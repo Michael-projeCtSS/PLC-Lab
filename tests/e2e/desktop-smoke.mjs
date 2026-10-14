@@ -107,7 +107,17 @@ try {
     `WebView2 failed to become ready: ${readinessFailure}\n${output}`,
   );
   browser = await chromium.connectOverCDP(endpoint);
-  const page = browser.contexts()[0]?.pages()[0];
+  // The browser endpoint can precede creation of the real WebView target.
+  // Wait for that target; every native application assertion still executes.
+  const pageDeadline = Date.now() + 20_000;
+  let page = browser.contexts().flatMap((context) => context.pages())[0];
+  while (!page && Date.now() < pageDeadline) {
+    if (launchError) throw launchError;
+    if (application.exitCode !== null)
+      throw new Error(`Native host exited ${application.exitCode}: ${output}`);
+    await delay(100);
+    page = browser.contexts().flatMap((context) => context.pages())[0];
+  }
   assert.ok(page, "Native app has no WebView2 page.");
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
