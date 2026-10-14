@@ -91,6 +91,45 @@ it("renders tank geometry and all labels from a fixed authoritative snapshot", (
   expect(screen.getByTestId("low-state")).toHaveTextContent("INACTIVE");
   expect(screen.getByTestId("high-state")).toHaveTextContent("INACTIVE");
 });
+it.each(["missing", "type", "role"])(
+  "disabled attachment explains the precise %s declaration mismatch",
+  (kind) => {
+    const snapshot = tankSnapshot();
+    snapshot.process = null;
+    snapshot.variables = snapshot.variables.map((v) => ({
+      ...v,
+      inputAuthority: v.role === "Input" ? ("USER" as const) : null,
+    }));
+    if (kind === "missing")
+      snapshot.variables = snapshot.variables.filter(
+        (v) => v.name !== "LevelHigh",
+      );
+    else if (kind === "type") {
+      const high = snapshot.variables.find((v) => v.name === "LevelHigh")!;
+      high.typeName = "INT";
+      high.value = { type: "INT", value: 0 };
+    } else {
+      const high = snapshot.variables.find((v) => v.name === "LevelHigh")!;
+      high.role = "Local";
+      high.inputAuthority = null;
+    }
+    render(<ProcessPanel {...props()} snapshot={snapshot} current canManage />);
+    expect(
+      screen.getByRole("button", { name: "Attach Tank Scene" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(/Tank scene requires LevelHigh : BOOL VAR_INPUT/),
+    ).toBeInTheDocument();
+    if (kind === "type")
+      expect(
+        screen.getByText(/Found LevelHigh : INT VAR_INPUT/),
+      ).toBeInTheDocument();
+    if (kind === "role")
+      expect(
+        screen.getByText(/Found LevelHigh : BOOL VAR/),
+      ).toBeInTheDocument();
+  },
+);
 it("uses supplied sensor/actuator booleans without deriving them from tank level", () => {
   const s = tankSnapshot();
   s.process = {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { RuntimeSnapshotDto, ProcessSnapshotDto } from "@plc-lab/ipc";
-import { TANK_EXAMPLE_SOURCE, tankInterfaceCompatible } from "./tank-example";
+import { TANK_EXAMPLE_SOURCE, tankInterfaceMismatch } from "./tank-example";
 function TankRenderer({ snapshot }: { snapshot: ProcessSnapshotDto }) {
   // Only presentation geometry: every state/command/sensor is supplied by Rust.
   const height = (105 * snapshot.levelPermille) / 1000;
@@ -157,7 +157,8 @@ export function ProcessPanel({
         </p>
       </div>
     );
-  const compatible = tankInterfaceCompatible(snapshot);
+  const mismatch = tankInterfaceMismatch(snapshot);
+  const compatible = snapshot !== null && mismatch === null;
   const canAttach =
     current && canManage && snapshot?.state === "READY" && compatible;
   return (
@@ -205,7 +206,7 @@ export function ProcessPanel({
             : !current
               ? "Source changed or association unavailable. Compile and load again."
               : !compatible
-                ? "Loaded program does not provide the required Tank interface."
+                ? mismatch
                 : snapshot.state !== "READY"
                   ? "Reset the faulted runtime first."
                   : "Wait for the current request to finish."}
