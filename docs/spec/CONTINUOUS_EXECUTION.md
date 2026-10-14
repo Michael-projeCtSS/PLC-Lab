@@ -24,6 +24,8 @@ Run changes only mode/control metadata and appends ExecutionStarted. It performs
 
 Load replacement, unload, manual scan, runtime reset, attach/detach and process reset require STOPPED in Rust and UI. Pure compile and read-only observations remain safe backend operations. Source/editor/Use Example/Compile/Load/topology/reset controls are disabled during RUNNING/PAUSED and explain: “Stop execution to edit or reload the program.” No editing action implicitly stops execution.
 
+Source editing is also locked while a Run/Resume request awaits confirmation, preventing an in-flight start from losing its source association. The displayed mode still changes only from a backend response.
+
 ## Lease, ordering and quiescence
 
 RunLease has private session ID and epoch fields. It can only originate in start_execution, never a browser request. Authorization requires current session, RUNNING and exact active lease under the session mutex. The epoch uses checked u64 addition. APP-EXECUTION-EPOCH-EXHAUSTED refuses a new Run/Resume without altering PLC/process/mode/history. Pause, Stop and faults clear the active lease under that same mutex. A scan already owning the mutex may finish before Pause acquires it; after Pause returns, every old tick is a no-op. Stop has the same guarantee. Resume/new session never reauthorizes an old lease.

@@ -58,6 +58,7 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     loadedRevision = useRef<bigint | null>(null),
     generation = useRef(0n),
     busy = useRef(false),
+    starting = useRef(false),
     mounted = useRef(false);
   const refresh = useRef<ReturnType<typeof coalescedRefresh> | null>(null),
     wakeQueued = useRef(false),
@@ -151,10 +152,11 @@ export function useRuntimeSession(source: string, compiled: boolean) {
   }, []);
   const invalidateSource = () => {
     if (
-      snapshot.current?.executionMode !== undefined &&
-      snapshot.current.executionMode !== "STOPPED"
+      starting.current ||
+      (snapshot.current?.executionMode !== undefined &&
+        snapshot.current.executionMode !== "STOPPED")
     )
-      return;
+      return false;
     sourceRevision.current += 1n;
     generation.current += 1n;
     busy.current = false;
@@ -166,6 +168,7 @@ export function useRuntimeSession(source: string, compiled: boolean) {
       error: null,
       loadDiagnostics: [],
     }));
+    return true;
   };
   const perform = async (
     action: Action,
@@ -173,6 +176,7 @@ export function useRuntimeSession(source: string, compiled: boolean) {
   ) => {
     if (busy.current || (action !== "load" && !snapshot.current)) return;
     busy.current = true;
+    starting.current = action === "run";
     const token = ++generation.current,
       revision = sourceRevision.current,
       expected = snapshot.current?.sessionId ?? "";
@@ -242,6 +246,7 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     } finally {
       if (current()) {
         busy.current = false;
+        starting.current = false;
         if (wakeQueued.current || action === "run") {
           wakeQueued.current = false;
           // A terminal tick can precede delivery of the Run/Resume response.
@@ -293,7 +298,7 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     canRun: canMutate && view.snapshot?.executionMode !== "RUNNING",
     canPause: canMutate && view.snapshot?.executionMode === "RUNNING",
     canStop: canMutate && !stopped,
-    sourceLocked: !stopped,
+    sourceLocked: !stopped || view.pending === "run",
     canReplace: stopped && view.pending === null,
     canUnload: (stopped || failedClosed) && view.pending === null,
     run: () =>

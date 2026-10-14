@@ -77,6 +77,10 @@ it("confirms controls with backend mode, locks source/topology, keeps USER stagi
     request = h.result.current.run();
   });
   expect(h.result.current.snapshot?.executionMode).toBe("STOPPED");
+  expect(h.result.current.sourceLocked).toBe(true);
+  act(() => {
+    expect(h.result.current.invalidateSource()).toBe(false);
+  });
   await act(async () => {
     confirm({
       ...running(),

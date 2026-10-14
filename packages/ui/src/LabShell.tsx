@@ -278,7 +278,7 @@ export function LabShell() {
               onChange={(value) => {
                 if (runtime.sourceLocked) return;
                 setFocusedDiagnostic(null);
-                runtime.invalidateSource();
+                if (!runtime.invalidateSource()) return;
                 compilation.edit(value);
               }}
               diagnostics={diagnostics}
@@ -409,7 +409,7 @@ export function LabShell() {
                 onExample={() => {
                   if (runtime.sourceLocked) return;
                   setFocusedDiagnostic(null);
-                  runtime.invalidateSource();
+                  if (!runtime.invalidateSource()) return;
                   compilation.edit(TANK_EXAMPLE_SOURCE);
                 }}
                 onAttach={runtime.attach}
