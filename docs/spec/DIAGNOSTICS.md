@@ -1,5 +1,21 @@
 # Diagnostics model
 
+## M3A process/application diagnostics
+
+PLC-PROCESS binding/authority/state errors use the existing typed IpcError envelope and appear labeled PROCESS. They never fault the PLC or replace its runtimeFault diagnostic. Compiler diagnostics, student PLC faults, application-internal failures and transport failures retain their existing distinctions.
+
+| Code                 | Meaning                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| PLC-PROCESS-001      | Required source-visible Tank interface variable is missing                                                          |
+| PLC-PROCESS-002      | Required variable has the wrong exact PLC type; message includes expected/found declaration                         |
+| PLC-PROCESS-003      | Required variable has the wrong Input/Output role                                                                   |
+| PLC-PROCESS-004      | Manual write rejected because the attached process owns this sensor Input                                           |
+| PLC-PROCESS-005      | Reset/detach requested without an attached scene                                                                    |
+| PLC-PROCESS-006      | Attachment requested on a Faulted PLC; explicit Runtime reset required                                              |
+| APP-PROCESS-INTERNAL | Impossible arithmetic/binding/staging invariant; application session fails closed until explicit replacement/unload |
+
+Validate all attachment bindings/preconditions before staging/replacing the scene. Ordinary rejected attachment preserves runtime/plant. Student scan faults leave the entire plant unchanged; no ordinary process arithmetic fault is invented. Accepted ScanError::Internal remains internalApplicationError snapshot data. IPC v5 adds process snapshots and input authority; malformed scene requests/response payloads are rejected by strict contract validators.
+
 ## M2B runtime session diagnostics
 
 Runtime faults arrive as coherent snapshot data with their original PLC-RUNTIME code, severity, category, scalar span and optional resolved related variable. APP-CORE internal diagnostics retain internalApplicationError and are never presented as student runtime faults. Compiler/load diagnostics and runtime faults have separate Monaco marker owners. Editing prevents old runtime spans from marking new source. Reset clears the actual backend fault.

@@ -45,6 +45,7 @@ jobs:
             artifacts/desktop-smoke/desktop.png
             artifacts/desktop-smoke/runtime-ton.png
             artifacts/desktop-smoke/runtime-fault.png
+            artifacts/desktop-smoke/tank-filling.png
 
   linux-core:
     name: Linux headless core validation

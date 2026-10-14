@@ -6,10 +6,16 @@ import {
   singleScan,
   resetRuntime,
   unloadProgram,
+  attachProcessScene,
+  detachProcessScene,
+  resetProcessScene,
   IpcTransportError,
 } from "@plc-lab/ipc";
 import { useRuntimeSession } from "./useRuntimeSession";
-import { readySnapshot } from "../../../tests/frontend/runtime-fixtures";
+import {
+  readySnapshot,
+  tankSnapshot,
+} from "../../../tests/frontend/runtime-fixtures";
 import type { RuntimeSnapshotDto, LoadProgramResponse } from "@plc-lab/ipc";
 import { CONTRACT_VERSION } from "../../ipc/src/generated";
 vi.mock("@plc-lab/ipc", async (original) => ({
@@ -19,6 +25,9 @@ vi.mock("@plc-lab/ipc", async (original) => ({
   singleScan: vi.fn(),
   resetRuntime: vi.fn(),
   unloadProgram: vi.fn(),
+  attachProcessScene: vi.fn(),
+  detachProcessScene: vi.fn(),
+  resetProcessScene: vi.fn(),
 }));
 beforeEach(() => {
   vi.resetAllMocks();
@@ -248,4 +257,128 @@ it("late unmounted load is discarded", async () => {
   h.unmount();
   complete({ kind: "loaded", snapshot: readySnapshot() });
   await pending;
+});
+it("scene mutations target the current session and adopt only supplied snapshots", async () => {
+  const h = mount();
+  await act(() => h.result.current.load());
+  vi.mocked(attachProcessScene).mockResolvedValue(tankSnapshot());
+  await act(() => h.result.current.attach());
+  expect(attachProcessScene).toHaveBeenCalledWith("1", "TANK_FILLING");
+  expect(h.result.current.snapshot).toEqual(tankSnapshot());
+  const reset = {
+    ...tankSnapshot(),
+    process: { ...tankSnapshot().process!, levelPermille: 0, lowLevel: true },
+  };
+  vi.mocked(resetProcessScene).mockResolvedValue(reset);
+  await act(() => h.result.current.resetProcess());
+  expect(resetProcessScene).toHaveBeenCalledWith("1");
+  expect(h.result.current.snapshot?.completedScans).toBe("17");
+  expect(h.result.current.snapshot).toEqual(reset);
+  const detached = {
+    ...readySnapshot(),
+    completedScans: "17",
+    simulationTimeMicros: "123456",
+  };
+  vi.mocked(detachProcessScene).mockResolvedValue(detached);
+  await act(() => h.result.current.detach());
+  expect(detachProcessScene).toHaveBeenCalledWith("1");
+  expect(h.result.current.snapshot).toEqual(detached);
+});
+it("late attach cannot transfer a scene after source edit and new load", async () => {
+  const h = mount();
+  await act(() => h.result.current.load());
+  let complete!: (value: RuntimeSnapshotDto) => void;
+  vi.mocked(attachProcessScene).mockReturnValue(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
+  let pending!: Promise<void>;
+  act(() => {
+    pending = h.result.current.attach();
+  });
+  act(() => h.result.current.invalidateSource());
+  vi.mocked(loadStProgram).mockResolvedValue({
+    kind: "loaded",
+    snapshot: readySnapshot("2"),
+  });
+  await act(() => h.result.current.load());
+  await act(async () => {
+    complete(tankSnapshot());
+    await pending;
+  });
+  expect(h.result.current.snapshot).toEqual(readySnapshot("2"));
+  expect(h.result.current.canScan).toBe(true);
+});
+it("process-owned input rejection retains authoritative state and association", async () => {
+  vi.mocked(loadStProgram).mockResolvedValue({
+    kind: "loaded",
+    snapshot: tankSnapshot(),
+  });
+  const h = mount();
+  await act(() => h.result.current.load());
+  vi.mocked(setRuntimeInput).mockRejectedValue(
+    new IpcTransportError("PLC-PROCESS-004", "Process-owned sensor."),
+  );
+  await act(() =>
+    h.result.current.setInput("1", { type: "BOOL", value: true }),
+  );
+  expect(h.result.current.snapshot).toEqual(tankSnapshot());
+  expect(h.result.current.canScan).toBe(true);
+  expect(h.result.current.error?.code).toBe("PLC-PROCESS-004");
+});
+it("stale source blocks all scene mutations and duplicate process actions are serialized", async () => {
+  vi.mocked(loadStProgram).mockResolvedValue({
+    kind: "loaded",
+    snapshot: tankSnapshot(),
+  });
+  const h = mount();
+  await act(() => h.result.current.load());
+  let complete!: (value: RuntimeSnapshotDto) => void;
+  vi.mocked(resetProcessScene).mockReturnValue(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
+  let pending!: Promise<void>;
+  act(() => {
+    pending = h.result.current.resetProcess();
+    void h.result.current.resetProcess();
+    void h.result.current.detach();
+  });
+  expect(resetProcessScene).toHaveBeenCalledTimes(1);
+  expect(detachProcessScene).not.toHaveBeenCalled();
+  await act(async () => {
+    complete(tankSnapshot());
+    await pending;
+  });
+  act(() => h.result.current.invalidateSource());
+  await act(async () => {
+    await h.result.current.attach();
+    await h.result.current.resetProcess();
+    await h.result.current.detach();
+  });
+  expect(attachProcessScene).not.toHaveBeenCalled();
+  expect(resetProcessScene).toHaveBeenCalledTimes(1);
+  expect(detachProcessScene).not.toHaveBeenCalled();
+  expect(h.result.current.canManageProcess).toBe(false);
+});
+it("unexpected process invariant errors fail association closed without inventing a student fault", async () => {
+  vi.mocked(loadStProgram).mockResolvedValue({
+    kind: "loaded",
+    snapshot: tankSnapshot(),
+  });
+  const h = mount();
+  await act(() => h.result.current.load());
+  vi.mocked(resetProcessScene).mockRejectedValue(
+    new IpcTransportError(
+      "APP-PROCESS-INTERNAL",
+      "Application invariant failure.",
+    ),
+  );
+  await act(() => h.result.current.resetProcess());
+  expect(h.result.current.error?.code).toBe("APP-PROCESS-INTERNAL");
+  expect(h.result.current.snapshot).toEqual(tankSnapshot());
+  expect(h.result.current.snapshot?.fault).toBeNull();
+  expect(h.result.current.canScan).toBe(false);
 });

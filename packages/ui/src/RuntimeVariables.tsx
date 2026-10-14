@@ -92,19 +92,30 @@ export function RuntimeVariables({
         >
           <span title={variable.name}>{variable.name}</span>
           <span>{variable.typeName}</span>
-          <span>{variable.role}</span>
+          <span>
+            {variable.role}
+            {variable.inputAuthority && (
+              <small
+                className="input-authority"
+                aria-label={`Authority ${variable.name}`}
+              >
+                {variable.inputAuthority}
+              </small>
+            )}
+          </span>
           <div className="runtime-value-cell">
             <output aria-label={`Value ${variable.name}`}>
               {formatRuntimeValue(variable.value)}
             </output>
-            {variable.role === "Input" && (
-              <InputEditor
-                key={`${snapshot.sessionId}/${observationKey}/${variable.variableId}`}
-                variable={variable}
-                disabled={!editable}
-                commit={(value) => setInput(variable.variableId, value)}
-              />
-            )}
+            {variable.role === "Input" &&
+              variable.inputAuthority === "USER" && (
+                <InputEditor
+                  key={`${snapshot.sessionId}/${observationKey}/${variable.variableId}`}
+                  variable={variable}
+                  disabled={!editable}
+                  commit={(value) => setInput(variable.variableId, value)}
+                />
+              )}
           </div>
         </div>
       ))}

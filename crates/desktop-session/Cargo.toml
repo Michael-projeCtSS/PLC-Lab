@@ -10,6 +10,7 @@ app-contract.workspace = true
 plc-types.workspace = true
 plc-runtime.workspace = true
 st-frontend.workspace = true
+process-simulation.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

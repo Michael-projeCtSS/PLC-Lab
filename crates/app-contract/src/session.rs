@@ -1,5 +1,5 @@
 //! Presentation transport only. Session ownership lives in desktop-session.
-use crate::{CompilerDiagnostic, CompilerSpan};
+use crate::{CompilerDiagnostic, CompilerSpan, InputAuthority, ProcessSnapshotDto};
 use plc_types::{PlcReal, PlcTime, PlcType, PlcValue};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -115,6 +115,7 @@ pub struct RuntimeVariable {
     #[ts(type = "\"BOOL\" | \"INT\" | \"REAL\" | \"TIME\"")]
     pub type_name: PlcType,
     pub role: RuntimeRole,
+    pub input_authority: Option<InputAuthority>,
     pub value: RuntimeValue,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -187,6 +188,7 @@ pub struct RuntimeSnapshotDto {
     pub variables: Vec<RuntimeVariable>,
     pub function_blocks: Vec<RuntimeFunctionBlock>,
     pub fault: Option<RuntimeDiagnostic>,
+    pub process: Option<ProcessSnapshotDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

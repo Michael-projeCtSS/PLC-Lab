@@ -26,6 +26,7 @@ network-core = { path = "crates/network-core" }
 grading-core = { path = "crates/grading-core" }
 app-contract = { path = "crates/app-contract" }
 desktop-session = { path = "crates/desktop-session" }
+process-simulation = { path = "crates/process-simulation" }
 st-frontend = { path = "languages/st" }
 
 [workspace.lints.rust]

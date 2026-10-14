@@ -1,5 +1,13 @@
 # Frontend/backend boundary
 
+## M3A IPC v5 and authoritative Tank snapshots
+
+app-contract v5 adds ProcessSceneKind TANK_FILLING, TankProcessSnapshotDto/ProcessSnapshotDto, InputAuthority USER/PROCESS and AttachProcessSceneRequest. RuntimeSnapshotDto includes required process:null-or-Tank and each variable includes inputAuthority (null for Output/Local). All existing load/input/scan/reset/observation responses and three new targeted scene mutations return one coherent combined snapshot. TIME/count/IDs/budget encoding and PlcReal remain unchanged.
+
+attach_process_scene requires version/sessionId/sceneKind; detach_process_scene and reset_process_scene require version/sessionId. Thin Tauri blocking adapters call desktop-session; no physical engine lives in IPC or React. Rust validates bindings/authority before mutation. TypeScript strictly validates tags, fields, scalar ranges and ownership/scene metadata, while never deriving sensor states or future levels. UI rejects obsolete source/request/session replies through the existing generation checks.
+
+Use Example only changes editor text after explicit replacement confirmation; Compile, Load, Attach and Single Scan remain independent. Attached Input sensors display PROCESS with no edit controls; Rust still rejects direct writes. SVG maps levelPermille to geometry and supplied booleans to labels. No timers or frame-based interpolation run the plant. Core/runtime/process diagnostics retain their distinct categories/families. See [process specification](../spec/PROCESS_SIMULATION.md) for the one-scan feedback delay, reset and failure policies. Earlier v4/v3 sections describe history.
+
 ## M2B IPC v4 and manual runtime
 
 The generated contract advances to v4. Core information reports manual-single-scan capability; this does not create or load a program. Compile still returns metadata/diagnostics only. load_st_program accepts source/version, recompiles at the trusted boundary and returns loaded snapshot or compiler diagnostics; task configuration is fixed once in Rust and returned as metadata. set_runtime_input, single_scan, reset_runtime, unload_program and get_runtime_snapshot require the opaque session generation. Input writes additionally require the opaque variable ID and discriminated Alpha value.

@@ -5,6 +5,9 @@ import {
   singleScan,
   resetRuntime,
   unloadProgram,
+  attachProcessScene,
+  detachProcessScene,
+  resetProcessScene,
   IpcTransportError,
 } from "@plc-lab/ipc";
 import type {
@@ -13,7 +16,15 @@ import type {
   CompilerDiagnostic,
 } from "@plc-lab/ipc";
 
-type Action = "load" | "input" | "scan" | "reset" | "unload";
+type Action =
+  | "load"
+  | "input"
+  | "scan"
+  | "reset"
+  | "unload"
+  | "attach"
+  | "detach"
+  | "resetProcess";
 type View = {
   snapshot: RuntimeSnapshotDto | null;
   current: boolean;
@@ -114,7 +125,9 @@ export function useRuntimeSession(source: string, compiled: boolean) {
           error instanceof IpcTransportError ? error.code : "APP-INTERNAL-001";
         // Only a documented input validation rejection proves no mutation.
         // Transport/internal failures leave the observation uncertain.
-        const invalid = action !== "input" || code !== "APP-RUNTIME-INPUT";
+        const invalid =
+          action !== "input" ||
+          !["APP-RUNTIME-INPUT", "PLC-PROCESS-004"].includes(code);
         if (invalid) loadedRevision.current = null;
         setView((v) => ({
           ...v,
@@ -150,11 +163,14 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     compiled &&
     view.snapshot?.state === "READY" &&
     view.pending === null;
+  const canManageProcess =
+    view.current && compiled && view.snapshot !== null && view.pending === null;
   return {
     ...view,
     invalidateSource,
     canScan: canMutate,
     canEditInputs: canMutate,
+    canManageProcess,
     load,
     scan: () =>
       canMutate ? perform("scan", (id) => singleScan(id)) : Promise.resolve(),
@@ -173,6 +189,18 @@ export function useRuntimeSession(source: string, compiled: boolean) {
           );
         return null;
       }),
+    attach: () =>
+      canMutate
+        ? perform("attach", (id) => attachProcessScene(id, "TANK_FILLING"))
+        : Promise.resolve(),
+    detach: () =>
+      canManageProcess
+        ? perform("detach", (id) => detachProcessScene(id))
+        : Promise.resolve(),
+    resetProcess: () =>
+      canManageProcess
+        ? perform("resetProcess", (id) => resetProcessScene(id))
+        : Promise.resolve(),
   };
 }
 class LoadDiagnosticError extends Error {

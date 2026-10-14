@@ -164,7 +164,7 @@ describe("foundation desktop shell", () => {
     ).toHaveTextContent("—");
     for (const name of ["Run", "Pause", "Stop", "Single Scan"])
       expect(screen.getByRole("button", { name })).toBeDisabled();
-    expect(screen.getByText("No process scene")).toBeInTheDocument();
+    expect(screen.getByText("No process scene attached")).toBeInTheDocument();
   });
   it("displays backend diagnostics and sends them to the editor; editing clears obsolete errors", async () => {
     vi.mocked(compileSt).mockResolvedValue({

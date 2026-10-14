@@ -1,5 +1,13 @@
 # PLC Lab architecture
 
+## M3A manual process boundary
+
+The process-simulation crate depends only on plc-types, never runtime/host/UI. desktop-session imports it beside the accepted runtime/compiler/contract. simulation-core remains the unchanged clock leaf; plc-runtime never imports a physical model. This authorized placement is recorded in [ADR-0014](../adr/0014-process-simulation-boundary.md), superseding ADR-0005's reserved placement while preserving model/renderer separation.
+
+Sensors(t) staged -> Runtime::single_scan -> committed Outputs(t) and core time/count -> fixed integer Tank step for cyclePeriod -> Process(t+dt) -> derived Sensors(t+dt) staged -> combined snapshot -> React/SVG. The same application mutex covers the full cycle/observation. Failed scans do not step the plant. Process state is private physical state, not hidden PLC symbols. Binding metadata resolves exact role/type/name to actual runtime identities. PROCESS sensors reject manual writes in Rust.
+
+Explicit attach/detach/reset process commands target RuntimeSessionId. Successful Load/Unload discards the scene; failed/stale Load retains it and accepted LoadIntent ordering. Runtime reset preserves plant/restages sensors; Process reset reinitializes plant/sensors and preserves all PLC memory/fault/count/time. IPC DTOs carry optional plant state and input authority; they own no model. React only renders supplied values/booleans and normalized geometry. Example ST is source data under scenes/tank-filling, inserted only by confirmation. No continuous execution, trace, network, grading or additional language is implemented.
+
 ## M2B application session boundary
 
 Editor Source -> Compile (pure metadata) is separate from Source -> explicit Load -> ST compiler -> existing validation -> owned ExecutionPlan -> desktop-session -> Runtime::single_scan -> coherent RuntimeSnapshotDto -> UI. Desktop owns one Arc<RuntimeSessionService>; a synchronous mutex serializes replacement/mutations/observation on blocking workers. The new headless application crate imports app-contract/st-frontend/plc-runtime/plc-types. Core and ST crates never import the service or Tauri.

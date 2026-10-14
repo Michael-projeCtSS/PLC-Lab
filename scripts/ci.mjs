@@ -15,6 +15,7 @@ const corePackages = [
   "st-frontend",
   "app-contract",
   "desktop-session",
+  "process-simulation",
 ];
 const selection = corePackages.flatMap((name) => ["-p", name]);
 const rust = (id, args) => ({
@@ -47,6 +48,8 @@ export function validationPlan(lane, platform = process.platform) {
     "app-contract",
     "-p",
     "desktop-session",
+    "-p",
+    "process-simulation",
   ]);
   if (lane === "windows")
     return [

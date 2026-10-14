@@ -1,5 +1,13 @@
 # Development
 
+## M3A Tank process development
+
+Open the Process panel's Tank Filling Demo, choose Use Example and confirm replacement. Compile -> Load Program -> Attach Tank Scene -> Single Scan. Each successful cycle advances the physical plant using committed PLC outputs and the fixed Rust cycle duration; resulting sensors are read by the next scan. Initial Low=true/High=false/level0; eight scans reach 80%, and scan nine closes the inlet while preserving 80%. PROCESS sensor rows are read-only; ordinary Inputs remain manual.
+
+Reset Runtime preserves the plant, resets PLC memory/fault/count/time and restages current sensors. Reset Process empties the tank/restages initial sensors without clearing PLC outputs/locals/TON/fault/count/time; applied actuator labels retain their last interval. Detach removes the plant and restores manual sensor input authority without resetting the PLC. Editing source leaves the old plant visibly STALE and disables process execution; new successful Load starts without a scene.
+
+Focused Rust: `node scripts/rust.mjs test --locked -p process-simulation -p desktop-session -p app-contract`; add `--release` for optimized coverage. Frontend/architecture: existing commands below. `npm run validate` retains full canonical/native acceptance; both independent CI selections add process-simulation without removing prior core/ST/session requirements. Native evidence also captures tank-filling.png. IPC is now v5; regenerate declarations with ipc:generate. Model/configuration is Rust-owned; frontend geometry and static binding compatibility do not simulate anything. See [ADR-0014](adr/0014-process-simulation-boundary.md) and [process spec](spec/PROCESS_SIMULATION.md).
+
 ## M2B session development
 
 Compile != Load != Execute. Compile edits/validates source only. After current successful Compile, use Load Program, stage Input values (numeric fields use Apply/Enter; TIME is integer microseconds) and press Single Scan. Each successful click advances the Rust SimulationClock by exactly 100 ms without waiting; click speed never defines elapsed PLC time. Reset Runtime clears staged inputs, all memory/TON state, fault/count/time. Editing marks the loaded association stale and requires Compile + Load again. Unload preserves source/compile metadata. Run/Pause/Stop remain disabled.

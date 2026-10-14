@@ -2,6 +2,28 @@ use app_contract::{CoreInfo, CoreInfoRequest, IpcError};
 use desktop_session::RuntimeSessionService;
 use std::sync::Arc;
 
+#[tauri::command]
+pub async fn attach_process_scene(
+    service: tauri::State<'_, Arc<RuntimeSessionService>>,
+    request: app_contract::AttachProcessSceneRequest,
+) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
+    session_work(service, move |s| s.attach_process(request)).await
+}
+#[tauri::command]
+pub async fn detach_process_scene(
+    service: tauri::State<'_, Arc<RuntimeSessionService>>,
+    request: app_contract::RuntimeSessionRequest,
+) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
+    session_work(service, move |s| s.detach_process(request)).await
+}
+#[tauri::command]
+pub async fn reset_process_scene(
+    service: tauri::State<'_, Arc<RuntimeSessionService>>,
+    request: app_contract::RuntimeSessionRequest,
+) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
+    session_work(service, move |s| s.reset_process(request)).await
+}
+
 async fn session_work<T: Send + 'static>(
     service: tauri::State<'_, Arc<RuntimeSessionService>>,
     operation: impl FnOnce(&RuntimeSessionService) -> Result<T, IpcError> + Send + 'static,

@@ -8,6 +8,8 @@ import { StructuredTextEditor } from "./StructuredTextEditor";
 import { useRuntimeSession } from "./useRuntimeSession";
 import { RuntimeVariables } from "./RuntimeVariables";
 import { formatDuration } from "./runtime-values";
+import { ProcessPanel } from "./ProcessPanel";
+import { TANK_EXAMPLE_SOURCE } from "./tank-example";
 
 type Connection =
   | { kind: "connecting" }
@@ -351,11 +353,26 @@ export function LabShell() {
             </div>
           </Panel>
           <div className="simulation-panels">
-            <Panel id="process" title="Process" detail="SCENE">
-              <EmptyState mark="◉" title="No process scene">
-                Devices and feedback will be visualized from authoritative
-                simulation state.
-              </EmptyState>
+            <Panel
+              id="process"
+              title="Process"
+              detail="SCENE"
+              className="process-panel"
+            >
+              <ProcessPanel
+                source={compilation.source}
+                snapshot={runtime.snapshot}
+                current={runtime.current}
+                canManage={runtime.canManageProcess}
+                onExample={() => {
+                  setFocusedDiagnostic(null);
+                  runtime.invalidateSource();
+                  compilation.edit(TANK_EXAMPLE_SOURCE);
+                }}
+                onAttach={runtime.attach}
+                onDetach={runtime.detach}
+                onReset={runtime.resetProcess}
+              />
             </Panel>
             <Panel id="network" title="Network" detail="TOPOLOGY">
               <EmptyState mark="⌘" title="No network configured">
@@ -420,7 +437,10 @@ export function LabShell() {
             >
               {runtime.error && (
                 <p role="alert">
-                  {runtime.error.code}: {runtime.error.message}
+                  {runtime.error.code.startsWith("PLC-PROCESS-")
+                    ? "PROCESS"
+                    : "APPLICATION"}{" "}
+                  · {runtime.error.code}: {runtime.error.message}
                 </p>
               )}
               {runtime.snapshot?.fault && (
@@ -495,7 +515,7 @@ export function LabShell() {
         <span>
           {runtime.snapshot ? "Manual runtime session" : "No runtime loaded"}
         </span>
-        <span>M2B · Manual Single Scan</span>
+        <span>M3A · Manual PLC + Process</span>
       </footer>
     </div>
   );

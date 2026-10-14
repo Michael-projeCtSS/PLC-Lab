@@ -1,5 +1,9 @@
 # Roadmap
 
+## M3A assigned manual Tank slice
+
+M1C, M2A and M2B final gates are accepted, including M2B-R1 intent ordering. M3A proves the first physical loop: PLC outputs -> integer plant -> sensors -> next scan -> authoritative 2D visualization. It remains manual, with explicit attach, ownership, reset/detach and no recording/grading/protocols. This is the physical portion of the eventual DEMO-001 chain; trace and educational grading remain separately authorized work. Stop after M3A validation for technical-lead process/application/UI source review. M3B, M2C and all continuous execution remain unauthorized. Earlier paragraphs preserve milestone history.
+
 ## M2B assigned increment
 
 M2A validation and technical-lead source review passed. M2B implements the first explicit desktop runtime session, manual Single Scan and real variable/TON/fault/reset presentation. It stops for technical-lead application/UI source review after independent validation. M2C continuous execution and M3 process simulation require separate authorization. No automatic transition is permitted.

@@ -96,6 +96,7 @@ test("Windows plan preserves canonical checks and real native smoke plus both M1
     "st-frontend",
     "app-contract",
     "desktop-session",
+    "process-simulation",
   ])
     assert.ok(plan[1].args.includes(name));
   assert.ok(plan[2].args.includes("--release"));
@@ -104,8 +105,13 @@ test("Windows plan preserves canonical checks and real native smoke plus both M1
   assert.ok(plan[2].args.includes("st-frontend"));
   assert.ok(plan[2].args.includes("app-contract"));
   assert.ok(plan[2].args.includes("desktop-session"));
+  assert.ok(plan[2].args.includes("process-simulation"));
   const portable = validationPlan("core", "linux");
-  for (const packageName of ["app-contract", "desktop-session"]) {
+  for (const packageName of [
+    "app-contract",
+    "desktop-session",
+    "process-simulation",
+  ]) {
     assert.ok(portable[1].args.includes(packageName));
     assert.ok(portable[2].args.includes(packageName));
     assert.ok(portable[3].args.includes(packageName));

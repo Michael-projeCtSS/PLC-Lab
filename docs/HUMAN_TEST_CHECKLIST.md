@@ -1,5 +1,28 @@
 # Human test checklist
 
+## M3A manual Tank Filling
+
+- [ ] Tank Filling Demo is discoverable in the Process panel.
+- [ ] Example source replaces editor text only after explicit action/confirmation.
+- [ ] Compile, Load Program and Attach Tank Scene remain separate actions.
+- [ ] Attached tank starts empty, with Low active and High inactive.
+- [ ] LevelLow/LevelHigh/LevelPercent visibly show PROCESS ownership.
+- [ ] Process-owned sensors cannot be edited; unrelated Inputs remain editable.
+- [ ] Single Scan opens the valve according to the real PLC output.
+- [ ] Tank rises by exactly one deterministic step per successful scan.
+- [ ] LevelPercent follows authoritative tank state.
+- [ ] Low is active through 20% and becomes inactive above it.
+- [ ] High activates at 80% on scan eight.
+- [ ] PLC closes the inlet on the next scan; tank stays at 80%.
+- [ ] PLC faults leave physical state and last applied actuator flags unchanged.
+- [ ] Reset Runtime preserves the physical tank and restages its sensors.
+- [ ] Reset Process empties the tank without resetting PLC time/count/outputs/locals/TON.
+- [ ] Detach restores manual sensor ownership and preserves the loaded PLC.
+- [ ] Run/Pause/Stop remain disabled.
+- [ ] Tank, actuator/sensor labels and controls remain readable at normal desktop resolution.
+
+The checklist is for manual review; automated native evidence is recorded separately. M3A stops for technical-lead source review before continuous execution.
+
 ## M2A Structured Text compilation
 
 - [ ] ST editor opens and the editable default PROGRAM source is visible.

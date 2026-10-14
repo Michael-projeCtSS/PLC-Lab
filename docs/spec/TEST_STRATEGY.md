@@ -1,5 +1,15 @@
 # Test strategy
 
+## M3A manual physical feedback acceptance
+
+process-simulation tests cover integer defaults, exact thresholds, +100/-80/+20/0 effects at 100 ms, independent fractional truncation, clamping, reset, repeated complete snapshot equality, finite analog feedback and maximum u64 duration without wrapping. Architecture checks forbid runtime/host/rendering dependencies and wall-time/OS capabilities in this model.
+
+desktop-session tests start from actual ST, including the shared scenes/tank-filling/example.st. Prove the nine-scan causal sequence, all five required name/type/role bindings, mixed-case names with extra variables and shifted IDs, owned write rejection, detach/manual restoration, load/unload lifecycle, Runtime-vs-Process reset, retained TON/user state, and a fault after provisional actuator writes that rolls back PLC state and preserves the whole plant. Existing deterministic Load intent tests remain; an additional private-operation test preserves an attached scene when newest B fails and older A is rejected. Impossible binding corruption is test-only and proves fail-closed application handling without changing core APIs.
+
+Contract tests cover process tags/fields/scalar/range bounds and exact targeting. Frontend tests use fixed DTOs, verify SVG geometry, use supplied booleans without deriving sensors, preserve authority/old-source protections and require explicit example confirmation. No frontend test provides semantic execution proof.
+
+The real Windows smoke inserts the example through UI confirmation, separately Compiles/Loads/Attaches, observes 0->10->...->80% and next-scan valve closure, directly proves Rust rejects an owned sensor write, demonstrates both resets, detach/pure scan, stale-source blocking and new-Load scene removal. Every UI mutation is correlated with one real targeted Rust observation. No mocked transport/model is used. Both CI lanes add process-simulation to fmt/clippy/debug/release selections and retain every existing REAL/TON/compiler/rollback/Load-intent test. Scope remains manual: no trace/exercise/grading/network/background engine.
+
 ## M2B manual session acceptance
 
 Headless desktop-session tests use actual ST compilation, validation, lowering and Runtime. Cover prepare-then-swap, generations/stale commands, role/type/identity checks, default/staged/committed observations, concurrent serialization, same-scan read-after-write, exact TON, source-backed faults/rollback, reset and unload. Contract tests prove checked finite REAL and exact u64 TIME/IDs plus strict fields/discriminants. Frontend tests use fixed backend DTOs to check presentation, explicit numeric commits, separate markers, source association and old-response filtering. No frontend test evaluates ST.

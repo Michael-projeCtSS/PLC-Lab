@@ -154,6 +154,7 @@ it("INT REAL and TIME display exactly and numeric drafts require Apply", async (
       name: "Count",
       typeName: "INT",
       role: "Input",
+      inputAuthority: "USER",
       value: { type: "INT", value: -12 },
     },
     {
@@ -161,6 +162,7 @@ it("INT REAL and TIME display exactly and numeric drafts require Apply", async (
       name: "Speed",
       typeName: "REAL",
       role: "Local",
+      inputAuthority: null,
       value: { type: "REAL", value: 12.5 },
     },
     {
@@ -168,6 +170,7 @@ it("INT REAL and TIME display exactly and numeric drafts require Apply", async (
       name: "Duration",
       typeName: "TIME",
       role: "Input",
+      inputAuthority: "USER",
       value: { type: "TIME", microseconds: "18446744073709551615" },
     },
   ];
@@ -203,6 +206,7 @@ it("invalid numeric input gives feedback without changing authoritative display"
       typeName: "INT",
       role: "Input",
       value: { type: "INT", value: 5 },
+      inputAuthority: "USER",
     },
   ];
   await mountLoaded(s);

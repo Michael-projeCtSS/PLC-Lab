@@ -13,6 +13,7 @@ const coreNames = new Set([
   "trace-core",
   "network-core",
   "grading-core",
+  "process-simulation",
 ]);
 
 function workspacePackages() {
@@ -117,6 +118,9 @@ test("desktop IPC exposes pure compilation and the authorized manual session com
     "commands::reset_runtime",
     "commands::unload_program",
     "commands::get_runtime_snapshot",
+    "commands::attach_process_scene",
+    "commands::detach_process_scene",
+    "commands::reset_process_scene",
   ]);
   const capability = JSON.parse(
     readFileSync(
@@ -136,7 +140,13 @@ test("session ownership is confined to the headless application service", () => 
       .dependencies.filter((d) => d.kind !== "dev")
       .map((d) => d.name)
       .sort(),
-    ["app-contract", "plc-runtime", "plc-types", "st-frontend"],
+    [
+      "app-contract",
+      "plc-runtime",
+      "plc-types",
+      "process-simulation",
+      "st-frontend",
+    ],
   );
   const service = readFileSync(
     path.join(root, "crates/desktop-session/src/lib.rs"),

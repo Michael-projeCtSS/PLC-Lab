@@ -7,6 +7,125 @@
   -webkit-font-smoothing: antialiased;
   color-scheme: dark;
 }
+.process-empty,
+.tank-scene {
+  padding: 10px 12px;
+  overflow: auto;
+  min-height: 0;
+}
+.process-empty {
+  display: grid;
+  gap: 8px;
+  font-size: 11px;
+}
+.process-empty code {
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.process-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 10px;
+}
+.process-controls button,
+.source-confirmation button {
+  border: 1px solid #4b8d77;
+  background: #183c36;
+  color: #dce5eb;
+  border-radius: 4px;
+  padding: 4px 7px;
+  cursor: pointer;
+  font-size: 10px;
+}
+.process-controls button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.tank-level {
+  display: block;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 650;
+  padding-top: 4px;
+  color: #76e0bd;
+}
+.tank-diagram {
+  display: block;
+  width: 100%;
+  min-height: 150px;
+  max-height: 175px;
+}
+.tank-diagram text {
+  fill: #dce5eb;
+  font:
+    11px "Segoe UI",
+    sans-serif;
+}
+.tank-vessel {
+  fill: #0f171d;
+  stroke: #9cb6c8;
+  stroke-width: 2;
+}
+.tank-liquid {
+  fill: #3d91bd;
+}
+.tank-pipe {
+  fill: none;
+  stroke: #9cb6c8;
+  stroke-width: 5;
+}
+.device-active,
+.sensor-active {
+  fill: #76e0bd;
+  stroke: #76e0bd;
+  stroke-width: 2;
+}
+.device-idle,
+.sensor-idle {
+  fill: #1a252e;
+  stroke: #9cb6c8;
+  stroke-width: 2;
+}
+.pump-arrow {
+  fill: #9cb6c8;
+}
+.process-readouts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 6px;
+  font-size: 10px;
+}
+.process-help {
+  font-size: 10px;
+  color: #94a7b6;
+  padding-top: 5px;
+}
+.process-stale {
+  color: #e8c77c;
+  font-size: 10px;
+  padding: 6px 0;
+}
+.source-confirmation {
+  border: 1px solid #9cb6c8;
+  border-radius: 4px;
+  padding: 8px;
+}
+.source-confirmation button {
+  margin: 6px 6px 0 0;
+}
+.input-authority {
+  display: block;
+  font-size: 8px;
+  color: #76e0bd;
+}
+.workbench:has(.tank-scene) {
+  grid-template-rows: minmax(215px, 1.1fr) minmax(310px, 1fr);
+}
+.simulation-panels:has(.tank-scene) {
+  min-height: 310px;
+}
 .st-editor {
   flex: 1;
   min-height: 0;

@@ -7,8 +7,10 @@ mod compilation;
 pub use compilation::*;
 mod session;
 pub use session::*;
+mod process;
+pub use process::*;
 
-pub const CONTRACT_VERSION: u32 = 4;
+pub const CONTRACT_VERSION: u32 = 5;
 pub const CORE_INFO_COMMAND: &str = "get_core_info";
 pub const COMPILE_ST_COMMAND: &str = "compile_st";
 pub const LOAD_PROGRAM_COMMAND: &str = "load_st_program";
@@ -17,6 +19,9 @@ pub const SINGLE_SCAN_COMMAND: &str = "single_scan";
 pub const RESET_RUNTIME_COMMAND: &str = "reset_runtime";
 pub const UNLOAD_PROGRAM_COMMAND: &str = "unload_program";
 pub const RUNTIME_SNAPSHOT_COMMAND: &str = "get_runtime_snapshot";
+pub const ATTACH_PROCESS_COMMAND: &str = "attach_process_scene";
+pub const DETACH_PROCESS_COMMAND: &str = "detach_process_scene";
+pub const RESET_PROCESS_COMMAND: &str = "reset_process_scene";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -92,9 +97,10 @@ pub fn typescript_contract() -> String {
         CoreInfo::decl(&config),
         IpcError::decl(&config),
         format_args!(
-            "{}{}\nexport const LOAD_PROGRAM_COMMAND = \"{LOAD_PROGRAM_COMMAND}\" as const;\nexport const SET_INPUT_COMMAND = \"{SET_INPUT_COMMAND}\" as const;\nexport const SINGLE_SCAN_COMMAND = \"{SINGLE_SCAN_COMMAND}\" as const;\nexport const RESET_RUNTIME_COMMAND = \"{RESET_RUNTIME_COMMAND}\" as const;\nexport const UNLOAD_PROGRAM_COMMAND = \"{UNLOAD_PROGRAM_COMMAND}\" as const;\nexport const RUNTIME_SNAPSHOT_COMMAND = \"{RUNTIME_SNAPSHOT_COMMAND}\" as const;\n",
+            "{}{}{}\nexport const LOAD_PROGRAM_COMMAND = \"{LOAD_PROGRAM_COMMAND}\" as const;\nexport const SET_INPUT_COMMAND = \"{SET_INPUT_COMMAND}\" as const;\nexport const SINGLE_SCAN_COMMAND = \"{SINGLE_SCAN_COMMAND}\" as const;\nexport const RESET_RUNTIME_COMMAND = \"{RESET_RUNTIME_COMMAND}\" as const;\nexport const UNLOAD_PROGRAM_COMMAND = \"{UNLOAD_PROGRAM_COMMAND}\" as const;\nexport const RUNTIME_SNAPSHOT_COMMAND = \"{RUNTIME_SNAPSHOT_COMMAND}\" as const;\nexport const ATTACH_PROCESS_COMMAND = \"{ATTACH_PROCESS_COMMAND}\" as const;\nexport const DETACH_PROCESS_COMMAND = \"{DETACH_PROCESS_COMMAND}\" as const;\nexport const RESET_PROCESS_COMMAND = \"{RESET_PROCESS_COMMAND}\" as const;\n",
             compilation_typescript(&config),
-            session_typescript(&config)
+            session_typescript(&config),
+            process_typescript(&config)
         ),
     )
 }

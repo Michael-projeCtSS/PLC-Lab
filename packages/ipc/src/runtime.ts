@@ -6,6 +6,9 @@ import {
   RESET_RUNTIME_COMMAND,
   UNLOAD_PROGRAM_COMMAND,
   RUNTIME_SNAPSHOT_COMMAND,
+  ATTACH_PROCESS_COMMAND,
+  DETACH_PROCESS_COMMAND,
+  RESET_PROCESS_COMMAND,
 } from "./generated";
 import type {
   RuntimeValue,
@@ -18,6 +21,9 @@ import type {
   LoadStProgramRequest,
   RuntimeSessionRequest,
   SetRuntimeInputRequest,
+  ProcessSnapshotDto,
+  AttachProcessSceneRequest,
+  ProcessSceneKind,
 } from "./generated";
 import { CoreInfoError, invokeNative } from "./transport";
 import {
@@ -31,6 +37,10 @@ export type {
   RuntimeFunctionBlock,
   RuntimeDiagnostic,
   LoadProgramResponse,
+  ProcessSnapshotDto,
+  TankProcessSnapshotDto,
+  ProcessSceneKind,
+  InputAuthority,
 } from "./generated";
 
 function invalid(): never {
@@ -97,11 +107,24 @@ export function parseRuntimeValue(value: unknown): RuntimeValue {
 }
 function parseVariable(value: unknown): RuntimeVariable {
   const v = record(value);
-  exact(v, ["variableId", "name", "typeName", "role", "value"]);
+  exact(v, [
+    "variableId",
+    "name",
+    "typeName",
+    "role",
+    "value",
+    "inputAuthority",
+  ]);
   const parsed = parseRuntimeValue(v.value);
   if (
     v.typeName !== parsed.type ||
     !["Input", "Output", "Local"].includes(String(v.role))
+  )
+    invalid();
+  if (
+    v.role === "Input"
+      ? !["USER", "PROCESS"].includes(String(v.inputAuthority))
+      : v.inputAuthority !== null
   )
     invalid();
   return {
@@ -109,6 +132,7 @@ function parseVariable(value: unknown): RuntimeVariable {
     name: text(v.name),
     typeName: parsed.type,
     role: v.role as RuntimeVariable["role"],
+    inputAuthority: v.inputAuthority as RuntimeVariable["inputAuthority"],
     value: parsed,
   };
 }
@@ -179,6 +203,7 @@ export function parseRuntimeSnapshot(value: unknown): RuntimeSnapshotDto {
     "variables",
     "functionBlocks",
     "fault",
+    "process",
   ]);
   if (
     v.contractVersion !== CONTRACT_VERSION ||
@@ -190,6 +215,33 @@ export function parseRuntimeSnapshot(value: unknown): RuntimeSnapshotDto {
   const variables = v.variables.map(parseVariable),
     functionBlocks = v.functionBlocks.map(parseBlock),
     fault = parseFault(v.fault);
+  const process = parseProcessSnapshot(v.process);
+  const owned = variables.filter((v) => v.inputAuthority === "PROCESS");
+  if (process === null && owned.length !== 0) invalid();
+  if (process !== null) {
+    const expected = new Map([
+      ["LEVELLOW", "BOOL"],
+      ["LEVELHIGH", "BOOL"],
+      ["LEVELPERCENT", "REAL"],
+    ]);
+    if (
+      owned.length !== 3 ||
+      new Set(owned.map((v) => v.name.toUpperCase())).size !== 3 ||
+      owned.some((v) => v.typeName !== expected.get(v.name.toUpperCase()))
+    )
+      invalid();
+    for (const name of ["INLETVALVE", "DRAINPUMP"]) {
+      if (
+        !variables.some(
+          (v) =>
+            v.name.toUpperCase() === name &&
+            v.role === "Output" &&
+            v.typeName === "BOOL",
+        )
+      )
+        invalid();
+    }
+  }
   if (
     (v.state === "READY" && fault !== null) ||
     (v.state === "FAULTED" && fault === null)
@@ -226,6 +278,57 @@ export function parseRuntimeSnapshot(value: unknown): RuntimeSnapshotDto {
     variables,
     functionBlocks,
     fault,
+    process,
+  };
+}
+function integer(value: unknown, maximum: number, minimum = 0): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < minimum ||
+    value > maximum
+  )
+    invalid();
+  return value;
+}
+export function parseProcessSnapshot(
+  value: unknown,
+): ProcessSnapshotDto | null {
+  if (value === null) return null;
+  const v = record(value);
+  exact(v, [
+    "kind",
+    "levelPermille",
+    "lowLevel",
+    "highLevel",
+    "inletValveOpen",
+    "drainPumpRunning",
+    "lowThresholdPermille",
+    "highThresholdPermille",
+    "fillRatePermillePerSecond",
+    "drainRatePermillePerSecond",
+  ]);
+  if (
+    v.kind !== "TANK_FILLING" ||
+    [v.lowLevel, v.highLevel, v.inletValveOpen, v.drainPumpRunning].some(
+      (value) => typeof value !== "boolean",
+    )
+  )
+    invalid();
+  const low = integer(v.lowThresholdPermille, 1000),
+    high = integer(v.highThresholdPermille, 1000);
+  if (low > high) invalid();
+  return {
+    kind: "TANK_FILLING",
+    levelPermille: integer(v.levelPermille, 1000),
+    lowLevel: v.lowLevel as boolean,
+    highLevel: v.highLevel as boolean,
+    inletValveOpen: v.inletValveOpen as boolean,
+    drainPumpRunning: v.drainPumpRunning as boolean,
+    lowThresholdPermille: low,
+    highThresholdPermille: high,
+    fillRatePermillePerSecond: integer(v.fillRatePermillePerSecond, 65535, 1),
+    drainRatePermillePerSecond: integer(v.drainRatePermillePerSecond, 65535, 1),
   };
 }
 export function parseLoadResponse(value: unknown): LoadProgramResponse {
@@ -296,5 +399,28 @@ export async function getRuntimeSnapshot(sessionId: string) {
 export async function unloadProgram(sessionId: string) {
   return parseUnloadResponse(
     await invokeNative(UNLOAD_PROGRAM_COMMAND, target(sessionId)),
+  );
+}
+export async function attachProcessScene(
+  sessionId: string,
+  sceneKind: ProcessSceneKind,
+) {
+  if (sceneKind !== "TANK_FILLING") invalid();
+  const request: AttachProcessSceneRequest = {
+    ...target(sessionId),
+    sceneKind,
+  };
+  return parseRuntimeSnapshot(
+    await invokeNative(ATTACH_PROCESS_COMMAND, request),
+  );
+}
+export async function detachProcessScene(sessionId: string) {
+  return parseRuntimeSnapshot(
+    await invokeNative(DETACH_PROCESS_COMMAND, target(sessionId)),
+  );
+}
+export async function resetProcessScene(sessionId: string) {
+  return parseRuntimeSnapshot(
+    await invokeNative(RESET_PROCESS_COMMAND, target(sessionId)),
   );
 }

@@ -7,6 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright-core";
 import { root } from "../../scripts/toolchain.mjs";
 import { interactiveRuntimeSmoke } from "./runtime-smoke.mjs";
+import { interactiveProcessSmoke } from "./process-smoke.mjs";
 import {
   CONTRACT_VERSION,
   CORE_INFO_COMMAND,
@@ -328,6 +329,13 @@ try {
     defaultSource,
     directory,
   });
+  const tankFilling = await interactiveProcessSmoke({
+    page,
+    editSource,
+    compileButton,
+    defaultSource,
+    directory,
+  });
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
@@ -352,6 +360,7 @@ try {
     panels: 7,
     pageErrors: errors,
     runtimeSession,
+    tankFilling,
     structuredText: {
       editorPresent: true,
       defaultSourceCompiled: true,

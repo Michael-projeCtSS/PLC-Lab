@@ -3,6 +3,7 @@ use app_contract::*;
 use plc_runtime::{FunctionBlockStateSnapshot, MemoryRole, Runtime, RuntimeConfig, RuntimeState};
 use plc_types::{PlcTime, diagnostics::RelatedIdentity, identity::SymbolId};
 use std::sync::{Mutex, MutexGuard};
+mod process;
 
 pub const DEFAULT_CYCLE_MICROS: u64 = 100_000;
 pub const DEFAULT_OPERATION_BUDGET: u64 = 10_000;
@@ -30,6 +31,8 @@ struct LoadedSession {
     runtime: Runtime,
     config: RuntimeConfig,
     variables: Vec<VariableDescriptor>,
+    process: Option<process::AttachedTank>,
+    process_failed: bool,
     instance_names:
         std::collections::BTreeMap<plc_types::identity::FunctionBlockInstanceId, String>,
 }
@@ -144,6 +147,8 @@ impl RuntimeSessionService {
             config,
             variables,
             instance_names,
+            process: None,
+            process_failed: false,
         };
         Ok(PreparedLoad::Ready(Box::new(candidate)))
     }
@@ -182,7 +187,20 @@ impl RuntimeSessionService {
         version(request.contract_version)?;
         let mut slot = self.lock()?;
         let session = slot.target(request.session_id)?;
-        action(session)
+        if session.process_failed {
+            return Err(application_error(
+                "APP-PROCESS-INTERNAL",
+                "The process session is unavailable after an application failure. Load the program again.",
+            ));
+        }
+        let result = action(session);
+        if result
+            .as_ref()
+            .is_err_and(|e| e.code == "APP-PROCESS-INTERNAL")
+        {
+            session.process_failed = true;
+        }
+        result
     }
     pub fn snapshot(&self, request: RuntimeSessionRequest) -> Result<RuntimeSnapshotDto, IpcError> {
         self.with_session(request, |s| s.snapshot())
@@ -197,6 +215,9 @@ impl RuntimeSessionService {
         };
         self.with_session(target, |s| {
             let symbol = SymbolId::new(request.variable_id.get()).map_err(|_| invariant())?;
+            if s.process.as_ref().is_some_and(|p| p.owns(symbol)) {
+                return Err(application_error("PLC-PROCESS-004", "This sensor Input is controlled by the attached process. Detach the process to edit it."));
+            }
             s.runtime
                 .set_input(symbol, request.value.into())
                 .map_err(|e| application_error("APP-RUNTIME-INPUT", e.to_string()))?;
@@ -210,8 +231,13 @@ impl RuntimeSessionService {
         self.with_session(request, |s| {
             // Faults are authoritative domain data in the post-attempt snapshot.
             match s.runtime.single_scan() {
-                Ok(_)
-                | Err(plc_runtime::ScanError::Fault(_))
+                Ok(_) => {
+                    if let Some(process) = &mut s.process {
+                        process.advance(&mut s.runtime, s.config.cycle_period())?;
+                    }
+                    s.snapshot()
+                }
+                Err(plc_runtime::ScanError::Fault(_))
                 | Err(plc_runtime::ScanError::Internal(_))
                 | Err(plc_runtime::ScanError::Faulted) => s.snapshot(),
             }
@@ -220,6 +246,9 @@ impl RuntimeSessionService {
     pub fn reset(&self, request: RuntimeSessionRequest) -> Result<RuntimeSnapshotDto, IpcError> {
         self.with_session(request, |s| {
             s.runtime.reset();
+            if let Some(process) = &s.process {
+                process.restage(&mut s.runtime)?;
+            }
             s.snapshot()
         })
     }
@@ -264,6 +293,15 @@ impl LoadedSession {
                     name: v.name.clone(),
                     type_name: v.type_name,
                     role: v.role,
+                    input_authority: if v.role == RuntimeRole::Input {
+                        Some(if self.process.as_ref().is_some_and(|p| p.owns(v.symbol)) {
+                            InputAuthority::Process
+                        } else {
+                            InputAuthority::User
+                        })
+                    } else {
+                        None
+                    },
                     value: (*values.get(&v.symbol).ok_or_else(invariant)?).into(),
                 })
             })
@@ -312,6 +350,7 @@ impl LoadedSession {
             variables,
             function_blocks,
             fault,
+            process: self.process.as_ref().map(|p| p.snapshot()),
         })
     }
 }
