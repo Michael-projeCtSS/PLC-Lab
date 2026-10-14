@@ -511,7 +511,7 @@ h3 {
 }
 .session-timeline {
   padding: 12px;
-  min-height: 170px;
+  min-height: 106px;
   max-height: 470px;
   overflow: auto;
   font-size: 11px;
