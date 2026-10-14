@@ -1,5 +1,24 @@
 # Human test checklist
 
+## M2A Structured Text compilation
+
+- [ ] ST editor opens and the editable default PROGRAM source is visible.
+- [ ] Keywords, types, literals, comments and operators have syntax highlighting.
+- [ ] Valid source compiles through the native backend and shows COMPILE SUCCESS.
+- [ ] Variables shows Name/Type/Role declarations with —/Not running, never FALSE/0 values.
+- [ ] Run/Pause/Stop/Single Scan remain disabled before and after compilation.
+- [ ] A syntax error produces a backend code/message/location and correct Monaco marker.
+- [ ] Clicking a diagnostic focuses its mapped source range.
+- [ ] Editing/fixing source clears obsolete diagnostics; recompilation updates declarations.
+- [ ] Mixed-case keywords compile and mixed-case variable/TON names resolve.
+- [ ] A comment containing ą, ż, – and 😀 before an error does not shift its highlight.
+- [ ] Local TON declaration and reordered named inputs/outputs compile.
+- [ ] Empty/malformed/oversized source shows failure without freezing the application.
+- [ ] Rapid edits during compilation do not display stale results.
+- [ ] Compile never creates runtime values, scan counts or process/network animation.
+
+No runtime RUN test is authorized for M2A.
+
 Run automated validation first. Perform this checklist in DEV and then in RELEASE when testing a newly built release. Human visual testing complements automated checks and does not replace them. Future milestones must extend this checklist while retaining these foundation checks.
 
 - Test date:

@@ -7,7 +7,13 @@ import { finished } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { root } from "./toolchain.mjs";
 
-const corePackages = ["plc-types", "plc-ir", "plc-runtime", "simulation-core"];
+const corePackages = [
+  "plc-types",
+  "plc-ir",
+  "plc-runtime",
+  "simulation-core",
+  "st-frontend",
+];
 const selection = corePackages.flatMap((name) => ["-p", name]);
 const rust = (id, args) => ({
   id,
@@ -33,6 +39,8 @@ export function validationPlan(lane, platform = process.platform) {
     "plc-runtime",
     "-p",
     "simulation-core",
+    "-p",
+    "st-frontend",
   ]);
   if (lane === "windows")
     return [

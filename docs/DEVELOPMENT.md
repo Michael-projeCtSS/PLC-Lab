@@ -1,5 +1,11 @@
 # Development
 
+## M2A compiler/editor development
+
+The UI package bundles pinned Monaco 0.57.0 and its editor worker locally; no CDN, parsing dependency or ST evaluator is used. IPC is now v3; regenerate declarations with npm run ipc:generate after Rust DTO edits. Compile runs bounded ST compilation only; controls remain disabled. No persistence or hidden runtime is created by compilation.
+
+Focused command: `node scripts/rust.mjs test --locked -p plc-types -p plc-ir -p plc-runtime -p simulation-core -p st-frontend -p app-contract`. Optimized source/runtime proof: `node scripts/rust.mjs test --release --locked -p plc-runtime -p simulation-core -p st-frontend`. Existing npm run validate remains canonical, including actual Windows Tauri/WebView2 compilation/IPC/Monaco smoke. CI runs source tests on both OS lanes and retains every M1 regression requirement. See [Alpha ST](spec/STRUCTURED_TEXT_ALPHA.md), [ADR-0012](adr/0012-alpha-st-compiler.md) and the extended human checklist. M1 validation documents retain their original exact code SHA.
+
 ## Prerequisites
 
 Use Node.js 24+, npm, and the pinned Rust 1.99.0 toolchain with rustfmt and clippy. Windows requires MSVC C++ build tools, a Windows SDK, and WebView2. macOS and Linux need their native Tauri prerequisites. See [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for the platform-specific installation steps. Sprint 0 native validation targets Windows x86_64; other platforms are not yet validated.

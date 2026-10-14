@@ -1,5 +1,13 @@
 # Test strategy
 
+## M2A ST source acceptance
+
+languages/st/tests/alpha.rs starts every execution proof from actual ST text, then uses lexer -> AST -> compiler -> existing IR validation -> existing runtime lowering/execution. It covers the full assigned lexer/parser/semantic matrix, signed INT minimum, finite REAL, exact checked TIME, limits (including flat/deep trees), deterministic identities, Unicode/CRLF positions, source-backed runtime division fault and identical normalized TON behavior for reordered bindings. Deterministic malformed-input cases exercise bounded error handling without a second evaluator.
+
+Rust app-contract tests cover pure compiler DTOs/version rejection/source limits and no executable response data. Frontend tests cover typed response validation, explicit scalar-to-UTF-16 spans, compile states, declaration-only display, clearing obsolete diagnostics and asynchronous revision races/unmount. Monaco is isolated as presentation in UI unit tests; actual Windows native smoke uses real Monaco, real Rust compile IPC, valid/default/TON source and a Unicode-positioned error marker. All earlier IPC, disabled-controls, page-error and layout checks remain.
+
+Both independent lanes include st-frontend in focused debug/release tests and Linux clippy. Existing M1 core packages, REAL assertions, rollback/TON/clock checks and Windows native acceptance remain required. Compilation/build-only outcomes cannot replace actual execution.
+
 The golden rule is:
 
 > Same program + same initial state + same event sequence = same trace.

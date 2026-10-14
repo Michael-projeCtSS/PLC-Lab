@@ -9,5 +9,9 @@ publish.workspace = true
 plc-types.workspace = true
 plc-ir.workspace = true
 
+[dev-dependencies]
+plc-runtime.workspace = true
+simulation-core.workspace = true
+
 [lints]
 workspace = true

@@ -52,8 +52,10 @@ name = "app-contract"
 version = "0.1.0"
 dependencies = [
  "plc-runtime",
+ "plc-types",
  "serde",
  "serde_json",
+ "st-frontend",
  "ts-rs",
 ]
 
@@ -2946,7 +2948,9 @@ name = "st-frontend"
 version = "0.1.0"
 dependencies = [
  "plc-ir",
+ "plc-runtime",
  "plc-types",
+ "simulation-core",
 ]
 
 [[package]]

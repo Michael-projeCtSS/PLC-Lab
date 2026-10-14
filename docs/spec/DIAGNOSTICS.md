@@ -1,5 +1,24 @@
 # Diagnostics model
 
+## M2A Structured Text diagnostics
+
+Rust ST errors use the common CompilerDiagnostic/Error record and one-based Unicode scalar spans. The compilation DTO preserves code/severity/message and optional span; packages/ui/src/source-spans.ts converts to Monaco UTF-16 without changing the core source model. Shared PLC-COMP diagnostics from final IR validation retain their meanings. APP-IPC-005 reports a failed compilation worker separately from student errors.
+
+| Code       | Meaning                                                                           |
+| ---------- | --------------------------------------------------------------------------------- |
+| PLC-ST-001 | Invalid character or unsupported nested/unterminated comment                      |
+| PLC-ST-002 | Expected grammar construct, identifier or separator                               |
+| PLC-ST-003 | Malformed, out-of-range, non-finite or invalid TIME literal                       |
+| PLC-ST-004 | Unsupported Alpha construct/type or multiple programs                             |
+| PLC-ST-005 | Duplicate variable/FB declaration or name collision                               |
+| PLC-ST-006 | Unknown variable identifier                                                       |
+| PLC-ST-007 | Incompatible assignment/operator or non-BOOL IF condition                         |
+| PLC-ST-008 | Invalid assignment target, including read-only VAR_INPUT                          |
+| PLC-ST-009 | Invalid TON declaration, instance, parameter, direction, required input or target |
+| PLC-ST-010 | Compiler configuration/source/token/nesting/diagnostic limit                      |
+
+For example: "Expected ';' after assignment." Lexical/syntax errors and semantic faults are returned as data. Diagnostics never start PLC execution. See [STRUCTURED_TEXT_ALPHA.md](STRUCTURED_TEXT_ALPHA.md).
+
 Diagnostics must explain problems in student-facing language and carry stable machine-readable data. Accepted M1A/M1B data includes checked codes/messages, severities, categories, source anchors, related identities, entry-write/lowering errors and mapped runtime faults. M1C adds standard-FB catalog/binding errors and typed definition/instance related identities. There is no parser, trace recorder, or diagnostic UI stream; application IPC DTOs remain unchanged.
 
 ## Categories

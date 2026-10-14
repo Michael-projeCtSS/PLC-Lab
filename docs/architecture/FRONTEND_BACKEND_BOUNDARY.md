@@ -1,5 +1,11 @@
 # Frontend/backend boundary
 
+## M2A compilation contract v3
+
+Core information remains read-only with the same version-rejection behavior, now version 3. compile_st accepts contractVersion/source and runs the bounded Rust ST compiler on Tauri's blocking pool. Success contains success=true, programName, declaration symbols (name/typeName/role), diagnostics; failure contains success=false and diagnostics. Diagnostic spans retain one-based Unicode scalar start/end coordinates. No IR, ExecutionPlan, PLC memory or hidden runtime is transported/created. Normal student failures are successful IPC responses containing compiler data; transport/version/worker failures remain explicit application errors.
+
+app-contract derives DTOs and generates TypeScript; packages/ipc validates responses before React consumes them. The frontend's source-spans converter adapts scalar columns to Monaco UTF-16. A monotonic editor revision/request identity prevents older responses from replacing newer markers/status. Only appearance, text editing, source navigation and declaration metadata belong in React; runtime controls stay disabled. Earlier foundation-only details below describe the preceding contract.
+
 ## Ownership
 
 React owns layout, accessibility, editor interactions, and rendering of supplied state. Rust owns all authoritative PLC semantics, timing, simulation, protocol behavior, traces, and grading. Tauri adapts narrow application operations to IPC; core crates do not import Tauri or React.

@@ -98,13 +98,20 @@ test("runtime uses a leaf simulation clock without reverse or trace execution de
   }
 });
 
-test("desktop IPC exposes only harmless foundation information", () => {
+test("desktop IPC exposes information and pure compilation without execution", () => {
   const host = readFileSync(
     path.join(root, "apps/desktop/src-tauri/src/lib.rs"),
     "utf8",
   );
-  const handlers = host.match(/generate_handler!\[([^\]]+)\]/)?.[1]?.trim();
-  assert.equal(handlers, "commands::get_core_info");
+  const handlers = host
+    .match(/generate_handler!\[([^\]]+)\]/)?.[1]
+    ?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  assert.deepEqual(handlers, [
+    "commands::get_core_info",
+    "commands::compile_st",
+  ]);
   const capability = JSON.parse(
     readFileSync(
       path.join(root, "apps/desktop/src-tauri/capabilities/main.json"),
@@ -113,6 +120,32 @@ test("desktop IPC exposes only harmless foundation information", () => {
   );
   assert.deepEqual(capability.permissions, []);
   assert.equal(capability.remote, undefined);
+});
+
+test("ST production depends only on shared types and IR; compile adapter cannot execute", () => {
+  const dependencies = workspacePackages()
+    .get("st-frontend")
+    .dependencies.filter((d) => d.kind !== "dev")
+    .map((d) => d.name)
+    .sort();
+  assert.deepEqual(dependencies, ["plc-ir", "plc-types"]);
+  const adapter = readFileSync(
+    path.join(root, "crates/app-contract/src/compilation.rs"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    adapter,
+    /Runtime::new|single_scan\s*\(|plc_runtime::lower/,
+  );
+  const compiler = readFileSync(
+    path.join(root, "languages/st/src/compiler.rs"),
+    "utf8",
+  );
+  assert.match(compiler, /plc_ir::validate\(&program\)/);
+  assert.doesNotMatch(
+    compiler,
+    /std::(?:fs|process|net)|SystemTime|Instant::|unsafe\s*\{/,
+  );
 });
 
 test("Sprint 0 renderer contains no student-code evaluator or scan scheduler", () => {

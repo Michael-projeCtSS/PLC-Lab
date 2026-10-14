@@ -1,8 +1,8 @@
 # PLC Lab
 
-Educational desktop workspace for PLC programming and industrial automation. **M0/M1A approved; M1B headless runtime implemented for review.** Validated direct IR now lowers to owned plans and executes transactional, budgeted single scans with deterministic time. No language parser, timers, process/network simulation, trace recording, grading, or UI execution is implemented.
+Educational desktop workspace for PLC programming and industrial automation. **M1C independently validated; M2A Alpha ST compiler/editor implemented for review.** Real ST source compiles through a Rust lexer, dedicated AST, semantic compiler and existing canonical IR validator. Headless tests execute it through the accepted transactional runtime and TON. Desktop Compile returns diagnostics and declarations only; no desktop PLC execution, process/network simulation, trace recording or grading is implemented.
 
-The working application uses Tauri 2, React, strict TypeScript, and Rust. It reserves Project, Program, Variables, Process, Network, Timeline, and Diagnostics areas. Run, Pause, Stop, and Single Scan are disabled. Diagnostics displays real Rust package information through a typed IPC contract.
+The working application uses Tauri 2, React, TypeScript, Rust and a locally bundled Monaco ST editor. It retains Project, Program, Variables, Process, Network, Timeline and Diagnostics. Compile uses real typed IPC v3; Run, Pause, Stop and Single Scan stay disabled. Variables shows declarations with unavailable runtime values. See [Alpha ST](docs/spec/STRUCTURED_TEXT_ALPHA.md) and [M2A report](docs/M2A_REPORT.md).
 
 ```powershell
 npm ci

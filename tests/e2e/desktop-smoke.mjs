@@ -9,6 +9,7 @@ import { root } from "../../scripts/toolchain.mjs";
 import {
   CONTRACT_VERSION,
   CORE_INFO_COMMAND,
+  COMPILE_ST_COMMAND,
 } from "../../packages/ipc/src/generated.ts";
 
 if (process.platform !== "win32")
@@ -152,6 +153,153 @@ try {
     }
   });
   assert.ok(runRejection, "Unexpected execution command exposed.");
+  // Actual Monaco editing and actual Rust compiler IPC, with no transport mock.
+  await page
+    .locator('[data-testid="st-editor"] .monaco-editor')
+    .waitFor({ timeout: 30_000 });
+  const compileButton = page.getByRole("button", {
+    name: "Compile",
+    exact: true,
+  });
+  assert.equal(await compileButton.count(), 1);
+  await compileButton.click();
+  await page
+    .getByTestId("compile-status")
+    .getByText("COMPILE SUCCESS", { exact: true })
+    .waitFor();
+  const declarationPanel = page.getByTestId("compiled-symbols");
+  for (const name of ["Start", "Stop", "Motor"])
+    assert.equal(
+      await declarationPanel.getByText(name, { exact: true }).count(),
+      1,
+    );
+  assert.equal(
+    await declarationPanel.getByLabel("Runtime value unavailable").count(),
+    3,
+  );
+  const editSource = async (source) => {
+    const input = page.locator('[data-testid="st-editor"] [role="textbox"]');
+    await input.focus();
+    await input.press("Control+a");
+    await page.keyboard.insertText(source);
+    await page
+      .getByTestId("compile-status")
+      .getByText("NOT COMPILED", { exact: true })
+      .waitFor();
+  };
+  const invalidSource =
+    "PROGRAM Main\nVAR_OUTPUT Motor : BOOL; END_VAR\n(* ą ż – 😀 *) Motor := Missing;\nEND_PROGRAM";
+  await editSource(invalidSource);
+  await compileButton.click();
+  await page
+    .getByTestId("compile-status")
+    .getByText("COMPILE FAILED", { exact: true })
+    .waitFor();
+  await page
+    .getByTestId("compiler-diagnostics")
+    .getByText(/PLC-ST-006/)
+    .waitFor();
+  await page
+    .locator('[data-testid="st-editor"] .squiggly-error')
+    .first()
+    .waitFor();
+  const markerBounds = await page
+    .locator('[data-testid="st-editor"] .squiggly-error')
+    .first()
+    .boundingBox();
+  const wordBounds = await page
+    .locator('[data-testid="st-editor"] .view-lines')
+    .evaluate((lines) => {
+      const walker = document.createTreeWalker(lines, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const index = node.textContent.indexOf("Missing");
+        if (index < 0) continue;
+        const range = document.createRange();
+        range.setStart(node, index);
+        range.setEnd(node, index + 7);
+        const rect = range.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      }
+      return null;
+    });
+  assert.ok(
+    markerBounds && wordBounds,
+    "Actual error word and marker must be rendered.",
+  );
+  assert.ok(
+    Math.abs(markerBounds.x - wordBounds.x) <= 2,
+    "Unicode error marker starts on the wrong character.",
+  );
+  assert.ok(
+    Math.abs(markerBounds.width - wordBounds.width) <= 2,
+    "Error marker covers the wrong source range.",
+  );
+  assert.ok(
+    markerBounds.y < wordBounds.y + wordBounds.height &&
+      markerBounds.y + markerBounds.height > wordBounds.y,
+    "Error marker is on the wrong line.",
+  );
+  const invalidCompilation = await page.evaluate(
+    ({ command, version, source }) =>
+      window.__TAURI_INTERNALS__.invoke(command, {
+        request: { contractVersion: version, source },
+      }),
+    {
+      command: COMPILE_ST_COMMAND,
+      version: CONTRACT_VERSION,
+      source: invalidSource,
+    },
+  );
+  assert.equal(invalidCompilation.success, false);
+  const compilerDiagnostic = invalidCompilation.diagnostics.find(
+    (d) => d.code === "PLC-ST-006",
+  );
+  assert.ok(compilerDiagnostic);
+  assert.equal(compilerDiagnostic.span.start.line, 3);
+  const expectedScalarColumn =
+    Array.from("(* ą ż – 😀 *) Motor := ").length + 1;
+  assert.equal(compilerDiagnostic.span.start.column, expectedScalarColumn);
+  const tonSource =
+    "PROGRAM Main\nVAR_INPUT Start : BOOL; END_VAR\nVAR_OUTPUT Motor : BOOL; END_VAR\nVAR Delay : TON; END_VAR\nDelay(PT := T#300ms, Q => Motor, IN := Start);\nEND_PROGRAM";
+  await editSource(tonSource);
+  await compileButton.click();
+  await page
+    .getByTestId("compile-status")
+    .getByText("COMPILE SUCCESS", { exact: true })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByTestId("compiled-symbols")
+      .getByText("Delay", { exact: true })
+      .count(),
+    1,
+  );
+  assert.equal(
+    await page
+      .getByTestId("compiled-symbols")
+      .getByText("FB Instance", { exact: true })
+      .count(),
+    1,
+  );
+  assert.equal(
+    await page.locator('[data-testid="st-editor"] .squiggly-error').count(),
+    0,
+  );
+  const defaultSource = (
+    await readFile(
+      path.join(root, "packages/ui/src/useStCompilation.ts"),
+      "utf8",
+    )
+  ).match(/DEFAULT_ST_SOURCE = `([\s\S]*?)`;/)?.[1];
+  assert.ok(defaultSource);
+  await editSource(defaultSource);
+  await compileButton.click();
+  await page
+    .getByTestId("compile-status")
+    .getByText("COMPILE SUCCESS", { exact: true })
+    .waitFor();
+  for (const name of ["Run", "Pause", "Stop", "Single Scan"])
+    assert.equal(await page.getByRole("button", { name }).isDisabled(), true);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
@@ -175,6 +323,16 @@ try {
     executionControlsDisabled: true,
     panels: 7,
     pageErrors: errors,
+    structuredText: {
+      editorPresent: true,
+      defaultSourceCompiled: true,
+      declarationsDisplayed: true,
+      invalidSourceDiagnostic: compilerDiagnostic.code,
+      unicodeMarkerCorrect: true,
+      tonSourceCompiled: true,
+      obsoleteMarkersCleared: true,
+      runtimeValuesUnavailable: true,
+    },
   };
   await writeFile(
     path.join(directory, "result.json"),

@@ -1,5 +1,7 @@
 # Architecture decision records
 
+M1C is independently validated. [ADR-0012](0012-alpha-st-compiler.md) records M2A's bounded ST frontend, owned validation wrapper, compilation-only IPC v3 and Monaco presentation boundary. M2A requires technical-lead source review before M2B. Earlier milestone descriptions below are preserved as historical context; core runtime/TON/IR/type decisions remain unchanged.
+
 These records implement the supplied engineering contract and assigned milestones. A superseding ADR and explicit architectural approval are required to change a fundamental decision. M1A/M1B are accepted. M1C authorizes the provisional FB migration and standard TON extension in ADR-0011; M1B behavior remains unchanged.
 
 | ADR                                           | Decision                                                                            |

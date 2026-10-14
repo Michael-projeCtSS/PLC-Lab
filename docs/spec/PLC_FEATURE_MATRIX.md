@@ -1,5 +1,9 @@
 # PLC feature matrix
 
+## M2A implemented source frontend
+
+M1C independent validation is accepted. M2A adds real Alpha ST source lexing, a distinct AST, semantic compilation and mandatory existing IR validation; headless tests lower and execute that source through the frozen runtime, including TON. Desktop support is Monaco editing and pure typed compile IPC v3 with diagnostics/declaration metadata. Run/Pause/Stop/Single Scan and runtime values remain unavailable. See [STRUCTURED_TEXT_ALPHA.md](STRUCTURED_TEXT_ALPHA.md) for IMPLEMENTED/PLANNED/UNSUPPORTED features. Earlier milestone descriptions below remain historical; no additional PLC semantics or other language/process/network/trace/grading feature is added.
+
 This is a support plan, not a claim of implemented semantics. Sprint 0 provides a shell and contracts only. Alpha 0.1 is the first minimal ST vertical-slice target; MVP follows DEMO-001 and separately approved increments. Future entries are uncommitted and require scoped tasks.
 
 M1A/M1B are accepted. M1C adds a declared standard-FB catalog, typed normalized calls, transactional private instance state and headless TON code. TON acceptance remains pending until all validation/runtime tests pass; see [M1C report](../M1C_REPORT.md) for actual evidence. See [TYPE_SYSTEM.md](TYPE_SYSTEM.md), [CANONICAL_PLC_IR.md](CANONICAL_PLC_IR.md), [PLC_RUNTIME_SEMANTICS.md](PLC_RUNTIME_SEMANTICS.md), and [TON_SEMANTICS.md](TON_SEMANTICS.md). This does not implement ST execution, a language frontend, process/network simulation, trace recording, or a completed educational vertical slice.

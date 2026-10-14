@@ -1,5 +1,13 @@
 # PLC Lab architecture
 
+## M2A source and compilation boundary
+
+ST Source -> Lexer -> dedicated ST AST -> Semantic Compiler -> Canonical PLC IR -> existing Validator -> ValidatedProgram -> existing ExecutionPlan -> existing PLC Runtime. The final two steps are exercised headlessly; desktop Compile stops after validation and declaration metadata. No runtime semantics changed.
+
+Monaco -> packages/ipc compileSt (IPC v3) -> thin Tauri command/blocking worker -> app-contract -> st-frontend -> diagnostics/symbol summary -> Monaco markers, Variables declarations and Diagnostics. The frontend explicitly converts scalar spans to UTF-16 and rejects stale source/request revisions. It never receives IR/plans or evaluates PLC logic. Execution controls and process/network/timeline/grading remain unavailable.
+
+st-frontend production depends only on plc-types/plc-ir; runtime/clock are dev-dependencies for real-source execution tests. app-contract adds st-frontend/plc-types for compile DTO adaptation. Core crates keep their existing dependencies and cannot import React/Tauri/frontends. [ADR-0012](../adr/0012-alpha-st-compiler.md) and [Alpha ST spec](../spec/STRUCTURED_TEXT_ALPHA.md) document this approved scope. Earlier milestone tables below describe their original state.
+
 ## Canonical execution chain
 
 ```mermaid

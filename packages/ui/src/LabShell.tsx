@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { CoreInfoError, getCoreInfo } from "@plc-lab/ipc";
 import type { CoreInfo } from "@plc-lab/ipc";
+import type { CompilerDiagnostic } from "@plc-lab/ipc";
+import { useStCompilation } from "./useStCompilation";
+import { StructuredTextEditor } from "./StructuredTextEditor";
 
 type Connection =
   | { kind: "connecting" }
@@ -53,6 +56,26 @@ function EmptyState({
 }
 
 export function LabShell() {
+  const compilation = useStCompilation();
+  const [focusedDiagnostic, setFocusedDiagnostic] =
+    useState<CompilerDiagnostic | null>(null);
+  const diagnostics =
+    compilation.state.kind === "result"
+      ? compilation.state.result.diagnostics
+      : [];
+  const symbols =
+    compilation.state.kind === "result" && compilation.state.result.success
+      ? compilation.state.result.symbols
+      : [];
+  const compileStatus =
+    compilation.state.kind === "not-compiled"
+      ? "NOT COMPILED"
+      : compilation.state.kind === "compiling"
+        ? "COMPILING"
+        : compilation.state.kind === "result" &&
+            compilation.state.result.success
+          ? "COMPILE SUCCESS"
+          : "COMPILE FAILED";
   const [connection, setConnection] = useState<Connection>({
     kind: "connecting",
   });
@@ -118,7 +141,7 @@ export function LabShell() {
         </div>
         <p id="execution-status">
           <span className="status-dot" />
-          Execution unavailable in this foundation build
+          PLC execution unavailable · compilation only
         </p>
       </nav>
       <main className="workspace">
@@ -142,33 +165,76 @@ export function LabShell() {
               </p>
             </div>
           </Panel>
-          <Panel id="variables" title="Variables" detail="WATCH">
-            <div className="table-heading" aria-hidden="true">
+          <Panel id="variables" title="Variables" detail="DECLARATIONS">
+            <div
+              className="table-heading declaration-heading"
+              aria-hidden="true"
+            >
               <span>Name</span>
               <span>Type</span>
+              <span>Role</span>
               <span>Value</span>
             </div>
-            <div className="compact-empty">
-              <p>No runtime variables</p>
-              <span>Values will come from the PLC core.</span>
-            </div>
+            {symbols.length ? (
+              <div className="declarations" data-testid="compiled-symbols">
+                {symbols.map((symbol) => (
+                  <div className="declaration-row" key={symbol.name}>
+                    <span title={symbol.name}>{symbol.name}</span>
+                    <span>{symbol.typeName}</span>
+                    <span>{symbol.role}</span>
+                    <span aria-label="Runtime value unavailable">—</span>
+                  </div>
+                ))}
+                <p className="declaration-note">
+                  Declarations only · Not running
+                </p>
+              </div>
+            ) : (
+              <div className="compact-empty">
+                <p>No runtime variables</p>
+                <span>
+                  Compile ST to see declarations. Runtime values are
+                  unavailable.
+                </span>
+              </div>
+            )}
           </Panel>
         </aside>
         <div className="workbench">
           <Panel
             id="program"
             title="Program"
-            detail="ST FIRST"
+            detail="ST ALPHA"
             className="program-panel"
           >
-            <EmptyState mark="{ }" title="No program open">
-              The program editor will live here.
-              <br />
-              Language support begins with Structured Text.
-            </EmptyState>
+            <StructuredTextEditor
+              source={compilation.source}
+              onChange={(value) => {
+                setFocusedDiagnostic(null);
+                compilation.edit(value);
+              }}
+              diagnostics={diagnostics}
+              focusedDiagnostic={focusedDiagnostic}
+            />
             <div className="panel-footer">
-              <span>Editor unavailable</span>
-              <span>Structured Text</span>
+              <button
+                className="compile-button"
+                type="button"
+                disabled={compilation.state.kind === "compiling"}
+                onClick={() => {
+                  void compilation.compile();
+                }}
+              >
+                Compile
+              </button>
+              <span
+                role="status"
+                aria-live="polite"
+                data-testid="compile-status"
+              >
+                {compileStatus}
+              </span>
+              <span>Not running</span>
             </div>
           </Panel>
           <div className="simulation-panels">
@@ -235,6 +301,36 @@ export function LabShell() {
                 </>
               )}
             </div>
+            <div
+              className="compiler-diagnostics"
+              data-testid="compiler-diagnostics"
+            >
+              {compilation.state.kind === "transport-error" && (
+                <p role="alert">
+                  {compilation.state.code}: {compilation.state.message}
+                </p>
+              )}
+              {diagnostics.map((diagnostic, index) => (
+                <button
+                  type="button"
+                  className="compiler-diagnostic"
+                  key={`${diagnostic.code}-${index}`}
+                  disabled={!diagnostic.span}
+                  onClick={() => setFocusedDiagnostic({ ...diagnostic })}
+                >
+                  <span>
+                    {diagnostic.severity.toUpperCase()} · {diagnostic.code}
+                  </span>
+                  <span>{diagnostic.message}</span>
+                  {diagnostic.span && (
+                    <span>
+                      Line {diagnostic.span.start.line}, column{" "}
+                      {diagnostic.span.start.column}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </Panel>
         </div>
       </main>
@@ -248,7 +344,7 @@ export function LabShell() {
               : "Native core unavailable"}
         </span>
         <span>Simulation not initialized</span>
-        <span>Sprint 0 · Foundation</span>
+        <span>M2A · ST compilation</span>
       </footer>
     </div>
   );
