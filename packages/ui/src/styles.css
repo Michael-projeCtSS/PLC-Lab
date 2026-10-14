@@ -123,6 +123,16 @@
 .workbench:has(.tank-scene) {
   grid-template-rows: minmax(215px, 1.1fr) minmax(310px, 1fr);
 }
+.workspace:has(.tank-scene) {
+  grid-template-rows: minmax(541px, 1fr) auto;
+}
+.process-variables .runtime-variable-row,
+.table-heading.runtime-heading.process-heading {
+  grid-template-columns: minmax(78px, 1fr) 28px 38px 34px;
+}
+.process-variables .runtime-value-cell:has(.numeric-input) {
+  grid-column: 1 / -1;
+}
 .simulation-panels:has(.tank-scene) {
   min-height: 310px;
 }

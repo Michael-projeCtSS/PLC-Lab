@@ -81,7 +81,7 @@ export function RuntimeVariables({
 }) {
   return (
     <div
-      className="declarations live-variables"
+      className={`declarations live-variables ${snapshot.process ? "process-variables" : ""}`}
       data-testid="runtime-variables"
     >
       {snapshot.variables.map((variable) => (

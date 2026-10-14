@@ -220,6 +220,43 @@ export async function interactiveProcessSmoke({
         bounds && bounds.width >= 250 && bounds.height >= 100,
         "Tank diagram is unreadable at the native window size.",
       );
+      const panel = await page
+        .getByRole("region", { name: "Process", exact: true })
+        .boundingBox();
+      const timeline = await page
+        .getByRole("region", { name: "Timeline", exact: true })
+        .boundingBox();
+      assert.ok(
+        panel && timeline && panel.y + panel.height <= timeline.y,
+        "Process panel overlaps the next workspace row.",
+      );
+      assert.ok(
+        bounds.y >= panel.y &&
+          bounds.y + bounds.height <= panel.y + panel.height,
+        "Tank graphic is clipped inside the Process panel.",
+      );
+      const viewport = await page.evaluate(() => ({
+        height: window.innerHeight,
+        top: document.querySelector(".toolbar").getBoundingClientRect().bottom,
+        bottom: document.querySelector(".statusbar").getBoundingClientRect()
+          .top,
+      }));
+      assert.ok(
+        bounds.y >= viewport.top && bounds.y + bounds.height <= viewport.bottom,
+        "Tank graphic is outside the usable native viewport.",
+      );
+      for (const name of ["LevelLow", "LevelHigh", "LevelPercent"]) {
+        const fullyShown = await page
+          .getByTestId(`runtime-variable-${name}`)
+          .locator("span")
+          .first()
+          .evaluate((node) => node.scrollWidth <= node.clientWidth);
+        assert.equal(
+          fullyShown,
+          true,
+          `Sensor name ${name} is truncated at the native window size.`,
+        );
+      }
       await page.screenshot({ path: path.join(directory, "tank-filling.png") });
     }
   }

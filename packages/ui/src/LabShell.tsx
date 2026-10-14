@@ -190,7 +190,7 @@ export function LabShell() {
             detail={runtime.snapshot ? "RUNTIME" : "DECLARATIONS"}
           >
             <div
-              className={`table-heading declaration-heading ${runtime.snapshot ? "runtime-heading" : ""}`}
+              className={`table-heading declaration-heading ${runtime.snapshot ? "runtime-heading" : ""} ${runtime.snapshot?.process ? "process-heading" : ""}`}
               aria-hidden="true"
             >
               <span>Name</span>
