@@ -10,11 +10,13 @@ DEFAULT BRANCH: main
 
 VALIDATED CODE SHA: a4a22f19c7bcdbd1c1d78a38804c29e15da32828
 
+GATE DOCUMENTATION SHA: 2942c7ff9afda1892133b82fc86c0718fb528d11
+
 WORKFLOW RUN ID: 38533787674
 
 WORKFLOW: Canonical validation, validation.yml, push on main
 
-The exact code SHA appears in both platform result.json files and completed GitHub run metadata. Later gate/metadata commits change documentation only; their identity is recorded separately after commit creation and must not replace the tested code SHA.
+The exact code SHA appears in both platform result.json files and completed GitHub run metadata. Gate commit 2942c7ff9afda1892133b82fc86c0718fb528d11 first records PASS; a following metadata-only commit adds that existing gate commit's identity. Both change documentation only and must not replace the tested code SHA. Any automatic push run for the later documentation revision is separate from the completed code-validation evidence recorded here.
 
 ## Executed requirements
 

@@ -22,6 +22,8 @@ VALIDATION COMMIT SHA: a4a22f19c7bcdbd1c1d78a38804c29e15da32828
 
 VALIDATED CODE SHA: a4a22f19c7bcdbd1c1d78a38804c29e15da32828
 
+GATE DOCUMENTATION SHA: 2942c7ff9afda1892133b82fc86c0718fb528d11
+
 GitHub CLI 2.102.0 was available at its installed Program Files path. `gh auth status` succeeded and `gh api user` confirmed the active account. Credential values were omitted. The fresh local remote check was empty. The authenticated owner's PLC-Lab lookup returned HTTP 404; creation used --private. GitHub API checks before publication and after validation confirmed private=true and default_branch=main.
 
 Preserved and committed all 149 audited files, including accumulated staged/unstaged/untracked M0–M1C work, human-test tooling, CI preparation and validation documentation. Used the existing author configuration without changing it. Baseline message: `PLC Lab: baseline through M1C and independent validation workflow`. Added credential-free HTTPS origin and pushed main normally with its upstream. No history rewrite, force push, unrelated overwrite, tag, release, collaborator or secret was involved.
@@ -169,7 +171,7 @@ M1C INDEPENDENT VALIDATION: PASS
 
 M1C GATE: PASS
 
-The validated code SHA is the baseline above. Later gate-recording/metadata commits change documentation only and are not represented as the tested code revision. The exact gate-recording SHA is recorded after that commit exists. See [M1C_INDEPENDENT_VALIDATION.md](M1C_INDEPENDENT_VALIDATION.md) for the authoritative record. Historical local Smart App Control reports remain preserved.
+The validated code SHA is the baseline above. Gate documentation commit 2942c7ff9afda1892133b82fc86c0718fb528d11 first records the successful result; a following metadata-only commit records that already-created commit's identity in these documents. Both change documentation only and are not represented as the tested code revision. See [M1C_INDEPENDENT_VALIDATION.md](M1C_INDEPENDENT_VALIDATION.md) for the authoritative record. Historical local Smart App Control reports remain preserved.
 
 ## Architecture, assumptions and known limitations
 
