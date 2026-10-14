@@ -1,0 +1,10 @@
+AGENTS.md
+package-lock.json
+Cargo.lock
+target/
+node_modules/
+.tools/
+artifacts/
+**/dist/
+apps/desktop/src-tauri/gen/
+packages/ipc/src/generated.ts

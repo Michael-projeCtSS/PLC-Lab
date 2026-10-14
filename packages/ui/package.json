@@ -1,0 +1,16 @@
+{
+  "name": "@plc-lab/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/LabShell.tsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "dependencies": {
+    "@plc-lab/ipc": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

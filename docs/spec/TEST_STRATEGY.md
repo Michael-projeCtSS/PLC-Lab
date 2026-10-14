@@ -1,0 +1,57 @@
+# Test strategy
+
+The golden rule is:
+
+> Same program + same initial state + same event sequence = same trace.
+
+The equality assumes the same simulation seed, timing configuration, semantic profile, and trace schema. Canonical trace comparison must include scan numbers, virtual timestamps, ordered changes/events, faults, and source mapping. Exclude wall-clock rendering and transport delivery metadata. A random fault source must be seeded with a specified algorithm; identical events at identical times need a documented tie-breaker.
+
+## Layers
+
+| Layer                       | Responsibility                                                                              | Current / future                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Unit                        | Pure types, DTOs, adapter validation, UI states; normal, boundary, and negative cases       | Implemented for substantive foundation modules                                              |
+| Semantic                    | PLC type/operator/control-flow/block rules, scan output commit, faults                      | M1B rules plus M1C TON tested in release; full validation pending; language semantics later |
+| M1A semantic representation | Value/type rules, symbols/scopes, source anchors, typed IR structure and rejection          | Implemented headless tests; no expression evaluation or scan behavior                       |
+| Integration                 | Language frontend → IR → runtime; runtime → process/network → trace                         | Direct IR -> owned execution tested; language/process/network/trace later                   |
+| Determinism                 | Repeat identical inputs/seeds/timing; compare canonical trace, including fault cases        | M1B snapshots/faults/clock tested; canonical trace comparison later                         |
+| Cross-language equivalence  | Equivalent ST/LAD/FBD/STL programs with identical stimuli yield equivalent behavioral trace | Add when each frontend is approved; source-location differences normalized explicitly       |
+| End-to-end exercises        | Real source compile/run → process → trace → visible result → behavioral grading             | DEMO-001 must pass with no mocked runtime/process                                           |
+| Native shell acceptance     | Real Tauri executable → React → IPC → Rust → response → visible diagnostics                 | Implemented Windows WebView2 smoke harness                                                  |
+| Architecture                | Core cannot depend on host/renderer/frontends; no executable IPC in Sprint 0                | Implemented Cargo closure and host/renderer checks                                          |
+
+## Foundation acceptance
+
+Run `npm run check` and `npm run test:desktop`. The native test launches the compiled desktop with embedded frontend assets, checks the seven panels and disabled controls, invokes Rust for package information, rejects unsupported IPC versions, confirms an execution command is absent, and captures a screenshot. Unit tests can mock transport to exercise errors in isolation; native acceptance does not mock it.
+
+Formatting includes source and documentation, excluding generated outputs and the verbatim engineering contract. Strict TypeScript, ESLint, cargo fmt, and clippy with warnings denied are gates. Rust and npm dependencies are lockfile controlled. Empty reservation crates have no contrived functionality tests; their boundaries are checked centrally. The desktop main entry point has its empty unit-test harness disabled; its startup and command adapter are covered by the real native smoke test. Rust contract, diagnostics, and conformance tests remain enabled. Tests for any new substantive module are required.
+
+## M1B headless execution acceptance
+
+Direct-IR tests run the real validation -> owned lowering -> Runtime -> single_scan -> committed memory path. They reuse the small test-only assembler and execute the four approved golden examples. No parser/runtime mocks or wall-clock sleeps are involved.
+
+Coverage includes stable staged-input/image separation, internal/output read-after-write and persistence, success publication, all-writable rollback with previously non-default outputs, unchanged failed time/count, read-only entry inputs, unsupported InOut, foreign POU exclusion, exact defaults, checked INT faults, binary32 bit patterns/canonical zero/subnormals/non-finite faults, TIME comparisons, left-to-right faults, eager booleans, selected IF only, exact budget boundaries, clock/count overflow, Faulted refusal, and deterministic full reset. Repeated identical programs/defaults/input sequences/periods compare owned results and fault diagnostics exactly.
+
+The golden rule remains the future trace requirement. M1B compares snapshots/faults because trace recording is explicitly excluded. Fixed REAL bit tests must run on additional supported target CI before cross-platform determinism is claimed. The native acceptance still checks the unchanged shell and read-only IPC, never UI execution.
+
+Focused checks: `node scripts/rust.mjs test --locked -p plc-types -p plc-ir -p plc-runtime -p simulation-core`. Full regression: `npm run validate`. Architecture guards enforce simulation-core as a clock/types leaf and exclude trace/UI/frontend authority from execution.
+
+## M1C standard function-block acceptance
+
+Use the real typed catalog -> canonical call validation -> owned normalized plan -> synchronous runtime path. TON tests use only SimulationClock scan starts, never wall-clock sleeps. Preserve every accepted M1B regression test, including optimized REAL bit-pattern checks.
+
+The required matrix covers: false input; zero PT; exact 100 ms cycle/300 ms preset timeline; capped ET; false after expiry and new activation; decreasing/increasing PT; Q/ET writes and same-scan visibility; omitted associations; sequential repeated calls; skipped calls and later elapsed jumps; missing IN/PT; wrong IN/PT/Q/ET types; read-only inputs; unknown instances/definitions/parameters; authoritative relationship uniqueness; wrong direction/duplicates/unsupported kind; arithmetic, budget and clock rollback; reset; independent instances; identical sequences and snapshots.
+
+Public tests observe immutable instance Q/ET without accessing active_since. Private runtime tests additionally compare complete committed instance maps to prove epoch rollback after later arithmetic, later budget, budget between mutation and either output, and clock/count completion failure. Impossible clock reversal must be APP-CORE-001 with call source. Reversed binding tests prove IN-before-PT evaluation and Q-before-ET writes through budget/fault source evidence. No private state setter or fake SymbolId exists in production.
+
+Focused debug command: `node scripts/rust.mjs test --locked -p plc-types -p plc-ir -p plc-runtime -p simulation-core`. Optimized command: `node scripts/rust.mjs test --release --locked -p plc-runtime -p simulation-core`. Canonical full gate remains `npm run validate`, including frontend, architecture, all Rust, production frontend build and native read-only IPC. Actual executed outcomes belong in the completion report; blocked/unexecuted cases cannot be declared passing.
+
+## Later language/exercise acceptance
+
+Before implementing language features, specify normal/error/boundary cases: typed arithmetic and conversions, IF branches, time overflow, timer edges, execution budgets, invalid memory, call depth, and cancellation. Define fault effects on partial state, trace, and virtual time. Timer tests use virtual ticks, never sleeps or machine elapsed time. Cross-language tests reuse the same stimuli and process models. Headless grading and visible rendering must consume the same evidence.
+
+Every meaningful exercise needs an observable process outcome and behavioral/timing/safety checks; final output values alone cannot prove correctness. Store representative versioned golden traces only after schema/semantics approval. Rebaseline changes require review explaining semantic or schema changes; do not bless a failing trace blindly.
+
+## Limits of current evidence
+
+Sprint 0 proves shell/IPC boundaries; M1A proves semantic representation; accepted M1B adds headless execution, transactions, budgets and checked clock on the current Windows target. M1C's scope adds standard TON and transactional private state; see its completion report for actual test outcomes. M1A golden tests still only validate; separate runtime goldens execute direct IR. No tests prove a language frontend, other standard blocks, general loop/call sandbox, process/network model, trace recorder, protocol conformance, or exercise grading. Native smoke remains Windows-only. Source-pattern guards are regression checks, not a complete security proof.

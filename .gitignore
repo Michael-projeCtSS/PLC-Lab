@@ -1,0 +1,16 @@
+node_modules/
+target/
+dist/
+.tools/
+artifacts/
+releases/**
+!releases/README.md
+*.log
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/icons/*
+!apps/desktop/src-tauri/icons/icon.png
+!apps/desktop/src-tauri/icons/icon.ico
+.DS_Store
+.env
+.env.*
+!.env.example

@@ -1,0 +1,5 @@
+* text=auto eol=lf
+AGENTS.md -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*.bat text eol=crlf
+*.png binary
+*.ico binary

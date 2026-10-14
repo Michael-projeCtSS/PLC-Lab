@@ -1,0 +1,74 @@
+name: Canonical validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-validation:
+    name: Windows canonical validation
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked Node dependencies
+        run: node scripts/ci.mjs dependencies
+      - name: Install repository-pinned Rust and quality components
+        run: node scripts/ci.mjs setup-rust
+      - name: Verify Windows build tools and provide WebView2 if needed
+        run: node scripts/ci.mjs windows-prerequisites
+      - name: Execute canonical checks, M1C debug/release tests and real native smoke
+        run: npm run ci:windows
+      - name: Preserve scoped validation evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-validation-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/ci/**/*.log
+            artifacts/ci/**/result.json
+            artifacts/desktop-smoke/native.log
+            artifacts/desktop-smoke/result.json
+            artifacts/desktop-smoke/desktop.png
+
+  linux-core:
+    name: Linux headless core validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked Node dependencies
+        run: node scripts/ci.mjs dependencies
+      - name: Install repository-pinned Rust and quality components
+        run: node scripts/ci.mjs setup-rust
+      - name: Execute Rust quality, M1C debug/release and portable architecture checks
+        run: npm run ci:core
+      - name: Preserve scoped core evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: linux-core-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            artifacts/ci/**/*.log
+            artifacts/ci/**/result.json

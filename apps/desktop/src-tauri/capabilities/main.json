@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Foundation window: read-only application information; no filesystem, shell, or network plugins.",
+  "windows": ["main"],
+  "permissions": []
+}

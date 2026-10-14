@@ -1,0 +1,57 @@
+{
+  "name": "plc-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "apps/desktop",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/native.mjs dev",
+    "dev:web": "npm run dev --workspace @plc-lab/desktop",
+    "build": "npm run typecheck && npm run build --workspace @plc-lab/desktop",
+    "build:desktop": "node scripts/native.mjs build --debug --no-bundle",
+    "build:release": "npm run validate && node scripts/native.mjs build --no-bundle -- --locked && node scripts/stage-release.mjs",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write . && node scripts/rust.mjs fmt --all",
+    "format:check": "prettier --check . && node scripts/rust.mjs fmt --all -- --check",
+    "lint": "eslint . --max-warnings 0 && node scripts/rust.mjs clippy --workspace --all-targets --locked -- -D warnings",
+    "test:frontend": "vitest run",
+    "test:rust": "node scripts/rust.mjs test --workspace --locked",
+    "test:architecture": "node --test tests/architecture/*.test.mjs",
+    "test": "npm run test:architecture && npm run test:frontend && npm run test:rust",
+    "test:desktop": "npm run build:desktop && node tests/e2e/desktop-smoke.mjs",
+    "ipc:generate": "node scripts/rust.mjs run --locked -p app-contract --example export_contract",
+    "check": "npm run format:check && npm run typecheck && npm run lint && npm test && npm run build",
+    "validate": "npm run check && npm run test:desktop",
+    "ci:windows": "node scripts/ci.mjs windows",
+    "ci:core": "node scripts/ci.mjs core",
+    "ci:status": "node scripts/ci.mjs status",
+    "test:ci": "node --test tests/architecture/ci.test.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@tauri-apps/cli": "2.12.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "eslint": "10.12.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "^17.0.0",
+    "jsdom": "30.1.2",
+    "playwright-core": "1.64.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}

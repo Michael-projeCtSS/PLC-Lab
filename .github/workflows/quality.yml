@@ -1,0 +1,11 @@
+name: Workspace quality (manual compatibility entry)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    uses: ./.github/workflows/validation.yml
