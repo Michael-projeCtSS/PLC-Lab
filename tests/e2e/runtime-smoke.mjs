@@ -268,38 +268,49 @@ export async function interactiveRuntimeSmoke({
     .locator('[data-testid="st-editor"] .squiggly-error')
     .first()
     .waitFor();
-  const marker = await page
-    .locator('[data-testid="st-editor"] .squiggly-error')
-    .first()
-    .boundingBox();
-  const expression = await page
-    .locator('[data-testid="st-editor"] .view-lines')
-    .evaluate((lines) => {
-      for (const line of lines.querySelectorAll(".view-line")) {
-        const raw = line.textContent.replace(/\u00a0/g, " ");
-        const start = raw.indexOf("100 / Divisor");
-        if (start < 0) continue;
-        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
-        let offset = 0;
-        let a, b;
-        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-          const end = offset + node.textContent.length;
-          if (!a && start >= offset && start < end)
-            a = { node, index: start - offset };
-          if (start + 13 > offset && start + 13 <= end)
-            b = { node, index: start + 13 - offset };
-          offset = end;
-        }
-        if (a && b) {
-          const range = document.createRange();
-          range.setStart(a.node, a.index);
-          range.setEnd(b.node, b.index);
-          const r = range.getBoundingClientRect();
-          return { x: r.x, y: r.y, width: r.width, height: r.height };
-        }
+  // Monaco reveals and renders its virtualized lines asynchronously. Observe
+  // both geometries in one rendered frame before applying the same assertions.
+  const geometry = await page.waitForFunction(() => {
+    const lines = document.querySelector(
+      '[data-testid="st-editor"] .view-lines',
+    );
+    const decoration = document.querySelector(
+      '[data-testid="st-editor"] .squiggly-error',
+    );
+    if (!lines || !decoration) return null;
+    for (const line of lines.querySelectorAll(".view-line")) {
+      const raw = line.textContent.replace(/\u00a0/g, " ");
+      const start = raw.indexOf("100 / Divisor");
+      if (start < 0) continue;
+      const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+      let offset = 0;
+      let a, b;
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const end = offset + node.textContent.length;
+        if (!a && start >= offset && start < end)
+          a = { node, index: start - offset };
+        if (start + 13 > offset && start + 13 <= end)
+          b = { node, index: start + 13 - offset };
+        offset = end;
       }
-      return null;
-    });
+      if (a && b) {
+        const range = document.createRange();
+        range.setStart(a.node, a.index);
+        range.setEnd(b.node, b.index);
+        const r = range.getBoundingClientRect();
+        const m = decoration.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0 || m.width === 0 || m.height === 0)
+          return null;
+        return {
+          expression: { x: r.x, y: r.y, width: r.width, height: r.height },
+          marker: { x: m.x, y: m.y, width: m.width, height: m.height },
+        };
+      }
+    }
+    return null;
+  });
+  const { marker, expression } = await geometry.jsonValue();
+  await geometry.dispose();
   assert.ok(
     marker && expression,
     "Runtime fault expression and marker must be rendered.",
