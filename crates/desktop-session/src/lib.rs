@@ -14,7 +14,15 @@ pub struct RuntimeSessionService {
 #[derive(Default)]
 struct SessionSlot {
     generation: u64,
+    latest_load_intent: u64,
     loaded: Option<LoadedSession>,
+}
+/// Backend-only request ordering, distinct from a committed runtime identity.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct LoadIntentId(u64);
+enum PreparedLoad {
+    Ready(Box<LoadedSession>),
+    CompileFailed(Vec<CompilerDiagnostic>),
 }
 struct LoadedSession {
     id: RuntimeSessionId,
@@ -66,15 +74,34 @@ impl RuntimeSessionService {
     }
     pub fn load(&self, request: LoadStProgramRequest) -> Result<LoadProgramResponse, IpcError> {
         version(request.contract_version)?;
-        let compiled = match st_frontend::compile_st(
-            &request.source,
-            st_frontend::CompilerConfig::default(),
-        ) {
+        let intent = self.reserve_load_intent()?;
+        match Self::prepare_load(&request.source)? {
+            PreparedLoad::Ready(candidate) => self.commit_prepared_load(intent, candidate),
+            PreparedLoad::CompileFailed(diagnostics) => {
+                Ok(LoadProgramResponse::CompileFailed { diagnostics })
+            }
+        }
+    }
+    fn reserve_load_intent(&self) -> Result<LoadIntentId, IpcError> {
+        let mut slot = self.lock()?;
+        let next = slot.latest_load_intent.checked_add(1).ok_or_else(|| {
+            application_error(
+                "APP-RUNTIME-LOAD-INTENT-EXHAUSTED",
+                "The program load intent range is exhausted.",
+            )
+        })?;
+        slot.latest_load_intent = next;
+        Ok(LoadIntentId(next))
+    }
+    // No service reference: expensive preparation cannot acquire its session lock.
+    fn prepare_load(source: &str) -> Result<PreparedLoad, IpcError> {
+        let compiled = match st_frontend::compile_st(source, st_frontend::CompilerConfig::default())
+        {
             Ok(compiled) => compiled,
             Err(errors) => {
-                return Ok(LoadProgramResponse::CompileFailed {
-                    diagnostics: errors.iter().map(CompilerDiagnostic::from).collect(),
-                });
+                return Ok(PreparedLoad::CompileFailed(
+                    errors.iter().map(CompilerDiagnostic::from).collect(),
+                ));
             }
         };
         let validated = compiled.validated().map_err(|_| invariant())?;
@@ -110,7 +137,7 @@ impl RuntimeSessionService {
             .filter(|i| i.owner() == compiled.program().entry())
             .map(|i| (i.id(), i.name().into()))
             .collect();
-        let mut candidate = LoadedSession {
+        let candidate = LoadedSession {
             id: RuntimeSessionId::new(1).map_err(|_| invariant())?,
             program_name: compiled.program_name().into(),
             runtime: Runtime::new(plan, config),
@@ -118,8 +145,21 @@ impl RuntimeSessionService {
             variables,
             instance_names,
         };
-        // No session mutation until preparation has completely succeeded.
+        Ok(PreparedLoad::Ready(Box::new(candidate)))
+    }
+    fn commit_prepared_load(
+        &self,
+        intent: LoadIntentId,
+        mut candidate: Box<LoadedSession>,
+    ) -> Result<LoadProgramResponse, IpcError> {
         let mut slot = self.lock()?;
+        // A newer intent supersedes this candidate even if its preparation failed.
+        if intent.0 != slot.latest_load_intent {
+            return Err(application_error(
+                "APP-RUNTIME-STALE-LOAD",
+                "A newer program load superseded this request. Load the current source again.",
+            ));
+        }
         let generation = slot.generation.checked_add(1).ok_or_else(|| {
             application_error(
                 "APP-RUNTIME-GENERATION",
@@ -129,7 +169,7 @@ impl RuntimeSessionService {
         candidate.id = RuntimeSessionId::new(generation).map_err(|_| invariant())?;
         let snapshot = candidate.snapshot()?;
         slot.generation = generation;
-        slot.loaded = Some(candidate);
+        slot.loaded = Some(*candidate);
         Ok(LoadProgramResponse::Loaded {
             snapshot: Box::new(snapshot),
         })
@@ -284,6 +324,118 @@ mod boundary_tests {
             contract_version: CONTRACT_VERSION,
             source: "PROGRAM Main END_PROGRAM".into(),
         }
+    }
+    fn prepared(name: &str) -> Box<LoadedSession> {
+        let PreparedLoad::Ready(candidate) = RuntimeSessionService::prepare_load(&format!(
+            "PROGRAM {name} VAR Count:INT; END_VAR Count := Count + 1; END_PROGRAM"
+        ))
+        .unwrap() else {
+            panic!("Test source must prepare successfully")
+        };
+        candidate
+    }
+    fn loaded(response: LoadProgramResponse) -> RuntimeSnapshotDto {
+        let LoadProgramResponse::Loaded { snapshot } = response else {
+            panic!("Test source must load successfully")
+        };
+        *snapshot
+    }
+    fn target(snapshot: &RuntimeSnapshotDto) -> RuntimeSessionRequest {
+        RuntimeSessionRequest {
+            contract_version: CONTRACT_VERSION,
+            session_id: snapshot.session_id,
+        }
+    }
+    #[test]
+    fn inverted_load_completion_rejects_older_intent_and_preserves_newest_session() {
+        let service = RuntimeSessionService::default();
+        let a = service.reserve_load_intent().unwrap();
+        let b = service.reserve_load_intent().unwrap();
+        assert_eq!(a, LoadIntentId(1));
+        assert_eq!(b, LoadIntentId(2));
+        let candidate_b = prepared("B");
+        let newest = loaded(service.commit_prepared_load(b, candidate_b).unwrap());
+        // A finishes preparing after B committed; no sleeps or timing assumptions.
+        let candidate_a = prepared("A");
+        assert_eq!(newest.program_name, "B");
+        assert_eq!(newest.session_id.get(), 1);
+        assert_eq!(
+            service
+                .commit_prepared_load(a, candidate_a)
+                .unwrap_err()
+                .code,
+            "APP-RUNTIME-STALE-LOAD"
+        );
+        assert_eq!(service.snapshot(target(&newest)).unwrap(), newest);
+        assert_eq!(service.inner.lock().unwrap().generation, 1);
+        let c = service.reserve_load_intent().unwrap();
+        let next = loaded(service.commit_prepared_load(c, prepared("C")).unwrap());
+        assert_eq!(c, LoadIntentId(3));
+        assert_eq!(next.session_id.get(), 2);
+    }
+    #[test]
+    fn failed_newest_load_supersedes_older_intent_preserves_existing_and_allows_next_load() {
+        let service = RuntimeSessionService::default();
+        let x = service.reserve_load_intent().unwrap();
+        let initial = loaded(service.commit_prepared_load(x, prepared("X")).unwrap());
+        let before = service.single_scan(target(&initial)).unwrap();
+        let a = service.reserve_load_intent().unwrap();
+        let candidate_a = prepared("A");
+        // Public Load must reserve B before real compilation reports failure.
+        let failed = service
+            .load(LoadStProgramRequest {
+                contract_version: CONTRACT_VERSION,
+                source: "PROGRAM B Missing := TRUE; END_PROGRAM".into(),
+            })
+            .unwrap();
+        assert!(matches!(failed, LoadProgramResponse::CompileFailed { .. }));
+        assert_eq!(service.inner.lock().unwrap().latest_load_intent, 3);
+        assert_eq!(
+            service
+                .commit_prepared_load(a, candidate_a)
+                .unwrap_err()
+                .code,
+            "APP-RUNTIME-STALE-LOAD"
+        );
+        assert_eq!(service.snapshot(target(&before)).unwrap(), before);
+        let next = loaded(
+            service
+                .load(LoadStProgramRequest {
+                    contract_version: CONTRACT_VERSION,
+                    source: "PROGRAM C END_PROGRAM".into(),
+                })
+                .unwrap(),
+        );
+        assert_eq!(next.program_name, "C");
+        assert_eq!(next.session_id.get(), 2);
+        assert_eq!(service.inner.lock().unwrap().latest_load_intent, 4);
+    }
+    #[test]
+    fn exhausted_load_intent_fails_closed_without_reusing_identity_or_mutating_session() {
+        let service = RuntimeSessionService::default();
+        let before = loaded(service.load(request()).unwrap());
+        service.inner.lock().unwrap().latest_load_intent = u64::MAX;
+        for _ in 0..2 {
+            assert_eq!(
+                service.load(request()).unwrap_err().code,
+                "APP-RUNTIME-LOAD-INTENT-EXHAUSTED"
+            );
+            assert_eq!(service.snapshot(target(&before)).unwrap(), before);
+            let slot = service.inner.lock().unwrap();
+            assert_eq!(slot.latest_load_intent, u64::MAX);
+            assert_eq!(slot.generation, 1);
+        }
+    }
+    #[test]
+    fn invalid_contract_version_does_not_reserve_or_supersede_valid_load_intent() {
+        let service = RuntimeSessionService::default();
+        let intent = service.reserve_load_intent().unwrap();
+        let mut invalid = request();
+        invalid.contract_version = CONTRACT_VERSION - 1;
+        assert_eq!(service.load(invalid).unwrap_err().code, "APP-IPC-001");
+        assert_eq!(service.inner.lock().unwrap().latest_load_intent, intent.0);
+        let committed = loaded(service.commit_prepared_load(intent, prepared("A")).unwrap());
+        assert_eq!(committed.session_id.get(), 1);
     }
     #[test]
     fn exhausted_generation_preserves_loaded_session() {

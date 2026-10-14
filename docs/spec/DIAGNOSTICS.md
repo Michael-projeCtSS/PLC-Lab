@@ -6,6 +6,8 @@ Runtime faults arrive as coherent snapshot data with their original PLC-RUNTIME 
 
 Application errors: APP-RUNTIME-STALE-SESSION (replaced/unloaded target), APP-RUNTIME-INPUT (identity/permission/type), APP-RUNTIME-LOAD (preparation/configuration), APP-RUNTIME-GENERATION (exhausted generation), APP-RUNTIME-LOCK (poisoned mutation boundary), APP-RUNTIME-INTERNAL (inconsistent metadata), APP-RUNTIME-WORKER (failed blocking request). These remain transport/application errors, separate from compiler and student fault results. Existing IPC codes retain their meaning; v4 rejects unsupported versions.
 
+M2B-R1 adds APP-RUNTIME-STALE-LOAD for an obsolete load candidate superseded by a newer backend intent, and APP-RUNTIME-LOAD-INTENT-EXHAUSTED for checked intent allocation exhaustion. Neither mutates the committed runtime nor returns another load's snapshot. These use the existing IpcError envelope; contract version, PLC values and student diagnostics are unchanged.
+
 ## M2A Structured Text diagnostics
 
 Rust ST errors use the common CompilerDiagnostic/Error record and one-based Unicode scalar spans. The compilation DTO preserves code/severity/message and optional span; packages/ui/src/source-spans.ts converts to Monaco UTF-16 without changing the core source model. Shared PLC-COMP diagnostics from final IR validation retain their meanings. APP-IPC-005 reports a failed compilation worker separately from student errors.

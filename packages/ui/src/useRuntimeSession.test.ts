@@ -76,6 +76,58 @@ it("late load after source edit cannot associate executable source", async () =>
   expect(h.result.current.snapshot).toBeNull();
   expect(h.result.current.canScan).toBe(false);
 });
+it("obsolete stale-load rejection cannot invalidate a newer loaded source", async () => {
+  let rejectOld!: (error: Error) => void;
+  vi.mocked(loadStProgram).mockReturnValueOnce(
+    new Promise((_, reject) => {
+      rejectOld = reject;
+    }),
+  );
+  const h = renderHook(({ source }) => useRuntimeSession(source, true), {
+    initialProps: { source: "A" },
+  });
+  let old!: Promise<void>;
+  act(() => {
+    old = h.result.current.load();
+  });
+  act(() => h.result.current.invalidateSource());
+  h.rerender({ source: "B" });
+  vi.mocked(loadStProgram).mockResolvedValue({
+    kind: "loaded",
+    snapshot: readySnapshot("2"),
+  });
+  await act(() => h.result.current.load());
+  await act(async () => {
+    rejectOld(new IpcTransportError("APP-RUNTIME-STALE-LOAD", "Superseded."));
+    await old;
+  });
+  expect(loadStProgram).toHaveBeenNthCalledWith(1, "A");
+  expect(loadStProgram).toHaveBeenNthCalledWith(2, "B");
+  expect(loadStProgram).toHaveBeenCalledTimes(2);
+  expect(h.result.current.snapshot).toEqual(readySnapshot("2"));
+  expect(h.result.current.error).toBeNull();
+  expect(h.result.current.pending).toBeNull();
+  expect(h.result.current.canScan).toBe(true);
+});
+it("authoritative stale-load rejection fails closed until an explicit reload", async () => {
+  const h = mount();
+  await act(() => h.result.current.load());
+  vi.mocked(loadStProgram).mockRejectedValueOnce(
+    new IpcTransportError("APP-RUNTIME-STALE-LOAD", "Superseded. Reload."),
+  );
+  await act(() => h.result.current.load());
+  expect(h.result.current.snapshot).toEqual(readySnapshot());
+  expect(h.result.current.error?.code).toBe("APP-RUNTIME-STALE-LOAD");
+  expect(h.result.current.canScan).toBe(false);
+  expect(h.result.current.canEditInputs).toBe(false);
+  expect(loadStProgram).toHaveBeenCalledTimes(2);
+  await act(() => h.result.current.scan());
+  expect(singleScan).not.toHaveBeenCalled();
+  await act(() => h.result.current.load());
+  expect(loadStProgram).toHaveBeenCalledTimes(3);
+  expect(h.result.current.canScan).toBe(true);
+  expect(h.result.current.error).toBeNull();
+});
 it("late scan cannot overwrite source edit and replacement", async () => {
   const h = mount();
   await act(() => h.result.current.load());
