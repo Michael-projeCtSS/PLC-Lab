@@ -1,3 +1,4 @@
+import { tracePage } from "../../../tests/frontend/trace-fixtures";
 import {
   fireEvent,
   render,
@@ -14,6 +15,7 @@ import {
   singleScan,
   resetRuntime,
   unloadProgram,
+  getTracePage,
 } from "@plc-lab/ipc";
 import type { CompilerDiagnostic, RuntimeSnapshotDto } from "@plc-lab/ipc";
 import { LabShell } from "./LabShell";
@@ -31,6 +33,7 @@ vi.mock("@plc-lab/ipc", async (original) => ({
   singleScan: vi.fn(),
   resetRuntime: vi.fn(),
   unloadProgram: vi.fn(),
+  getTracePage: vi.fn(),
 }));
 vi.mock("./StructuredTextEditor", () => ({
   StructuredTextEditor: ({
@@ -56,6 +59,10 @@ vi.mock("./StructuredTextEditor", () => ({
 }));
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(getTracePage).mockImplementation(async (sessionId) => ({
+    ...tracePage(),
+    sessionId,
+  }));
   vi.mocked(getCoreInfo).mockResolvedValue({
     applicationName: "PLC Lab",
     appVersion: "test",

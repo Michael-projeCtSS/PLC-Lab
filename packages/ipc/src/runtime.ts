@@ -189,24 +189,8 @@ function parseFault(value: unknown): RuntimeDiagnostic | null {
     relatedVariable: related,
   };
 }
-export function parseRuntimeSnapshot(value: unknown): RuntimeSnapshotDto {
-  const v = record(value);
-  exact(v, [
-    "contractVersion",
-    "sessionId",
-    "programName",
-    "state",
-    "completedScans",
-    "simulationTimeMicros",
-    "cyclePeriodMicros",
-    "operationBudget",
-    "variables",
-    "functionBlocks",
-    "fault",
-    "process",
-  ]);
+export function parseRuntimeBoundary(v: Record<string, unknown>) {
   if (
-    v.contractVersion !== CONTRACT_VERSION ||
     !["READY", "FAULTED"].includes(String(v.state)) ||
     !Array.isArray(v.variables) ||
     !Array.isArray(v.functionBlocks)
@@ -263,10 +247,37 @@ export function parseRuntimeSnapshot(value: unknown): RuntimeSnapshotDto {
   )
     invalid();
   return {
+    state: v.state as RuntimeSnapshotDto["state"],
+    variables,
+    functionBlocks,
+    fault,
+    process,
+  };
+}
+export function parseRuntimeSnapshot(value: unknown): RuntimeSnapshotDto {
+  const v = record(value);
+  exact(v, [
+    "contractVersion",
+    "sessionId",
+    "programName",
+    "state",
+    "completedScans",
+    "simulationTimeMicros",
+    "cyclePeriodMicros",
+    "operationBudget",
+    "variables",
+    "functionBlocks",
+    "fault",
+    "process",
+  ]);
+  if (v.contractVersion !== CONTRACT_VERSION) invalid();
+  const { state, variables, functionBlocks, fault, process } =
+    parseRuntimeBoundary(v);
+  return {
     contractVersion: CONTRACT_VERSION,
     sessionId: decimal(v.sessionId, 18446744073709551615n, true),
     programName: text(v.programName),
-    state: v.state as RuntimeSnapshotDto["state"],
+    state,
     completedScans: decimal(v.completedScans),
     simulationTimeMicros: decimal(v.simulationTimeMicros),
     cyclePeriodMicros: decimal(

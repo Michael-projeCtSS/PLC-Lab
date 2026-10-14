@@ -1,5 +1,9 @@
 # Frontend/backend boundary
 
+## M4A IPC v6 trace query
+
+get_trace_page(version, sessionId, afterSequence, limit) dispatches through the existing blocking-worker adapter. Rust returns bounded ordered TraceEntryDto pages with exact decimal-string sequence/count/time, variable/TON/process/fault observations and retention/saturation metadata. Internal typed history is separate from DTOs. React validates, incrementally merges and displays historical observations only. Request/source/session guards discard obsolete pages. No polling, replay, state synthesis or execution authority crosses this boundary.
+
 ## M3A IPC v5 and authoritative Tank snapshots
 
 app-contract v5 adds ProcessSceneKind TANK_FILLING, TankProcessSnapshotDto/ProcessSnapshotDto, InputAuthority USER/PROCESS and AttachProcessSceneRequest. RuntimeSnapshotDto includes required process:null-or-Tank and each variable includes inputAuthority (null for Output/Local). All existing load/input/scan/reset/observation responses and three new targeted scene mutations return one coherent combined snapshot. TIME/count/IDs/budget encoding and PlcReal remain unchanged.

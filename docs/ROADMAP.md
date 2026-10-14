@@ -1,5 +1,9 @@
 # Roadmap
 
+## M4A — Trace foundation and Timeline
+
+M3A validation/source review/final gate is accepted at c72a880d39ca442a49f93dce6351ada56f3a4c33. M4A adds deterministic bounded manual history and historical observation; technical-lead source review is required after validation. Run/Pause/Stop, replay, grading and trace persistence remain unauthorized.
+
 ## M3A assigned manual Tank slice
 
 M1C, M2A and M2B final gates are accepted, including M2B-R1 intent ordering. M3A proves the first physical loop: PLC outputs -> integer plant -> sensors -> next scan -> authoritative 2D visualization. It remains manual, with explicit attach, ownership, reset/detach and no recording/grading/protocols. This is the physical portion of the eventual DEMO-001 chain; trace and educational grading remain separately authorized work. Stop after M3A validation for technical-lead process/application/UI source review. M3B, M2C and all continuous execution remain unauthorized. Earlier paragraphs preserve milestone history.

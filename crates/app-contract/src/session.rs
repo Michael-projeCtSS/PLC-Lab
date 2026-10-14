@@ -56,6 +56,7 @@ decimal_identity!(RuntimeSessionId, u64, true);
 decimal_identity!(RuntimeVariableId, u32, true);
 decimal_identity!(RuntimeInstanceId, u32, true);
 decimal_identity!(ExactU64, u64, false);
+decimal_identity!(TraceSequenceId, u64, true);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "type", rename_all = "UPPERCASE", deny_unknown_fields)]
@@ -233,6 +234,7 @@ pub(crate) fn session_typescript(config: &ts_rs::Config) -> String {
         RuntimeVariableId::decl(config),
         RuntimeInstanceId::decl(config),
         ExactU64::decl(config),
+        TraceSequenceId::decl(config),
         RuntimeValue::decl(config),
         RuntimeRole::decl(config),
         SessionRuntimeState::decl(config),

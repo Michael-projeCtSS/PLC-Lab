@@ -3,6 +3,7 @@ export { CoreInfoError, IpcTransportError } from "./transport";
 import { parseCompileResponse } from "./compilation-response";
 export { parseCompileResponse } from "./compilation-response";
 export * from "./runtime";
+export * from "./trace";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   CONTRACT_VERSION,

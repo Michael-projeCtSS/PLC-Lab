@@ -588,6 +588,7 @@ dependencies = [
  "process-simulation",
  "serde_json",
  "st-frontend",
+ "trace-core",
 ]
 
 [[package]]

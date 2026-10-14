@@ -1,5 +1,9 @@
 # PLC feature matrix
 
+## M4A delivery scope
+
+Manual bounded session/cycle-boundary trace and read-only Timeline are implemented for existing ST/TON/Tank observations. No new PLC instruction, type, language, timer or process semantics. Trace is not replay, grading, streaming, persistence or continuous execution. See [TRACE_MODEL.md](TRACE_MODEL.md).
+
 ## M3A manual physical process
 
 M2B final gate and its required Load intent correction are accepted. M3A adds an explicitly attached Tank Filling process above the unchanged runtime: integer level, committed output actuation, deterministic cycle stepping, sensor feedback staged for the next scan, input ownership and authoritative 2D visualization. Compile/Load/Attach/Single Scan remain separate. Runtime and Process reset have distinct effects. IPC advances to v5; source/IR/types/TON/clock/budget semantics do not change. Run/Pause/Stop, trace, network, grading, other languages and arbitrary process editing remain unavailable. See [PROCESS_SIMULATION.md](PROCESS_SIMULATION.md). Validation and source-review evidence belong to the M3A report; earlier sections preserve milestone history.

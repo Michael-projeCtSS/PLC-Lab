@@ -1,5 +1,9 @@
 # Development
 
+## M4A trace development
+
+Run `node scripts/rust.mjs test --locked -p trace-core -p desktop-session -p app-contract`, `npm run test:frontend`, `npm run test:architecture`, then `npm run validate`. Existing `npm run ci:windows` and `npm run ci:core` execute trace-core/session regressions in debug/release and actual Windows trace smoke. Regenerate v6 contract with `npm run ipc:generate`. Trace history is bounded/in-memory and uses SimulationClock observations, independent of wall time. Timeline selection is historical inspection only.
+
 ## M3A Tank process development
 
 Open the Process panel's Tank Filling Demo, choose Use Example and confirm replacement. Compile -> Load Program -> Attach Tank Scene -> Single Scan. Each successful cycle advances the physical plant using committed PLC outputs and the fixed Rust cycle duration; resulting sensors are read by the next scan. Initial Low=true/High=false/level0; eight scans reach 80%, and scan nine closes the inlet while preserving 80%. PROCESS sensor rows are read-only; ordinary Inputs remain manual.

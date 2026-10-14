@@ -16,6 +16,7 @@ const corePackages = [
   "app-contract",
   "desktop-session",
   "process-simulation",
+  "trace-core",
 ];
 const selection = corePackages.flatMap((name) => ["-p", name]);
 const rust = (id, args) => ({
@@ -50,6 +51,8 @@ export function validationPlan(lane, platform = process.platform) {
     "desktop-session",
     "-p",
     "process-simulation",
+    "-p",
+    "trace-core",
   ]);
   if (lane === "windows")
     return [

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { exerciseTraceHistory } from "./trace-smoke.mjs";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { CONTRACT_VERSION } from "../../packages/ipc/src/generated.ts";
@@ -260,6 +261,12 @@ export async function interactiveProcessSmoke({
       await page.screenshot({ path: path.join(directory, "tank-filling.png") });
     }
   }
+  const traceHistory = await exerciseTraceHistory(
+    page,
+    s,
+    directory,
+    CONTRACT_VERSION,
+  );
   const runtimeReset = await mutation(() =>
     page.getByRole("button", { name: "Reset Runtime", exact: true }).click(),
   );
@@ -383,6 +390,7 @@ export async function interactiveProcessSmoke({
     initialLoad,
     attached,
     sequence,
+    traceHistory,
     runtimeReset,
     afterRuntimeResetScan,
     processReset,

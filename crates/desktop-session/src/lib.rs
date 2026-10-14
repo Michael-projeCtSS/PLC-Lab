@@ -4,6 +4,9 @@ use plc_runtime::{FunctionBlockStateSnapshot, MemoryRole, Runtime, RuntimeConfig
 use plc_types::{PlcTime, diagnostics::RelatedIdentity, identity::SymbolId};
 use std::sync::{Mutex, MutexGuard};
 mod process;
+mod trace;
+use trace::EventKind;
+pub use trace::{TRACE_CAPACITY, TRACE_PAGE_MAX};
 
 pub const DEFAULT_CYCLE_MICROS: u64 = 100_000;
 pub const DEFAULT_OPERATION_BUDGET: u64 = 10_000;
@@ -33,6 +36,7 @@ struct LoadedSession {
     variables: Vec<VariableDescriptor>,
     process: Option<process::AttachedTank>,
     process_failed: bool,
+    trace: trace_core::TraceBuffer<trace::Event>,
     instance_names:
         std::collections::BTreeMap<plc_types::identity::FunctionBlockInstanceId, String>,
 }
@@ -149,6 +153,7 @@ impl RuntimeSessionService {
             instance_names,
             process: None,
             process_failed: false,
+            trace: trace::recorder(),
         };
         Ok(PreparedLoad::Ready(Box::new(candidate)))
     }
@@ -172,7 +177,7 @@ impl RuntimeSessionService {
             )
         })?;
         candidate.id = RuntimeSessionId::new(generation).map_err(|_| invariant())?;
-        let snapshot = candidate.snapshot()?;
+        let snapshot = candidate.record(EventKind::SessionLoaded, None)?;
         slot.generation = generation;
         slot.loaded = Some(*candidate);
         Ok(LoadProgramResponse::Loaded {
@@ -221,7 +226,7 @@ impl RuntimeSessionService {
             s.runtime
                 .set_input(symbol, request.value.into())
                 .map_err(|e| application_error("APP-RUNTIME-INPUT", e.to_string()))?;
-            s.snapshot()
+            s.record(EventKind::InputStaged, Some(symbol))
         })
     }
     pub fn single_scan(
@@ -235,11 +240,12 @@ impl RuntimeSessionService {
                     if let Some(process) = &mut s.process {
                         process.advance(&mut s.runtime, s.config.cycle_period())?;
                     }
+                    s.record(EventKind::ScanCompleted, None)
+                }
+                Err(plc_runtime::ScanError::Fault(_)) => s.record(EventKind::ScanFaulted, None),
+                Err(plc_runtime::ScanError::Internal(_)) | Err(plc_runtime::ScanError::Faulted) => {
                     s.snapshot()
                 }
-                Err(plc_runtime::ScanError::Fault(_))
-                | Err(plc_runtime::ScanError::Internal(_))
-                | Err(plc_runtime::ScanError::Faulted) => s.snapshot(),
             }
         })
     }
@@ -249,7 +255,7 @@ impl RuntimeSessionService {
             if let Some(process) = &s.process {
                 process.restage(&mut s.runtime)?;
             }
-            s.snapshot()
+            s.record(EventKind::RuntimeReset, None)
         })
     }
     pub fn unload(
@@ -278,80 +284,7 @@ impl SessionSlot {
 }
 impl LoadedSession {
     fn snapshot(&self) -> Result<RuntimeSnapshotDto, IpcError> {
-        let observed = self.runtime.snapshot();
-        let variables = self
-            .variables
-            .iter()
-            .map(|v| {
-                let values = if v.role == RuntimeRole::Input {
-                    observed.staged_inputs()
-                } else {
-                    observed.committed()
-                };
-                Ok(RuntimeVariable {
-                    variable_id: RuntimeVariableId::new(v.symbol.get()).map_err(|_| invariant())?,
-                    name: v.name.clone(),
-                    type_name: v.type_name,
-                    role: v.role,
-                    input_authority: if v.role == RuntimeRole::Input {
-                        Some(if self.process.as_ref().is_some_and(|p| p.owns(v.symbol)) {
-                            InputAuthority::Process
-                        } else {
-                            InputAuthority::User
-                        })
-                    } else {
-                        None
-                    },
-                    value: (*values.get(&v.symbol).ok_or_else(invariant)?).into(),
-                })
-            })
-            .collect::<Result<Vec<_>, IpcError>>()?;
-        let function_blocks = observed
-            .function_blocks()
-            .iter()
-            .map(|(id, state)| {
-                let name = self.instance_names.get(id).ok_or_else(invariant)?.clone();
-                match state {
-                    FunctionBlockStateSnapshot::Ton { q, et } => Ok(RuntimeFunctionBlock::Ton {
-                        instance_id: RuntimeInstanceId::new(id.get()).map_err(|_| invariant())?,
-                        name,
-                        q: *q,
-                        et_micros: *et,
-                    }),
-                }
-            })
-            .collect::<Result<Vec<_>, IpcError>>()?;
-        let fault = observed.fault().map(|diagnostic| {
-            let related = match diagnostic.related() {
-                Some(RelatedIdentity::Symbol(id)) => variables
-                    .iter()
-                    .find(|v| v.variable_id.get() == id.get())
-                    .map(|v| RuntimeRelatedVariable {
-                        variable_id: v.variable_id,
-                        name: v.name.clone(),
-                    }),
-                _ => None,
-            };
-            RuntimeDiagnostic::from_core(diagnostic, related)
-        });
-        Ok(RuntimeSnapshotDto {
-            contract_version: CONTRACT_VERSION,
-            session_id: self.id,
-            program_name: self.program_name.clone(),
-            state: match observed.state() {
-                RuntimeState::Ready => SessionRuntimeState::Ready,
-                RuntimeState::Faulted => SessionRuntimeState::Faulted,
-            },
-            completed_scans: ExactU64::new(observed.completed_scans()).map_err(|_| invariant())?,
-            simulation_time_micros: observed.time(),
-            cycle_period_micros: self.config.cycle_period(),
-            operation_budget: ExactU64::new(self.config.execution_budget())
-                .map_err(|_| invariant())?,
-            variables,
-            function_blocks,
-            fault,
-            process: self.process.as_ref().map(|p| p.snapshot()),
-        })
+        self.observe_snapshot()
     }
 }
 

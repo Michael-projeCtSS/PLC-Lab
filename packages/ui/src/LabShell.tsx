@@ -10,6 +10,8 @@ import { RuntimeVariables } from "./RuntimeVariables";
 import { formatDuration } from "./runtime-values";
 import { ProcessPanel } from "./ProcessPanel";
 import { TANK_EXAMPLE_SOURCE } from "./tank-example";
+import { useSessionTrace } from "./useSessionTrace";
+import { TimelinePanel } from "./TimelinePanel";
 
 type Connection =
   | { kind: "connecting" }
@@ -65,6 +67,11 @@ export function LabShell() {
   const compiled =
     compilation.state.kind === "result" && compilation.state.result.success;
   const runtime = useRuntimeSession(compilation.source, compiled);
+  const trace = useSessionTrace(
+    runtime.snapshot?.sessionId ?? null,
+    runtime.observationKey,
+    runtime.current,
+  );
   const [focusedDiagnostic, setFocusedDiagnostic] =
     useState<CompilerDiagnostic | null>(null);
   const diagnostics = [
@@ -383,17 +390,16 @@ export function LabShell() {
         </div>
         <div className="bottom-panels">
           <Panel id="timeline" title="Timeline" detail="TRACE">
-            <div className="timeline-empty">
-              <span className="trace-line" aria-hidden="true" />
-              <div>
-                <h3>No trace recorded</h3>
-                <p>
-                  Scans, transitions, and events will share one simulation
-                  timeline.
-                </p>
-              </div>
-              <span className="muted-label">Trace recording unavailable</span>
-            </div>
+            <TimelinePanel
+              key={runtime.snapshot?.sessionId ?? "none"}
+              page={trace.page}
+              current={runtime.current}
+              pending={trace.pending}
+              error={trace.error}
+              onDiagnostic={(diagnostic) =>
+                setFocusedDiagnostic({ ...diagnostic })
+              }
+            />
           </Panel>
           <Panel id="diagnostics" title="Diagnostics" detail="APPLICATION">
             <div
@@ -515,7 +521,7 @@ export function LabShell() {
         <span>
           {runtime.snapshot ? "Manual runtime session" : "No runtime loaded"}
         </span>
-        <span>M3A · Manual PLC + Process</span>
+        <span>M4A · Manual PLC + Process + Trace</span>
       </footer>
     </div>
   );

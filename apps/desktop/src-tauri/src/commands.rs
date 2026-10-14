@@ -3,6 +3,14 @@ use desktop_session::RuntimeSessionService;
 use std::sync::Arc;
 
 #[tauri::command]
+pub async fn get_trace_page(
+    service: tauri::State<'_, Arc<RuntimeSessionService>>,
+    request: app_contract::TracePageRequest,
+) -> Result<app_contract::TracePageDto, IpcError> {
+    session_work(service, move |s| s.trace_page(request)).await
+}
+
+#[tauri::command]
 pub async fn attach_process_scene(
     service: tauri::State<'_, Arc<RuntimeSessionService>>,
     request: app_contract::AttachProcessSceneRequest,

@@ -16,7 +16,8 @@ pub fn run() {
             commands::get_runtime_snapshot,
             commands::attach_process_scene,
             commands::detach_process_scene,
-            commands::reset_process_scene
+            commands::reset_process_scene,
+            commands::get_trace_page
         ])
         .run(tauri::generate_context!())
         .expect("PLC Lab desktop host failed to start");

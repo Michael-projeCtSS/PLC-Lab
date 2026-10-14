@@ -509,6 +509,81 @@ h3 {
   padding: 26px 20px;
   min-height: 106px;
 }
+.session-timeline {
+  padding: 12px;
+  min-height: 170px;
+  max-height: 470px;
+  overflow: auto;
+  font-size: 11px;
+}
+.trace-status {
+  color: #9aaebb;
+  margin: 8px 0;
+  line-height: 1.5;
+}
+.trace-columns,
+.trace-entry {
+  background: #141e26;
+  color: inherit;
+  display: grid;
+  grid-template-columns: 60px minmax(110px, 1.3fr) minmax(85px, 1fr) minmax(
+      85px,
+      1fr
+    );
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  align-items: center;
+  padding: 8px;
+}
+.trace-entry:hover:not([aria-pressed="true"]) {
+  background: #1c2b34;
+}
+.trace-columns {
+  color: #9aaebb;
+  font-size: 10px;
+}
+.trace-list {
+  max-height: 190px;
+  overflow: auto;
+}
+.trace-entry {
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid #2b3a45;
+  font-size: 10px;
+}
+.trace-entry[aria-pressed="true"] {
+  background: #244b47;
+}
+.trace-fault {
+  color: #f0b199;
+}
+.trace-inspector {
+  border-top: 1px solid #547486;
+  margin-top: 12px;
+  padding-top: 10px;
+  line-height: 1.6;
+}
+.trace-inspector h3,
+.trace-inspector h4 {
+  margin: 6px 0;
+}
+.trace-inspector ul {
+  padding-left: 18px;
+}
+.trace-tank {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 12px;
+}
+.trace-tank dd {
+  margin: 0;
+  color: #76e0bd;
+}
+.historical-fault {
+  color: #f0b199;
+}
 .trace-line {
   width: 32px;
   height: 22px;

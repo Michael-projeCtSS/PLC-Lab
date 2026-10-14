@@ -121,6 +121,7 @@ test("desktop IPC exposes pure compilation and the authorized manual session com
     "commands::attach_process_scene",
     "commands::detach_process_scene",
     "commands::reset_process_scene",
+    "commands::get_trace_page",
   ]);
   const capability = JSON.parse(
     readFileSync(
@@ -146,6 +147,7 @@ test("session ownership is confined to the headless application service", () => 
       "plc-types",
       "process-simulation",
       "st-frontend",
+      "trace-core",
     ],
   );
   const service = readFileSync(

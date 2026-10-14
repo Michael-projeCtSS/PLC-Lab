@@ -1,5 +1,9 @@
 # PLC Lab architecture
 
+## M4A observational history
+
+Authoritative Runtime/Process -> typed session observation -> generic trace-core recorder -> bounded session history -> typed IPC query -> Timeline. trace-core depends only on plc-types; desktop-session consumes it. Neither plc-runtime nor process-simulation imports trace-core. TraceSequenceId is independent of scan count/time and belongs to RuntimeSessionId. All capture shares the application mutex; no racing thread or wall-clock input. See [ADR-0015](../adr/0015-deterministic-session-trace.md).
+
 ## M3A manual process boundary
 
 The process-simulation crate depends only on plc-types, never runtime/host/UI. desktop-session imports it beside the accepted runtime/compiler/contract. simulation-core remains the unchanged clock leaf; plc-runtime never imports a physical model. This authorized placement is recorded in [ADR-0014](../adr/0014-process-simulation-boundary.md), superseding ADR-0005's reserved placement while preserving model/renderer separation.

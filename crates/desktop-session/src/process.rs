@@ -156,20 +156,26 @@ impl AttachedTank {
         self.model = TankFillingProcess::new(self.model.snapshot().actuators());
         self.restage(runtime)
     }
-    pub(super) fn snapshot(&self) -> ProcessSnapshotDto {
-        let s = self.model.snapshot();
-        ProcessSnapshotDto::TankFilling(TankProcessSnapshotDto {
-            level_permille: s.level_permille(),
-            low_level: s.sensors().low_level,
-            high_level: s.sensors().high_level,
-            inlet_valve_open: s.actuators().inlet_valve,
-            drain_pump_running: s.actuators().drain_pump,
-            low_threshold_permille: process_simulation::LOW_THRESHOLD_PERMILLE,
-            high_threshold_permille: process_simulation::HIGH_THRESHOLD_PERMILLE,
-            fill_rate_permille_per_second: process_simulation::FILL_RATE_PERMILLE_PER_SECOND,
-            drain_rate_permille_per_second: process_simulation::DRAIN_RATE_PERMILLE_PER_SECOND,
-        })
+    pub(super) fn observation(&self) -> process_simulation::TankSnapshot {
+        self.model.snapshot()
     }
+    #[cfg(test)]
+    pub(super) fn snapshot(&self) -> ProcessSnapshotDto {
+        present(self.observation())
+    }
+}
+pub(super) fn present(s: process_simulation::TankSnapshot) -> ProcessSnapshotDto {
+    ProcessSnapshotDto::TankFilling(TankProcessSnapshotDto {
+        level_permille: s.level_permille(),
+        low_level: s.sensors().low_level,
+        high_level: s.sensors().high_level,
+        inlet_valve_open: s.actuators().inlet_valve,
+        drain_pump_running: s.actuators().drain_pump,
+        low_threshold_permille: process_simulation::LOW_THRESHOLD_PERMILLE,
+        high_threshold_permille: process_simulation::HIGH_THRESHOLD_PERMILLE,
+        fill_rate_permille_per_second: process_simulation::FILL_RATE_PERMILLE_PER_SECOND,
+        drain_rate_permille_per_second: process_simulation::DRAIN_RATE_PERMILLE_PER_SECOND,
+    })
 }
 
 impl RuntimeSessionService {
@@ -196,7 +202,7 @@ impl RuntimeSessionService {
                         s.process = Some(candidate);
                     }
                 }
-                s.snapshot()
+                s.record(EventKind::ProcessAttached, None)
             },
         )
     }
@@ -208,7 +214,7 @@ impl RuntimeSessionService {
             s.process.take().ok_or_else(|| {
                 application_error("PLC-PROCESS-005", "No process scene is attached.")
             })?;
-            s.snapshot()
+            s.record(EventKind::ProcessDetached, None)
         })
     }
     pub fn reset_process(
@@ -222,7 +228,7 @@ impl RuntimeSessionService {
                     application_error("PLC-PROCESS-005", "No process scene is attached.")
                 })?
                 .reset(&mut s.runtime)?;
-            s.snapshot()
+            s.record(EventKind::ProcessReset, None)
         })
     }
 }

@@ -1,5 +1,9 @@
 # Test strategy
 
+## M4A trace validation
+
+Require generic retention/cursor/nonzero/exhaustion tests; real-source session/input/process/reset/fault/no-event/pagination tests; exact deterministic histories including visible TON state; strict Rust/TypeScript contract validators; incremental/stale-response/selection/retention UI tests; architecture dependency/no-clock/no-scheduler guards; actual Windows native historical Tank scan 8/9 correlated with Rust trace pages. Keep all M0–M3A and cross-platform REAL/debug/release regressions. Trace is observation, never authority.
+
 ## M3A manual physical feedback acceptance
 
 process-simulation tests cover integer defaults, exact thresholds, +100/-80/+20/0 effects at 100 ms, independent fractional truncation, clamping, reset, repeated complete snapshot equality, finite analog feedback and maximum u64 duration without wrapping. Architecture checks forbid runtime/host/rendering dependencies and wall-time/OS capabilities in this model.

@@ -1,5 +1,9 @@
 # Diagnostics model
 
+## M4A trace diagnostics
+
+Historical diagnostics retain core category/code/severity/message/source span and related variable. ScanFaulted is reserved for genuine runtimeFault. Internal failures stay application errors; a failed closed pipeline creates no fabricated event. APP-TRACE-LIMIT and APP-TRACE-CURSOR reject invalid queries without changing history. SATURATED is internal recorder metadata, not a PLC fault. Historical source navigation reuses the existing Monaco span bridge and is unavailable for stale source.
+
 ## M3A process/application diagnostics
 
 PLC-PROCESS binding/authority/state errors use the existing typed IpcError envelope and appear labeled PROCESS. They never fault the PLC or replace its runtimeFault diagnostic. Compiler diagnostics, student PLC faults, application-internal failures and transport failures retain their existing distinctions.

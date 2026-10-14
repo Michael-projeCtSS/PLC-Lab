@@ -1,5 +1,25 @@
 # Human test checklist
 
+## M4A manual trace review
+
+- [ ] Load creates the first Timeline event.
+- [ ] Staged manual Input appears in Timeline.
+- [ ] Attach Tank is a separate event.
+- [ ] Each Single Scan adds exactly one cycle event.
+- [ ] Sequence IDs increase monotonically, independent of scan count.
+- [ ] Time is simulation time.
+- [ ] Tank scan 8 shows 80%, High ACTIVE, Inlet OPEN.
+- [ ] Tank scan 9 shows 80%, High ACTIVE, Inlet CLOSED.
+- [ ] Selecting old history leaves the live tank unchanged.
+- [ ] A runtime fault has code, source provenance, scan and time in history.
+- [ ] Runtime Reset is a distinct reset event.
+- [ ] Process Reset is distinct and preserves PLC time/count.
+- [ ] Source edit marks old history STALE and disables historical source navigation.
+- [ ] New Load starts a new trace.
+- [ ] Unload clears Timeline.
+- [ ] Dropped history and internal saturation are visibly identified.
+- [ ] Run/Pause/Stop remain disabled.
+
 ## M3A manual Tank Filling
 
 - [ ] Tank Filling Demo is discoverable in the Process panel.
