@@ -1,5 +1,7 @@
 # M1C-CI preparation report
 
+Historical preparation report. Subsequent owner-authorized publication and actual independent execution passed in run 38533787674 on 2026-10-14. Current authoritative status: [M1C INDEPENDENT VALIDATION: PASS / M1C GATE: PASS](M1C_INDEPENDENT_VALIDATION.md). Preparation-only statements and the original HOLD below describe the earlier task and remain preserved.
+
 Date: 2026-10-14, Europe/Warsaw. Scope: CI-001 through CI-016. CI files are prepared and locally checked; no external run, remote creation, publication, authentication or dispatch was performed. M1C implementation review is accepted, local validation remains host-policy blocked, and M2 is not authorized.
 
 ## Completed

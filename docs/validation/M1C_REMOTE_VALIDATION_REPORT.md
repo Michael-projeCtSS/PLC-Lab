@@ -1,139 +1,180 @@
 # M1C remote validation report
 
-Date: 2026-10-14. Scope: M1C-CI-RUN. Repository inspection timestamp: 2026-10-14T08:02:43Z.
-
-Publication and CI execution stopped at REMOTE-003: GitHub CLI is unavailable on the current process PATH. The request explicitly requires stopping when the CLI is unavailable. No installation, authentication, repository creation, remote configuration, staging, commit, push or workflow dispatch was performed.
+Date: 2026-10-14. Scope: M1C-CI-RUN, resumed at REMOTE-003 following owner installation/authentication of GitHub CLI. Evidence review: 2026-10-14T08:27:39Z. The earlier CLI-blocked attempt is retained in baseline Git history.
 
 ## Repository publication
 
-REMOTE CREATED: NO
+REMOTE CREATED: YES
 
-PRIVATE: NO
+PRIVATE: YES
 
-No remote repository exists for this checkout; PRIVATE is therefore unverified/not applicable, rather than a claim that a public repository was created.
+REPOSITORY NAME: PLC-Lab
 
-DEFAULT BRANCH: NOT CONFIGURED (no remote repository)
+REPOSITORY: [PLC-Lab](https://github.com/Michael-projeCtSS/PLC-Lab)
 
-LOCAL / INTENDED PRIMARY BRANCH: main
+DEFAULT BRANCH: main
 
-REMOTE NAME: NONE
+REMOTE NAME: origin
 
-VALIDATION COMMIT SHA: NONE
+REMOTE URL: https://github.com/Michael-projeCtSS/PLC-Lab.git
 
-`git remote -v` returned no entries. Local main is an unborn branch: `git log -5 --oneline` reported that it has no commits. No validated code SHA or gate documentation SHA exists for this task.
+VALIDATION COMMIT SHA: a4a22f19c7bcdbd1c1d78a38804c29e15da32828
 
-The existing 28 staged files, including four with further unstaged changes, and 120 untracked project files were preserved. No index entries were changed. AGENTS.md and .github/workflows/validation.yml exist. The only file added by this task is this report; it remains untracked. A baseline commit is deferred until the required CLI/authentication checks succeed.
+VALIDATED CODE SHA: a4a22f19c7bcdbd1c1d78a38804c29e15da32828
+
+GitHub CLI 2.102.0 was available at its installed Program Files path. `gh auth status` succeeded and `gh api user` confirmed the active account. Credential values were omitted. The fresh local remote check was empty. The authenticated owner's PLC-Lab lookup returned HTTP 404; creation used --private. GitHub API checks before publication and after validation confirmed private=true and default_branch=main.
+
+Preserved and committed all 149 audited files, including accumulated staged/unstaged/untracked M0–M1C work, human-test tooling, CI preparation and validation documentation. Used the existing author configuration without changing it. Baseline message: `PLC Lab: baseline through M1C and independent validation workflow`. Added credential-free HTTPS origin and pushed main normally with its upstream. No history rewrite, force push, unrelated overwrite, tag, release, collaborator or secret was involved.
+
+Complete staging exposed two whitespace issues: Git interpreted the verbatim AGENTS.md CRLF bytes as trailing whitespace, and Cargo.toml had an extra EOF blank line. Added a file-specific cr-at-eol attribute while retaining the normal whitespace checks; removed only the manifest's extra blank line. AGENTS.md bytes and Cargo semantics were preserved. Corrected `git diff --cached --check` passed before committing.
 
 ## Secret audit
 
 PUBLICATION SECRET AUDIT: PASS
 
-Inspected the 148 unique tracked/untracked publication candidates and all 28 staged versions: 174 text versions and the two application icon assets. No suspected secret or prohibited publication path was found. Checks covered private-key headers, recognizable GitHub/service/AWS token formats, credential-bearing URLs, credential assignments, environment/credential/certificate files, executable archives, logs and generated directories. No credential value was printed.
+Fresh audit at 2026-10-14T08:11:26Z covered 149 unique working-tree candidates and all 28 previously staged versions: 175 text versions and two icon assets. Checked private-key/token signatures, credential assignments/URLs, environment/credential/certificate files, executable archives, logs and generated directories. No suspected secret or prohibited path was found; no credential value was printed. Final baseline index contained exactly the audited 149 files, including AGENTS.md and validation.yml.
 
-The binary candidates are only icon.png and icon.ico. Cargo target directories, node_modules, .tools, generated frontend/native output, artifacts, logs and releases/current are ignored and absent from the publication candidates. Ignore probes also confirmed .env and .env.local are excluded. releases/README.md is intentionally included. This is a reasonable publication audit of the current working tree/index, not certification of every possible secret format or an inspection of unrelated host credential stores. Recheck the final candidate set before any later push.
+target, node_modules, .tools, artifacts, dist, logs and releases/current remain ignored; .env and .env.local ignore probes passed. Only releases/README.md is included from releases. No generated executable, personal profile or credential file was published. Later documentation changes were checked separately. This is a reasonable publication audit, not proof against every possible secret format or an audit of unrelated host stores.
 
 ## Workflow
 
-WORKFLOW NAME: NOT RUN
+WORKFLOW NAME: Canonical validation
 
 WORKFLOW FILE: .github/workflows/validation.yml
 
-RUN ID: NONE
+RUN ID: 38533787674
 
-RUN COMMIT: NONE
+RUN COMMIT: a4a22f19c7bcdbd1c1d78a38804c29e15da32828
 
-RUN BRANCH / START TIME: NONE
+RUN BRANCH: main
 
-WINDOWS JOB: NOT_RUN
+RUN EVENT: push
 
-LINUX JOB: NOT_RUN
+RUN START: 2026-10-14T08:15:08Z
 
-No account or repository identity was queried, no workflow was triggered and no hosted evidence/artifacts exist for this task. GitHub authentication status is unknown because gh could not be invoked.
+RUN TERMINAL UPDATE: 2026-10-14T08:25:08Z
+
+WINDOWS JOB: PASS
+
+LINUX JOB: PASS
+
+[Completed run](https://github.com/Michael-projeCtSS/PLC-Lab/actions/runs/38533787674), [Windows job 115751656572](https://github.com/Michael-projeCtSS/PLC-Lab/actions/runs/38533787674/job/115751656572), [Linux job 115751656681](https://github.com/Michael-projeCtSS/PLC-Lab/actions/runs/38533787674/job/115751656681).
+
+Used the automatic push run; no manual dispatch was necessary. `gh run watch --interval 30 --exit-status` reached success after both jobs completed. Every workflow step succeeded. Workflow/setup/orchestration files, dependencies and assertions remained unchanged; Actions permissions remain contents: read and checkout does not persist credentials.
 
 ## Windows evidence
 
-| Required acceptance                                                                                                            | Actual result |
-| ------------------------------------------------------------------------------------------------------------------------------ | ------------- |
-| Canonical npm check: formatting, TypeScript, ESLint, Rust fmt/clippy, architecture/frontend/workspace tests and frontend build | NOT_RUN       |
-| Focused plc-types/plc-ir/plc-runtime/simulation-core debug tests                                                               | NOT_RUN       |
-| Optimized plc-runtime tests, including TON, rollback and REAL assertions                                                       | NOT_RUN       |
-| Optimized simulation-core clock tests                                                                                          | NOT_RUN       |
-| Tauri build and real native WebView2/CDP Rust IPC smoke                                                                        | NOT_RUN       |
+windows-2022 x64 / MSVC Rust 1.99.0 / Node v24.21.0. Job ran 08:15:11Z–08:25:07Z. Every stage records PASS, exitCode=0, no signal/launch error and the exact validated revision.
 
-No compilation or historical local result is substituted for independent execution. The historical Smart App Control reports remain unchanged.
+| Executed requirement                                                               | Actual result                                            | Evidence inside windows-validation-1                          |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------- |
+| npm run check: Prettier, Rust fmt, TypeScript, ESLint, workspace/all-target clippy | PASS                                                     | ci/windows/canonical-check.log                                |
+| Architecture/tooling and frontend tests                                            | PASS: 17 architecture/tooling, 18 frontend, no skips     | ci/windows/canonical-check.log                                |
+| All Rust workspace regressions                                                     | PASS: 122 executed tests, zero failures/ignored/filtered | ci/windows/canonical-check.log                                |
+| Focused debug types/IR/runtime/clock                                               | PASS: 26 + 34 + 52 + 3 = 115                             | ci/windows/m1c-debug.log                                      |
+| Optimized plc-runtime                                                              | PASS: 10 unit + 28 semantic + 14 TON = 52                | ci/windows/runtime-clock-release.log                          |
+| Optimized simulation-core                                                          | PASS: 3 clock tests                                      | ci/windows/runtime-clock-release.log                          |
+| Production frontend and actual Tauri build                                         | PASS                                                     | ci/windows/canonical-check.log, ci/windows/native-desktop.log |
+| Actual native Tauri/WebView2/CDP Rust IPC smoke                                    | PASS                                                     | ci/windows/native-desktop.log, desktop-smoke/result.json      |
+
+Rust logs contain actual Running entries for .exe processes and per-case results. Debug/release both executed all 14 TON integration cases and private transaction tests. Epoch/memory rollback after arithmetic, budget and completion faults, exact 100 ms/300 ms timing, reset and deterministic repeated sequences passed. Compilation-only evidence was not substituted.
 
 ## Linux evidence
 
-Core Rust fmt, clippy, focused debug types/IR/runtime/clock tests, optimized runtime/clock tests and portable architecture tests: NOT_RUN.
+ubuntu-24.04 x64 / GNU Rust 1.99.0 / Node v24.21.0. Job ran 08:15:10Z–08:16:02Z. Same validated revision; all five stages returned zero without launch errors/signals.
+
+| Executed requirement                               | Actual result                   | Evidence inside linux-core-1               |
+| -------------------------------------------------- | ------------------------------- | ------------------------------------------ |
+| Rust fmt and core/all-target clippy                | PASS                            | core/rust-format.log, core/core-clippy.log |
+| Debug plc-types/plc-ir/plc-runtime/simulation-core | PASS: 115 executed tests        | core/m1c-debug.log                         |
+| Optimized runtime/clock                            | PASS: 52 runtime + 3 clock = 55 | core/runtime-clock-release.log             |
+| Portable architecture/tooling                      | PASS: 15 applicable tests       | core/architecture.log                      |
+
+The two existing Windows BAT-only cases report SKIP on Linux under their original platform guards; both executed/passed in Windows's 17/17 suite. They are not Linux portable requirements. No required semantic/runtime test was skipped, ignored, blocked or left unrun. No guard was changed. Linux corroborates core behavior and does not replace Windows native acceptance.
 
 ## REAL determinism
 
-WINDOWS REAL DETERMINISM: NOT_RUN
+WINDOWS REAL DETERMINISM: PASS
 
-LINUX REAL DETERMINISM: NOT_RUN
+LINUX REAL DETERMINISM: PASS
 
-No cross-platform comparison is possible without both actual CI runs. Existing assertions, expected bit patterns and platform coverage were not changed.
+CROSS-PLATFORM REAL RESULT: PASS
+
+All three existing tests passed unchanged in debug and release on both x64 targets:
+
+- real_results_have_fixed_binary32_bits_subnormals_and_canonical_zero
+- real_operation_nesting_is_not_reassociated_or_constant_folded
+- real_nonfinite_arithmetic_cannot_enter_authoritative_memory
+
+Compared the complete sorted passing-test name sets: identical 115 debug and 55 release cases across Windows/Linux, zero failed/ignored/filtered. No platform-specific expected bits, normalization, new arithmetic semantics or disabled assertion was introduced. This evidence applies to the recorded targets/toolchain/profiles.
+
+## Artifact review
+
+| Artifact             | ID          | Archive digest                                                          |
+| -------------------- | ----------- | ----------------------------------------------------------------------- |
+| windows-validation-1 | 11879338664 | sha256:52eb65efbf600e41c8d79fac86700912c7e2f418b9e1f8232b2021eb138da16c |
+| linux-core-1         | 11878763534 | sha256:b01519bfa4028266495d6ad4c6e59186f4126720e0e0060c5566658927211faf |
+
+Downloaded/reviewed both archives, completed run metadata and full workflow log. Checked all setup and stage result records against the exact SHA. Viewed the real desktop screenshot. Native JSON confirms applicationStarted=true, actual IPC v2 development response, APP-IPC-001 wrong-contract rejection, unavailable PLC execution, seven panels, disabled controls and no page errors. native.log exists and is empty because the successful application emitted no stdout/stderr. No executable/profile was uploaded.
+
+Windows evidence contains ci/windows stage logs/results, setup logs and desktop-smoke/native.log, result.json, desktop.png. Linux contains core stage logs/results and setup logs. Local downloads and evidence-review.json remain under ignored artifacts/independent-validation/38533787674. Hosted artifact retention is 14 days.
 
 ## CI repairs
 
 CI-ONLY REPAIR ITERATIONS: 0 / 2
 
-CI-ONLY FIX COMMITS: NONE
+CI-ONLY FIX COMMIT SHAS: NONE
 
 PLC SEMANTIC/RUNTIME SOURCE CHANGED: NO
 
-There is no failed hosted job to diagnose or repair. The current blocker is missing local GitHub CLI, not an observed PLC test failure or hosted-runner limitation. Workflow/setup/orchestration files, lockfiles, toolchain pins, application code and existing tests remain unchanged. Windows security settings and Actions permissions were not modified.
+First hosted run passed. Only pre-baseline non-report edits were the two publication whitespace corrections above. Hash comparison with the initial audit confirmed all other existing files unchanged, including core/runtime/IR/types, tests, UI/IPC, native smoke, workflow, CI scripts, lockfiles and toolchain. Later commits record documentation only. No Windows security setting, signing material or Actions permission was changed.
 
 ## Native acceptance
 
-NATIVE WINDOWS ACCEPTANCE: FAIL
+NATIVE WINDOWS ACCEPTANCE: PASS
 
-The required acceptance has not been satisfied because the smoke was NOT_RUN. This disposition does not claim that an executed smoke failed or that GitHub-hosted Windows is incompatible.
+The unchanged test built/launched the actual native executable, connected to its WebView2 CDP endpoint, invoked real Rust IPC and completed its assertions. No mock or hosted-runner limitation was needed.
 
 ## Local checks
 
-| Check                                                               | Result                                               |
-| ------------------------------------------------------------------- | ---------------------------------------------------- |
-| git status / tracked and untracked inventory                        | Reviewed; approved accumulated work retained         |
-| git diff / staged diff inventory                                    | Reviewed; baseline remains uncommitted               |
-| git log -5 --oneline                                                | No commits on main                                   |
-| git diff --check and git diff --cached --check                      | PASS                                                 |
-| Get-Command gh -ErrorAction SilentlyContinue                        | No command found; availability guard returned exit 2 |
-| gh --version / gh auth status                                       | NOT_RUN: CLI unavailable                             |
-| Prettier check of this report                                       | PASS                                                 |
-| Hash comparison of all 148 existing project files and the Git index | PASS: unchanged                                      |
-| Required hosted/product test execution                              | NOT_RUN; no independent PASS claimed                 |
+Fresh secret/path audit and CLI/account/remote checks passed. Corrected staged whitespace check passed. `npm.cmd run format:check` passed, and `npm.cmd run test:ci` passed all seven tests. Final documentation formatting, Git whitespace and protected-source comparisons passed. These supplement actual hosted execution; blocked local PLC/native executables were not retried.
 
-## Gate
+## Acceptance criteria
+
+| Requirement                          | Result                                                                                          |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| REMOTE-001 audit                     | PASS: current tree/index, no publication risk found                                             |
+| REMOTE-002 preserve work             | PASS: complete approved state, no destructive recovery                                          |
+| REMOTE-003 authentication            | PASS: CLI, active account and auth verified                                                     |
+| REMOTE-004 identity/privacy          | PASS: intended absent owner repository created private and rechecked                            |
+| REMOTE-005 baseline                  | PASS: audited 149-file commit with whitespace checks                                            |
+| REMOTE-006/007 origin/push           | PASS: secure HTTPS, normal upstream main push, exact SHA                                        |
+| CI-RUN-001 trigger                   | PASS: automatic push run used                                                                   |
+| CI-RUN-002/003 platform execution    | PASS: all Windows and portable Linux requirements executed                                      |
+| CI-RUN-004 REAL                      | PASS: unchanged assertions on both OS/profile combinations                                      |
+| CI-RUN-005 terminal watch            | PASS: both jobs completed successfully                                                          |
+| CI-RUN-006/007 failure/repair policy | PASS: no hosted failure, zero repairs, assertions/semantics preserved                           |
+| CI-RUN-008 native                    | PASS: actual Tauri/WebView2/CDP/Rust IPC                                                        |
+| CI-RUN-009 artifacts                 | PASS: metadata, logs, archives, native JSON and screenshot reviewed                             |
+| CI-RUN-010/011 success/gate          | PASS: all required executions, gate record created                                              |
+| CI-RUN-012 incomplete-gate policy    | PASS: no blocked/unrun requirement relabeled PASS                                               |
+| CI-RUN-013 stop                      | PASS: M2A not started                                                                           |
+| Security constraints                 | PASS: private/read-only Actions, no credentials/secrets/collaborators/releases/security changes |
+
+## Gate and commit identity
 
 M1C IMPLEMENTATION REVIEW: PASS
 
-M1C INDEPENDENT VALIDATION: BLOCKED
+M1C INDEPENDENT VALIDATION: PASS
 
-M1C GATE: HOLD
+M1C GATE: PASS
+
+The validated code SHA is the baseline above. Later gate-recording/metadata commits change documentation only and are not represented as the tested code revision. The exact gate-recording SHA is recorded after that commit exists. See [M1C_INDEPENDENT_VALIDATION.md](M1C_INDEPENDENT_VALIDATION.md) for the authoritative record. Historical local Smart App Control reports remain preserved.
+
+## Architecture, assumptions and known limitations
+
+No product architecture changed. Used the authenticated user's private account and prepared runner families/commands. Native acceptance is the existing debug smoke; release desktop launch is not required here. Local Smart App Control remains unchanged and can still block owner-host executables. Independent PASS applies to the recorded Windows/Linux x64 code revision; it does not repair local policy.
 
 ## Next dependency
 
-Install GitHub CLI for Windows and ensure it is available in a newly opened terminal/application process. The official installation command is:
-
-```powershell
-winget install --id GitHub.cli --source winget
-```
-
-Then verify availability and authentication:
-
-```powershell
-gh --version
-gh auth status
-```
-
-If not authenticated, the owner must complete the normal interactive browser login:
-
-```powershell
-gh auth login --hostname github.com --git-protocol https --web
-gh auth status
-```
-
-These are owner instructions, not commands executed by this task. No token is requested in chat or stored in the repository. See [official Windows installation instructions](https://github.com/cli/cli/blob/trunk/docs/install_windows.md) and [official interactive authentication documentation](https://cli.github.com/manual/gh_auth_login).
-
-After CLI availability and authentication are confirmed, resume the already authorized private publication and independent validation task, starting with a fresh publication audit and repository identity check. M2A remains unauthorized and was not started.
+Technical-lead review of this first external validation report, followed by explicit M2A authorization. Stopped after validation and gate documentation. M2A was not started.

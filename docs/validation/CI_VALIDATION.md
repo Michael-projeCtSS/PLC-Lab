@@ -1,6 +1,6 @@
 # Independent canonical validation lanes
 
-Status: CI infrastructure prepared, not externally executed. M1C implementation review is PASS; owner-host validation remains HOST POLICY BLOCKED and the project gate is HOLD. M2 is not authorized. This document does not change PLC, TON, clock, budget, memory or REAL semantics.
+Status: both independent lanes actually executed and passed for code SHA a4a22f19c7bcdbd1c1d78a38804c29e15da32828 in run 38533787674 on 2026-10-14, including native Windows smoke and cross-platform REAL assertions. M1C implementation review, independent validation and gate are PASS; see the authoritative [gate record](M1C_INDEPENDENT_VALIDATION.md). Owner-host validation remains historically HOST POLICY BLOCKED; policy is unchanged. M2A requires technical-lead review and explicit authorization. No PLC, TON, clock, budget, memory or REAL semantics changed.
 
 ## Validation model
 
@@ -16,7 +16,7 @@ No lane silently substitutes for another's platform-specific requirements. A blo
 
 `.github/workflows/validation.yml` supports push, pull_request and workflow_dispatch. workflow_call additionally supports the old `.github/workflows/quality.yml`, now a manual compatibility wrapper; automatic events belong only to the new workflow to avoid duplicate pipelines.
 
-Windows uses windows-2022 and Linux uses ubuntu-24.04. These explicit image families avoid windows-latest/ubuntu-latest family migration; their maintained image patch revisions still change. No hosted image is claimed to have executed this project yet. GitHub's published Windows image includes Visual Studio C++ tools, Windows SDK and rustup. [Runner image manifest](https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md)
+Windows uses windows-2022 and Linux uses ubuntu-24.04. These explicit image families avoid windows-latest/ubuntu-latest family migration; their maintained image patch revisions still change. Both image families executed this project's recorded code SHA in run 38533787674. GitHub's published Windows image includes Visual Studio C++ tools, Windows SDK and rustup. [Runner image manifest](https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md)
 
 Both jobs use official actions pinned to verified full commit hashes: checkout v6, setup-node v6 and upload-artifact v7. Node major 24 follows the existing quality workflow and the declared >=24 engine; the selected patch is recorded in CI result metadata. Node dependency installation is `npm ci` against the existing lockfile. No dependency or lockfile changes were needed.
 
@@ -53,7 +53,7 @@ The existing smoke file remains byte-identical. It launches target/debug/plc-lab
 
 The script checks Microsoft's documented per-machine/per-user WebView2 `pv` registrations. If a valid Runtime is missing, it downloads only Microsoft's official Evergreen bootstrapper, requires a valid Microsoft Authenticode signature, performs supported silent installation and verifies the registration afterward. This is ordinary application-prerequisite setup on an explicitly started runner, not security-policy modification or an unsigned test workaround. It is not executed on the owner machine by this task. [Microsoft deployment reference](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution), [Microsoft bootstrapper sample](https://github.com/MicrosoftEdge/WebView2Samples/blob/main/SampleApps/WebView2APISample/AppWindow.cpp)
 
-No runner can be declared compatible without an actual external run. Prerequisite/setup/native launch/CDP/assertion failures fail the job; the smoke is never disabled or marked passed from compilation. If execution evidence later establishes a genuine hosted-runner limitation, record `NATIVE DESKTOP CI: HOSTED RUNNER LIMITATION`, retain the unchanged test, and arrange an explicitly approved Windows validation VM. Such a limitation cannot make M1C PASS. Current status is **external compatibility unverified**, not a demonstrated hosted-runner limitation.
+No runner can be declared compatible without an actual external run. Prerequisite/setup/native launch/CDP/assertion failures fail the job; the smoke is never disabled or marked passed from compilation. If execution evidence later establishes a genuine hosted-runner limitation, record `NATIVE DESKTOP CI: HOSTED RUNNER LIMITATION`, retain the unchanged test, and arrange an explicitly approved Windows validation VM. Such a limitation cannot make M1C PASS. Recorded status is **native hosted execution PASS for run 38533787674**, with real WebView2/CDP/Rust IPC artifacts reviewed.
 
 ## Cross-platform REAL evidence
 
@@ -78,7 +78,7 @@ Permissions are contents: read only, checkout does not persist credentials, no s
 
 M1C implementation review is already PASS. Final M1C PASS requires actual executed evidence for all required semantic/runtime tests, debug tests, optimized tests, TON, SimulationClock, full core regressions and existing Windows application checks. Windows-specific checks must execute and pass either in this CI lane or another explicitly owner-approved Windows validation environment. Linux results cannot replace them. BLOCKED and NOT_RUN never mean PASS.
 
-Preparing files or passing configuration tests proves no hosted test outcome. There is currently no configured Git remote. This task does not create a remote, push, authenticate, dispatch CI or invent a repository URL. Once the owner separately authorizes publication/execution, use the existing push/PR triggers or manual validation workflow. Require both job results and review artifacts for the exact commit/profile/OS before considering gate changes.
+Preparing files or passing configuration tests proves no hosted test outcome. The owner subsequently authorized M1C-CI-RUN publication/execution. Private PLC-Lab has HTTPS origin/main and its push triggered run 38533787674. Both jobs/profile logs/native artifacts were reviewed for the exact code SHA before PASS was recorded. Later documentation-only commits identify the gate record separately and are not represented as the tested code revision. See [M1C_REMOTE_VALIDATION_REPORT.md](M1C_REMOTE_VALIDATION_REPORT.md).
 
 ## Local commands and limitations
 
