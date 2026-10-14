@@ -138,9 +138,13 @@ export async function interactiveRuntimeSmoke({
   };
   const stageStart = async () => {
     const response = await mutation("set_runtime_input", () =>
-      page.getByLabel("Set Start", { exact: true }).check(),
+      page.getByLabel("Set Start", { exact: true }).click(),
     );
     await visible(response);
+    assert.equal(
+      await page.getByLabel("Set Start", { exact: true }).isChecked(),
+      true,
+    );
     assert.equal(
       response.variables.find((v) => v.name === "Start").value.value,
       true,
