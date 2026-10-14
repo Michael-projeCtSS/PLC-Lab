@@ -1,5 +1,9 @@
 # PLC Lab architecture
 
+## M4B execution control
+
+[ADR-0016](../adr/0016-continuous-execution-controller.md) adds Host Pacer → private lease → desktop-session mutex → one shared PLC/process cycle → trace → snapshot → identity-only wake → typed queries → React. The host driver is the sole pacing exception; deterministic crates have no host clock/Tokio/Tauri dependency. PLC Source → Language Frontend → Canonical PLC IR → PLC Runtime → Process/Network Simulation → Trace → Visualization/Diagnostics/Grading remains the target chain. No network/grading implementation is introduced. The accepted shell layout and process renderer remain intact.
+
 ## M4A observational history
 
 Authoritative Runtime/Process -> typed session observation -> generic trace-core recorder -> bounded session history -> typed IPC query -> Timeline. trace-core depends only on plc-types; desktop-session consumes it. Neither plc-runtime nor process-simulation imports trace-core. TraceSequenceId is independent of scan count/time and belongs to RuntimeSessionId. All capture shares the application mutex; no racing thread or wall-clock input. See [ADR-0015](../adr/0015-deterministic-session-trace.md).

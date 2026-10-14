@@ -100,7 +100,9 @@ export function createStEditor(
       value: string,
       diagnostics: CompilerDiagnostic[],
       runtimeDiagnostics: CompilerDiagnostic[] = [],
+      readOnly = false,
     ) {
+      editor.updateOptions({ readOnly });
       if (model.getValue() !== value) model.setValue(value);
       const markers = (
         owner: string,

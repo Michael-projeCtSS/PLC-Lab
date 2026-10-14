@@ -3,6 +3,39 @@ use desktop_session::RuntimeSessionService;
 use std::sync::Arc;
 
 #[tauri::command]
+pub async fn start_execution(
+    app: tauri::AppHandle,
+    service: tauri::State<'_, Arc<RuntimeSessionService>>,
+    request: app_contract::RuntimeSessionRequest,
+) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
+    let owned = Arc::clone(service.inner());
+    let started = session_work(service, move |s| s.start_execution(request)).await?;
+    if let Some(lease) = started.driver {
+        crate::execution_driver::spawn(
+            app,
+            owned,
+            lease,
+            started.snapshot.cycle_period_micros.as_micros(),
+        );
+    }
+    Ok(started.snapshot)
+}
+#[tauri::command]
+pub async fn pause_execution(
+    service: tauri::State<'_, Arc<RuntimeSessionService>>,
+    request: app_contract::RuntimeSessionRequest,
+) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
+    session_work(service, move |s| s.pause_execution(request)).await
+}
+#[tauri::command]
+pub async fn stop_execution(
+    service: tauri::State<'_, Arc<RuntimeSessionService>>,
+    request: app_contract::RuntimeSessionRequest,
+) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
+    session_work(service, move |s| s.stop_execution(request)).await
+}
+
+#[tauri::command]
 pub async fn get_trace_page(
     service: tauri::State<'_, Arc<RuntimeSessionService>>,
     request: app_contract::TracePageRequest,

@@ -7,6 +7,8 @@ export function readySnapshot(sessionId = "1"): RuntimeSnapshotDto {
     sessionId,
     programName: "Main",
     state: "READY",
+    executionMode: "STOPPED",
+    executionRunId: null,
     completedScans: "0",
     simulationTimeMicros: "0",
     cyclePeriodMicros: "100000",

@@ -57,6 +57,25 @@ decimal_identity!(RuntimeVariableId, u32, true);
 decimal_identity!(RuntimeInstanceId, u32, true);
 decimal_identity!(ExactU64, u64, false);
 decimal_identity!(TraceSequenceId, u64, true);
+decimal_identity!(ExecutionRunId, u64, true);
+
+/// Application control state, independent of PLC Ready/Faulted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum ExecutionMode {
+    Stopped,
+    Running,
+    Paused,
+}
+
+/// Read-only wake identity. Contains no executable state or tick authorization.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ExecutionWake {
+    pub contract_version: u32,
+    pub session_id: RuntimeSessionId,
+    pub run_id: ExecutionRunId,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(tag = "type", rename_all = "UPPERCASE", deny_unknown_fields)]
@@ -180,6 +199,8 @@ pub struct RuntimeSnapshotDto {
     pub session_id: RuntimeSessionId,
     pub program_name: String,
     pub state: SessionRuntimeState,
+    pub execution_mode: ExecutionMode,
+    pub execution_run_id: Option<ExecutionRunId>,
     pub completed_scans: ExactU64,
     #[ts(type = "string")]
     pub simulation_time_micros: PlcTime,
@@ -230,6 +251,9 @@ pub struct UnloadProgramResponse {
 
 pub(crate) fn session_typescript(config: &ts_rs::Config) -> String {
     [
+        ExecutionMode::decl(config),
+        ExecutionRunId::decl(config),
+        ExecutionWake::decl(config),
         RuntimeSessionId::decl(config),
         RuntimeVariableId::decl(config),
         RuntimeInstanceId::decl(config),

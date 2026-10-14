@@ -99,7 +99,7 @@ test("runtime uses a leaf simulation clock without reverse or trace execution de
   }
 });
 
-test("desktop IPC exposes pure compilation and the authorized manual session commands", () => {
+test("desktop IPC exposes pure compilation and the authorized session and execution control commands", () => {
   const host = readFileSync(
     path.join(root, "apps/desktop/src-tauri/src/lib.rs"),
     "utf8",
@@ -122,6 +122,9 @@ test("desktop IPC exposes pure compilation and the authorized manual session com
     "commands::detach_process_scene",
     "commands::reset_process_scene",
     "commands::get_trace_page",
+    "commands::start_execution",
+    "commands::pause_execution",
+    "commands::stop_execution",
   ]);
   const capability = JSON.parse(
     readFileSync(
@@ -129,7 +132,10 @@ test("desktop IPC exposes pure compilation and the authorized manual session com
       "utf8",
     ),
   );
-  assert.deepEqual(capability.permissions, []);
+  assert.deepEqual(capability.permissions, [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+  ]);
   assert.equal(capability.remote, undefined);
 });
 
@@ -157,7 +163,13 @@ test("session ownership is confined to the headless application service", () => 
   assert.match(service, /Mutex<SessionSlot>/);
   assert.match(service, /checked_add\(1\)/);
   assert.match(service, /runtime\s*\.\s*set_input/);
-  assert.match(service, /runtime\s*\.\s*single_scan/);
+  assert.match(
+    readFileSync(
+      path.join(root, "crates/desktop-session/src/execution.rs"),
+      "utf8",
+    ),
+    /runtime\s*\.\s*single_scan/,
+  );
   assert.match(service, /runtime\s*\.\s*reset/);
   assert.doesNotMatch(
     service,

@@ -1,5 +1,9 @@
 # PLC feature matrix
 
+## M4B application capability
+
+Alpha application control supports deterministic 1× Run, Pause, Resume and Stop above the same accepted ST runtime/process/trace; STOPPED supports manual Single Scan. No PLC type/operator/instruction/TON behavior or language support is added. Speed controls, instruction stepping, replay, grading, exercises, protocols and M5 remain unavailable. See [CONTINUOUS_EXECUTION.md](CONTINUOUS_EXECUTION.md). Earlier milestone tables below describe their original scope.
+
 ## M4A delivery scope
 
 Manual bounded session/cycle-boundary trace and read-only Timeline are implemented for existing ST/TON/Tank observations. No new PLC instruction, type, language, timer or process semantics. Trace is not replay, grading, streaming, persistence or continuous execution. See [TRACE_MODEL.md](TRACE_MODEL.md).

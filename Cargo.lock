@@ -2282,6 +2282,7 @@ dependencies = [
  "desktop-session",
  "tauri",
  "tauri-build",
+ "tokio",
 ]
 
 [[package]]

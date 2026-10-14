@@ -1,5 +1,9 @@
 # Frontend/backend boundary
 
+## M4B / IPC v7
+
+start_execution, pause_execution and stop_execution accept only strict contractVersion/sessionId and return coherent RuntimeSnapshotDto. executionMode (STOPPED/RUNNING/PAUSED) is separate from state (READY/FAULTED); executionRunId is read-only correlation metadata. TraceEntryDto carries the same control observation. No lease/epoch/tick can be submitted over IPC. execution-state-changed has only version/sessionId/runId; React must query get_runtime_snapshot and get_trace_page. Strict v7 validators reject older contracts, unknown fields, invalid modes/identities and FAULTED with an active mode. Main-window permissions add only local event listen/unlisten; no browser emit, remote access or OS plugin capability is granted. Rust remains authoritative for values/time/process/modes/history.
+
 ## M4A IPC v6 trace query
 
 get_trace_page(version, sessionId, afterSequence, limit) dispatches through the existing blocking-worker adapter. Rust returns bounded ordered TraceEntryDto pages with exact decimal-string sequence/count/time, variable/TON/process/fault observations and retention/saturation metadata. Internal typed history is separate from DTOs. React validates, incrementally merges and displays historical observations only. Request/source/session guards discard obsolete pages. No polling, replay, state synthesis or execution authority crosses this boundary.

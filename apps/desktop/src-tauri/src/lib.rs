@@ -1,4 +1,5 @@
 mod commands;
+mod execution_driver;
 
 pub fn run() {
     tauri::Builder::default()
@@ -17,7 +18,10 @@ pub fn run() {
             commands::attach_process_scene,
             commands::detach_process_scene,
             commands::reset_process_scene,
-            commands::get_trace_page
+            commands::get_trace_page,
+            commands::start_execution,
+            commands::pause_execution,
+            commands::stop_execution
         ])
         .run(tauri::generate_context!())
         .expect("PLC Lab desktop host failed to start");

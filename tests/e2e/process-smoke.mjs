@@ -90,7 +90,11 @@ export async function interactiveProcessSmoke({
         );
       }
     }
-    for (const name of ["Run", "Pause", "Stop"])
+    assert.equal(
+      await page.getByRole("button", { name: "Run", exact: true }).isEnabled(),
+      snapshot.state === "READY",
+    );
+    for (const name of ["Pause", "Stop"])
       assert.equal(
         await page.getByRole("button", { name, exact: true }).isDisabled(),
         true,

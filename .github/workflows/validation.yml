@@ -45,6 +45,7 @@ jobs:
             artifacts/desktop-smoke/desktop.png
             artifacts/desktop-smoke/runtime-ton.png
             artifacts/desktop-smoke/runtime-fault.png
+            artifacts/desktop-smoke/continuous-tank.png
             artifacts/desktop-smoke/tank-filling.png
             artifacts/desktop-smoke/timeline-scan-8.png
             artifacts/desktop-smoke/timeline-scan-9.png

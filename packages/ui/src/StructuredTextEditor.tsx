@@ -4,12 +4,14 @@ import type { createStEditor } from "./monaco-host";
 
 export function StructuredTextEditor({
   source,
+  readOnly = false,
   onChange,
   diagnostics,
   runtimeDiagnostics = [],
   focusedDiagnostic,
 }: {
   source: string;
+  readOnly?: boolean;
   onChange: (value: string) => void;
   diagnostics: CompilerDiagnostic[];
   runtimeDiagnostics?: CompilerDiagnostic[];
@@ -19,6 +21,7 @@ export function StructuredTextEditor({
     instance = useRef<ReturnType<typeof createStEditor> | null>(null);
   const latest = useRef({
     source,
+    readOnly,
     onChange,
     diagnostics,
     runtimeDiagnostics,
@@ -28,14 +31,22 @@ export function StructuredTextEditor({
   useEffect(() => {
     latest.current = {
       source,
+      readOnly,
       onChange,
       diagnostics,
       runtimeDiagnostics,
       focusedDiagnostic,
     };
-    instance.current?.update(source, diagnostics, runtimeDiagnostics);
+    instance.current?.update(source, diagnostics, runtimeDiagnostics, readOnly);
     if (focusedDiagnostic) instance.current?.focus(focusedDiagnostic.span);
-  }, [source, onChange, diagnostics, runtimeDiagnostics, focusedDiagnostic]);
+  }, [
+    source,
+    readOnly,
+    onChange,
+    diagnostics,
+    runtimeDiagnostics,
+    focusedDiagnostic,
+  ]);
   useEffect(() => {
     let active = true;
     import("./monaco-host")
@@ -45,12 +56,15 @@ export function StructuredTextEditor({
         instance.current = module.createStEditor(
           container.current,
           current.source,
-          (value) => latest.current.onChange(value),
+          (value) => {
+            if (!latest.current.readOnly) latest.current.onChange(value);
+          },
         );
         instance.current.update(
           current.source,
           current.diagnostics,
           current.runtimeDiagnostics,
+          current.readOnly,
         );
       })
       .catch((error: unknown) => {

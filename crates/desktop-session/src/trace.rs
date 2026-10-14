@@ -18,6 +18,10 @@ pub(super) enum EventKind {
     RuntimeReset,
     ProcessReset,
     ProcessDetached,
+    ExecutionStarted,
+    ExecutionPaused,
+    ExecutionResumed,
+    ExecutionStopped,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,6 +48,8 @@ struct ObservedBlock {
 pub(super) struct Observation {
     point: TracePoint,
     state: RuntimeState,
+    mode: Mode,
+    run_id: Option<u64>,
     variables: Vec<ObservedVariable>,
     blocks: Vec<ObservedBlock>,
     fault: Option<Diagnostic>,
@@ -120,6 +126,8 @@ impl Observation {
                 simulation_time: core.time(),
             },
             state: core.state(),
+            mode: session.mode,
+            run_id: (session.epoch != 0).then_some(session.epoch),
             variables,
             blocks,
             fault: core.fault().cloned(),
@@ -194,6 +202,10 @@ impl Observation {
             session_id: session.id,
             program_name: session.program_name.clone(),
             state: self.state_dto(),
+            execution_mode: self.mode.dto(),
+            execution_run_id: self
+                .run_id
+                .map(|id| ExecutionRunId::new(id).expect("Run identity is nonzero.")),
             completed_scans: ExactU64::new(self.point.completed_scans)
                 .expect("Every u64 is exact."),
             simulation_time_micros: self.point.simulation_time,
@@ -241,6 +253,9 @@ impl RuntimeSessionService {
         }
         let mut slot = self.lock()?;
         let session = slot.target(request.session_id)?;
+        if let Some(error) = &session.driver_error {
+            return Err(error.clone());
+        }
         if session.process_failed {
             return Err(application_error(
                 "APP-PROCESS-INTERNAL",
@@ -278,11 +293,19 @@ impl RuntimeSessionService {
                         EventKind::RuntimeReset => TraceEventKind::RuntimeReset,
                         EventKind::ProcessReset => TraceEventKind::ProcessReset,
                         EventKind::ProcessDetached => TraceEventKind::ProcessDetached,
+                        EventKind::ExecutionStarted => TraceEventKind::ExecutionStarted,
+                        EventKind::ExecutionPaused => TraceEventKind::ExecutionPaused,
+                        EventKind::ExecutionResumed => TraceEventKind::ExecutionResumed,
+                        EventKind::ExecutionStopped => TraceEventKind::ExecutionStopped,
                     },
                     completed_scans: ExactU64::new(e.point.completed_scans)
                         .expect("Every u64 is exact."),
                     simulation_time_micros: e.point.simulation_time,
                     runtime_state: o.state_dto(),
+                    execution_mode: o.mode.dto(),
+                    execution_run_id: o
+                        .run_id
+                        .map(|id| ExecutionRunId::new(id).expect("Run identity is nonzero.")),
                     variables: o.variables_dto(),
                     function_blocks: o.blocks_dto(),
                     process: o.process.map(process::present),

@@ -1,5 +1,9 @@
 # Development
 
+## M4B validation
+
+Run `npm run check`, `npm run test:desktop`, `npm run ci:windows` and `npm run ci:core` as applicable. The native harness now includes actual automatic execution; it never invokes continuous_tick. `node scripts/rust.mjs test --locked -p desktop-session` covers deterministic controller/trace integration; `node scripts/rust.mjs test --locked -p plc-lab-desktop --lib` covers host pacing order. CI Windows canonical workspace tests execute the latter. Linux selects portable crates and requires no Tauri system libraries. The default-off trace-core test-support feature only supplies a near-exhaustion test seam. Native timing waits are observation windows, not authoritative simulation time. Evidence is scoped under ignored artifacts and uploaded by the existing pinned workflow. Product documentation/report must distinguish executed PASS from compilation/BLOCKED/NOT_RUN.
+
 ## M4A trace development
 
 Run `node scripts/rust.mjs test --locked -p trace-core -p desktop-session -p app-contract`, `npm run test:frontend`, `npm run test:architecture`, then `npm run validate`. Existing `npm run ci:windows` and `npm run ci:core` execute trace-core/session regressions in debug/release and actual Windows trace smoke. Regenerate v6 contract with `npm run ipc:generate`. Trace history is bounded/in-memory and uses SimulationClock observations, independent of wall time. Timeline selection is historical inspection only.

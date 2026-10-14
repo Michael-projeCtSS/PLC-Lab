@@ -1,5 +1,9 @@
 # Deterministic manual session trace
 
+## M4B extension
+
+The original eight events retain their semantics. ExecutionStarted/ExecutionResumed record RUNNING; ExecutionPaused records PAUSED; ExecutionStopped records STOPPED. Each control row has its own sequence and unchanged PLC count/time, with a post-transition observation. Duplicate controls append nothing. ScanFaulted records STOPPED after lease invalidation; automatic faults need no extra ExecutionStopped. Internal failures fabricate no cycle event. Every live/historical observation now includes executionMode and read-only executionRunId in strict IPC v7. Wake signals trigger queries only; trace pages remain authoritative. Pinned history is independent from live refresh and explicitly reports selection eviction. Retention and saturation never control Run. See [continuous execution](CONTINUOUS_EXECUTION.md); the original M4A material below remains the accepted recorder specification.
+
 Trace observes authoritative Runtime/Process state. It does not execute PLC logic, advance SimulationClock, integrate a process or derive sensors. M4A records session/cycle boundaries only, before any continuous execution.
 
 ## Identity, point and retention

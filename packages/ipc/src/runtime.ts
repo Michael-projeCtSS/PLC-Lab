@@ -9,6 +9,9 @@ import {
   ATTACH_PROCESS_COMMAND,
   DETACH_PROCESS_COMMAND,
   RESET_PROCESS_COMMAND,
+  START_EXECUTION_COMMAND,
+  PAUSE_EXECUTION_COMMAND,
+  STOP_EXECUTION_COMMAND,
 } from "./generated";
 import type {
   RuntimeValue,
@@ -192,10 +195,17 @@ function parseFault(value: unknown): RuntimeDiagnostic | null {
 export function parseRuntimeBoundary(v: Record<string, unknown>) {
   if (
     !["READY", "FAULTED"].includes(String(v.state)) ||
+    !["STOPPED", "RUNNING", "PAUSED"].includes(String(v.executionMode)) ||
+    (v.state === "FAULTED" && v.executionMode !== "STOPPED") ||
     !Array.isArray(v.variables) ||
     !Array.isArray(v.functionBlocks)
   )
     invalid();
+  const executionRunId =
+    v.executionRunId === null
+      ? null
+      : decimal(v.executionRunId, 18446744073709551615n, true);
+  if (v.executionMode !== "STOPPED" && executionRunId === null) invalid();
   const variables = v.variables.map(parseVariable),
     functionBlocks = v.functionBlocks.map(parseBlock),
     fault = parseFault(v.fault);
@@ -248,6 +258,8 @@ export function parseRuntimeBoundary(v: Record<string, unknown>) {
     invalid();
   return {
     state: v.state as RuntimeSnapshotDto["state"],
+    executionMode: v.executionMode as RuntimeSnapshotDto["executionMode"],
+    executionRunId,
     variables,
     functionBlocks,
     fault,
@@ -261,6 +273,8 @@ export function parseRuntimeSnapshot(value: unknown): RuntimeSnapshotDto {
     "sessionId",
     "programName",
     "state",
+    "executionMode",
+    "executionRunId",
     "completedScans",
     "simulationTimeMicros",
     "cyclePeriodMicros",
@@ -271,13 +285,22 @@ export function parseRuntimeSnapshot(value: unknown): RuntimeSnapshotDto {
     "process",
   ]);
   if (v.contractVersion !== CONTRACT_VERSION) invalid();
-  const { state, variables, functionBlocks, fault, process } =
-    parseRuntimeBoundary(v);
+  const {
+    state,
+    executionMode,
+    executionRunId,
+    variables,
+    functionBlocks,
+    fault,
+    process,
+  } = parseRuntimeBoundary(v);
   return {
     contractVersion: CONTRACT_VERSION,
     sessionId: decimal(v.sessionId, 18446744073709551615n, true),
     programName: text(v.programName),
     state,
+    executionMode,
+    executionRunId,
     completedScans: decimal(v.completedScans),
     simulationTimeMicros: decimal(v.simulationTimeMicros),
     cyclePeriodMicros: decimal(
@@ -433,5 +456,21 @@ export async function detachProcessScene(sessionId: string) {
 export async function resetProcessScene(sessionId: string) {
   return parseRuntimeSnapshot(
     await invokeNative(RESET_PROCESS_COMMAND, target(sessionId)),
+  );
+}
+
+export async function startExecution(sessionId: string) {
+  return parseRuntimeSnapshot(
+    await invokeNative(START_EXECUTION_COMMAND, target(sessionId)),
+  );
+}
+export async function pauseExecution(sessionId: string) {
+  return parseRuntimeSnapshot(
+    await invokeNative(PAUSE_EXECUTION_COMMAND, target(sessionId)),
+  );
+}
+export async function stopExecution(sessionId: string) {
+  return parseRuntimeSnapshot(
+    await invokeNative(STOP_EXECUTION_COMMAND, target(sessionId)),
   );
 }

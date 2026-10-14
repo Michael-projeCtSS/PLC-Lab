@@ -108,6 +108,7 @@ export function ProcessPanel({
   snapshot,
   current,
   canManage,
+  sourceLocked = false,
   onExample,
   onAttach,
   onDetach,
@@ -117,6 +118,7 @@ export function ProcessPanel({
   snapshot: RuntimeSnapshotDto | null;
   current: boolean;
   canManage: boolean;
+  sourceLocked?: boolean;
   onExample: () => void;
   onAttach: () => Promise<void>;
   onDetach: () => Promise<void>;
@@ -169,6 +171,7 @@ export function ProcessPanel({
         <button
           type="button"
           className="compile-button"
+          disabled={sourceLocked}
           onClick={() =>
             source === TANK_EXAMPLE_SOURCE ? onExample() : setConfirm(true)
           }
@@ -197,7 +200,8 @@ export function ProcessPanel({
         </code>
       </details>
       <p className="process-help">
-        Use Example → Compile → Load Program → Attach Tank Scene → Single Scan
+        Use Example → Compile → Load Program → Attach Tank Scene → Run or Single
+        Scan
       </p>
       {!canAttach && (
         <p className="process-help">

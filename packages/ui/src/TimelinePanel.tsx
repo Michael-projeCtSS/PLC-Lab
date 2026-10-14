@@ -102,8 +102,8 @@ export function TimelinePanel({
             >
               <h3>Historical Trace · #{event.sequence}</h3>
               <p>
-                {eventName(event)} · {event.runtimeState} · Scan{" "}
-                {event.completedScans} ·{" "}
+                {eventName(event)} · {event.runtimeState} ·{" "}
+                {event.executionMode} · Scan {event.completedScans} ·{" "}
                 {formatDuration(event.simulationTimeMicros)}
               </p>
               <p className="trace-status">
@@ -162,7 +162,11 @@ export function TimelinePanel({
             </div>
           ) : (
             <p className="trace-status">
-              Select an event to inspect Historical Trace.
+              {selected &&
+              page.oldestSequence &&
+              BigInt(selected) < BigInt(page.oldestSequence)
+                ? "Selected event is no longer retained. Select another event."
+                : "Select an event to inspect Historical Trace."}
             </p>
           )}
         </>

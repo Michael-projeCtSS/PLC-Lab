@@ -3,7 +3,10 @@ use app_contract::*;
 use plc_runtime::{FunctionBlockStateSnapshot, MemoryRole, Runtime, RuntimeConfig, RuntimeState};
 use plc_types::{PlcTime, diagnostics::RelatedIdentity, identity::SymbolId};
 use std::sync::{Mutex, MutexGuard};
+mod execution;
 mod process;
+use execution::Mode;
+pub use execution::{ExecutionStart, RunLease, TickOutcome};
 mod trace;
 use trace::EventKind;
 pub use trace::{TRACE_CAPACITY, TRACE_PAGE_MAX};
@@ -36,6 +39,10 @@ struct LoadedSession {
     variables: Vec<VariableDescriptor>,
     process: Option<process::AttachedTank>,
     process_failed: bool,
+    driver_error: Option<IpcError>,
+    mode: Mode,
+    epoch: u64,
+    active_lease: Option<RunLease>,
     trace: trace_core::TraceBuffer<trace::Event>,
     instance_names:
         std::collections::BTreeMap<plc_types::identity::FunctionBlockInstanceId, String>,
@@ -91,6 +98,9 @@ impl RuntimeSessionService {
     }
     fn reserve_load_intent(&self) -> Result<LoadIntentId, IpcError> {
         let mut slot = self.lock()?;
+        if let Some(s) = &slot.loaded {
+            s.require_stopped()?;
+        }
         let next = slot.latest_load_intent.checked_add(1).ok_or_else(|| {
             application_error(
                 "APP-RUNTIME-LOAD-INTENT-EXHAUSTED",
@@ -153,6 +163,10 @@ impl RuntimeSessionService {
             instance_names,
             process: None,
             process_failed: false,
+            driver_error: None,
+            mode: Mode::Stopped,
+            epoch: 0,
+            active_lease: None,
             trace: trace::recorder(),
         };
         Ok(PreparedLoad::Ready(Box::new(candidate)))
@@ -169,6 +183,9 @@ impl RuntimeSessionService {
                 "APP-RUNTIME-STALE-LOAD",
                 "A newer program load superseded this request. Load the current source again.",
             ));
+        }
+        if let Some(s) = &slot.loaded {
+            s.require_stopped()?;
         }
         let generation = slot.generation.checked_add(1).ok_or_else(|| {
             application_error(
@@ -192,6 +209,9 @@ impl RuntimeSessionService {
         version(request.contract_version)?;
         let mut slot = self.lock()?;
         let session = slot.target(request.session_id)?;
+        if let Some(error) = &session.driver_error {
+            return Err(error.clone());
+        }
         if session.process_failed {
             return Err(application_error(
                 "APP-PROCESS-INTERNAL",
@@ -199,11 +219,18 @@ impl RuntimeSessionService {
             ));
         }
         let result = action(session);
+        if let Err(error) = &result
+            && error.code == "APP-RUNTIME-INTERNAL"
+        {
+            session.halt();
+            session.driver_error = Some(error.clone());
+        }
         if result
             .as_ref()
             .is_err_and(|e| e.code == "APP-PROCESS-INTERNAL")
         {
             session.process_failed = true;
+            session.halt();
         }
         result
     }
@@ -234,23 +261,13 @@ impl RuntimeSessionService {
         request: RuntimeSessionRequest,
     ) -> Result<RuntimeSnapshotDto, IpcError> {
         self.with_session(request, |s| {
-            // Faults are authoritative domain data in the post-attempt snapshot.
-            match s.runtime.single_scan() {
-                Ok(_) => {
-                    if let Some(process) = &mut s.process {
-                        process.advance(&mut s.runtime, s.config.cycle_period())?;
-                    }
-                    s.record(EventKind::ScanCompleted, None)
-                }
-                Err(plc_runtime::ScanError::Fault(_)) => s.record(EventKind::ScanFaulted, None),
-                Err(plc_runtime::ScanError::Internal(_)) | Err(plc_runtime::ScanError::Faulted) => {
-                    s.snapshot()
-                }
-            }
+            s.require_stopped()?;
+            s.execute_one_cycle()
         })
     }
     pub fn reset(&self, request: RuntimeSessionRequest) -> Result<RuntimeSnapshotDto, IpcError> {
         self.with_session(request, |s| {
+            s.require_stopped()?;
             s.runtime.reset();
             if let Some(process) = &s.process {
                 process.restage(&mut s.runtime)?;
@@ -264,7 +281,7 @@ impl RuntimeSessionService {
     ) -> Result<UnloadProgramResponse, IpcError> {
         version(request.contract_version)?;
         let mut slot = self.lock()?;
-        slot.target(request.session_id)?;
+        slot.target(request.session_id)?.require_stopped()?;
         slot.loaded = None;
         Ok(UnloadProgramResponse {
             contract_version: CONTRACT_VERSION,

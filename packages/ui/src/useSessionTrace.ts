@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getTracePage } from "@plc-lab/ipc";
 import type { TracePageDto } from "@plc-lab/ipc";
 import { mergeTracePage } from "./trace-history";
+import { coalescedRefresh } from "./coalesced-refresh";
 
 export function useSessionTrace(
   sessionId: string | null,
@@ -13,65 +14,65 @@ export function useSessionTrace(
     pending: boolean;
     error: string | null;
   }>({ page: null, pending: false, error: null });
-  const history = useRef<TracePageDto | null>(null);
-  const generation = useRef(0n);
+  const history = useRef<TracePageDto | null>(null),
+    generation = useRef(0n),
+    context = useRef({ sessionId, current }),
+    reader = useRef<ReturnType<typeof coalescedRefresh> | null>(null);
   useLayoutEffect(() => {
     generation.current += 1n;
-    return () => {
-      generation.current += 1n;
-    };
-  }, [sessionId, observationKey, current]);
-  useEffect(() => {
-    let active = true;
-    const token = generation.current;
-    const valid = () => active && generation.current === token;
-    if (sessionId === null) {
-      history.current = null;
-      setView({ page: null, pending: false, error: null });
-      return;
-    }
+    context.current = { sessionId, current };
     if (history.current?.sessionId !== sessionId) {
       history.current = null;
       setView({ page: null, pending: false, error: null });
     }
-    if (!current) {
-      setView((v) => ({ ...v, pending: false }));
-      return;
-    }
-    setView((v) => ({ ...v, pending: true, error: null }));
-    void (async () => {
+    if (!current) setView((v) => ({ ...v, pending: false }));
+  }, [sessionId, current]);
+  useEffect(() => {
+    let active = true;
+    const refresh = coalescedRefresh(async () => {
+      const { sessionId, current } = context.current,
+        token = generation.current;
+      if (!current || sessionId === null) return;
+      const valid = () => active && generation.current === token;
+      setView((v) => ({ ...v, pending: true, error: null }));
       try {
-        // Request-driven catch-up is bounded by session capacity, never a polling loop.
         for (let pageNumber = 0; pageNumber < 16; pageNumber++) {
-          const known = history.current;
-          const cursor = known?.entries.at(-1)?.sequence ?? null;
+          const known = history.current,
+            cursor = known?.entries.at(-1)?.sequence ?? null;
           const page = await getTracePage(sessionId, cursor, 256);
           if (!valid()) return;
           if (page.sessionId !== sessionId)
             throw new Error("Trace response belongs to another session.");
           history.current = mergeTracePage(known, page);
-          const last = history.current.entries.at(-1)?.sequence ?? null;
-          const more = last !== page.latestSequence;
+          const more =
+            history.current.entries.at(-1)?.sequence !== page.latestSequence;
           setView({ page: history.current, pending: more, error: null });
           if (!more) return;
         }
         throw new Error(
           "The trace response exceeds the bounded session history.",
         );
-      } catch (e: unknown) {
+      } catch (error) {
         if (valid())
           setView((v) => ({
             ...v,
             pending: false,
-            error: e instanceof Error ? e.message : "Trace query failed.",
+            error:
+              error instanceof Error ? error.message : "Trace query failed.",
           }));
       }
-    })();
+    });
+    reader.current = refresh;
     return () => {
       active = false;
+      generation.current += 1n;
+      refresh.dispose();
+      reader.current = null;
     };
+  }, []);
+  useEffect(() => {
+    reader.current?.trigger();
   }, [sessionId, observationKey, current]);
-  // A new session must never render an old session's page even before effects run.
   return {
     ...view,
     page: view.page?.sessionId === sessionId ? view.page : null,

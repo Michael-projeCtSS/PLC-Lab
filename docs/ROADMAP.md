@@ -1,5 +1,9 @@
 # Roadmap
 
+## M4B review boundary
+
+M0–M4A gates/source reviews are accepted. M4B adds deterministic continuous control and live observation only. Validate current source independently on Windows/Linux and actual native WebView2, record M4B_REPORT.md, then stop for technical-lead review. Do not begin M5 or grading/exercises/network/other languages.
+
 ## M4A — Trace foundation and Timeline
 
 M3A validation/source review/final gate is accepted at c72a880d39ca442a49f93dce6351ada56f3a4c33. M4A adds deterministic bounded manual history and historical observation; technical-lead source review is required after validation. Run/Pause/Stop, replay, grading and trace persistence remain unauthorized.

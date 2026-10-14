@@ -12,7 +12,11 @@ pub use process::*;
 mod trace;
 pub use trace::*;
 
-pub const CONTRACT_VERSION: u32 = 6;
+pub const CONTRACT_VERSION: u32 = 7;
+pub const START_EXECUTION_COMMAND: &str = "start_execution";
+pub const PAUSE_EXECUTION_COMMAND: &str = "pause_execution";
+pub const STOP_EXECUTION_COMMAND: &str = "stop_execution";
+pub const EXECUTION_WAKE_EVENT: &str = "execution-state-changed";
 pub const TRACE_PAGE_COMMAND: &str = "get_trace_page";
 pub const CORE_INFO_COMMAND: &str = "get_core_info";
 pub const COMPILE_ST_COMMAND: &str = "compile_st";
@@ -107,7 +111,7 @@ pub fn typescript_contract() -> String {
         ),
     );
     format!(
-        "{base}{}\nexport const TRACE_PAGE_COMMAND = \"{TRACE_PAGE_COMMAND}\" as const;\n",
+        "{base}{}\nexport const START_EXECUTION_COMMAND = \"{START_EXECUTION_COMMAND}\" as const;\nexport const PAUSE_EXECUTION_COMMAND = \"{PAUSE_EXECUTION_COMMAND}\" as const;\nexport const STOP_EXECUTION_COMMAND = \"{STOP_EXECUTION_COMMAND}\" as const;\nexport const EXECUTION_WAKE_EVENT = \"{EXECUTION_WAKE_EVENT}\" as const;\nexport const TRACE_PAGE_COMMAND = \"{TRACE_PAGE_COMMAND}\" as const;\n",
         trace_typescript(&config)
     )
 }

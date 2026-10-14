@@ -6,6 +6,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright-core";
 import { root } from "../../scripts/toolchain.mjs";
+import { interactiveContinuousSmoke } from "./continuous-smoke.mjs";
 import { interactiveRuntimeSmoke } from "./runtime-smoke.mjs";
 import { interactiveProcessSmoke } from "./process-smoke.mjs";
 import {
@@ -346,6 +347,14 @@ try {
     defaultSource,
     directory,
   });
+  const continuousExecution = await interactiveContinuousSmoke({
+    page,
+    editSource,
+    compileButton,
+    defaultSource,
+    tonSource,
+    directory,
+  });
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
@@ -371,6 +380,7 @@ try {
     pageErrors: errors,
     runtimeSession,
     tankFilling,
+    continuousExecution,
     structuredText: {
       editorPresent: true,
       defaultSourceCompiled: true,

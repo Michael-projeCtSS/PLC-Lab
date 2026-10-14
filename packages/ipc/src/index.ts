@@ -4,6 +4,7 @@ import { parseCompileResponse } from "./compilation-response";
 export { parseCompileResponse } from "./compilation-response";
 export * from "./runtime";
 export * from "./trace";
+export * from "./execution";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   CONTRACT_VERSION,

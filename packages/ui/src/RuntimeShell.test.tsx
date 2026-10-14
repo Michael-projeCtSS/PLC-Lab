@@ -119,7 +119,8 @@ it("explicit load displays backend defaults and only input editors", async () =>
   expect(screen.queryByLabelText("Set Motor")).not.toBeInTheDocument();
   expect(screen.queryByLabelText("Set Internal")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Single Scan" })).toBeEnabled();
-  for (const name of ["Run", "Pause", "Stop"])
+  expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
+  for (const name of ["Pause", "Stop"])
     expect(screen.getByRole("button", { name })).toBeDisabled();
 });
 it("BOOL staging and committed values come from returned snapshots", async () => {

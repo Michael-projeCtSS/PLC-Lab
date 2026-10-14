@@ -24,6 +24,10 @@ const kinds: TraceEventKind[] = [
   "RuntimeReset",
   "ProcessReset",
   "ProcessDetached",
+  "ExecutionStarted",
+  "ExecutionPaused",
+  "ExecutionResumed",
+  "ExecutionStopped",
 ];
 function invalid(): never {
   throw new CoreInfoError(
@@ -58,6 +62,8 @@ function entry(value: unknown): TraceEntryDto {
     "completedScans",
     "simulationTimeMicros",
     "runtimeState",
+    "executionMode",
+    "executionRunId",
     "variables",
     "functionBlocks",
     "process",
@@ -89,6 +95,32 @@ function entry(value: unknown): TraceEntryDto {
       boundary.fault?.category !== "runtimeFault")
   )
     invalid();
+  const controlMode = (
+    {
+      ExecutionStarted: "RUNNING",
+      ExecutionResumed: "RUNNING",
+      ExecutionPaused: "PAUSED",
+      ExecutionStopped: "STOPPED",
+    } as Record<string, string>
+  )[v.kind as string];
+  if (
+    controlMode &&
+    (boundary.state !== "READY" ||
+      boundary.executionMode !== controlMode ||
+      boundary.executionRunId === null)
+  )
+    invalid();
+  if (
+    [
+      "SessionLoaded",
+      "ProcessAttached",
+      "ProcessDetached",
+      "ProcessReset",
+      "RuntimeReset",
+    ].includes(String(v.kind)) &&
+    boundary.executionMode !== "STOPPED"
+  )
+    invalid();
   if (v.kind === "ScanCompleted" && boundary.state !== "READY") invalid();
   if (v.kind === "ProcessAttached" && boundary.process === null) invalid();
   if (v.kind === "ProcessDetached" && boundary.process !== null) invalid();
@@ -101,6 +133,7 @@ function entry(value: unknown): TraceEntryDto {
       completedScans !== "0" ||
       simulationTimeMicros !== "0" ||
       boundary.state !== "READY" ||
+      boundary.executionRunId !== null ||
       boundary.process !== null)
   )
     invalid();
@@ -110,6 +143,8 @@ function entry(value: unknown): TraceEntryDto {
     completedScans,
     simulationTimeMicros,
     runtimeState: boundary.state,
+    executionMode: boundary.executionMode,
+    executionRunId: boundary.executionRunId,
     variables: boundary.variables,
     functionBlocks: boundary.functionBlocks,
     process: boundary.process,

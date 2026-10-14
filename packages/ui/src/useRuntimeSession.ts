@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { coalescedRefresh } from "./coalesced-refresh";
 import {
   loadStProgram,
+  startExecution,
+  pauseExecution,
+  stopExecution,
+  getRuntimeSnapshot,
+  listenExecutionWake,
   setRuntimeInput,
   singleScan,
   resetRuntime,
@@ -17,6 +23,9 @@ import type {
 } from "@plc-lab/ipc";
 
 type Action =
+  | "run"
+  | "pause"
+  | "stop"
   | "load"
   | "input"
   | "scan"
@@ -50,6 +59,10 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     generation = useRef(0n),
     busy = useRef(false),
     mounted = useRef(false);
+  const refresh = useRef<ReturnType<typeof coalescedRefresh> | null>(null),
+    wakeQueued = useRef(false),
+    observation = useRef(0n);
+  const observed = () => (++observation.current).toString();
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -57,7 +70,91 @@ export function useRuntimeSession(source: string, compiled: boolean) {
       generation.current += 1n;
     };
   }, []);
+  useEffect(() => {
+    let active = true,
+      unlisten: (() => void) | undefined;
+    const failed = (error: unknown) => {
+      if (active)
+        setView((v) => ({
+          ...v,
+          error: {
+            code:
+              error instanceof IpcTransportError
+                ? error.code
+                : "APP-EXECUTION-REFRESH",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Execution refresh failed.",
+          },
+          current: false,
+        }));
+    };
+    const reader = coalescedRefresh(async () => {
+      const before = snapshot.current;
+      if (
+        !before ||
+        busy.current ||
+        loadedRevision.current !== sourceRevision.current ||
+        before.executionMode !== "RUNNING"
+      )
+        return;
+      const token = generation.current,
+        revision = sourceRevision.current;
+      try {
+        const next = await getRuntimeSnapshot(before.sessionId);
+        if (
+          !active ||
+          generation.current !== token ||
+          sourceRevision.current !== revision ||
+          busy.current
+        )
+          return;
+        if (
+          next.sessionId !== before.sessionId ||
+          next.executionRunId !== before.executionRunId
+        )
+          throw new IpcTransportError(
+            "APP-IPC-002",
+            "Execution observation belongs to another run.",
+          );
+        snapshot.current = next;
+        setView((v) => ({ ...v, snapshot: next, observationKey: observed() }));
+      } catch (error) {
+        if (active && generation.current === token) failed(error);
+      }
+    });
+    refresh.current = reader;
+    void listenExecutionWake((wake) => {
+      const live = snapshot.current;
+      if (
+        !active ||
+        !live ||
+        live.executionMode !== "RUNNING" ||
+        wake.sessionId !== live.sessionId ||
+        wake.runId !== live.executionRunId ||
+        loadedRevision.current !== sourceRevision.current
+      )
+        return;
+      if (busy.current) wakeQueued.current = true;
+      else reader.trigger();
+    }, failed).then((stop) => {
+      if (active) unlisten = stop;
+      else stop();
+    }, failed);
+    return () => {
+      active = false;
+      reader.dispose();
+      unlisten?.();
+      refresh.current = null;
+    };
+  }, []);
   const invalidateSource = () => {
+    if (
+      snapshot.current?.executionMode !== undefined &&
+      snapshot.current.executionMode !== "STOPPED"
+    )
+      return;
     sourceRevision.current += 1n;
     generation.current += 1n;
     busy.current = false;
@@ -106,7 +203,7 @@ export function useRuntimeSession(source: string, compiled: boolean) {
         snapshot: next,
         current: next !== null && loadedRevision.current === revision,
         pending: null,
-        observationKey: token.toString(),
+        observationKey: observed(),
       }));
     } catch (error: unknown) {
       if (current()) {
@@ -143,11 +240,21 @@ export function useRuntimeSession(source: string, compiled: boolean) {
         }));
       }
     } finally {
-      if (current()) busy.current = false;
+      if (current()) {
+        busy.current = false;
+        if (wakeQueued.current) {
+          wakeQueued.current = false;
+          refresh.current?.trigger();
+        }
+      }
     }
   };
   const load = () => {
-    if (!compiled) return Promise.resolve();
+    if (
+      !compiled ||
+      (snapshot.current && snapshot.current.executionMode !== "STOPPED")
+    )
+      return Promise.resolve();
     const candidate = source;
     return perform("load", async () => {
       const response = await loadStProgram(candidate);
@@ -163,34 +270,61 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     compiled &&
     view.snapshot?.state === "READY" &&
     view.pending === null;
+  const stopped = !view.snapshot || view.snapshot.executionMode === "STOPPED";
   const canManageProcess =
-    view.current && compiled && view.snapshot !== null && view.pending === null;
+    view.current &&
+    compiled &&
+    stopped &&
+    view.snapshot !== null &&
+    view.pending === null;
   return {
     ...view,
     invalidateSource,
-    canScan: canMutate,
+    canScan: canMutate && stopped,
+    canRun: canMutate && view.snapshot?.executionMode !== "RUNNING",
+    canPause: canMutate && view.snapshot?.executionMode === "RUNNING",
+    canStop: canMutate && !stopped,
+    sourceLocked: !stopped,
+    canReplace: stopped && view.pending === null,
+    run: () =>
+      canMutate && view.snapshot?.executionMode !== "RUNNING"
+        ? perform("run", (id) => startExecution(id))
+        : Promise.resolve(),
+    pause: () =>
+      canMutate && !stopped
+        ? perform("pause", (id) => pauseExecution(id))
+        : Promise.resolve(),
+    stop: () =>
+      canMutate && !stopped
+        ? perform("stop", (id) => stopExecution(id))
+        : Promise.resolve(),
     canEditInputs: canMutate,
     canManageProcess,
     load,
     scan: () =>
-      canMutate ? perform("scan", (id) => singleScan(id)) : Promise.resolve(),
+      canMutate && stopped
+        ? perform("scan", (id) => singleScan(id))
+        : Promise.resolve(),
     setInput: (id: string, value: RuntimeValue) =>
       canMutate
         ? perform("input", (session) => setRuntimeInput(session, id, value))
         : Promise.resolve(),
-    reset: () => perform("reset", (id) => resetRuntime(id)),
+    reset: () =>
+      stopped ? perform("reset", (id) => resetRuntime(id)) : Promise.resolve(),
     unload: () =>
-      perform("unload", async (id) => {
-        const response = await unloadProgram(id);
-        if (response.sessionId !== id)
-          throw new IpcTransportError(
-            "APP-IPC-002",
-            "Unload targeted another session.",
-          );
-        return null;
-      }),
+      stopped
+        ? perform("unload", async (id) => {
+            const response = await unloadProgram(id);
+            if (response.sessionId !== id)
+              throw new IpcTransportError(
+                "APP-IPC-002",
+                "Unload targeted another session.",
+              );
+            return null;
+          })
+        : Promise.resolve(),
     attach: () =>
-      canMutate
+      canMutate && stopped
         ? perform("attach", (id) => attachProcessScene(id, "TANK_FILLING"))
         : Promise.resolve(),
     detach: () =>

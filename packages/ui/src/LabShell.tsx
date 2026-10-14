@@ -150,24 +150,45 @@ export function LabShell() {
             <button
               key={label}
               type="button"
-              disabled={label !== "Single Scan" || !runtime.canScan}
+              disabled={
+                !(label === "Run"
+                  ? runtime.canRun
+                  : label === "Pause"
+                    ? runtime.canPause
+                    : label === "Stop"
+                      ? runtime.canStop
+                      : runtime.canScan)
+              }
               onClick={
                 label === "Single Scan"
                   ? () => {
                       void runtime.scan();
                     }
-                  : undefined
+                  : label === "Run"
+                    ? () => {
+                        void runtime.run();
+                      }
+                    : label === "Pause"
+                      ? () => {
+                          void runtime.pause();
+                        }
+                      : () => {
+                          void runtime.stop();
+                        }
               }
               aria-describedby="execution-status"
             >
               <span aria-hidden="true">{icon}</span>
-              {label}
+              {label === "Run" && runtime.snapshot?.executionMode === "PAUSED"
+                ? "Resume"
+                : label}
             </button>
           ))}
         </div>
         <p id="execution-status">
           <span className="status-dot" />
-          Manual Single Scan · no continuous execution
+          {runtime.snapshot?.executionMode ?? "STOPPED"} · deterministic 1×
+          execution
         </p>
       </nav>
       <main className="workspace">
@@ -253,7 +274,9 @@ export function LabShell() {
           >
             <StructuredTextEditor
               source={compilation.source}
+              readOnly={runtime.sourceLocked}
               onChange={(value) => {
+                if (runtime.sourceLocked) return;
                 setFocusedDiagnostic(null);
                 runtime.invalidateSource();
                 compilation.edit(value);
@@ -266,7 +289,9 @@ export function LabShell() {
               <button
                 className="compile-button"
                 type="button"
-                disabled={compilation.state.kind === "compiling"}
+                disabled={
+                  runtime.sourceLocked || compilation.state.kind === "compiling"
+                }
                 onClick={() => {
                   void compilation.compile();
                 }}
@@ -276,7 +301,7 @@ export function LabShell() {
               <button
                 type="button"
                 className="compile-button"
-                disabled={!compiled || runtime.pending !== null}
+                disabled={!compiled || !runtime.canReplace}
                 onClick={() => {
                   void runtime.load();
                 }}
@@ -285,7 +310,7 @@ export function LabShell() {
               </button>
               <button
                 type="button"
-                disabled={!runtime.snapshot || runtime.pending !== null}
+                disabled={!runtime.snapshot || !runtime.canReplace}
                 onClick={() => {
                   void runtime.reset();
                 }}
@@ -294,7 +319,7 @@ export function LabShell() {
               </button>
               <button
                 type="button"
-                disabled={!runtime.snapshot || runtime.pending !== null}
+                disabled={!runtime.snapshot || !runtime.canReplace}
                 onClick={() => {
                   void runtime.unload();
                 }}
@@ -308,7 +333,13 @@ export function LabShell() {
               >
                 {compileStatus}
               </span>
-              <span>{runtime.snapshot ? "Manual scans" : "Not running"}</span>
+              <span>
+                {runtime.sourceLocked
+                  ? "Stop execution to edit or reload the program."
+                  : runtime.snapshot
+                    ? "Manual scans available"
+                    : "Not running"}
+              </span>
             </div>
             <div
               className="runtime-status"
@@ -329,6 +360,9 @@ export function LabShell() {
                   </strong>
                   <span data-testid="runtime-state">
                     {runtime.snapshot.state}
+                  </span>
+                  <span data-testid="execution-mode">
+                    {runtime.snapshot.executionMode}
                   </span>
                   <span>
                     Scan{" "}
@@ -371,7 +405,9 @@ export function LabShell() {
                 snapshot={runtime.snapshot}
                 current={runtime.current}
                 canManage={runtime.canManageProcess}
+                sourceLocked={runtime.sourceLocked}
                 onExample={() => {
+                  if (runtime.sourceLocked) return;
                   setFocusedDiagnostic(null);
                   runtime.invalidateSource();
                   compilation.edit(TANK_EXAMPLE_SOURCE);
@@ -519,9 +555,11 @@ export function LabShell() {
               : "Native core unavailable"}
         </span>
         <span>
-          {runtime.snapshot ? "Manual runtime session" : "No runtime loaded"}
+          {runtime.snapshot
+            ? "Controlled runtime session"
+            : "No runtime loaded"}
         </span>
-        <span>M4A · Manual PLC + Process + Trace</span>
+        <span>M4B · Continuous PLC + Process + Trace</span>
       </footer>
     </div>
   );

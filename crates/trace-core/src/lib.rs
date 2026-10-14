@@ -59,6 +59,14 @@ pub struct TraceBuffer<T> {
     dropped_count: u64,
 }
 impl<T> TraceBuffer<T> {
+    /// Focused exhaustion seam, absent from production builds. Not persistence.
+    #[cfg(feature = "test-support")]
+    pub fn near_exhaustion_for_test(capacity: NonZeroUsize) -> Self {
+        let mut buffer = Self::new(capacity);
+        buffer.next = TraceSequenceId::new(u64::MAX - 1);
+        buffer.dropped_count = u64::MAX - 2;
+        buffer
+    }
     pub fn new(capacity: NonZeroUsize) -> Self {
         Self {
             entries: VecDeque::with_capacity(capacity.get()),

@@ -1,5 +1,31 @@
 # Human test checklist
 
+## M4B continuous execution review
+
+- [ ] Run starts automatic scans without manual clicks
+- [ ] Run does not synchronously execute a cycle
+- [ ] Pause freezes count, time, TON and process across several host periods
+- [ ] Resume continues the preserved state with a fresh lease
+- [ ] Stop freezes count, time, TON and process
+- [ ] Stop does not reset PLC memory or staged inputs
+- [ ] Stop does not reset the plant or sensors
+- [ ] Single Scan is available after Stop and advances exactly one cycle
+- [ ] Single Scan is disabled during Run and Pause
+- [ ] Editor is read-only during Run and Pause
+- [ ] Use Example, Compile and Load require Stop
+- [ ] Attach, Detach and Reset Process require Stop
+- [ ] Reset Runtime and Unload require Stop
+- [ ] USER input staging remains available during Run and Pause
+- [ ] PROCESS sensor editing is rejected in all modes
+- [ ] Timeline refreshes from Rust pages during Run
+- [ ] Historical selection remains pinned while live scans continue
+- [ ] Automatic Tank scan 8 is 800 ms / 80% / High ACTIVE / Inlet OPEN
+- [ ] Automatic Tank scan 9 is 900 ms / 80% / High ACTIVE / Inlet CLOSED
+- [ ] Runtime fault automatically stops once and explicit Reset Runtime recovers
+- [ ] Run/Pause/Stop use host time only for pacing; visible time remains SimulationClock
+
+Earlier manual-only checklists below are historical; M4B supersedes their disabled Run/Pause/Stop expectations.
+
 ## M4A manual trace review
 
 - [ ] Load creates the first Timeline event.

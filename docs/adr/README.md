@@ -1,5 +1,9 @@
 # Architecture decision records
 
+## M4B
+
+[ADR-0016: Deterministic continuous execution controller](0016-continuous-execution-controller.md) authorizes application modes, private leases, host-only pacing and authoritative live refresh. M0–M4A are accepted; earlier manual-only restrictions below are historical. M4B requires technical-lead review after independent validation.
+
 ## M4A
 
 [ADR-0015: Deterministic session boundary trace](0015-deterministic-session-trace.md).

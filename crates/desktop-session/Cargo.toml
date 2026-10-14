@@ -15,6 +15,7 @@ trace-core.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+trace-core = { workspace = true, features = ["test-support"] }
 
 [lints]
 workspace = true

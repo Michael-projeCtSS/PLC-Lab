@@ -18,6 +18,8 @@ export function traceEntry(
     completedScans: snapshot.completedScans,
     simulationTimeMicros: snapshot.simulationTimeMicros,
     runtimeState: snapshot.state,
+    executionMode: snapshot.executionMode,
+    executionRunId: snapshot.executionRunId,
     variables: snapshot.variables,
     functionBlocks: snapshot.functionBlocks,
     process: snapshot.process,

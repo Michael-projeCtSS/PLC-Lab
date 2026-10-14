@@ -105,7 +105,11 @@ export async function exerciseTraceHistory(
     });
     selected.push(event);
   }
-  for (const label of ["Run", "Pause", "Stop"])
+  assert.equal(
+    await page.getByRole("button", { name: "Run", exact: true }).isEnabled(),
+    true,
+  );
+  for (const label of ["Pause", "Stop"])
     assert.equal(
       await page.getByRole("button", { name: label, exact: true }).isDisabled(),
       true,

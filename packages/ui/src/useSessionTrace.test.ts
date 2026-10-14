@@ -20,7 +20,8 @@ it("does not query before Load and requests initial SessionLoaded history", asyn
   const h = mount({ id: null, key: "0", current: false });
   expect(getTracePage).not.toHaveBeenCalled();
   h.rerender(loaded);
-  await waitFor(() => expect(h.result.current.pending).toBe(false));
+  await waitFor(() => expect(h.result.current.page?.entries).toHaveLength(1));
+  expect(h.result.current.pending).toBe(false);
   expect(h.result.current.page?.entries[0]?.kind).toBe("SessionLoaded");
   expect(getTracePage).toHaveBeenCalledWith("1", null, 256);
 });
@@ -109,8 +110,9 @@ it("replacement discards the pending prior session page", async () => {
     .mockResolvedValueOnce(tracePage(undefined, "2"));
   const h = mount();
   h.rerender({ ...loaded, id: "2", key: "2" });
-  await waitFor(() => expect(h.result.current.page?.sessionId).toBe("2"));
+  expect(getTracePage).toHaveBeenCalledTimes(1);
   await act(async () => old(tracePage()));
+  await waitFor(() => expect(h.result.current.page?.sessionId).toBe("2"));
   expect(h.result.current.page?.sessionId).toBe("2");
 });
 it("reports query failures without mutating live state or fabricating history", async () => {

@@ -14,6 +14,49 @@ const props = () => ({
   error: null,
   onDiagnostic: vi.fn(),
 });
+it("pins a historical sequence as live pages advance and reports selection eviction", () => {
+  const first = traceEntry("1", "ScanCompleted", {
+    ...readySnapshot(),
+    executionMode: "RUNNING",
+    executionRunId: "1",
+  });
+  const h = render(
+    <TimelinePanel {...props()} page={tracePage([first])} current />,
+  );
+  fireEvent.click(screen.getByRole("button"));
+  const historical = screen.getByTestId("trace-inspector").textContent;
+  const next = traceEntry("2", "ScanCompleted", {
+    ...readySnapshot(),
+    completedScans: "1",
+    executionMode: "RUNNING",
+    executionRunId: "1",
+  });
+  h.rerender(
+    <TimelinePanel {...props()} page={tracePage([first, next])} current />,
+  );
+  expect(screen.getByTestId("trace-inspector").textContent).toBe(historical);
+  h.rerender(
+    <TimelinePanel
+      {...props()}
+      page={{
+        ...tracePage([next]),
+        oldestSequence: "2",
+        droppedCount: "1",
+        capacity: 1,
+      }}
+      current
+    />,
+  );
+  expect(screen.queryByTestId("trace-inspector")).not.toBeInTheDocument();
+  expect(
+    screen.getByText(/Selected event is no longer retained/),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button"));
+  expect(screen.getByTestId("trace-inspector")).toHaveAttribute(
+    "data-selected-sequence",
+    "2",
+  );
+});
 it("shows an empty read-only Timeline before Load", () => {
   render(<TimelinePanel {...props()} />);
   expect(screen.getByText(/No trace recorded/)).toBeInTheDocument();

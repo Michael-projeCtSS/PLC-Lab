@@ -13,6 +13,10 @@ pub enum TraceEventKind {
     RuntimeReset,
     ProcessReset,
     ProcessDetached,
+    ExecutionStarted,
+    ExecutionPaused,
+    ExecutionResumed,
+    ExecutionStopped,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -31,6 +35,8 @@ pub struct TraceEntryDto {
     #[ts(type = "string")]
     pub simulation_time_micros: plc_types::PlcTime,
     pub runtime_state: SessionRuntimeState,
+    pub execution_mode: ExecutionMode,
+    pub execution_run_id: Option<ExecutionRunId>,
     pub variables: Vec<RuntimeVariable>,
     pub function_blocks: Vec<RuntimeFunctionBlock>,
     pub process: Option<ProcessSnapshotDto>,

@@ -40,11 +40,15 @@ fn event_kinds_are_closed_and_contract_version_is_incremented() {
         "RuntimeReset",
         "ProcessReset",
         "ProcessDetached",
+        "ExecutionStarted",
+        "ExecutionPaused",
+        "ExecutionResumed",
+        "ExecutionStopped",
     ] {
         let e: TraceEventKind = serde_json::from_str(&format!("\"{kind}\"")).unwrap();
         assert_eq!(serde_json::to_string(&e).unwrap(), format!("\"{kind}\""));
     }
     assert!(serde_json::from_str::<TraceEventKind>("\"Replay\"").is_err());
-    assert_eq!(CONTRACT_VERSION, 6);
+    assert_eq!(CONTRACT_VERSION, 7);
     assert_eq!(TRACE_PAGE_COMMAND, "get_trace_page");
 }

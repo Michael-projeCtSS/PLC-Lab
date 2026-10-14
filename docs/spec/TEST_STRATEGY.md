@@ -1,5 +1,9 @@
 # Test strategy
 
+## M4B continuous execution
+
+Headless real-ST tests compare N manual cycles with N authorized leased cycles, including private core snapshots, staged/attempted/committed images, TON, virtual clock, Tank/sensors and cycle observations. Ignore control rows, their sequence displacement and controller metadata only; no PLC/process differences are normalized. Test exact control-row count/time, old leases after Pause/Stop/Resume/replacement/unload, Load prepare/Run/commit ordering, input ownership, fault auto-stop, checked epoch exhaustion, small-capacity eviction and near-MAX sequence saturation. Domain tests use no sleeps. Host tests assert wait-before-first/every-tick and one attempt per wake without exact real-time deadlines. Frontend tests cover confirmed modes, stale signals/replies, bounded coalescing and pinned/evicted history. Actual WebView2 smoke executes automatic Tank scans 8/9, Pause/Stop quiescence across several periods, Resume continuity, historical inspection during Run, TON preservation and exactly one manual cycle after Stop. Existing Windows canonical/debug/release/native and Linux portable/debug/release/REAL assertions remain mandatory.
+
 ## M4A trace validation
 
 Require generic retention/cursor/nonzero/exhaustion tests; real-source session/input/process/reset/fault/no-event/pagination tests; exact deterministic histories including visible TON state; strict Rust/TypeScript contract validators; incremental/stale-response/selection/retention UI tests; architecture dependency/no-clock/no-scheduler guards; actual Windows native historical Tank scan 8/9 correlated with Rust trace pages. Keep all M0–M3A and cross-platform REAL/debug/release regressions. Trace is observation, never authority.

@@ -189,6 +189,7 @@ impl RuntimeSessionService {
                 session_id: request.session_id,
             },
             |s| {
+                s.require_stopped()?;
                 if s.runtime.snapshot().state() != RuntimeState::Ready {
                     return Err(application_error(
                         "PLC-PROCESS-006",
@@ -211,6 +212,7 @@ impl RuntimeSessionService {
         request: RuntimeSessionRequest,
     ) -> Result<RuntimeSnapshotDto, IpcError> {
         self.with_session(request, |s| {
+            s.require_stopped()?;
             s.process.take().ok_or_else(|| {
                 application_error("PLC-PROCESS-005", "No process scene is attached.")
             })?;
@@ -222,6 +224,7 @@ impl RuntimeSessionService {
         request: RuntimeSessionRequest,
     ) -> Result<RuntimeSnapshotDto, IpcError> {
         self.with_session(request, |s| {
+            s.require_stopped()?;
             s.process
                 .as_mut()
                 .ok_or_else(|| {

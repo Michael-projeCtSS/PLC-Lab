@@ -49,8 +49,12 @@ export async function interactiveRuntimeSmoke({
     );
     return observe(id);
   };
-  const disabledContinuous = async () => {
-    for (const name of ["Run", "Pause", "Stop"])
+  const disabledContinuous = async (snapshot) => {
+    assert.equal(
+      await page.getByRole("button", { name: "Run", exact: true }).isDisabled(),
+      !snapshot || snapshot.state !== "READY",
+    );
+    for (const name of ["Pause", "Stop"])
       assert.equal(
         await page.getByRole("button", { name, exact: true }).isDisabled(),
         true,
@@ -99,7 +103,7 @@ export async function interactiveRuntimeSmoke({
         `ET = ${shownValue({ type: "TIME", microseconds: block.etMicros })}`,
       );
     }
-    await disabledContinuous();
+    await disabledContinuous(snapshot);
   };
   const loaded = async () => {
     const snapshot = await mutation("load_st_program", () =>
@@ -403,7 +407,7 @@ export async function interactiveRuntimeSmoke({
     sourceEditDisablesScan: true,
     runtimeFaultMarkerCorrect: true,
     unloadRemovesValues: true,
-    continuousControlsDisabled: true,
+    stoppedControlMatrixVerified: true,
     realBackendResponsesCorrelated: true,
   };
 }
