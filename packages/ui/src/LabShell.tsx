@@ -319,7 +319,7 @@ export function LabShell() {
               </button>
               <button
                 type="button"
-                disabled={!runtime.snapshot || !runtime.canReplace}
+                disabled={!runtime.snapshot || !runtime.canUnload}
                 onClick={() => {
                   void runtime.unload();
                 }}

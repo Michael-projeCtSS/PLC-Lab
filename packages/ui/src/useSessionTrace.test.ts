@@ -138,3 +138,20 @@ it("catches up bounded pages from each returned cursor without polling", async (
   expect(getTracePage).toHaveBeenCalledTimes(2);
   expect(h.result.current.pending).toBe(false);
 });
+it("coalesces live observation bursts while a trace page is pending", async () => {
+  let complete!: (p: TracePageDto) => void;
+  vi.mocked(getTracePage)
+    .mockReturnValueOnce(
+      new Promise((r) => {
+        complete = r;
+      }),
+    )
+    .mockResolvedValue(tracePage([traceEntry("2", "ScanCompleted")]));
+  const h = mount();
+  for (let i = 2; i < 100; i++) h.rerender({ ...loaded, key: String(i) });
+  expect(getTracePage).toHaveBeenCalledTimes(1);
+  await act(async () => complete(tracePage()));
+  await waitFor(() => expect(h.result.current.page?.entries).toHaveLength(2));
+  expect(getTracePage).toHaveBeenCalledTimes(2);
+  expect(getTracePage).toHaveBeenLastCalledWith("1", "1", 256);
+});

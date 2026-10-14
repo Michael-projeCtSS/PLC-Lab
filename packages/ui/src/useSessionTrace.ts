@@ -49,9 +49,9 @@ export function useSessionTrace(
           setView({ page: history.current, pending: more, error: null });
           if (!more) return;
         }
-        throw new Error(
-          "The trace response exceeds the bounded session history.",
-        );
+        // Run may append while these bounded pages are read. Continue through
+        // the same coalescer instead of mistaking new events for invalid data.
+        refresh.trigger();
       } catch (error) {
         if (valid())
           setView((v) => ({

@@ -42,6 +42,8 @@ IPC v7 adds executionMode and nullable read-only executionRunId to RuntimeSnapsh
 
 execution-state-changed carries only contractVersion/sessionId/runId. It cannot carry snapshots, PLC values or execution authority. React matches the active source/session/run, then queries get_runtime_snapshot and incremental get_trace_page. Readers each allow one in-flight chain and one dirty bit; bursts coalesce into a follow-up, with no promise queue or browser execution timer. Mutation generations prevent old reads overwriting Pause/Stop/reload confirmations. Wrong-run/session wakes are ignored. History uses canonical Rust pages, never inserted event payloads.
 
+After Run/Resume confirmation, one coalesced read also catches a terminal tick whose wake preceded delivery of that confirmation. A bounded 16-page history chain may request a coalesced follow-up if Run appended more events during the read. Known fail-closed APP errors allow explicit Unload, still checked by the backend, so an unavailable session can be replaced without guessing a STOPPED snapshot. Other source/topology operations remain locked until that authoritative unload completes.
+
 Selecting history leaves live updates running. The selected sequence remains pinned while the live tank advances. Eviction removes the unavailable observation and shows an explicit no-longer-retained notice. Trace eviction/saturation cannot control execution. Test equality projects out controller mode/run identity and absolute trace IDs displaced by control rows; every PLC/process value, staged/committed/attempted image, TON state, fault, count and virtual timestamp remains exact.
 
 ## Evidence

@@ -242,8 +242,9 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     } finally {
       if (current()) {
         busy.current = false;
-        if (wakeQueued.current) {
+        if (wakeQueued.current || action === "run") {
           wakeQueued.current = false;
+          // A terminal tick can precede delivery of the Run/Resume response.
           refresh.current?.trigger();
         }
       }
@@ -271,6 +272,14 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     view.snapshot?.state === "READY" &&
     view.pending === null;
   const stopped = !view.snapshot || view.snapshot.executionMode === "STOPPED";
+  const failedClosed =
+    !view.current &&
+    [
+      "APP-EXECUTION-WORKER",
+      "APP-EXECUTION-NOTIFICATION",
+      "APP-PROCESS-INTERNAL",
+      "APP-RUNTIME-INTERNAL",
+    ].includes(view.error?.code ?? "");
   const canManageProcess =
     view.current &&
     compiled &&
@@ -286,6 +295,7 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     canStop: canMutate && !stopped,
     sourceLocked: !stopped,
     canReplace: stopped && view.pending === null,
+    canUnload: (stopped || failedClosed) && view.pending === null,
     run: () =>
       canMutate && view.snapshot?.executionMode !== "RUNNING"
         ? perform("run", (id) => startExecution(id))
@@ -312,7 +322,7 @@ export function useRuntimeSession(source: string, compiled: boolean) {
     reset: () =>
       stopped ? perform("reset", (id) => resetRuntime(id)) : Promise.resolve(),
     unload: () =>
-      stopped
+      stopped || failedClosed
         ? perform("unload", async (id) => {
             const response = await unloadProgram(id);
             if (response.sessionId !== id)
