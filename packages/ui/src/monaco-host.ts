@@ -96,30 +96,41 @@ export function createStEditor(
     onChange(model.getValue()),
   );
   return {
-    update(value: string, diagnostics: CompilerDiagnostic[]) {
+    update(
+      value: string,
+      diagnostics: CompilerDiagnostic[],
+      runtimeDiagnostics: CompilerDiagnostic[] = [],
+    ) {
       if (model.getValue() !== value) model.setValue(value);
-      monaco.editor.setModelMarkers(
-        model,
-        MARKER_OWNER,
-        diagnostics.flatMap((d) =>
-          d.span
-            ? [
-                {
-                  ...toEditorRange(value, d.span),
-                  severity:
-                    d.severity === "error"
-                      ? monaco.MarkerSeverity.Error
-                      : d.severity === "warning"
-                        ? monaco.MarkerSeverity.Warning
-                        : monaco.MarkerSeverity.Info,
-                  message: d.message,
-                  code: d.code,
-                  source: "Rust ST compiler",
-                },
-              ]
-            : [],
-        ),
-      );
+      const markers = (
+        owner: string,
+        items: CompilerDiagnostic[],
+        source: string,
+      ) =>
+        monaco.editor.setModelMarkers(
+          model,
+          owner,
+          items.flatMap((d) =>
+            d.span
+              ? [
+                  {
+                    ...toEditorRange(value, d.span),
+                    severity:
+                      d.severity === "error"
+                        ? monaco.MarkerSeverity.Error
+                        : d.severity === "warning"
+                          ? monaco.MarkerSeverity.Warning
+                          : monaco.MarkerSeverity.Info,
+                    message: d.message,
+                    code: d.code,
+                    source,
+                  },
+                ]
+              : [],
+          ),
+        );
+      markers(MARKER_OWNER, diagnostics, "Rust ST compiler");
+      markers("plc-lab-runtime", runtimeDiagnostics, "Rust PLC runtime");
     },
     focus(span: CompilerDiagnostic["span"]) {
       if (span) {

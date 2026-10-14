@@ -6,6 +6,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright-core";
 import { root } from "../../scripts/toolchain.mjs";
+import { interactiveRuntimeSmoke } from "./runtime-smoke.mjs";
 import {
   CONTRACT_VERSION,
   CORE_INFO_COMMAND,
@@ -32,10 +33,9 @@ await new Promise((resolve, reject) =>
 );
 
 let output = "";
-const application = spawn(
-  path.join(root, "target/debug/plc-lab-desktop.exe"),
-  [],
-  {
+let application;
+try {
+  application = spawn(path.join(root, "target/debug/plc-lab-desktop.exe"), [], {
     cwd: root,
     env: {
       ...process.env,
@@ -44,8 +44,22 @@ const application = spawn(
     },
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
-  },
-);
+  });
+} catch (error) {
+  const failure = {
+    result: "FAIL",
+    phase: "native-launch",
+    applicationStarted: false,
+    error: error instanceof Error ? error.message : String(error),
+    code: error.code ?? null,
+  };
+  await writeFile(
+    path.join(directory, "result.json"),
+    `${JSON.stringify(failure, null, 2)}\n`,
+  );
+  await writeFile(path.join(directory, "native.log"), failure.error);
+  throw error;
+}
 let launchError;
 application.on("error", (error) => {
   launchError = error;
@@ -113,7 +127,10 @@ try {
     assert.equal(await page.getByRole("region", { name }).count(), 1);
   }
   for (const name of ["Run", "Pause", "Stop", "Single Scan"]) {
-    assert.equal(await page.getByRole("button", { name }).isDisabled(), true);
+    assert.equal(
+      await page.getByRole("button", { name, exact: true }).isDisabled(),
+      true,
+    );
   }
   const info = await page.evaluate(
     ({ command, version }) =>
@@ -129,7 +146,7 @@ try {
   assert.equal(info.coreVersion, manifest.version);
   assert.equal(info.contractVersion, CONTRACT_VERSION);
   assert.equal(info.buildContext, "development");
-  assert.equal(info.execution, "unavailable");
+  assert.equal(info.execution, "manual-single-scan");
   const rejection = await page.evaluate(
     async ({ command, version }) => {
       try {
@@ -299,7 +316,18 @@ try {
     .getByText("COMPILE SUCCESS", { exact: true })
     .waitFor();
   for (const name of ["Run", "Pause", "Stop", "Single Scan"])
-    assert.equal(await page.getByRole("button", { name }).isDisabled(), true);
+    assert.equal(
+      await page.getByRole("button", { name, exact: true }).isDisabled(),
+      true,
+    );
+  const runtimeSession = await interactiveRuntimeSmoke({
+    page,
+    editSource,
+    compileButton,
+    tonSource,
+    defaultSource,
+    directory,
+  });
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
@@ -323,6 +351,7 @@ try {
     executionControlsDisabled: true,
     panels: 7,
     pageErrors: errors,
+    runtimeSession,
     structuredText: {
       editorPresent: true,
       defaultSourceCompiled: true,
@@ -331,7 +360,7 @@ try {
       unicodeMarkerCorrect: true,
       tonSourceCompiled: true,
       obsoleteMarkersCleared: true,
-      runtimeValuesUnavailable: true,
+      runtimeValuesUnavailableBeforeLoad: true,
     },
   };
   await writeFile(

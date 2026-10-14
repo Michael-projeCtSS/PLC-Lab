@@ -25,6 +25,7 @@ trace-core = { path = "crates/trace-core" }
 network-core = { path = "crates/network-core" }
 grading-core = { path = "crates/grading-core" }
 app-contract = { path = "crates/app-contract" }
+desktop-session = { path = "crates/desktop-session" }
 st-frontend = { path = "languages/st" }
 
 [workspace.lints.rust]

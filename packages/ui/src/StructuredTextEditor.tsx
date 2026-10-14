@@ -6,22 +6,36 @@ export function StructuredTextEditor({
   source,
   onChange,
   diagnostics,
+  runtimeDiagnostics = [],
   focusedDiagnostic,
 }: {
   source: string;
   onChange: (value: string) => void;
   diagnostics: CompilerDiagnostic[];
+  runtimeDiagnostics?: CompilerDiagnostic[];
   focusedDiagnostic: CompilerDiagnostic | null;
 }) {
   const container = useRef<HTMLDivElement>(null),
     instance = useRef<ReturnType<typeof createStEditor> | null>(null);
-  const latest = useRef({ source, onChange, diagnostics, focusedDiagnostic });
+  const latest = useRef({
+    source,
+    onChange,
+    diagnostics,
+    runtimeDiagnostics,
+    focusedDiagnostic,
+  });
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    latest.current = { source, onChange, diagnostics, focusedDiagnostic };
-    instance.current?.update(source, diagnostics);
+    latest.current = {
+      source,
+      onChange,
+      diagnostics,
+      runtimeDiagnostics,
+      focusedDiagnostic,
+    };
+    instance.current?.update(source, diagnostics, runtimeDiagnostics);
     if (focusedDiagnostic) instance.current?.focus(focusedDiagnostic.span);
-  }, [source, onChange, diagnostics, focusedDiagnostic]);
+  }, [source, onChange, diagnostics, runtimeDiagnostics, focusedDiagnostic]);
   useEffect(() => {
     let active = true;
     import("./monaco-host")
@@ -33,7 +47,11 @@ export function StructuredTextEditor({
           current.source,
           (value) => latest.current.onChange(value),
         );
-        instance.current.update(current.source, current.diagnostics);
+        instance.current.update(
+          current.source,
+          current.diagnostics,
+          current.runtimeDiagnostics,
+        );
       })
       .catch((error: unknown) => {
         if (active)

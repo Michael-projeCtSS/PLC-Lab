@@ -1,5 +1,11 @@
 # PLC Lab architecture
 
+## M2B application session boundary
+
+Editor Source -> Compile (pure metadata) is separate from Source -> explicit Load -> ST compiler -> existing validation -> owned ExecutionPlan -> desktop-session -> Runtime::single_scan -> coherent RuntimeSnapshotDto -> UI. Desktop owns one Arc<RuntimeSessionService>; a synchronous mutex serializes replacement/mutations/observation on blocking workers. The new headless application crate imports app-contract/st-frontend/plc-runtime/plc-types. Core and ST crates never import the service or Tauri.
+
+Snapshots carry staged Inputs, committed Outputs/Locals, public TON Q/ET and exact Rust count/time/configuration. No IR, plan, private epoch or mutable storage map is transported. Source revisions and session generations have distinct responsibilities. Single Scan is deterministic and not real-time paced; React caches/formats returned snapshots. No process/network/trace/grading implementation is introduced. [ADR-0013](../adr/0013-desktop-runtime-session.md) and the [session specification](../spec/DESKTOP_RUNTIME_SESSION.md) define this increment.
+
 ## M2A source and compilation boundary
 
 ST Source -> Lexer -> dedicated ST AST -> Semantic Compiler -> Canonical PLC IR -> existing Validator -> ValidatedProgram -> existing ExecutionPlan -> existing PLC Runtime. The final two steps are exercised headlessly; desktop Compile stops after validation and declaration metadata. No runtime semantics changed.

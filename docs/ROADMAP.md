@@ -1,5 +1,9 @@
 # Roadmap
 
+## M2B assigned increment
+
+M2A validation and technical-lead source review passed. M2B implements the first explicit desktop runtime session, manual Single Scan and real variable/TON/fault/reset presentation. It stops for technical-lead application/UI source review after independent validation. M2C continuous execution and M3 process simulation require separate authorization. No automatic transition is permitted.
+
 M1C is independently validated. M2A implements the Alpha ST compiler and Monaco compilation surface under source-review gating. It proves ST -> existing IR/runtime headlessly while desktop Compile returns diagnostics/declarations only. M2B/runtime UI and subsequent process/trace/education work remain separately authorized dependencies; no later milestone starts automatically. See [M2A report](M2A_REPORT.md).
 
 The engineering contract controls scope and implementation order. M0/M1A/M1B are approved. M1C adds standard-FB declarations, normalized calls, transactional state and headless TON code/tests, then stops for technical-lead review. This document does not authorize M2. Actual validation outcomes are in [M1C_REPORT.md](M1C_REPORT.md).

@@ -1,8 +1,8 @@
 # PLC Lab
 
-Educational desktop workspace for PLC programming and industrial automation. **M1C independently validated; M2A Alpha ST compiler/editor implemented for review.** Real ST source compiles through a Rust lexer, dedicated AST, semantic compiler and existing canonical IR validator. Headless tests execute it through the accepted transactional runtime and TON. Desktop Compile returns diagnostics and declarations only; no desktop PLC execution, process/network simulation, trace recording or grading is implemented.
+Educational desktop workspace for PLC programming and industrial automation. **M1C/M2A accepted; M2B adds manual desktop runtime sessions.** Real ST source compiles through a Rust lexer, dedicated AST, semantic compiler and existing canonical IR validator. Explicit Load independently compiles and lowers it into the accepted transactional runtime. Manual Single Scan exposes real committed variables, TON state and source-backed faults without process/network simulation, trace recording or grading.
 
-The working application uses Tauri 2, React, TypeScript, Rust and a locally bundled Monaco ST editor. It retains Project, Program, Variables, Process, Network, Timeline and Diagnostics. Compile uses real typed IPC v3; Run, Pause, Stop and Single Scan stay disabled. Variables shows declarations with unavailable runtime values. See [Alpha ST](docs/spec/STRUCTURED_TEXT_ALPHA.md) and [M2A report](docs/M2A_REPORT.md).
+The working application uses Tauri 2, React, TypeScript, Rust and a locally bundled Monaco ST editor. It retains Project, Program, Variables, Process, Network, Timeline and Diagnostics. Compile remains pure; IPC v4 adds explicit Load, staged input editing, Single Scan, Reset Runtime and Unload. Run/Pause/Stop remain disabled. Values, count and simulation time come from Rust snapshots; click speed never controls PLC time. See [Alpha ST](docs/spec/STRUCTURED_TEXT_ALPHA.md), [session rules](docs/spec/DESKTOP_RUNTIME_SESSION.md) and [M2B report](docs/M2B_REPORT.md).
 
 ```powershell
 npm ci

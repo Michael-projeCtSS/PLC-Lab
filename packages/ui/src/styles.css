@@ -430,6 +430,93 @@ h3 {
     10px "Consolas",
     monospace;
 }
+.runtime-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 8px 16px;
+  border-top: 1px solid #2b363f;
+  font:
+    11px Consolas,
+    monospace;
+  color: #bacbd7;
+}
+.runtime-status strong,
+.runtime-status > span:last-child {
+  flex-basis: 100%;
+}
+.runtime-status > span:last-child {
+  color: #9aaebb;
+  font-size: 10px;
+}
+.program-panel .panel-footer {
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.program-panel .panel-footer button {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.table-heading.runtime-heading,
+.runtime-variable-row {
+  grid-template-columns: minmax(0, 1fr) 30px 42px 76px;
+}
+.runtime-variable-row {
+  align-items: start;
+}
+.runtime-value-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+.runtime-value-cell output {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.runtime-value-cell input[type="checkbox"] {
+  accent-color: #77ddba;
+}
+.numeric-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  width: 100%;
+}
+.numeric-input input {
+  width: 100%;
+  min-width: 0;
+  background: #101820;
+  border: 1px solid #547486;
+  color: #d4e0e7;
+  padding: 3px;
+  font:
+    11px Consolas,
+    monospace;
+}
+.numeric-input button {
+  font-size: 9px;
+  padding: 3px 6px;
+}
+.numeric-input [role="alert"] {
+  white-space: normal;
+  color: #efaeaa;
+}
+.runtime-fb {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  border-top: 1px solid #2b363f;
+  font:
+    11px Consolas,
+    monospace;
+}
+.runtime-diagnostic {
+  border-left-color: #efaeaa;
+}
 .statusbar {
   min-height: 33px;
   display: flex;

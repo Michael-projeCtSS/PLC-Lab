@@ -5,6 +5,9 @@ import type { CoreInfo } from "@plc-lab/ipc";
 import type { CompilerDiagnostic } from "@plc-lab/ipc";
 import { useStCompilation } from "./useStCompilation";
 import { StructuredTextEditor } from "./StructuredTextEditor";
+import { useRuntimeSession } from "./useRuntimeSession";
+import { RuntimeVariables } from "./RuntimeVariables";
+import { formatDuration } from "./runtime-values";
 
 type Connection =
   | { kind: "connecting" }
@@ -57,12 +60,19 @@ function EmptyState({
 
 export function LabShell() {
   const compilation = useStCompilation();
+  const compiled =
+    compilation.state.kind === "result" && compilation.state.result.success;
+  const runtime = useRuntimeSession(compilation.source, compiled);
   const [focusedDiagnostic, setFocusedDiagnostic] =
     useState<CompilerDiagnostic | null>(null);
-  const diagnostics =
-    compilation.state.kind === "result"
+  const diagnostics = [
+    ...(compilation.state.kind === "result"
       ? compilation.state.result.diagnostics
-      : [];
+      : []),
+    ...runtime.loadDiagnostics,
+  ];
+  const runtimeDiagnostics =
+    runtime.current && runtime.snapshot?.fault ? [runtime.snapshot.fault] : [];
   const symbols =
     compilation.state.kind === "result" && compilation.state.result.success
       ? compilation.state.result.symbols
@@ -131,7 +141,14 @@ export function LabShell() {
             <button
               key={label}
               type="button"
-              disabled
+              disabled={label !== "Single Scan" || !runtime.canScan}
+              onClick={
+                label === "Single Scan"
+                  ? () => {
+                      void runtime.scan();
+                    }
+                  : undefined
+              }
               aria-describedby="execution-status"
             >
               <span aria-hidden="true">{icon}</span>
@@ -141,7 +158,7 @@ export function LabShell() {
         </div>
         <p id="execution-status">
           <span className="status-dot" />
-          PLC execution unavailable · compilation only
+          Manual Single Scan · no continuous execution
         </p>
       </nav>
       <main className="workspace">
@@ -165,9 +182,13 @@ export function LabShell() {
               </p>
             </div>
           </Panel>
-          <Panel id="variables" title="Variables" detail="DECLARATIONS">
+          <Panel
+            id="variables"
+            title="Variables"
+            detail={runtime.snapshot ? "RUNTIME" : "DECLARATIONS"}
+          >
             <div
-              className="table-heading declaration-heading"
+              className={`table-heading declaration-heading ${runtime.snapshot ? "runtime-heading" : ""}`}
               aria-hidden="true"
             >
               <span>Name</span>
@@ -175,7 +196,21 @@ export function LabShell() {
               <span>Role</span>
               <span>Value</span>
             </div>
-            {symbols.length ? (
+            {runtime.snapshot ? (
+              <>
+                {!runtime.current && (
+                  <p className="declaration-note">
+                    Previous loaded source · STALE
+                  </p>
+                )}
+                <RuntimeVariables
+                  snapshot={runtime.snapshot}
+                  editable={runtime.canEditInputs}
+                  observationKey={runtime.observationKey}
+                  setInput={runtime.setInput}
+                />
+              </>
+            ) : symbols.length ? (
               <div className="declarations" data-testid="compiled-symbols">
                 {symbols.map((symbol) => (
                   <div className="declaration-row" key={symbol.name}>
@@ -211,9 +246,11 @@ export function LabShell() {
               source={compilation.source}
               onChange={(value) => {
                 setFocusedDiagnostic(null);
+                runtime.invalidateSource();
                 compilation.edit(value);
               }}
               diagnostics={diagnostics}
+              runtimeDiagnostics={runtimeDiagnostics}
               focusedDiagnostic={focusedDiagnostic}
             />
             <div className="panel-footer">
@@ -227,6 +264,34 @@ export function LabShell() {
               >
                 Compile
               </button>
+              <button
+                type="button"
+                className="compile-button"
+                disabled={!compiled || runtime.pending !== null}
+                onClick={() => {
+                  void runtime.load();
+                }}
+              >
+                Load Program
+              </button>
+              <button
+                type="button"
+                disabled={!runtime.snapshot || runtime.pending !== null}
+                onClick={() => {
+                  void runtime.reset();
+                }}
+              >
+                Reset Runtime
+              </button>
+              <button
+                type="button"
+                disabled={!runtime.snapshot || runtime.pending !== null}
+                onClick={() => {
+                  void runtime.unload();
+                }}
+              >
+                Unload
+              </button>
               <span
                 role="status"
                 aria-live="polite"
@@ -234,7 +299,55 @@ export function LabShell() {
               >
                 {compileStatus}
               </span>
-              <span>Not running</span>
+              <span>{runtime.snapshot ? "Manual scans" : "Not running"}</span>
+            </div>
+            <div
+              className="runtime-status"
+              data-testid="runtime-status"
+              data-session-id={runtime.snapshot?.sessionId}
+              data-observation-key={runtime.observationKey}
+              data-runtime-pending={runtime.pending ?? ""}
+              role="status"
+              aria-live="polite"
+            >
+              {runtime.snapshot ? (
+                <>
+                  <strong>
+                    PROGRAM LOADED · {runtime.snapshot.programName} ·{" "}
+                    {runtime.current
+                      ? runtime.snapshot.state
+                      : "STALE · RELOAD REQUIRED"}
+                  </strong>
+                  <span data-testid="runtime-state">
+                    {runtime.snapshot.state}
+                  </span>
+                  <span>
+                    Scan{" "}
+                    <output data-testid="runtime-scan-count">
+                      {runtime.snapshot.completedScans}
+                    </output>
+                  </span>
+                  <span>
+                    t ={" "}
+                    <output data-testid="runtime-time">
+                      {formatDuration(runtime.snapshot.simulationTimeMicros)}
+                    </output>
+                  </span>
+                  <span>
+                    Cycle: {formatDuration(runtime.snapshot.cyclePeriodMicros)}{" "}
+                    · Budget: {runtime.snapshot.operationBudget}
+                  </span>
+                </>
+              ) : (
+                <strong>NOT LOADED</strong>
+              )}
+              {runtime.pending && (
+                <span>{runtime.pending.toUpperCase()} request in progress</span>
+              )}
+              <span>
+                Click speed does not affect simulation time. Reset clears inputs
+                and all runtime state.
+              </span>
             </div>
           </Panel>
           <div className="simulation-panels">
@@ -262,7 +375,7 @@ export function LabShell() {
                   timeline.
                 </p>
               </div>
-              <span className="muted-label">Awaiting runtime</span>
+              <span className="muted-label">Trace recording unavailable</span>
             </div>
           </Panel>
           <Panel id="diagnostics" title="Diagnostics" detail="APPLICATION">
@@ -299,6 +412,42 @@ export function LabShell() {
                   <span className="diagnostic-code">{connection.code}</span>
                   <p>{connection.message}</p>
                 </>
+              )}
+            </div>
+            <div
+              className="compiler-diagnostics"
+              data-testid="runtime-diagnostics"
+            >
+              {runtime.error && (
+                <p role="alert">
+                  {runtime.error.code}: {runtime.error.message}
+                </p>
+              )}
+              {runtime.snapshot?.fault && (
+                <button
+                  type="button"
+                  className="compiler-diagnostic runtime-diagnostic"
+                  disabled={!runtime.current || !runtime.snapshot.fault.span}
+                  onClick={() => {
+                    const fault = runtime.snapshot?.fault;
+                    if (fault) setFocusedDiagnostic({ ...fault });
+                  }}
+                >
+                  <span>
+                    RUNTIME · {runtime.snapshot.fault.severity.toUpperCase()} ·{" "}
+                    {runtime.snapshot.fault.code}
+                  </span>
+                  <span>{runtime.snapshot.fault.message}</span>
+                  {runtime.snapshot.fault.span && (
+                    <span>
+                      Line {runtime.snapshot.fault.span.start.line}, column{" "}
+                      {runtime.snapshot.fault.span.start.column}
+                    </span>
+                  )}
+                  {!runtime.current && (
+                    <span>Previous loaded source · navigation unavailable</span>
+                  )}
+                </button>
               )}
             </div>
             <div
@@ -343,8 +492,10 @@ export function LabShell() {
               ? "Connecting to native core"
               : "Native core unavailable"}
         </span>
-        <span>Simulation not initialized</span>
-        <span>M2A · ST compilation</span>
+        <span>
+          {runtime.snapshot ? "Manual runtime session" : "No runtime loaded"}
+        </span>
+        <span>M2B · Manual Single Scan</span>
       </footer>
     </div>
   );

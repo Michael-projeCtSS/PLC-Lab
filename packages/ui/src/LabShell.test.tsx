@@ -44,7 +44,7 @@ describe("foundation desktop shell", () => {
       appVersion: "app-test",
       coreVersion: "core-test",
       contractVersion: CONTRACT_VERSION,
-      execution: "unavailable",
+      execution: "manual-single-scan",
       buildContext: "development",
     });
   });
@@ -110,7 +110,7 @@ describe("foundation desktop shell", () => {
       appVersion: "0.1.0",
       coreVersion: "0.1.0",
       contractVersion: CONTRACT_VERSION,
-      execution: "unavailable",
+      execution: "manual-single-scan",
       buildContext: "development",
     });
     await Promise.resolve();
@@ -123,7 +123,7 @@ describe("foundation desktop shell", () => {
       appVersion: "release-app",
       coreVersion: "release-core",
       contractVersion: CONTRACT_VERSION,
-      execution: "unavailable",
+      execution: "manual-single-scan",
       buildContext: "release",
     });
     render(<LabShell />);

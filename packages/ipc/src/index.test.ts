@@ -10,7 +10,7 @@ const response = {
   appVersion: "0.1.0",
   coreVersion: "0.1.0",
   contractVersion: CONTRACT_VERSION,
-  execution: "unavailable",
+  execution: "manual-single-scan",
   buildContext: "development",
 };
 

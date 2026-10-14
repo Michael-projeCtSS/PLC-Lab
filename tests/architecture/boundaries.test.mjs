@@ -98,7 +98,7 @@ test("runtime uses a leaf simulation clock without reverse or trace execution de
   }
 });
 
-test("desktop IPC exposes information and pure compilation without execution", () => {
+test("desktop IPC exposes pure compilation and the authorized manual session commands", () => {
   const host = readFileSync(
     path.join(root, "apps/desktop/src-tauri/src/lib.rs"),
     "utf8",
@@ -111,6 +111,12 @@ test("desktop IPC exposes information and pure compilation without execution", (
   assert.deepEqual(handlers, [
     "commands::get_core_info",
     "commands::compile_st",
+    "commands::load_st_program",
+    "commands::set_runtime_input",
+    "commands::single_scan",
+    "commands::reset_runtime",
+    "commands::unload_program",
+    "commands::get_runtime_snapshot",
   ]);
   const capability = JSON.parse(
     readFileSync(
@@ -120,6 +126,57 @@ test("desktop IPC exposes information and pure compilation without execution", (
   );
   assert.deepEqual(capability.permissions, []);
   assert.equal(capability.remote, undefined);
+});
+
+test("session ownership is confined to the headless application service", () => {
+  const packages = workspacePackages();
+  assert.deepEqual(
+    packages
+      .get("desktop-session")
+      .dependencies.filter((d) => d.kind !== "dev")
+      .map((d) => d.name)
+      .sort(),
+    ["app-contract", "plc-runtime", "plc-types", "st-frontend"],
+  );
+  const service = readFileSync(
+    path.join(root, "crates/desktop-session/src/lib.rs"),
+    "utf8",
+  );
+  assert.match(service, /Mutex<SessionSlot>/);
+  assert.match(service, /checked_add\(1\)/);
+  assert.match(service, /runtime\s*\.\s*set_input/);
+  assert.match(service, /runtime\s*\.\s*single_scan/);
+  assert.match(service, /runtime\s*\.\s*reset/);
+  assert.doesNotMatch(
+    service,
+    /SystemTime|Instant::|thread::sleep|active_since|unsafe\s*\{/,
+  );
+  const contract = readFileSync(
+    path.join(root, "crates/app-contract/src/session.rs"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    contract,
+    /Mutex|Runtime::new|ExecutionPlan|active_since/,
+  );
+});
+
+test("runtime UI presents snapshots without PLC time/count or TON calculations", () => {
+  const hook = readFileSync(
+    path.join(root, "packages/ui/src/useRuntimeSession.ts"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    hook,
+    /Date\.now|performance\.now|setInterval|setTimeout|\.completedScans\s*(?:\+\+|[+-]=|=)|\.simulationTimeMicros\s*(?:\+\+|[+-]=|=)/,
+  );
+  assert.match(hook, /next\.sessionId !== expected/);
+  const editor = readFileSync(
+    path.join(root, "packages/ui/src/monaco-host.ts"),
+    "utf8",
+  );
+  assert.match(editor, /"plc-lab-runtime"/);
+  assert.match(editor, /"Rust PLC runtime"/);
 });
 
 test("ST production depends only on shared types and IR; compile adapter cannot execute", () => {

@@ -1,5 +1,11 @@
 # Test strategy
 
+## M2B manual session acceptance
+
+Headless desktop-session tests use actual ST compilation, validation, lowering and Runtime. Cover prepare-then-swap, generations/stale commands, role/type/identity checks, default/staged/committed observations, concurrent serialization, same-scan read-after-write, exact TON, source-backed faults/rollback, reset and unload. Contract tests prove checked finite REAL and exact u64 TIME/IDs plus strict fields/discriminants. Frontend tests use fixed backend DTOs to check presentation, explicit numeric commits, separate markers, source association and old-response filtering. No frontend test evaluates ST.
+
+Native Windows smoke edits actual Monaco source and performs real compile/load/input/scan/reset/unload IPC. Each mutation is correlated with one coherent get_runtime_snapshot response for the exact loaded ID. It proves same-scan results, four-scan TON timing, the actual fault expression underline and rolled-back state, reset and typed INT/REAL/maximum TIME. Existing M0–M2A checks remain. Both CI lanes execute application/session and typed contract tests in debug/release; no required test can be replaced by compilation.
+
 ## M2A ST source acceptance
 
 languages/st/tests/alpha.rs starts every execution proof from actual ST text, then uses lexer -> AST -> compiler -> existing IR validation -> existing runtime lowering/execution. It covers the full assigned lexer/parser/semantic matrix, signed INT minimum, finite REAL, exact checked TIME, limits (including flat/deep trees), deterministic identities, Unicode/CRLF positions, source-backed runtime division fault and identical normalized TON behavior for reordered bindings. Deterministic malformed-input cases exercise bounded error handling without a second evaluator.

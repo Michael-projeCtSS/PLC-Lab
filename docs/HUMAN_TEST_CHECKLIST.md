@@ -86,3 +86,22 @@ Notes:
 Record observations here. Empty Process/Network/Timeline states and disabled
 execution controls are expected at M0; they are not missing runtime behavior.
 ```
+
+## M2B manual runtime
+
+- [ ] Compile default ST; no runtime values appear yet.
+- [ ] Load Program explicitly; PROGRAM LOADED / READY, Scan 0 / time 0 appear.
+- [ ] Single Scan is enabled; Run/Pause/Stop remain disabled.
+- [ ] Change BOOL input and verify staging does not predict outputs.
+- [ ] Apply INT/REAL/TIME numeric drafts explicitly; TIME uses integer microseconds.
+- [ ] Single Scan shows actual committed Output/Local values and Rust time/count.
+- [ ] Edit source after load: STALE / RELOAD REQUIRED; Single Scan/input editing disabled.
+- [ ] Recompile/reload restores exact source association.
+- [ ] TON 100 ms/300 ms four-scan sequence gives ET 0/100/200/300 ms and Q false/false/false/true.
+- [ ] Division by zero shows PLC-RUNTIME-003 / FAULTED and marks the correct expression.
+- [ ] Failed scan preserves committed output/time/count.
+- [ ] Reset Runtime restores READY/defaults, including staged inputs, TON, count/time.
+- [ ] Unload removes live values, preserves editor source and compile metadata, disables Single Scan.
+- [ ] No process animation, background execution, trace/timeline or network state appears.
+
+Human testing complements real native automated acceptance; no continuous Run test exists yet.

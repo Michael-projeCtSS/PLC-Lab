@@ -5,10 +5,18 @@ use ts_rs::TS;
 
 mod compilation;
 pub use compilation::*;
+mod session;
+pub use session::*;
 
-pub const CONTRACT_VERSION: u32 = 3;
+pub const CONTRACT_VERSION: u32 = 4;
 pub const CORE_INFO_COMMAND: &str = "get_core_info";
 pub const COMPILE_ST_COMMAND: &str = "compile_st";
+pub const LOAD_PROGRAM_COMMAND: &str = "load_st_program";
+pub const SET_INPUT_COMMAND: &str = "set_runtime_input";
+pub const SINGLE_SCAN_COMMAND: &str = "single_scan";
+pub const RESET_RUNTIME_COMMAND: &str = "reset_runtime";
+pub const UNLOAD_PROGRAM_COMMAND: &str = "unload_program";
+pub const RUNTIME_SNAPSHOT_COMMAND: &str = "get_runtime_snapshot";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -19,7 +27,8 @@ pub struct CoreInfoRequest {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 pub enum ExecutionAvailability {
-    Unavailable,
+    #[serde(rename = "manual-single-scan")]
+    ManualSingleScan,
 }
 
 /// Actual Rust build configuration, independent of frontend presentation.
@@ -63,7 +72,7 @@ pub fn get_core_info(request: CoreInfoRequest, app_version: &str) -> Result<Core
         app_version: app_version.into(),
         core_version: plc_runtime::VERSION.into(),
         contract_version: CONTRACT_VERSION,
-        execution: ExecutionAvailability::Unavailable,
+        execution: ExecutionAvailability::ManualSingleScan,
         build_context: if cfg!(debug_assertions) {
             BuildContext::Development
         } else {
@@ -82,7 +91,11 @@ pub fn typescript_contract() -> String {
         BuildContext::decl(&config),
         CoreInfo::decl(&config),
         IpcError::decl(&config),
-        compilation_typescript(&config),
+        format_args!(
+            "{}{}\nexport const LOAD_PROGRAM_COMMAND = \"{LOAD_PROGRAM_COMMAND}\" as const;\nexport const SET_INPUT_COMMAND = \"{SET_INPUT_COMMAND}\" as const;\nexport const SINGLE_SCAN_COMMAND = \"{SINGLE_SCAN_COMMAND}\" as const;\nexport const RESET_RUNTIME_COMMAND = \"{RESET_RUNTIME_COMMAND}\" as const;\nexport const UNLOAD_PROGRAM_COMMAND = \"{UNLOAD_PROGRAM_COMMAND}\" as const;\nexport const RUNTIME_SNAPSHOT_COMMAND = \"{RUNTIME_SNAPSHOT_COMMAND}\" as const;\n",
+            compilation_typescript(&config),
+            session_typescript(&config)
+        ),
     )
 }
 

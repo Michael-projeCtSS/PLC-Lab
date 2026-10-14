@@ -1,7 +1,7 @@
 use app_contract::{CONTRACT_VERSION, CoreInfoRequest, ExecutionAvailability, get_core_info};
 
 #[test]
-fn backend_reports_real_core_package_version_and_unavailable_execution() {
+fn backend_reports_real_core_package_version_and_manual_scan_capability() {
     let info = get_core_info(
         CoreInfoRequest {
             contract_version: CONTRACT_VERSION,
@@ -10,10 +10,10 @@ fn backend_reports_real_core_package_version_and_unavailable_execution() {
     );
     let info = info.unwrap();
     assert_eq!(info.core_version, plc_runtime::VERSION);
-    assert_eq!(info.execution, ExecutionAvailability::Unavailable);
+    assert_eq!(info.execution, ExecutionAvailability::ManualSingleScan);
     let value = serde_json::to_value(info).unwrap();
     assert_eq!(value["contractVersion"], CONTRACT_VERSION);
-    assert_eq!(value["execution"], "unavailable");
+    assert_eq!(value["execution"], "manual-single-scan");
 }
 
 #[test]

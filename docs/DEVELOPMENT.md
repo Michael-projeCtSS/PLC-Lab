@@ -1,5 +1,11 @@
 # Development
 
+## M2B session development
+
+Compile != Load != Execute. Compile edits/validates source only. After current successful Compile, use Load Program, stage Input values (numeric fields use Apply/Enter; TIME is integer microseconds) and press Single Scan. Each successful click advances the Rust SimulationClock by exactly 100 ms without waiting; click speed never defines elapsed PLC time. Reset Runtime clears staged inputs, all memory/TON state, fault/count/time. Editing marks the loaded association stale and requires Compile + Load again. Unload preserves source/compile metadata. Run/Pause/Stop remain disabled.
+
+Focused application checks: node scripts/rust.mjs test --locked -p app-contract -p desktop-session. Release: add --release. Existing npm run validate covers the full local canonical/native path; ci:windows and ci:core retain prior checks and now select the portable contract/session packages in both profiles. Complete snapshots are returned once per mutation; no polling loop exists.
+
 ## M2A compiler/editor development
 
 The UI package bundles pinned Monaco 0.57.0 and its editor worker locally; no CDN, parsing dependency or ST evaluator is used. IPC is now v3; regenerate declarations with npm run ipc:generate after Rust DTO edits. Compile runs bounded ST compilation only; controls remain disabled. No persistence or hidden runtime is created by compilation.

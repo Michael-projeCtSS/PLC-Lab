@@ -189,7 +189,14 @@ mod tests {
     }
     #[test]
     fn compile_rejects_previous_and_future_contracts() {
-        for version in [0, 1, 2, CONTRACT_VERSION + 1, u32::MAX] {
+        for version in [
+            0,
+            1,
+            2,
+            CONTRACT_VERSION - 1,
+            CONTRACT_VERSION + 1,
+            u32::MAX,
+        ] {
             let mut r = request("PROGRAM Main END_PROGRAM");
             r.contract_version = version;
             assert_eq!(compile_st(r).unwrap_err().code, "APP-IPC-001");

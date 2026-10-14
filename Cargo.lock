@@ -579,6 +579,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "desktop-session"
+version = "0.1.0"
+dependencies = [
+ "app-contract",
+ "plc-runtime",
+ "plc-types",
+ "serde_json",
+ "st-frontend",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2266,6 +2277,7 @@ name = "plc-lab-desktop"
 version = "0.1.0"
 dependencies = [
  "app-contract",
+ "desktop-session",
  "tauri",
  "tauri-build",
 ]

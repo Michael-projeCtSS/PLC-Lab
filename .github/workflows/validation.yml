@@ -43,6 +43,8 @@ jobs:
             artifacts/desktop-smoke/native.log
             artifacts/desktop-smoke/result.json
             artifacts/desktop-smoke/desktop.png
+            artifacts/desktop-smoke/runtime-ton.png
+            artifacts/desktop-smoke/runtime-fault.png
 
   linux-core:
     name: Linux headless core validation

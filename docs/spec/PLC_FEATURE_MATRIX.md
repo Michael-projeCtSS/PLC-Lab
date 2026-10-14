@@ -1,5 +1,9 @@
 # PLC feature matrix
 
+## M2B manual desktop execution
+
+M2A validation and source review are accepted. M2B adds explicit Load Program, backend-owned generation-checked session, typed staged Input editing, manual Single Scan, committed scalar/TON snapshots, source-backed runtime fault display, explicit reset and unload. Compile remains pure. Run/Pause/Stop, pacing, processes, networking, trace/timeline recording and grading remain unavailable. No Alpha ST or M1 semantics change. See [DESKTOP_RUNTIME_SESSION.md](DESKTOP_RUNTIME_SESSION.md).
+
 ## M2A implemented source frontend
 
 M1C independent validation is accepted. M2A adds real Alpha ST source lexing, a distinct AST, semantic compilation and mandatory existing IR validation; headless tests lower and execute that source through the frozen runtime, including TON. Desktop support is Monaco editing and pure typed compile IPC v3 with diagnostics/declaration metadata. Run/Pause/Stop/Single Scan and runtime values remain unavailable. See [STRUCTURED_TEXT_ALPHA.md](STRUCTURED_TEXT_ALPHA.md) for IMPLEMENTED/PLANNED/UNSUPPORTED features. Earlier milestone descriptions below remain historical; no additional PLC semantics or other language/process/network/trace/grading feature is added.

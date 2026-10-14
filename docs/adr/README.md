@@ -19,3 +19,5 @@ These records implement the supplied engineering contract and assigned milestone
 | [0011](0011-function-block-instance-model.md) | M1C declared instances, typed bindings, transactional standard TON (review pending) |
 
 ADRs 0001–0008 are dated 2026-10-13; ADRs 0009–0011 are dated 2026-10-14. M1C requires technical-lead code review before M2. TON code and tests are present; validation outcomes are recorded separately. Languages, other standard blocks, user FB execution, process/network simulation, trace recording and persistence remain unimplemented.
+
+[ADR-0013](0013-desktop-runtime-session.md) records the authorized M2B application session, exact snapshots and manual Single Scan. M2A source review is accepted; M2B source review is required before M2C/M3.

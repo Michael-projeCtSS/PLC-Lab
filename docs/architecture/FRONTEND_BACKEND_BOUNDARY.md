@@ -1,5 +1,11 @@
 # Frontend/backend boundary
 
+## M2B IPC v4 and manual runtime
+
+The generated contract advances to v4. Core information reports manual-single-scan capability; this does not create or load a program. Compile still returns metadata/diagnostics only. load_st_program accepts source/version, recompiles at the trusted boundary and returns loaded snapshot or compiler diagnostics; task configuration is fixed once in Rust and returned as metadata. set_runtime_input, single_scan, reset_runtime, unload_program and get_runtime_snapshot require the opaque session generation. Input writes additionally require the opaque variable ID and discriminated Alpha value.
+
+TIME, IDs, count and budget use checked canonical decimal strings; REAL uses the existing finite binary32 wrapper. packages/ipc strictly validates fields, tags, ranges, IDs, source spans and coherent snapshot relationships. IpcTransportError is a compatible alias for CoreInfoError; compiler/runtime diagnostics remain data. Runtime mutation and snapshot construction happen in one application mutex observation. React does not increment time/count, evaluate ST, predict outputs or derive TON. Numeric drafts require Apply/Enter. Editing immediately invalidates the executable association; late replies cannot restore it.
+
 ## M2A compilation contract v3
 
 Core information remains read-only with the same version-rejection behavior, now version 3. compile_st accepts contractVersion/source and runs the bounded Rust ST compiler on Tauri's blocking pool. Success contains success=true, programName, declaration symbols (name/typeName/role), diagnostics; failure contains success=false and diagnostics. Diagnostic spans retain one-based Unicode scalar start/end coordinates. No IR, ExecutionPlan, PLC memory or hidden runtime is transported/created. Normal student failures are successful IPC responses containing compiler data; transport/version/worker failures remain explicit application errors.
