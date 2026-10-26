@@ -6,9 +6,11 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-plc-types.workspace = true
+lab-model.workspace = true
 simulation-core.workspace = true
-trace-core.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true

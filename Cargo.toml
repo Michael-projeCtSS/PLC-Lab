@@ -28,6 +28,11 @@ app-contract = { path = "crates/app-contract" }
 desktop-session = { path = "crates/desktop-session" }
 process-simulation = { path = "crates/process-simulation" }
 st-frontend = { path = "languages/st" }
+lab-model = { path = "crates/lab-model" }
+hardware-model = { path = "crates/hardware-model" }
+lab-engine = { path = "crates/lab-engine" }
+knowledge-core = { path = "crates/knowledge-core" }
+project-model = { path = "crates/project-model" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

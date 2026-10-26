@@ -1,0 +1,17 @@
+[package]
+name = "hardware-model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+lab-model.workspace = true
+process-simulation.workspace = true
+simulation-core.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true
