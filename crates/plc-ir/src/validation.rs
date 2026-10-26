@@ -5,11 +5,11 @@ use crate::{
 };
 use plc_types::{
     PlcType,
-    compatibility::{self, AssignmentCompatibility},
+    compatibility::{self, AssignmentCompatibility, BinaryOperator},
     diagnostics::{
         Diagnostic, DiagnosticCategory, DiagnosticCode, RelatedIdentity, Severity, codes,
     },
-    function_blocks::{FunctionBlockKind, StandardFunctionBlock},
+    function_blocks::{FunctionBlockKind, ParameterDirection},
     identity::SymbolId,
     source::SourceRef,
     symbols::{PouKind, Scope, VariableCategory},
@@ -143,7 +143,7 @@ impl Validator<'_> {
             );
             return;
         };
-        if definition.kind() != FunctionBlockKind::Standard(StandardFunctionBlock::Ton) {
+        if !matches!(definition.kind(), FunctionBlockKind::Standard(_)) {
             self.emit(
                 codes::UNSUPPORTED_FB_KIND,
                 "This function-block kind is not executable in Alpha.",
@@ -218,7 +218,7 @@ impl Validator<'_> {
                 CallBinding::InOut { .. } => {
                     self.emit(
                         codes::FB_PARAMETER_DIRECTION,
-                        "InOut associations are not executable for TON.",
+                        "InOut associations are not executable for standard blocks.",
                         Some(source),
                         related,
                     );
@@ -358,6 +358,50 @@ impl Validator<'_> {
                     _ => None,
                 }
             }
+            ExpressionKind::Logical { operator, operands } => {
+                if !matches!(operator, BinaryOperator::And | BinaryOperator::Or | BinaryOperator::Xor) || operands.len() < 2 {
+                    self.emit(
+                        codes::OPERAND_TYPE,
+                        "A logical expression requires AND, OR or XOR over at least two operands.",
+                        Some(expression.source()),
+                        None,
+                    );
+                    return None;
+                }
+                let mut ok = true;
+                for operand in operands {
+                    match self.expression(operand, depth + 1) {
+                        Some(PlcType::Bool) => {}
+                        Some(other) => {
+                            ok = false;
+                            self.emit(
+                                codes::OPERAND_TYPE,
+                                format!("{operator:?} does not accept {other:?}."),
+                                Some(operand.source()),
+                                None,
+                            );
+                        }
+                        None => ok = false,
+                    }
+                }
+                ok.then_some(PlcType::Bool)
+            }
+            ExpressionKind::FunctionBlockOutput { instance, parameter } => {
+                self.function_block_output(*instance, *parameter, expression.source())
+            }
+            ExpressionKind::Conversion { function, operand } => {
+                let operand = self.expression(operand, depth + 1)?;
+                let result = compatibility::conversion_result(*function, operand);
+                if result.is_none() {
+                    self.emit(
+                        codes::OPERAND_TYPE,
+                        format!("{} does not accept {operand:?}.", function.name()),
+                        Some(expression.source()),
+                        None,
+                    );
+                }
+                result
+            }
         }?;
         if inferred != expression.result_type() {
             self.emit(codes::OPERAND_TYPE, format!("The declared expression type {:?} differs from its semantic type {inferred:?}.",
@@ -365,6 +409,37 @@ impl Validator<'_> {
             return None;
         }
         Some(inferred)
+    }
+    fn function_block_output(
+        &mut self,
+        instance: plc_types::identity::FunctionBlockInstanceId,
+        parameter: plc_types::identity::ParameterId,
+        source: SourceRef,
+    ) -> Option<PlcType> {
+        let related = Some(RelatedIdentity::FunctionBlockInstance(instance));
+        let Some(declared) = self.program.function_blocks().instance(instance) else {
+            self.emit(codes::UNKNOWN_FB_INSTANCE, "The read function-block instance is not declared.", Some(source), related);
+            return None;
+        };
+        if declared.owner() != self.program.entry() {
+            self.emit(codes::INVALID_FB_OWNER, "The entry program cannot read another POU's instance.", Some(source), related);
+            return None;
+        }
+        let Some(definition) = self.program.function_blocks().definition(declared.definition()) else {
+            self.emit(codes::UNKNOWN_FB_DEFINITION, "The read instance has no declared definition.", Some(source), related);
+            return None;
+        };
+        match definition.parameter(parameter) {
+            Some(p) if p.direction() == ParameterDirection::Output => Some(p.plc_type()),
+            Some(_) => {
+                self.emit(codes::FB_PARAMETER_DIRECTION, "Only function-block outputs can be read.", Some(source), related);
+                None
+            }
+            None => {
+                self.emit(codes::UNKNOWN_FB_PARAMETER, "The read parameter does not belong to the definition.", Some(source), related);
+                None
+            }
+        }
     }
     fn write_type(&mut self, id: SymbolId, source: SourceRef) -> Option<PlcType> {
         let t = self.symbol_type(id, source)?;

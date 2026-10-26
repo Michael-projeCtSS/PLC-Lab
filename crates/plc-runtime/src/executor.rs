@@ -1,6 +1,6 @@
 use crate::{
     errors::{FaultKind, InternalError, RuntimeFault, ScanError},
-    function_blocks::InstanceStates,
+    function_blocks::{CallInputs, InstanceStates},
     memory::WorkingState,
     operators::{self, OperationError},
     plan::{ExecExpression, ExecExpressionKind, ExecStatement, ExecStatementKind, ExecutionPlan},
@@ -99,6 +99,31 @@ impl<'a> Executor<'a> {
                     related,
                 )?
             }
+            ExecExpressionKind::Logical(op, operands) => {
+                let mut values = Vec::with_capacity(operands.len());
+                for operand in operands {
+                    values.push(self.expression(operand, related)?);
+                }
+                self.charge(expression.source, related)?;
+                self.operation(operators::logical(*op, &values), expression.source, related)?
+            }
+            ExecExpressionKind::FunctionBlockOutput(instance, parameter) => {
+                self.charge(expression.source, related)?;
+                self.instances
+                    .get(instance)
+                    .and_then(|state| state.output(*parameter))
+                    .ok_or_else(|| {
+                        self.internal(
+                            InternalError::new("A compiled block output has no working state."),
+                            expression.source,
+                        )
+                    })?
+            }
+            ExecExpressionKind::Conversion(function, operand) => {
+                let operand = self.expression(operand, related)?;
+                self.charge(expression.source, related)?;
+                self.operation(operators::convert(*function, operand), expression.source, related)?
+            }
         };
         if value.plc_type() != expression.result_type {
             return Err(self.internal(
@@ -131,44 +156,32 @@ impl<'a> Executor<'a> {
                     };
                     self.body(if condition { then_body } else { else_body })?;
                 }
-                ExecStatementKind::TonCall {
-                    instance,
-                    input,
-                    preset,
-                    q_target,
-                    et_target,
-                } => {
-                    let input = self.expression(input, None)?;
-                    let preset = self.expression(preset, None)?;
-                    let (PlcValue::Bool(input), PlcValue::Time(preset)) = (input, preset) else {
-                        return Err(self.internal(
-                            InternalError::new(
-                                "A validated TON call has incompatible input types.",
-                            ),
-                            statement.source,
-                        ));
-                    };
+                ExecStatementKind::StandardCall { instance, inputs, outputs } => {
+                    let mut values = Vec::with_capacity(inputs.len());
+                    for (parameter, expression) in inputs {
+                        values.push((*parameter, self.expression(expression, None)?));
+                    }
                     self.charge(statement.source, None)?;
+                    let source = statement.source;
                     let state = self.instances.get_mut(instance).ok_or_else(|| {
                         ScanError::Internal(
-                            InternalError::new("A compiled TON instance has no working state.")
-                                .at(self.plan.sources.get(statement.source).cloned()),
+                            InternalError::new("A compiled block instance has no working state.")
+                                .at(self.plan.sources.get(source).cloned()),
                         )
                     })?;
-                    let (q, et) = state
-                        .ton(input, preset, self.now)
-                        .map_err(|e| self.internal(e, statement.source))?;
-                    if let Some(target) = q_target {
-                        self.charge(statement.source, Some(*target))?;
+                    state
+                        .call(CallInputs(&values), self.now)
+                        .map_err(|e| ScanError::Internal(e.at(self.plan.sources.get(source).cloned())))?;
+                    for (parameter, target) in outputs {
+                        let value = self.instances[instance]
+                            .output(plc_types::identity::ParameterId::new(*parameter).map_err(|_| {
+                                self.internal(InternalError::new("A compiled block output identity is zero."), source)
+                            })?)
+                            .ok_or_else(|| self.internal(InternalError::new("A compiled block output is unknown."), source))?;
+                        self.charge(source, Some(*target))?;
                         self.working
-                            .write(*target, PlcValue::Bool(q))
-                            .map_err(|e| self.internal(e, statement.source))?;
-                    }
-                    if let Some(target) = et_target {
-                        self.charge(statement.source, Some(*target))?;
-                        self.working
-                            .write(*target, PlcValue::Time(et))
-                            .map_err(|e| self.internal(e, statement.source))?;
+                            .write(*target, value)
+                            .map_err(|e| self.internal(e, source))?;
                     }
                 }
             }

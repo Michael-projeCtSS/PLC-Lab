@@ -2,7 +2,7 @@
 use crate::errors::{FaultKind, InternalError};
 use plc_types::{
     PlcReal, PlcValue,
-    compatibility::{self, BinaryOperator, UnaryOperator},
+    compatibility::{self, BinaryOperator, ConversionFunction, UnaryOperator},
 };
 use std::cmp::Ordering;
 
@@ -67,6 +67,11 @@ pub(crate) fn binary(
     match (op, left, right) {
         (And, PlcValue::Bool(a), PlcValue::Bool(b)) => Ok(PlcValue::Bool(a && b)),
         (Or, PlcValue::Bool(a), PlcValue::Bool(b)) => Ok(PlcValue::Bool(a || b)),
+        (Xor, PlcValue::Bool(a), PlcValue::Bool(b)) => Ok(PlcValue::Bool(a ^ b)),
+        (Modulo, PlcValue::Int(_), PlcValue::Int(0)) => Err(OperationError::Fault(FaultKind::DivisionByZero)),
+        // i16::MIN MOD -1 is mathematically 0; checked_rem reports it as overflow.
+        (Modulo, PlcValue::Int(_), PlcValue::Int(-1)) => Ok(PlcValue::Int(0)),
+        (Modulo, PlcValue::Int(a), PlcValue::Int(b)) => int(a.checked_rem(b)),
         (Add, PlcValue::Int(a), PlcValue::Int(b)) => int(a.checked_add(b)),
         (Subtract, PlcValue::Int(a), PlcValue::Int(b)) => int(a.checked_sub(b)),
         (Multiply, PlcValue::Int(a), PlcValue::Int(b)) => int(a.checked_mul(b)),
@@ -78,6 +83,37 @@ pub(crate) fn binary(
         (Subtract, PlcValue::Real(a), PlcValue::Real(b)) => real(a.get() - b.get()),
         (Multiply, PlcValue::Real(a), PlcValue::Real(b)) => real(a.get() * b.get()),
         (Divide, PlcValue::Real(a), PlcValue::Real(b)) => real(a.get() / b.get()),
+        _ => Err(invalid_operands()),
+    }
+}
+
+/// Eager associative BOOL operation over already evaluated operands.
+pub(crate) fn logical(op: BinaryOperator, values: &[PlcValue]) -> Result<PlcValue, OperationError> {
+    let mut bits = Vec::with_capacity(values.len());
+    for v in values {
+        let PlcValue::Bool(b) = v else { return Err(invalid_operands()) };
+        bits.push(*b);
+    }
+    match op {
+        BinaryOperator::And => Ok(PlcValue::Bool(bits.iter().all(|b| *b))),
+        BinaryOperator::Or => Ok(PlcValue::Bool(bits.iter().any(|b| *b))),
+        BinaryOperator::Xor => Ok(PlcValue::Bool(bits.iter().fold(false, |a, b| a ^ b))),
+        _ => Err(invalid_operands()),
+    }
+}
+
+pub(crate) fn convert(function: ConversionFunction, operand: PlcValue) -> Result<PlcValue, OperationError> {
+    let to_int = |v: f32| {
+        if (f32::from(i16::MIN)..=f32::from(i16::MAX)).contains(&v) {
+            Ok(PlcValue::Int(v as i16))
+        } else {
+            Err(OperationError::Fault(FaultKind::IntOverflow))
+        }
+    };
+    match (function, operand) {
+        (ConversionFunction::IntToReal, PlcValue::Int(i)) => real(f32::from(i)),
+        (ConversionFunction::RealToInt, PlcValue::Real(r)) => to_int(r.get().round_ties_even()),
+        (ConversionFunction::Trunc, PlcValue::Real(r)) => to_int(r.get().trunc()),
         _ => Err(invalid_operands()),
     }
 }

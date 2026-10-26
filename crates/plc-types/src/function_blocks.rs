@@ -14,9 +14,81 @@ pub enum ParameterDirection {
     Output,
     InOut,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum StandardFunctionBlock {
     Ton,
+    Tof,
+    Tp,
+    RTrig,
+    FTrig,
+    Ctu,
+    Ctd,
+}
+
+/// One parameter of a standard block signature. IDs are local to the signature.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StandardParameter {
+    pub id: u32,
+    pub name: &'static str,
+    pub direction: ParameterDirection,
+    pub plc_type: PlcType,
+    pub required: bool,
+}
+
+const fn param(id: u32, name: &'static str, direction: ParameterDirection, plc_type: PlcType, required: bool) -> StandardParameter {
+    StandardParameter { id, name, direction, plc_type, required }
+}
+use ParameterDirection::{Input as IN, Output as OUT};
+const TIMER: [StandardParameter; 4] = [
+    param(1, "IN", IN, PlcType::Bool, true),
+    param(2, "PT", IN, PlcType::Time, true),
+    param(3, "Q", OUT, PlcType::Bool, false),
+    param(4, "ET", OUT, PlcType::Time, false),
+];
+const TRIGGER: [StandardParameter; 2] = [param(1, "CLK", IN, PlcType::Bool, true), param(2, "Q", OUT, PlcType::Bool, false)];
+const UP_COUNTER: [StandardParameter; 5] = [
+    param(1, "CU", IN, PlcType::Bool, true),
+    param(2, "R", IN, PlcType::Bool, false),
+    param(3, "PV", IN, PlcType::Int, true),
+    param(4, "Q", OUT, PlcType::Bool, false),
+    param(5, "CV", OUT, PlcType::Int, false),
+];
+const DOWN_COUNTER: [StandardParameter; 5] = [
+    param(1, "CD", IN, PlcType::Bool, true),
+    param(2, "LD", IN, PlcType::Bool, false),
+    param(3, "PV", IN, PlcType::Int, true),
+    param(4, "Q", OUT, PlcType::Bool, false),
+    param(5, "CV", OUT, PlcType::Int, false),
+];
+
+impl StandardFunctionBlock {
+    pub const ALL: [Self; 7] = [Self::Ton, Self::Tof, Self::Tp, Self::RTrig, Self::FTrig, Self::Ctu, Self::Ctd];
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Ton => "TON",
+            Self::Tof => "TOF",
+            Self::Tp => "TP",
+            Self::RTrig => "R_TRIG",
+            Self::FTrig => "F_TRIG",
+            Self::Ctu => "CTU",
+            Self::Ctd => "CTD",
+        }
+    }
+    pub fn from_name(name: &str) -> Option<Self> {
+        let upper = name.to_ascii_uppercase();
+        Self::ALL.into_iter().find(|k| k.name() == upper)
+    }
+    pub fn signature(self) -> &'static [StandardParameter] {
+        match self {
+            Self::Ton | Self::Tof | Self::Tp => &TIMER,
+            Self::RTrig | Self::FTrig => &TRIGGER,
+            Self::Ctu => &UP_COUNTER,
+            Self::Ctd => &DOWN_COUNTER,
+        }
+    }
+    pub fn parameter_named(self, name: &str) -> Option<StandardParameter> {
+        self.signature().iter().copied().find(|p| p.name.eq_ignore_ascii_case(name))
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FunctionBlockKind {
@@ -41,21 +113,6 @@ impl TonParameter {
             Self::Et => 4,
         })
         .expect("fixed standard parameter identity")
-    }
-    fn definition(self) -> ParameterDefinition {
-        let (name, direction, plc_type, required) = match self {
-            Self::In => ("IN", ParameterDirection::Input, PlcType::Bool, true),
-            Self::Pt => ("PT", ParameterDirection::Input, PlcType::Time, true),
-            Self::Q => ("Q", ParameterDirection::Output, PlcType::Bool, false),
-            Self::Et => ("ET", ParameterDirection::Output, PlcType::Time, false),
-        };
-        ParameterDefinition {
-            id: self.id(),
-            name: name.into(),
-            direction,
-            plc_type,
-            required,
-        }
     }
 }
 
@@ -109,18 +166,23 @@ pub struct FunctionBlockDefinition {
 }
 impl FunctionBlockDefinition {
     pub fn ton(id: FunctionBlockId) -> Self {
+        Self::standard(id, StandardFunctionBlock::Ton)
+    }
+    pub fn standard(id: FunctionBlockId, kind: StandardFunctionBlock) -> Self {
         Self {
             id,
-            kind: FunctionBlockKind::Standard(StandardFunctionBlock::Ton),
-            parameters: [
-                TonParameter::In,
-                TonParameter::Pt,
-                TonParameter::Q,
-                TonParameter::Et,
-            ]
-            .into_iter()
-            .map(TonParameter::definition)
-            .collect(),
+            kind: FunctionBlockKind::Standard(kind),
+            parameters: kind
+                .signature()
+                .iter()
+                .map(|p| ParameterDefinition {
+                    id: ParameterId::new(p.id).expect("fixed standard parameter identity"),
+                    name: p.name.into(),
+                    direction: p.direction,
+                    plc_type: p.plc_type,
+                    required: p.required,
+                })
+                .collect(),
             source: None,
         }
     }

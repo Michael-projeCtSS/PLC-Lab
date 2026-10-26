@@ -217,12 +217,14 @@ fn parser_boolean_precedence() {
     let StatementKind::Assignment(_, expr) = &ast.body[0].kind else {
         panic!()
     };
-    let ExpressionKind::Binary(BinaryOperator::Or, _, right) = &expr.kind else {
+    // OR binds weaker than AND; same-operator chains are flat n-ary nodes.
+    let ExpressionKind::Chain(BinaryOperator::Or, operands) = &expr.kind else {
         panic!()
     };
+    assert_eq!(operands.len(), 2);
     assert!(matches!(
-        right.kind,
-        ExpressionKind::Binary(BinaryOperator::And, _, _)
+        operands[1].kind,
+        ExpressionKind::Chain(BinaryOperator::And, _)
     ));
 }
 #[test]

@@ -7,9 +7,9 @@ use plc_ir::{
 };
 use plc_types::{
     PlcType, PlcValue,
-    compatibility::{BinaryOperator, UnaryOperator},
+    compatibility::{BinaryOperator, ConversionFunction, UnaryOperator},
     diagnostics::{DiagnosticCategory, RelatedIdentity, codes},
-    function_blocks::{FunctionBlockKind, StandardFunctionBlock, TonParameter},
+    function_blocks::{FunctionBlockKind, ParameterDirection, StandardFunctionBlock},
     identity::{FunctionBlockInstanceId, SymbolId},
     source::{SourceMap, SourceRef},
     symbols::{Scope, VariableCategory},
@@ -53,6 +53,9 @@ pub(crate) enum ExecExpressionKind {
     Read(SymbolId),
     Unary(UnaryOperator, Box<ExecExpression>),
     Binary(BinaryOperator, Box<ExecExpression>, Box<ExecExpression>),
+    Logical(BinaryOperator, Vec<ExecExpression>),
+    FunctionBlockOutput(FunctionBlockInstanceId, plc_types::identity::ParameterId),
+    Conversion(ConversionFunction, Box<ExecExpression>),
 }
 #[derive(Debug)]
 pub(crate) struct ExecStatement {
@@ -63,12 +66,11 @@ pub(crate) struct ExecStatement {
 pub(crate) enum ExecStatementKind {
     Assign(SymbolId, ExecExpression),
     If(ExecExpression, Vec<ExecStatement>, Vec<ExecStatement>),
-    TonCall {
+    /// Standard block call with bound inputs and outputs in canonical signature order.
+    StandardCall {
         instance: FunctionBlockInstanceId,
-        input: ExecExpression,
-        preset: ExecExpression,
-        q_target: Option<SymbolId>,
-        et_target: Option<SymbolId>,
+        inputs: Vec<(u32, ExecExpression)>,
+        outputs: Vec<(u32, SymbolId)>,
     },
 }
 
@@ -194,6 +196,19 @@ fn lower_expression(
             Box::new(lower_expression(left, original, retained)?),
             Box::new(lower_expression(right, original, retained)?),
         ),
+        ExpressionKind::Logical { operator, operands } => ExecExpressionKind::Logical(
+            *operator,
+            operands
+                .iter()
+                .map(|o| lower_expression(o, original, retained))
+                .collect::<Result<_, _>>()?,
+        ),
+        ExpressionKind::FunctionBlockOutput { instance, parameter } => {
+            ExecExpressionKind::FunctionBlockOutput(*instance, *parameter)
+        }
+        ExpressionKind::Conversion { function, operand } => {
+            ExecExpressionKind::Conversion(*function, Box::new(lower_expression(operand, original, retained)?))
+        }
     };
     Ok(ExecExpression {
         source: expression.source(),
@@ -253,7 +268,7 @@ fn lower_call(
         .ok_or_else(|| {
             LoweringError::Internal(InternalError::new("A validated call has no definition."))
         })?;
-    if definition.kind() != FunctionBlockKind::Standard(StandardFunctionBlock::Ton) {
+    if !matches!(definition.kind(), FunctionBlockKind::Standard(_)) {
         return Err(LoweringError::Unsupported(
             diagnostic(
                 codes::UNSUPPORTED_FB_KIND,
@@ -263,39 +278,28 @@ fn lower_call(
             .with_source(program.sources().get(source).cloned()),
         ));
     }
-    let input = |parameter: TonParameter| -> Result<&Expression, LoweringError> {
-        match call
-            .bindings()
-            .iter()
-            .find(|b| b.parameter() == parameter.id())
-        {
-            Some(CallBinding::Input { value, .. }) => Ok(value),
-            _ => Err(LoweringError::Internal(InternalError::new(
-                "A validated TON input binding is missing or inconsistent.",
-            ))),
-        }
-    };
-    let output = |parameter: TonParameter| -> Result<Option<SymbolId>, LoweringError> {
-        match call
-            .bindings()
-            .iter()
-            .find(|b| b.parameter() == parameter.id())
-        {
-            Some(CallBinding::Output { target, .. }) => Ok(Some(*target)),
-            None => Ok(None),
-            _ => Err(LoweringError::Internal(InternalError::new(
-                "A validated TON output binding is inconsistent.",
-            ))),
-        }
-    };
     // Canonical signature order: producer binding order never reaches the executor.
-    Ok(ExecStatementKind::TonCall {
-        instance: call.instance(),
-        input: lower_expression(input(TonParameter::In)?, program.sources(), retained)?,
-        preset: lower_expression(input(TonParameter::Pt)?, program.sources(), retained)?,
-        q_target: output(TonParameter::Q)?,
-        et_target: output(TonParameter::Et)?,
-    })
+    let mut inputs = Vec::new();
+    let mut outputs = Vec::new();
+    for parameter in definition.parameters() {
+        let binding = call.bindings().iter().find(|b| b.parameter() == parameter.id());
+        match (parameter.direction(), binding) {
+            (ParameterDirection::Input, Some(CallBinding::Input { value, .. })) => {
+                inputs.push((parameter.id().get(), lower_expression(value, program.sources(), retained)?));
+            }
+            (ParameterDirection::Input, None) if !parameter.required() => {}
+            (ParameterDirection::Output, Some(CallBinding::Output { target, .. })) => {
+                outputs.push((parameter.id().get(), *target));
+            }
+            (ParameterDirection::Output, None) => {}
+            _ => {
+                return Err(LoweringError::Internal(InternalError::new(
+                    "A validated block binding is missing or inconsistent.",
+                )));
+            }
+        }
+    }
+    Ok(ExecStatementKind::StandardCall { instance: call.instance(), inputs, outputs })
 }
 
 #[cfg(test)]

@@ -30,10 +30,13 @@ pub enum UnaryOperator {
 pub enum BinaryOperator {
     And,
     Or,
+    Xor,
     Add,
     Subtract,
     Multiply,
     Divide,
+    /// Integer remainder with the sign of the dividend (truncated division).
+    Modulo,
     Equal,
     NotEqual,
     Less,
@@ -56,7 +59,8 @@ pub fn binary_result(operator: BinaryOperator, left: PlcType, right: PlcType) ->
     }
     use BinaryOperator::*;
     match operator {
-        And | Or if left == PlcType::Bool => Some(PlcType::Bool),
+        And | Or | Xor if left == PlcType::Bool => Some(PlcType::Bool),
+        Modulo if left == PlcType::Int => Some(PlcType::Int),
         Add | Subtract | Multiply | Divide if matches!(left, PlcType::Int | PlcType::Real) => {
             Some(left)
         }
@@ -66,6 +70,41 @@ pub fn binary_result(operator: BinaryOperator, left: PlcType, right: PlcType) ->
         {
             Some(PlcType::Bool)
         }
+        _ => None,
+    }
+}
+
+/// Typed standard conversion functions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConversionFunction {
+    /// INT to REAL, exact for every INT value.
+    IntToReal,
+    /// REAL to INT, rounding to nearest with ties to even (PLC Lab generic profile).
+    RealToInt,
+    /// REAL to INT, truncating toward zero (IEC TRUNC).
+    Trunc,
+}
+impl ConversionFunction {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::IntToReal => "INT_TO_REAL",
+            Self::RealToInt => "REAL_TO_INT",
+            Self::Trunc => "TRUNC",
+        }
+    }
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name.to_ascii_uppercase().as_str() {
+            "INT_TO_REAL" => Some(Self::IntToReal),
+            "REAL_TO_INT" => Some(Self::RealToInt),
+            "TRUNC" => Some(Self::Trunc),
+            _ => None,
+        }
+    }
+}
+pub fn conversion_result(function: ConversionFunction, operand: PlcType) -> Option<PlcType> {
+    match (function, operand) {
+        (ConversionFunction::IntToReal, PlcType::Int) => Some(PlcType::Real),
+        (ConversionFunction::RealToInt | ConversionFunction::Trunc, PlcType::Real) => Some(PlcType::Int),
         _ => None,
     }
 }
@@ -123,8 +162,9 @@ mod tests {
             [None, None, None, Some(Bool)],
         ];
         for (operators, matrix) in [
-            (vec![And, Or], boolean),
+            (vec![And, Or, Xor], boolean),
             (vec![Add, Subtract, Multiply, Divide], arithmetic),
+            (vec![Modulo], [[None; 4], [None, Some(Int), None, None], [None; 4], [None; 4]]),
             (vec![Equal, NotEqual], equality),
             (vec![Less, LessEqual, Greater, GreaterEqual], ordering),
         ] {

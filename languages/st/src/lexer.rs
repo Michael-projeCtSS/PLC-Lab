@@ -6,6 +6,7 @@ use crate::{
 };
 use plc_types::{
     PlcType,
+    function_blocks::StandardFunctionBlock,
     diagnostics::Diagnostic,
     source::{SourcePosition, TextSpan},
 };
@@ -22,15 +23,21 @@ pub enum Keyword {
     Then,
     Else,
     EndIf,
+    Elsif,
+    Case,
+    Of,
+    EndCase,
     Not,
     And,
     Or,
+    Xor,
+    Mod,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     Keyword(Keyword),
     Type(PlcType),
-    Ton,
+    FunctionBlockType(StandardFunctionBlock),
     Identifier(String),
     Literal(Literal),
     Unsupported(String),
@@ -49,6 +56,8 @@ pub enum TokenKind {
     LeftParen,
     RightParen,
     Comma,
+    Dot,
+    Range,
     Semicolon,
     Colon,
     Eof,
@@ -210,7 +219,7 @@ impl Scanner {
                 }
                 let mut real = false;
                 let mut malformed = false;
-                if self.peek() == Some('.') {
+                if self.peek() == Some('.') && self.next() != Some('.') {
                     real = true;
                     self.bump();
                     let first = self.cursor;
@@ -262,6 +271,11 @@ impl Scanner {
                     '(' => TokenKind::LeftParen,
                     ')' => TokenKind::RightParen,
                     ',' => TokenKind::Comma,
+                    '.' if self.peek() == Some('.') => {
+                        self.bump();
+                        TokenKind::Range
+                    }
+                    '.' => TokenKind::Dot,
                     ';' => TokenKind::Semicolon,
                     ':' if self.peek() == Some('=') => {
                         self.bump();
@@ -322,6 +336,12 @@ fn word(name: String, upper: &str) -> TokenKind {
         "THEN" => Then,
         "ELSE" => Else,
         "END_IF" => EndIf,
+        "ELSIF" => Elsif,
+        "CASE" => Case,
+        "OF" => Of,
+        "END_CASE" => EndCase,
+        "XOR" => Xor,
+        "MOD" => Mod,
         "NOT" => Not,
         "AND" => And,
         "OR" => Or,
@@ -329,10 +349,14 @@ fn word(name: String, upper: &str) -> TokenKind {
         "INT" => return TokenKind::Type(PlcType::Int),
         "REAL" => return TokenKind::Type(PlcType::Real),
         "TIME" => return TokenKind::Type(PlcType::Time),
-        "TON" => return TokenKind::Ton,
+        "TON" | "TOF" | "TP" | "R_TRIG" | "F_TRIG" | "CTU" | "CTD" => {
+            return TokenKind::FunctionBlockType(
+                StandardFunctionBlock::from_name(upper).expect("listed standard block name"),
+            );
+        }
         "TRUE" => return TokenKind::Literal(Literal::Bool(true)),
         "FALSE" => return TokenKind::Literal(Literal::Bool(false)),
-        "CASE" | "ELSIF" | "FOR" | "WHILE" | "REPEAT" | "RETURN" | "ARRAY" | "STRUCT"
+        "FOR" | "WHILE" | "REPEAT" | "RETURN" | "ARRAY" | "STRUCT"
         | "STRING" | "FUNCTION" | "FUNCTION_BLOCK" | "METHOD" | "CLASS" | "NAMESPACE"
         | "VAR_IN_OUT" | "VAR_TEMP" | "RETAIN" | "AT" | "POINTER" | "REFERENCE" | "INCLUDE"
         | "IMPORT" | "NAN" | "INF" | "INFINITY" => return TokenKind::Unsupported(name),

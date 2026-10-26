@@ -157,7 +157,9 @@ fn clock_and_counter_completion_failures_rollback_timer_mutation() {
 fn impossible_runtime_timer_epoch_is_a_source_backed_internal_error() {
     let (mut r, pins) = timer(ms(100), 5, Tail::None);
     r.set_input(pins[0], PlcValue::Bool(true)).unwrap();
-    let InstanceState::Ton { active_since, .. } = r.instances.get_mut(&iid(11)).unwrap();
+    let InstanceState::Ton { active_since, .. } = r.instances.get_mut(&iid(11)).unwrap() else {
+        panic!("TON state expected")
+    };
     *active_since = Some(ms(100)); // Private invariant injection; no production clock/state setter.
     let instances = r.instances.clone();
     let before = r.snapshot();

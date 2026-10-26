@@ -32,7 +32,9 @@ fn scan(r: &mut Runtime, pins: [SymbolId; 4], input: bool, preset: u64) -> Runti
     r.single_scan().unwrap().snapshot().clone()
 }
 fn state(s: &RuntimeSnapshot, n: u32) -> (bool, PlcTime) {
-    let FunctionBlockStateSnapshot::Ton { q, et } = s.function_blocks()[&iid(n)];
+    let FunctionBlockStateSnapshot::Ton { q, et } = s.function_blocks()[&iid(n)] else {
+        panic!("TON snapshot expected")
+    };
     (q, et)
 }
 fn assert_timer(s: &RuntimeSnapshot, pins: [SymbolId; 4], q: bool, et: u64) {

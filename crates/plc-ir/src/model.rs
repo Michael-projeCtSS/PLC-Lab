@@ -1,6 +1,6 @@
 use plc_types::{
     PlcType, PlcValue,
-    compatibility::{BinaryOperator, UnaryOperator},
+    compatibility::{BinaryOperator, ConversionFunction, UnaryOperator},
     diagnostics::{Diagnostic, DiagnosticCategory, DiagnosticCode, Severity, codes},
     function_blocks::{FunctionBlockCatalog, ParameterDirection},
     identity::{FunctionBlockInstanceId, ParameterId, PouId, SymbolId},
@@ -28,6 +28,21 @@ pub enum ExpressionKind {
         operator: BinaryOperator,
         left: Box<Expression>,
         right: Box<Expression>,
+    },
+    /// Associative BOOL operator over two or more operands, evaluated eagerly left to right.
+    /// Wide AND/OR networks (for example parallel LAD branches) keep constant depth.
+    Logical {
+        operator: BinaryOperator,
+        operands: Vec<Expression>,
+    },
+    /// Current value of a standard function-block instance output.
+    FunctionBlockOutput {
+        instance: FunctionBlockInstanceId,
+        parameter: ParameterId,
+    },
+    Conversion {
+        function: ConversionFunction,
+        operand: Box<Expression>,
     },
 }
 impl Expression {
@@ -74,6 +89,35 @@ impl Expression {
                 operator,
                 left: Box::new(left),
                 right: Box::new(right),
+            },
+        }
+    }
+    pub fn logical(source: SourceRef, operator: BinaryOperator, operands: Vec<Self>) -> Self {
+        Self {
+            source,
+            result_type: PlcType::Bool,
+            kind: ExpressionKind::Logical { operator, operands },
+        }
+    }
+    pub fn function_block_output(
+        source: SourceRef,
+        result_type: PlcType,
+        instance: FunctionBlockInstanceId,
+        parameter: ParameterId,
+    ) -> Self {
+        Self {
+            source,
+            result_type,
+            kind: ExpressionKind::FunctionBlockOutput { instance, parameter },
+        }
+    }
+    pub fn conversion(source: SourceRef, result_type: PlcType, function: ConversionFunction, operand: Self) -> Self {
+        Self {
+            source,
+            result_type,
+            kind: ExpressionKind::Conversion {
+                function,
+                operand: Box::new(operand),
             },
         }
     }
