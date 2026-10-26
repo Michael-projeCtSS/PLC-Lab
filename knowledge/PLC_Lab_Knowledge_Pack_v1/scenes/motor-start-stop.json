@@ -1,0 +1,60 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.motor-start-stop",
+  "revision": 1,
+  "title": "Motor start/stop station",
+  "summary": "A conveyor motor switched by a contactor with an auxiliary feedback contact and a thermal overload relay. A green normally open start button, a red normally closed stop button and a green run lamp are wired to a compact PLC.",
+  "components": [
+    { "id": "start", "label": "Start S1", "kind": { "type": "pushButton", "contact": "normallyOpen", "color": "green" } },
+    { "id": "stop", "label": "Stop S2", "kind": { "type": "pushButton", "contact": "normallyClosed", "color": "red" } },
+    { "id": "motor", "label": "Conveyor motor M1", "kind": { "type": "motorStarter", "pickupMs": 30, "runUpMs": 1500, "ratedCurrentMa": 4200 } },
+    { "id": "lamp", "label": "Run lamp H1", "kind": { "type": "pilotLamp", "color": "green" } }
+  ],
+  "installation": {
+    "cpu": "cpu.compact",
+    "modules": [
+      { "position": { "rack": 0, "slot": 1 }, "module": "di8.24vdc.sink" },
+      { "position": { "rack": 0, "slot": 2 }, "module": "do8.24vdc" }
+    ],
+    "wiring": [
+      { "channel": { "rack": 0, "slot": 1, "channel": 0 }, "component": "start", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 1 }, "component": "stop", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 2 }, "component": "motor", "port": "aux" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 3 }, "component": "motor", "port": "overload" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 0 }, "component": "motor", "port": "coil" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 1 }, "component": "lamp", "port": "coil" }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      { "position": { "rack": 0, "slot": 1 }, "module": "di8.24vdc.sink", "startAddress": 0 },
+      { "position": { "rack": 0, "slot": 2 }, "module": "do8.24vdc", "startAddress": 0 }
+    ],
+    "ioMap": [
+      { "channel": { "rack": 0, "slot": 1, "channel": 0 }, "tag": "StartPB" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 1 }, "tag": "StopPB" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 2 }, "tag": "MotorFeedback" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 3 }, "tag": "OverloadOK" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 0 }, "tag": "MotorContactor" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 1 }, "tag": "RunLamp" }
+    ]
+  },
+  "interface": [
+    { "tag": "StartPB", "type": "BOOL", "direction": "input", "description": "Start button S1, normally open: TRUE while pressed." },
+    { "tag": "StopPB", "type": "BOOL", "direction": "input", "description": "Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe)." },
+    { "tag": "MotorFeedback", "type": "BOOL", "direction": "input", "description": "Contactor auxiliary contact: TRUE when the contactor has pulled in." },
+    { "tag": "OverloadOK", "type": "BOOL", "direction": "input", "description": "Overload relay contact, normally closed: TRUE while the motor is not overloaded." },
+    { "tag": "MotorContactor", "type": "BOOL", "direction": "output", "description": "Contactor coil K1: TRUE energizes the motor." },
+    { "tag": "RunLamp", "type": "BOOL", "direction": "output", "description": "Green run lamp H1." }
+  ],
+  "layout": [
+    { "component": "start", "x": 120, "y": 420 },
+    { "component": "stop", "x": 240, "y": 420 },
+    { "component": "lamp", "x": 360, "y": 420 },
+    { "component": "motor", "x": 620, "y": 260, "width": 220, "height": 160 }
+  ],
+  "knowledgeRefs": ["fundamentals.start-stop-latch", "fundamentals.no-nc-contacts"]
+}

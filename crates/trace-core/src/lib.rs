@@ -216,6 +216,21 @@ impl<H: Clone, V: TraceValue> SignalTrace<H, V> {
         let index = usize::try_from(seq.0 - first.0).ok()?;
         (index < self.chunks[chunk].records.len()).then_some((chunk, index))
     }
+    /// Header of one retained record.
+    pub fn header(&self, seq: RecordSeq) -> Option<&H> {
+        let (chunk, index) = self.locate(seq)?;
+        Some(&self.chunks[chunk].records[index].header)
+    }
+    /// First retained record whose header satisfies a predicate that is monotone
+    /// (false for a prefix, then true) over retained history.
+    pub fn find_first(&self, predicate: impl Fn(&H) -> bool) -> Option<RecordSeq> {
+        let chunk = self
+            .chunks
+            .partition_point(|c| c.records.last().is_some_and(|r| !predicate(&r.header)));
+        let records = &self.chunks.get(chunk)?.records;
+        let index = records.partition_point(|r| !predicate(&r.header));
+        records.get(index).map(|r| r.seq)
+    }
     /// Reconstruct the complete layers of one retained record.
     pub fn record(&self, seq: RecordSeq) -> Option<(&H, Vec<Layer<V>>)> {
         let (chunk, index) = self.locate(seq)?;

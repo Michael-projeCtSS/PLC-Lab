@@ -1,0 +1,114 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.tank-modbus",
+  "revision": 1,
+  "title": "Tank with Modbus TCP level transmitter",
+  "summary": "The tank filling station, but the level is measured by a transmitter with a Modbus TCP interface at 192.168.0.20. The PLC reads the level cyclically with a Modbus TCP I/O scan. An HMI panel shares the Ethernet segment.",
+  "components": [
+    { "id": "start", "label": "Start S1", "kind": { "type": "pushButton", "contact": "normallyOpen", "color": "green" } },
+    { "id": "stop", "label": "Stop S2", "kind": { "type": "pushButton", "contact": "normallyClosed", "color": "red" } },
+    { "id": "inlet", "label": "Inlet valve XV-101", "kind": { "type": "onOffValve", "travelMs": 1500, "flowMlPerS": 10000 } },
+    { "id": "pump", "label": "Drain pump P-102", "kind": { "type": "pump", "flowMlPerS": 6000 } },
+    { "id": "tank", "label": "Tank T-100", "kind": { "type": "tank", "capacityMl": 150000, "initialMl": 15000, "highHighMl": 142500, "lowLowMl": 7500 } },
+    { "id": "lsh", "label": "High level switch LSH-103", "kind": { "type": "levelSwitch", "tank": "tank", "switchLevelMl": 135000, "contact": "normallyOpen", "output": "pnp" } }
+  ],
+  "couplings": [
+    { "type": "valveFillsTank", "valve": "inlet", "tank": "tank" },
+    { "type": "pumpDrainsTank", "pump": "pump", "tank": "tank" }
+  ],
+  "installation": {
+    "cpu": "cpu.compact",
+    "modules": [
+      { "position": { "rack": 0, "slot": 1 }, "module": "di8.24vdc.sink" },
+      { "position": { "rack": 0, "slot": 2 }, "module": "do8.24vdc" }
+    ],
+    "wiring": [
+      { "channel": { "rack": 0, "slot": 1, "channel": 0 }, "component": "start", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 1 }, "component": "stop", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 3 }, "component": "lsh", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 0 }, "component": "inlet", "port": "solenoid" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 1 }, "component": "pump", "port": "motor" }
+    ]
+  },
+  "network": {
+    "latencyUs": 400,
+    "devices": [
+      {
+        "id": "lt-modbus",
+        "label": "Level transmitter LT-105 (Modbus TCP)",
+        "interface": { "ip": "192.168.0.20", "mask": "255.255.255.0" },
+        "role": {
+          "type": "modbusTcpServer",
+          "unitIds": { "type": "ignore" },
+          "processingUs": 3000,
+          "holdingRegisters": [
+            { "address": 0, "value": { "type": "scaledInt16", "component": "tank", "quantity": "levelPermille", "scale": 1, "divisor": 1 } },
+            { "address": 1, "value": { "type": "float32", "component": "tank", "quantity": "levelPermille", "divisor": 10, "wordOrder": "highWordFirst" } },
+            { "address": 3, "value": { "type": "constant", "value": 1 } }
+          ]
+        }
+      },
+      {
+        "id": "hmi",
+        "label": "Operator panel HMI-1",
+        "interface": { "ip": "192.168.0.30", "mask": "255.255.255.0" },
+        "role": { "type": "host" }
+      }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      { "position": { "rack": 0, "slot": 1 }, "module": "di8.24vdc.sink", "startAddress": 0 },
+      { "position": { "rack": 0, "slot": 2 }, "module": "do8.24vdc", "startAddress": 0 }
+    ],
+    "ioMap": [
+      { "channel": { "rack": 0, "slot": 1, "channel": 0 }, "tag": "StartPB" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 1 }, "tag": "StopPB" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 3 }, "tag": "LevelHighHigh" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 0 }, "tag": "InletValve" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 1 }, "tag": "DrainPump" }
+    ],
+    "network": {
+      "interface": { "ip": "192.168.0.10", "mask": "255.255.255.0" },
+      "modbusTcp": [
+        {
+          "id": "level-transmitter",
+          "server": "192.168.0.20",
+          "unitId": 1,
+          "function": "readHoldingRegisters",
+          "startAddress": 0,
+          "quantity": 3,
+          "periodMs": 200,
+          "timeoutMs": 500,
+          "values": [
+            { "offset": 0, "dataType": { "type": "int16" }, "tag": "LevelPermille" },
+            { "offset": 1, "dataType": { "type": "float32", "wordOrder": "highWordFirst" }, "tag": "LevelPercent" }
+          ],
+          "statusTag": "LevelCommOK"
+        }
+      ]
+    }
+  },
+  "interface": [
+    { "tag": "StartPB", "type": "BOOL", "direction": "input", "description": "Start button S1 (normally open)." },
+    { "tag": "StopPB", "type": "BOOL", "direction": "input", "description": "Stop button S2 (normally closed)." },
+    { "tag": "LevelHighHigh", "type": "BOOL", "direction": "input", "description": "Independent high-high switch at 90 % (TRUE when wet)." },
+    { "tag": "LevelPermille", "type": "INT", "direction": "input", "description": "Level from Modbus holding register 0 (40001), 0..1000 = 0..100 %." },
+    { "tag": "LevelPercent", "type": "REAL", "direction": "input", "description": "Level from holding registers 1-2 (40002-40003), IEEE 754 float, high word first." },
+    { "tag": "LevelCommOK", "type": "BOOL", "direction": "input", "description": "TRUE while the Modbus scan of the transmitter succeeds." },
+    { "tag": "InletValve", "type": "BOOL", "direction": "output", "description": "Inlet valve solenoid XV-101." },
+    { "tag": "DrainPump", "type": "BOOL", "direction": "output", "description": "Drain pump P-102." }
+  ],
+  "layout": [
+    { "component": "inlet", "x": 260, "y": 90 },
+    { "component": "tank", "x": 420, "y": 150, "width": 220, "height": 300 },
+    { "component": "lsh", "x": 660, "y": 180 },
+    { "component": "pump", "x": 720, "y": 500 },
+    { "component": "start", "x": 80, "y": 470 },
+    { "component": "stop", "x": 170, "y": 470 }
+  ],
+  "knowledgeRefs": ["protocols.modbus-tcp", "fundamentals.ip-addressing"]
+}

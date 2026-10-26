@@ -1,0 +1,90 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.tank-filling",
+  "revision": 1,
+  "title": "Tank filling station",
+  "summary": "A 150 litre process tank filled through an on/off inlet valve with limit switch feedback and emptied by a drain pump. Point level switches detect low and high level; a 4-20 mA transmitter measures the level continuously. Filling from empty to the high switch takes about 12 seconds.",
+  "components": [
+    { "id": "start", "label": "Start S1", "kind": { "type": "pushButton", "contact": "normallyOpen", "color": "green" } },
+    { "id": "stop", "label": "Stop S2", "kind": { "type": "pushButton", "contact": "normallyClosed", "color": "red" } },
+    { "id": "inlet", "label": "Inlet valve XV-101", "kind": { "type": "onOffValve", "travelMs": 1500, "flowMlPerS": 10000 } },
+    { "id": "pump", "label": "Drain pump P-102", "kind": { "type": "pump", "flowMlPerS": 6000 } },
+    { "id": "tank", "label": "Tank T-100", "kind": { "type": "tank", "capacityMl": 150000, "initialMl": 15000, "highHighMl": 142500, "lowLowMl": 7500 } },
+    { "id": "lsh", "label": "High level switch LSH-103", "kind": { "type": "levelSwitch", "tank": "tank", "switchLevelMl": 120000, "contact": "normallyOpen", "output": "pnp" } },
+    { "id": "lsl", "label": "Low level switch LSL-104", "kind": { "type": "levelSwitch", "tank": "tank", "switchLevelMl": 30000, "contact": "normallyClosed", "output": "pnp" } },
+    { "id": "lt", "label": "Level transmitter LT-105", "kind": { "type": "levelTransmitter", "tank": "tank", "rangeMinMl": 0, "rangeMaxMl": 150000, "signal": "current4To20mA" } }
+  ],
+  "couplings": [
+    { "type": "valveFillsTank", "valve": "inlet", "tank": "tank" },
+    { "type": "pumpDrainsTank", "pump": "pump", "tank": "tank" }
+  ],
+  "installation": {
+    "cpu": "cpu.compact",
+    "modules": [
+      { "position": { "rack": 0, "slot": 1 }, "module": "di8.24vdc.sink" },
+      { "position": { "rack": 0, "slot": 2 }, "module": "do8.24vdc" },
+      { "position": { "rack": 0, "slot": 3 }, "module": "ai4.ui" }
+    ],
+    "wiring": [
+      { "channel": { "rack": 0, "slot": 1, "channel": 0 }, "component": "start", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 1 }, "component": "stop", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 2 }, "component": "lsl", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 3 }, "component": "lsh", "port": "contact" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 4 }, "component": "inlet", "port": "openSwitch" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 0 }, "component": "inlet", "port": "solenoid" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 1 }, "component": "pump", "port": "motor" },
+      { "channel": { "rack": 0, "slot": 3, "channel": 0 }, "component": "lt", "port": "signal" }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      { "position": { "rack": 0, "slot": 1 }, "module": "di8.24vdc.sink", "startAddress": 0 },
+      { "position": { "rack": 0, "slot": 2 }, "module": "do8.24vdc", "startAddress": 0 },
+      {
+        "position": { "rack": 0, "slot": 3 },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          { "channel": 0, "mode": "current4To20mA", "diagnostics": true },
+          { "channel": 1, "mode": "disabled" },
+          { "channel": 2, "mode": "disabled" },
+          { "channel": 3, "mode": "disabled" }
+        ]
+      }
+    ],
+    "ioMap": [
+      { "channel": { "rack": 0, "slot": 1, "channel": 0 }, "tag": "StartPB" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 1 }, "tag": "StopPB" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 2 }, "tag": "LevelLow" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 3 }, "tag": "LevelHigh" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 4 }, "tag": "InletOpen" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 0 }, "tag": "InletValve" },
+      { "channel": { "rack": 0, "slot": 2, "channel": 1 }, "tag": "DrainPump" },
+      { "channel": { "rack": 0, "slot": 3, "channel": 0 }, "tag": "LevelRaw" }
+    ]
+  },
+  "interface": [
+    { "tag": "StartPB", "type": "BOOL", "direction": "input", "description": "Start button S1 (normally open)." },
+    { "tag": "StopPB", "type": "BOOL", "direction": "input", "description": "Stop button S2 (normally closed: TRUE while not pressed)." },
+    { "tag": "LevelLow", "type": "BOOL", "direction": "input", "description": "TRUE while the level is below the low switch (LSL-104 contact closes when dry)." },
+    { "tag": "LevelHigh", "type": "BOOL", "direction": "input", "description": "TRUE while the level is at or above the high switch (LSH-103 contact closes when wet)." },
+    { "tag": "InletOpen", "type": "BOOL", "direction": "input", "description": "Inlet valve fully-open limit switch." },
+    { "tag": "LevelRaw", "type": "INT", "direction": "input", "description": "Raw analog value of LT-105 (scaling depends on the selected platform profile)." },
+    { "tag": "InletValve", "type": "BOOL", "direction": "output", "description": "Inlet valve solenoid XV-101: TRUE opens the valve." },
+    { "tag": "DrainPump", "type": "BOOL", "direction": "output", "description": "Drain pump P-102 contactor." }
+  ],
+  "layout": [
+    { "component": "inlet", "x": 260, "y": 90 },
+    { "component": "tank", "x": 420, "y": 150, "width": 220, "height": 300 },
+    { "component": "lsh", "x": 660, "y": 210 },
+    { "component": "lsl", "x": 660, "y": 390 },
+    { "component": "lt", "x": 360, "y": 300 },
+    { "component": "pump", "x": 720, "y": 500 },
+    { "component": "start", "x": 80, "y": 470 },
+    { "component": "stop", "x": 170, "y": 470 }
+  ],
+  "knowledgeRefs": ["fundamentals.4-20ma", "fundamentals.level-measurement", "fundamentals.no-nc-contacts"]
+}
