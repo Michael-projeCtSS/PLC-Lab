@@ -27,7 +27,12 @@ fn knowledge_roots(app_data: &std::path::Path) -> Vec<PathBuf> {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            let app_data = app.path().app_data_dir()?;
+            // PLC_LAB_DATA_DIR lets a test harness or a portable installation choose the
+            // data folder; it is read once by the trusted host, never by student code.
+            let app_data = match std::env::var_os("PLC_LAB_DATA_DIR") {
+                Some(dir) if !dir.is_empty() => PathBuf::from(dir),
+                _ => app.path().app_data_dir()?,
+            };
             std::fs::create_dir_all(app_data.join("projects"))?;
             std::fs::create_dir_all(app_data.join("knowledge-packs"))?;
             let paths = AppPaths {

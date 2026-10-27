@@ -316,8 +316,9 @@ function Investigation({
       <div className="inspector-section">
         <h4>2 · Repair</h4>
         <p className="muted">
-          A repair changes the installation. Only the right one fixes the
-          machine.
+          {brief.repairs.length > 0
+            ? "A repair changes the installation. Only the right one fixes the machine."
+            : "No physical part is broken here. Correct the configuration in the Hardware or Network tab (Advanced mode) and download it."}
         </p>
         {brief.repairs.map((r) => (
           <button

@@ -130,7 +130,9 @@ export function WorkspacePage({
                     advanced={mode === "advanced"}
                   />
                 )}
-                {tab === "network" && <NetworkTab lab={lab} />}
+                {tab === "network" && (
+                  <NetworkTab lab={lab} advanced={mode === "advanced"} />
+                )}
                 {tab === "diagnostics" && <DiagnosticsTab lab={lab} />}
               </div>
             </section>

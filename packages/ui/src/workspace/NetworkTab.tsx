@@ -5,8 +5,9 @@ import { seconds } from "../format";
 import { Badge, ErrorNotice } from "../ui";
 import { useEvidence, useFrameQuery } from "./useFrameQuery";
 import type { Lab } from "./useLab";
+import { NetworkConfig } from "./NetworkConfig";
 
-export function NetworkTab({ lab }: { lab: Lab }) {
+export function NetworkTab({ lab, advanced }: { lab: Lab; advanced: boolean }) {
   const { ws } = lab;
   const net = useFrameQuery<NetworkDto>(lab, () =>
     ws ? api.network(ws) : Promise.reject(new Error("No workspace")),
@@ -230,6 +231,13 @@ export function NetworkTab({ lab }: { lab: Lab }) {
           </div>
         </div>
       </div>
+      {advanced ? (
+        <NetworkConfig lab={lab} />
+      ) : (
+        <p className="muted">
+          Switch to Advanced to edit the IP and Modbus configuration.
+        </p>
+      )}
     </div>
   );
 }

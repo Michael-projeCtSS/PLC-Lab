@@ -8,7 +8,7 @@ import {
 import { Markdown } from "../Markdown";
 import { Badge, Empty, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
-import type { Navigate } from "../route";
+import { openExercise, type Navigate } from "../route";
 
 const CATEGORIES = [
   { id: null, label: "All" },
@@ -101,7 +101,7 @@ export function KnowledgePage({
           navigate={navigate}
         />
       ) : hits && query.trim() ? (
-        <SearchResults hits={hits} open={open} />
+        <SearchResults hits={hits} open={open} navigate={navigate} />
       ) : catalog.data ? (
         <Catalog catalog={catalog.data} open={open} />
       ) : null}
@@ -112,9 +112,11 @@ export function KnowledgePage({
 function SearchResults({
   hits,
   open,
+  navigate,
 }: {
   hits: SearchHitDto[];
   open: (id: string) => void;
+  navigate: Navigate;
 }) {
   if (hits.length === 0)
     return <Empty>No matching articles. Try fewer or different words.</Empty>;
@@ -124,8 +126,13 @@ function SearchResults({
         <button
           key={h.id}
           className="list-row"
-          onClick={() => open(h.id)}
-          disabled={h.docType === "lesson" || h.docType === "exercise"}
+          onClick={() => {
+            if (h.docType === "lesson")
+              navigate({ page: "learn", lesson: h.id });
+            else if (h.docType === "exercise")
+              void openExercise(h.id, navigate, "practice");
+            else open(h.id);
+          }}
         >
           <div className="grow">
             <div className="row">

@@ -1,413 +1,224 @@
+// Native end-to-end smoke test of the real desktop application (WebView2 + Rust core).
+// No transport mocks: the test drives the real UI, which calls the real backend.
+//
+// Usage: node tests/e2e/desktop-smoke.mjs [--exe <path>] [--build development|release]
+//                                         [--out <artifacts subfolder>]
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { parseArgs } from "node:util";
 import { chromium } from "playwright-core";
 import { root } from "../../scripts/toolchain.mjs";
-import { interactiveContinuousSmoke } from "./continuous-smoke.mjs";
-import { interactiveRuntimeSmoke } from "./runtime-smoke.mjs";
-import { interactiveProcessSmoke } from "./process-smoke.mjs";
-import {
-  CONTRACT_VERSION,
-  CORE_INFO_COMMAND,
-  COMPILE_ST_COMMAND,
-} from "../../packages/ipc/src/generated.ts";
 
+const { values } = parseArgs({
+  options: {
+    exe: { type: "string", default: "target/debug/plc-lab-desktop.exe" },
+    build: { type: "string", default: "development" },
+    out: { type: "string", default: "desktop-smoke" },
+  },
+});
 if (process.platform !== "win32")
-  throw new Error(
-    "Native smoke test currently requires Windows/WebView2. See TEST_STRATEGY.md.",
-  );
-const directory = path.join(root, "artifacts", "desktop-smoke");
-await mkdir(directory, { recursive: true });
-await writeFile(path.join(directory, "result.json"), '{"result":"RUNNING"}\n');
-const listener = net.createServer();
-await new Promise((resolve, reject) => {
-  listener.once("error", reject);
-  listener.listen(0, "127.0.0.1", resolve);
-});
-const address = listener.address();
-assert.ok(address && typeof address === "object");
-const port = address.port;
-await new Promise((resolve, reject) =>
-  listener.close((error) => (error ? reject(error) : resolve())),
-);
+  throw new Error("The native smoke test requires Windows and WebView2.");
 
-let output = "";
-let application;
-try {
-  application = spawn(path.join(root, "target/debug/plc-lab-desktop.exe"), [], {
-    cwd: root,
-    env: {
-      ...process.env,
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
-      WEBVIEW2_USER_DATA_FOLDER: path.join(directory, `webview-${Date.now()}`),
-    },
-    windowsHide: true,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-} catch (error) {
-  const failure = {
-    result: "FAIL",
-    phase: "native-launch",
-    applicationStarted: false,
-    error: error instanceof Error ? error.message : String(error),
-    code: error.code ?? null,
-  };
-  await writeFile(
+const SOLUTION = `PROGRAM Main
+VAR_INPUT
+    StartPB : BOOL;
+    StopPB : BOOL;
+    MotorFeedback : BOOL;
+    OverloadOK : BOOL;
+END_VAR
+VAR_OUTPUT
+    MotorContactor : BOOL;
+    RunLamp : BOOL;
+END_VAR
+MotorContactor := (StartPB OR MotorContactor) AND StopPB AND OverloadOK;
+RunLamp := MotorFeedback;
+END_PROGRAM
+`;
+
+const directory = path.join(root, "artifacts", values.out);
+await mkdir(directory, { recursive: true });
+const steps = [];
+const result = (state, extra = {}) =>
+  writeFile(
     path.join(directory, "result.json"),
-    `${JSON.stringify(failure, null, 2)}\n`,
+    `${JSON.stringify({ result: state, executable: values.exe, build: values.build, steps, ...extra }, null, 2)}\n`,
   );
-  await writeFile(path.join(directory, "native.log"), failure.error);
-  throw error;
+await result("RUNNING");
+
+async function freePort() {
+  const server = net.createServer();
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const { port } = server.address();
+  await new Promise((resolve) => server.close(resolve));
+  return port;
 }
-let launchError;
-application.on("error", (error) => {
-  launchError = error;
+
+const port = await freePort();
+const stamp = Date.now();
+let output = "";
+let launchError = null;
+const application = spawn(path.resolve(root, values.exe), [], {
+  cwd: path.dirname(path.resolve(root, values.exe)),
+  env: {
+    ...process.env,
+    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
+    WEBVIEW2_USER_DATA_FOLDER: path.join(directory, `webview-${stamp}`),
+    PLC_LAB_DATA_DIR: path.join(directory, `data-${stamp}`),
+  },
+  windowsHide: true,
+  stdio: ["ignore", "pipe", "pipe"],
 });
-application.stdout.on("data", (chunk) => {
-  output += chunk.toString();
-});
-application.stderr.on("data", (chunk) => {
-  output += chunk.toString();
-});
+application.on("error", (error) => (launchError = error));
+application.stdout.on("data", (c) => (output += c));
+application.stderr.on("data", (c) => (output += c));
+
+const step = async (name, work) => {
+  const started = Date.now();
+  await work();
+  steps.push({ name, ms: Date.now() - started });
+};
+
 let browser;
 try {
   const endpoint = `http://127.0.0.1:${port}`;
-  const deadline = Date.now() + 60_000;
-  let ready = false;
-  let readinessFailure = "WebView2 has not exposed its debugging endpoint.";
-  while (Date.now() < deadline) {
-    if (launchError) throw launchError;
-    if (application.exitCode !== null)
-      throw new Error(`Native host exited ${application.exitCode}: ${output}`);
-    try {
-      const response = await fetch(`${endpoint}/json/version`, {
-        signal: AbortSignal.timeout(1000),
-      });
-      if (response.ok) {
-        ready = true;
-        break;
-      }
-      readinessFailure = `Debugging endpoint returned HTTP ${response.status}.`;
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      const code = error.cause?.code;
-      if (
-        !["ECONNREFUSED", "ECONNRESET"].includes(code) &&
-        !["TimeoutError", "AbortError"].includes(error.name)
-      )
-        throw error;
-      readinessFailure = `${error.message} (${code ?? error.name})`;
-    }
-    await delay(250);
-  }
-  assert.ok(
-    ready,
-    `WebView2 failed to become ready: ${readinessFailure}\n${output}`,
-  );
-  browser = await chromium.connectOverCDP(endpoint);
-  // The browser endpoint can precede creation of the real WebView target.
-  // Wait for that target; every native application assertion still executes.
-  const pageDeadline = Date.now() + 20_000;
-  let page = browser.contexts().flatMap((context) => context.pages())[0];
-  while (!page && Date.now() < pageDeadline) {
-    if (launchError) throw launchError;
-    if (application.exitCode !== null)
-      throw new Error(`Native host exited ${application.exitCode}: ${output}`);
-    await delay(100);
-    page = browser.contexts().flatMap((context) => context.pages())[0];
-  }
-  assert.ok(page, "Native app has no WebView2 page.");
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page
-    .getByTestId("core-status")
-    .getByText("CORE CONNECTED")
-    .waitFor({ timeout: 20_000 });
-  assert.equal(await page.title(), "PLC Lab");
-  for (const name of [
-    "Project",
-    "Program",
-    "Variables",
-    "Process",
-    "Network",
-    "Timeline",
-    "Diagnostics",
-  ]) {
-    assert.equal(await page.getByRole("region", { name }).count(), 1);
-  }
-  for (const name of ["Run", "Pause", "Stop", "Single Scan"]) {
-    assert.equal(
-      await page.getByRole("button", { name, exact: true }).isDisabled(),
-      true,
-    );
-  }
-  const info = await page.evaluate(
-    ({ command, version }) =>
-      window.__TAURI_INTERNALS__.invoke(command, {
-        request: { contractVersion: version },
-      }),
-    { command: CORE_INFO_COMMAND, version: CONTRACT_VERSION },
-  );
-  const manifest = JSON.parse(
-    await readFile(path.join(root, "package.json"), "utf8"),
-  );
-  assert.equal(info.appVersion, manifest.version);
-  assert.equal(info.coreVersion, manifest.version);
-  assert.equal(info.contractVersion, CONTRACT_VERSION);
-  assert.equal(info.buildContext, "development");
-  assert.equal(info.execution, "manual-single-scan");
-  const rejection = await page.evaluate(
-    async ({ command, version }) => {
+  await step("native host exposes WebView2", async () => {
+    const deadline = Date.now() + 60_000;
+    while (Date.now() < deadline) {
+      if (launchError) throw launchError;
+      if (application.exitCode !== null)
+        throw new Error(`Native host exited ${application.exitCode}: ${output}`);
       try {
-        await window.__TAURI_INTERNALS__.invoke(command, {
-          request: { contractVersion: version + 1 },
+        const response = await fetch(`${endpoint}/json/version`, {
+          signal: AbortSignal.timeout(1000),
         });
-        return null;
-      } catch (error) {
-        return error;
+        if (response.ok) return;
+      } catch {
+        // not ready yet
       }
-    },
-    { command: CORE_INFO_COMMAND, version: CONTRACT_VERSION },
-  );
-  assert.equal(rejection.code, "APP-IPC-001");
-  const runRejection = await page.evaluate(async () => {
-    try {
-      await window.__TAURI_INTERNALS__.invoke("run");
-      return null;
-    } catch (error) {
-      return String(error);
+      await delay(250);
     }
+    throw new Error(`WebView2 did not become ready.\n${output}`);
   });
-  assert.ok(runRejection, "Unexpected execution command exposed.");
-  // Actual Monaco editing and actual Rust compiler IPC, with no transport mock.
-  await page
-    .locator('[data-testid="st-editor"] .monaco-editor')
-    .waitFor({ timeout: 30_000 });
-  const compileButton = page.getByRole("button", {
-    name: "Compile",
-    exact: true,
+  browser = await chromium.connectOverCDP(endpoint);
+  let page;
+  await step("web view target exists", async () => {
+    const deadline = Date.now() + 20_000;
+    while (!page && Date.now() < deadline) {
+      page = browser.contexts().flatMap((c) => c.pages())[0];
+      if (!page) await delay(100);
+    }
+    assert.ok(page, "The native application has no WebView2 page.");
   });
-  assert.equal(await compileButton.count(), 1);
-  await compileButton.click();
-  await page
-    .getByTestId("compile-status")
-    .getByText("COMPILE SUCCESS", { exact: true })
-    .waitFor();
-  const declarationPanel = page.getByTestId("compiled-symbols");
-  for (const name of ["Start", "Stop", "Motor"])
-    assert.equal(
-      await declarationPanel.getByText(name, { exact: true }).count(),
-      1,
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(e.message));
+  const invoke = (command, request) =>
+    page.evaluate(
+      async ({ command, request }) => {
+        try {
+          return { ok: await window.__TAURI_INTERNALS__.invoke(command, { request }) };
+        } catch (error) {
+          return { error };
+        }
+      },
+      { command, request },
     );
-  assert.equal(
-    await declarationPanel.getByLabel("Runtime value unavailable").count(),
-    3,
-  );
-  const editSource = async (source) => {
-    const input = page.locator('[data-testid="st-editor"] [role="textbox"]');
-    await input.focus();
-    await input.press("Control+a");
-    await page.keyboard.insertText(source);
-    await page
-      .getByTestId("compile-status")
-      .getByText("NOT COMPILED", { exact: true })
-      .waitFor();
-  };
-  const invalidSource =
-    "PROGRAM Main\nVAR_OUTPUT Motor : BOOL; END_VAR\n(* ą ż – 😀 *) Motor := Missing;\nEND_PROGRAM";
-  await editSource(invalidSource);
-  await compileButton.click();
-  await page
-    .getByTestId("compile-status")
-    .getByText("COMPILE FAILED", { exact: true })
-    .waitFor();
-  await page
-    .getByTestId("compiler-diagnostics")
-    .getByText(/PLC-ST-006/)
-    .waitFor();
-  await page
-    .locator('[data-testid="st-editor"] .squiggly-error')
-    .first()
-    .waitFor();
-  const markerBounds = await page
-    .locator('[data-testid="st-editor"] .squiggly-error')
-    .first()
-    .boundingBox();
-  const wordBounds = await page
-    .locator('[data-testid="st-editor"] .view-lines')
-    .evaluate((lines) => {
-      const walker = document.createTreeWalker(lines, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        const index = node.textContent.indexOf("Missing");
-        if (index < 0) continue;
-        const range = document.createRange();
-        range.setStart(node, index);
-        range.setEnd(node, index + 7);
-        const rect = range.getBoundingClientRect();
-        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-      }
-      return null;
-    });
-  assert.ok(
-    markerBounds && wordBounds,
-    "Actual error word and marker must be rendered.",
-  );
-  assert.ok(
-    Math.abs(markerBounds.x - wordBounds.x) <= 2,
-    "Unicode error marker starts on the wrong character.",
-  );
-  assert.ok(
-    Math.abs(markerBounds.width - wordBounds.width) <= 2,
-    "Error marker covers the wrong source range.",
-  );
-  assert.ok(
-    markerBounds.y < wordBounds.y + wordBounds.height &&
-      markerBounds.y + markerBounds.height > wordBounds.y,
-    "Error marker is on the wrong line.",
-  );
-  const invalidCompilation = await page.evaluate(
-    ({ command, version, source }) =>
-      window.__TAURI_INTERNALS__.invoke(command, {
-        request: { contractVersion: version, source },
-      }),
-    {
-      command: COMPILE_ST_COMMAND,
-      version: CONTRACT_VERSION,
-      source: invalidSource,
-    },
-  );
-  assert.equal(invalidCompilation.success, false);
-  const compilerDiagnostic = invalidCompilation.diagnostics.find(
-    (d) => d.code === "PLC-ST-006",
-  );
-  assert.ok(compilerDiagnostic);
-  assert.equal(compilerDiagnostic.span.start.line, 3);
-  const expectedScalarColumn =
-    Array.from("(* ą ż – 😀 *) Motor := ").length + 1;
-  assert.equal(compilerDiagnostic.span.start.column, expectedScalarColumn);
-  const tonSource =
-    "PROGRAM Main\nVAR_INPUT Start : BOOL; END_VAR\nVAR_OUTPUT Motor : BOOL; END_VAR\nVAR Delay : TON; END_VAR\nDelay(PT := T#300ms, Q => Motor, IN := Start);\nEND_PROGRAM";
-  await editSource(tonSource);
-  await compileButton.click();
-  await page
-    .getByTestId("compile-status")
-    .getByText("COMPILE SUCCESS", { exact: true })
-    .waitFor();
-  assert.equal(
-    await page
-      .getByTestId("compiled-symbols")
-      .getByText("Delay", { exact: true })
-      .count(),
-    1,
-  );
-  assert.equal(
-    await page
-      .getByTestId("compiled-symbols")
-      .getByText("FB Instance", { exact: true })
-      .count(),
-    1,
-  );
-  assert.equal(
-    await page.locator('[data-testid="st-editor"] .squiggly-error').count(),
-    0,
-  );
-  const defaultSource = (
-    await readFile(
-      path.join(root, "packages/ui/src/useStCompilation.ts"),
-      "utf8",
-    )
-  ).match(/DEFAULT_ST_SOURCE = `([\s\S]*?)`;/)?.[1];
-  assert.ok(defaultSource);
-  await editSource(defaultSource);
-  await compileButton.click();
-  await page
-    .getByTestId("compile-status")
-    .getByText("COMPILE SUCCESS", { exact: true })
-    .waitFor();
-  for (const name of ["Run", "Pause", "Stop", "Single Scan"])
-    assert.equal(
-      await page.getByRole("button", { name, exact: true }).isDisabled(),
-      true,
-    );
-  const runtimeSession = await interactiveRuntimeSmoke({
-    page,
-    editSource,
-    compileButton,
-    tonSource,
-    defaultSource,
-    directory,
+
+  await step("shell renders with primary navigation", async () => {
+    await page.getByRole("navigation", { name: "Main" }).waitFor({ timeout: 30_000 });
+    assert.equal(await page.title(), "PLC Lab");
+    for (const name of ["HOME", "LEARN", "PRACTICE", "TROUBLESHOOT", "FREE LAB", "KNOWLEDGE", "PROGRESS"])
+      assert.equal(await page.getByRole("button", { name, exact: true }).count(), 1, name);
+    assert.doesNotMatch(await page.locator("body").innerText(), /M4B|FOUNDATION|IPC v\d/);
   });
-  const tankFilling = await interactiveProcessSmoke({
-    page,
-    editSource,
-    compileButton,
-    defaultSource,
-    directory,
+
+  await step("core contract and knowledge pack", async () => {
+    const info = await invoke("core_info", { contractVersion: 8 });
+    assert.equal(info.ok.contractVersion, 8);
+    assert.equal(info.ok.execution, "manual-and-continuous");
+    assert.equal(info.ok.buildContext, values.build);
+    const stale = await invoke("core_info", { contractVersion: 7 });
+    assert.equal(stale.error.code, "APP-CONTRACT-VERSION");
+    const unknown = await invoke("tick", { contractVersion: 8 });
+    assert.ok(unknown.error, "no host command may let the web view drive cycles");
+    const status = await invoke("knowledge_status", { contractVersion: 8 });
+    const pack = status.ok.packs.find((p) => p.id === "plclab.core");
+    assert.ok(pack, `knowledge pack not discovered: ${JSON.stringify(status.ok.searchPaths)}`);
+    assert.notEqual(pack.status, "INVALID", pack.errors.join("; "));
+    assert.ok(pack.exercises >= 2);
   });
-  const continuousExecution = await interactiveContinuousSmoke({
-    page,
-    editSource,
-    compileButton,
-    defaultSource,
-    tonSource,
-    directory,
+
+  await step("practice exercise opens a workspace", async () => {
+    await page.getByRole("button", { name: "PRACTICE", exact: true }).click();
+    await page.getByRole("button", { name: /Start Motor start\/stop with seal-in/ }).click();
+    await page.getByRole("button", { name: "Build & Load to PLC" }).waitFor({ timeout: 30_000 });
+    await page.locator('[data-testid="st-editor"] .monaco-editor').waitFor({ timeout: 30_000 });
   });
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth,
-  );
-  assert.equal(overflow, false, "Desktop shell overflows the native window.");
-  const diagnosticsBounds = await page
-    .getByRole("region", { name: "Diagnostics" })
-    .boundingBox();
-  assert.ok(diagnosticsBounds);
-  assert.ok(
-    diagnosticsBounds.y + diagnosticsBounds.height <=
-      (await page.evaluate(() => window.innerHeight)),
-    "Diagnostics panel is clipped at the default window size.",
-  );
-  await page.screenshot({ path: path.join(directory, "desktop.png") });
-  assert.deepEqual(errors, []);
-  const report = {
-    result: "PASS",
-    applicationStarted: true,
-    realIpc: info,
-    invalidContractRejected: rejection.code,
-    executionControlsDisabled: true,
-    panels: 7,
-    pageErrors: errors,
-    runtimeSession,
-    tankFilling,
-    continuousExecution,
-    structuredText: {
-      editorPresent: true,
-      defaultSourceCompiled: true,
-      declarationsDisplayed: true,
-      invalidSourceDiagnostic: compilerDiagnostic.code,
-      unicodeMarkerCorrect: true,
-      tonSourceCompiled: true,
-      obsoleteMarkersCleared: true,
-      runtimeValuesUnavailableBeforeLoad: true,
-    },
-  };
-  await writeFile(
-    path.join(directory, "result.json"),
-    `${JSON.stringify(report, null, 2)}\n`,
-  );
-  console.log(JSON.stringify(report, null, 2));
+
+  await step("edit, build and load with the real compiler and runtime", async () => {
+    await page.locator('[data-testid="st-editor"] .monaco-editor .view-lines').click();
+    await page.keyboard.press("Control+A");
+    await page.keyboard.press("Delete");
+    await page.keyboard.insertText(SOLUTION);
+    await page.getByRole("button", { name: "Build & Load to PLC" }).click();
+    await page.getByText("Sim running", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("PLC RUN", { exact: true }).waitFor();
+  });
+
+  await step("operator input drives the simulated machine", async () => {
+    await page.getByRole("tab", { name: "Process" }).click();
+    const button = page.getByRole("button", { name: "Start S1 (hold to press)" });
+    await button.dispatchEvent("pointerdown", { pointerId: 1 });
+    await delay(500);
+    await button.dispatchEvent("pointerup", { pointerId: 1 });
+    await page.locator('[aria-label="Conveyor motor M1: running"]').waitFor({ timeout: 10_000 });
+    await page.screenshot({ path: path.join(directory, "workspace-process.png") });
+  });
+
+  await step("causal inspector shows the cycle", async () => {
+    await page.getByRole("tab", { name: "Cause & effect" }).click();
+    await page.getByText(/PLC read/).first().waitFor();
+    await page.getByText(/Next PLC input/).first().waitFor();
+  });
+
+  await step("isolated grading passes", async () => {
+    await page.getByRole("button", { name: "Pause" }).click();
+    await page.getByRole("button", { name: "Check solution" }).click();
+    await page.getByRole("tab", { name: "Task" }).click();
+    await page.getByLabel("Check result").getByText("Passed", { exact: true }).waitFor({ timeout: 30_000 });
+    await page.getByRole("tab", { name: "Program" }).click();
+    await page.screenshot({ path: path.join(directory, "workspace-program.png") });
+  });
+
+  await step("troubleshooting lab opens without revealing the cause", async () => {
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await page.getByRole("button", { name: "TROUBLESHOOT", exact: true }).click();
+    await page.getByRole("button", { name: /Start Conveyor will not start/ }).click();
+    await page.getByText("Fault report").waitFor({ timeout: 30_000 });
+    assert.doesNotMatch(await page.locator("body").innerText(), /contactTypeMismatch/);
+  });
+
+  await step("knowledge search returns results", async () => {
+    await page.getByRole("button", { name: "KNOWLEDGE", exact: true }).click();
+    await page.getByLabel("Search knowledge").fill("motor");
+    await page.locator(".list .list-row").first().waitFor({ timeout: 10_000 });
+  });
+
+  assert.deepEqual(pageErrors, [], "the web view reported script errors");
+  await page.screenshot({ path: path.join(directory, "final.png") });
+  await result("PASS");
+  console.log(`Native smoke PASS (${values.exe}, ${steps.length} steps)`);
 } catch (error) {
-  await writeFile(
-    path.join(directory, "result.json"),
-    `${JSON.stringify({ result: "FAIL", error: error instanceof Error ? error.message : String(error) }, null, 2)}\n`,
-  );
+  await result("FAIL", { error: error instanceof Error ? error.stack : String(error), output });
   throw error;
 } finally {
-  try {
-    if (browser) await browser.close();
-  } finally {
-    application.kill();
-    await writeFile(path.join(directory, "native.log"), output);
-  }
+  await browser?.close().catch(() => undefined);
+  if (application.exitCode === null) application.kill();
+  await writeFile(path.join(directory, "native.log"), output);
 }
