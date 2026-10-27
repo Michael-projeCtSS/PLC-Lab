@@ -1,0 +1,86 @@
+{
+  "id": "lesson.troubleshooting-method",
+  "number": 20,
+  "title": "Troubleshooting methodology",
+  "summary": "Find faults systematically: symptom, evidence, hypothesis, test, repair and verification.",
+  "level": "intermediate",
+  "minutes": 20,
+  "objectives": [
+    "Apply a systematic fault-finding method",
+    "Avoid guessing"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Evidence before conclusions",
+      "body": "Good troubleshooting is a method, not luck: understand the symptom, reproduce it, collect evidence from the process to the program, form one hypothesis that explains everything, test it, repair the root cause and verify the whole function."
+    },
+    {
+      "type": "visual",
+      "heading": "Divide the signal path",
+      "body": "Each test halves the search space.",
+      "diagram": "  field device --> wiring --> terminal --> module --> input image --> program --> output\n            measure here?            LED here?           tag here?"
+    },
+    {
+      "type": "example",
+      "heading": "A worked example",
+      "body": "Motor will not start: StartPB becomes TRUE (good), StopPB is FALSE at rest (bad), the Stop terminal shows 0 V with the button released: an NO block replaced the NC block."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Changing the program to 'make it work' (for example writing NOT StopPB) instead of repairing the hardware. The machine then loses its wire-break safety."
+    },
+    {
+      "type": "challenge",
+      "heading": "Next step",
+      "body": "Choose the most informative test.",
+      "question": {
+        "question": "The input LED is ON but the PLC tag is FALSE. What do you check next?",
+        "options": [
+          "The sensor",
+          "The I/O mapping and module configuration",
+          "The motor"
+        ],
+        "answer": 1,
+        "explanation": "The field side works; the fault is between module and program."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Troubleshooting lab",
+      "body": "Find out why the conveyor will not start after panel maintenance.",
+      "exercise": "ts.motor-wont-start"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Symptom, evidence, hypothesis, test, repair, verify: always in this order.\n\n**Troubleshooting note:** In PLC Lab troubleshooting labs every guess is recorded; a correct first diagnosis earns full points."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What should a hypothesis explain?",
+      "options": [
+        "The most obvious symptom",
+        "Every observation",
+        "Nothing yet"
+      ],
+      "answer": 1,
+      "explanation": "One cause must explain all evidence."
+    },
+    {
+      "question": "What completes a repair?",
+      "options": [
+        "Clearing the alarm",
+        "Verifying the whole function",
+        "Writing a report first"
+      ],
+      "answer": 1,
+      "explanation": "Verification proves the fix and finds side effects."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.troubleshooting-method"
+  ]
+}

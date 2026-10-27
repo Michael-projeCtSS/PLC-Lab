@@ -1,0 +1,224 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ts.outputs-dead",
+  "revision": 1,
+  "title": "Conveyor dead although the PLC says ON",
+  "kind": "troubleshooting",
+  "difficulty": "beginner",
+  "summary": "The PLC shows the motor command TRUE, yet the contactor does not pull in and the run lamp stays dark. Find out where the signal is lost.",
+  "objectives": [
+    "Follow a signal from the program to the field device",
+    "Use module status LEDs and the diagnostic buffer"
+  ],
+  "estimatedMinutes": 15,
+  "scene": "scene.motor-start-stop",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open: TRUE while pressed. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe). *)\n    MotorFeedback : BOOL; (* Contactor auxiliary contact: TRUE when the contactor has pulled in. *)\n    OverloadOK : BOOL; (* Overload relay contact, normally closed: TRUE while the motor is not overloaded. *)\nEND_VAR\nVAR_OUTPUT\n    MotorContactor : BOOL; (* Contactor coil K1: TRUE energizes the motor. *)\n    RunLamp : BOOL; (* Green run lamp H1. *)\nEND_VAR\nMotorContactor := (StartPB OR MotorContactor) AND StopPB AND OverloadOK;\nRunLamp := MotorFeedback;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Run the simulation and press Start; confirm the symptom.",
+    "Compare the PLC output tag, the output LED and the contactor.",
+    "Check the module status and the diagnostic buffer.",
+    "Diagnose, repair, then verify."
+  ],
+  "hints": [
+    "The program is the one that worked yesterday.",
+    "An output module needs its own 24 V load supply to switch anything."
+  ],
+  "knowledgeRefs": [
+    "troubleshooting.missing-field-power",
+    "fundamentals.digital-io"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "contactor",
+      "source": {
+        "type": "plcTag",
+        "tag": "MotorContactor"
+      }
+    },
+    {
+      "name": "running",
+      "source": {
+        "type": "component",
+        "component": "motor",
+        "quantity": "running"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "verify",
+      "title": "Start the repaired conveyor",
+      "durationMs": 5000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "runs",
+      "title": "The motor runs after Start",
+      "points": 60,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 2000
+      },
+      "onFail": "The motor still does not run after Start."
+    },
+    {
+      "id": "command",
+      "title": "The PLC commands the contactor",
+      "points": 40,
+      "scenario": "verify",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "withinMs": 300
+      },
+      "onFail": "The contactor command did not follow Start."
+    }
+  ],
+  "troubleshooting": {
+    "symptom": "Pressing Start does nothing at the machine. On the programming device MotorContactor shows TRUE.",
+    "reportedBy": "Maintenance technician, conveyor line 1",
+    "faults": [
+      {
+        "id": "do-power",
+        "fault": {
+          "type": "fieldPowerMissing",
+          "position": {
+            "rack": 0,
+            "slot": 2
+          }
+        }
+      }
+    ],
+    "diagnosisOptions": [
+      {
+        "id": "program-error",
+        "label": "The PLC program does not set the output"
+      },
+      {
+        "id": "contactor-coil",
+        "label": "The contactor coil is open-circuit"
+      },
+      {
+        "id": "do-power",
+        "label": "The digital output module has no load (field) supply"
+      },
+      {
+        "id": "overload",
+        "label": "The overload relay has tripped"
+      },
+      {
+        "id": "start-button",
+        "label": "The Start button is defective"
+      }
+    ],
+    "rootCauses": [
+      "do-power"
+    ],
+    "repairs": [
+      {
+        "id": "restore-supply",
+        "label": "Replace the blown fuse in the output module's 24 V load supply",
+        "clears": [
+          "do-power"
+        ]
+      },
+      {
+        "id": "replace-contactor",
+        "label": "Replace the contactor",
+        "clears": []
+      },
+      {
+        "id": "reset-overload",
+        "label": "Reset the overload relay",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "runs",
+      "command"
+    ],
+    "knowledgeRefs": [
+      "troubleshooting.missing-field-power"
+    ]
+  }
+}

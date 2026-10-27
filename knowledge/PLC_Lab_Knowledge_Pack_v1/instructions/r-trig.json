@@ -1,0 +1,73 @@
+{
+  "id": "instruction.r-trig",
+  "kind": "instruction",
+  "title": "R_TRIG: rising edge detection",
+  "summary": "R_TRIG sets Q for exactly one call when CLK changes from FALSE to TRUE.",
+  "tags": [
+    "R_TRIG",
+    "edge",
+    "rising edge",
+    "one-shot"
+  ],
+  "sections": [
+    {
+      "heading": "Behavior",
+      "body": "R_TRIG remembers the value of **CLK** from its previous call. **Q** is TRUE only in the call where CLK is TRUE and was FALSE before. Holding a button down therefore produces a single one-scan pulse."
+    },
+    {
+      "heading": "Example: count button presses",
+      "body": "```\nVAR Edge : R_TRIG; Presses : CTU; END_VAR\nEdge(CLK := Button1);\nPresses(CU := Edge.Q, R := Button2, PV := 5);\nLamp1 := Presses.Q;\n```\nCounting `Button1` directly with a level-sensitive condition would count once per scan while the button is held."
+    },
+    {
+      "heading": "Startup behavior",
+      "body": "In PLC Lab's generic profile the remembered value starts FALSE, so a CLK that is already TRUE in the first scan produces one rising edge. Platforms differ in startup handling; check your platform documentation."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "instruction.f-trig",
+    "instruction.ctu"
+  ],
+  "instruction": {
+    "category": "Edge detection",
+    "inputs": [
+      {
+        "name": "CLK",
+        "type": "BOOL",
+        "description": "Signal to watch"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Q",
+        "type": "BOOL",
+        "description": "TRUE for one call on a FALSE-to-TRUE change"
+      }
+    ],
+    "state": "Previous value of CLK.",
+    "retentivity": "Not retentive.",
+    "timing": "Edge is relative to the previous call, not to wall time.",
+    "simulationSupport": "EXACT_BEHAVIORAL",
+    "equivalents": [
+      {
+        "platform": "Siemens S7-1200/S7-1500",
+        "name": "R_TRIG",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Rockwell Logix",
+        "name": "ONS / OSR",
+        "notes": "One-shot instructions with a storage bit. Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Beckhoff TwinCAT 3 / CODESYS",
+        "name": "R_TRIG",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      }
+    ]
+  }
+}

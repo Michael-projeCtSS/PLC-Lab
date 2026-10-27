@@ -1,0 +1,38 @@
+{
+  "id": "fundamentals.scaling",
+  "kind": "topic",
+  "title": "Scaling analog values",
+  "summary": "Scaling converts the raw integer of an analog module into an engineering value. It is a straight-line conversion defined by two points.",
+  "tags": [
+    "scaling",
+    "NORM_X",
+    "SCALE_X",
+    "engineering units",
+    "INT_TO_REAL"
+  ],
+  "sections": [
+    {
+      "heading": "The straight line",
+      "body": "```\nvalue = (raw - rawMin) / (rawMax - rawMin) * (engMax - engMin) + engMin\n```\n\nFor PLC Lab's generic profile (0..10000 for the nominal range) and a level of 0..100 %:\n\n```\nLevelPercent := INT_TO_REAL(LevelRaw) / 100.0;\n```"
+    },
+    {
+      "heading": "Integer arithmetic traps",
+      "body": "In INT arithmetic `LevelRaw / 10000 * 100` is 0 for every value below 10000, because the division truncates first. Multiply first or convert to REAL before dividing. Also watch the INT range (-32768..32767): `LevelRaw * 100` overflows above 327."
+    },
+    {
+      "heading": "Vendor helpers",
+      "body": "Most platforms provide scaling functions, for example NORM_X/SCALE_X on Siemens S7-1200/S7-1500 or module-level scaling to engineering units on Logix analog modules. The underlying mathematics is always the same straight line; check the exact raw range of your module."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.siemens-support",
+    "src.rockwell-literature",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.analog-io",
+    "fundamentals.4-20ma"
+  ]
+}

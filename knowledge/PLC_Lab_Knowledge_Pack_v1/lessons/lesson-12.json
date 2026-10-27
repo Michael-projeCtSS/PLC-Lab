@@ -1,0 +1,88 @@
+{
+  "id": "lesson.analog-signals",
+  "number": 12,
+  "title": "Analog signals",
+  "summary": "Values instead of on/off: how a module turns a current or voltage into a number.",
+  "level": "intermediate",
+  "minutes": 15,
+  "objectives": [
+    "Explain the raw value of an analog input",
+    "Name typical analog signal types"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Continuous values",
+      "body": "Analog signals represent a quantity continuously: a level, pressure or speed. The module measures a current (for example 4-20 mA) or a voltage (0-10 V) and converts it into an integer, the **raw value**."
+    },
+    {
+      "type": "visual",
+      "heading": "Signal to raw value",
+      "body": "Each platform uses its own number range.",
+      "diagram": "  0 %  ... 50 % ... 100 %  (process)\n  4 mA ... 12 mA ... 20 mA (signal)\n  0    ... 5000  ... 10000 (PLC Lab generic raw)\n  0    ... 13824 ... 27648 (S7 nominal raw)"
+    },
+    {
+      "type": "example",
+      "heading": "Reading the raw value",
+      "body": "LevelRaw is an INT from the analog module.",
+      "code": "IF LevelRaw > 8000 THEN\n    HighWarning := TRUE;\nEND_IF;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Comparing raw values with engineering numbers (`LevelRaw > 80` meaning 80 %). Always know the raw range of your module and platform."
+    },
+    {
+      "type": "challenge",
+      "heading": "Compute",
+      "body": "Use the PLC Lab generic range.",
+      "question": {
+        "question": "With 0..10000 for 0..100 %, what raw value is 25 %?",
+        "options": [
+          "25",
+          "250",
+          "2500",
+          "6912"
+        ],
+        "answer": 2,
+        "explanation": "25 % of 10000 is 2500."
+      }
+    },
+    {
+      "type": "simulation",
+      "heading": "See the raw value",
+      "body": "On the tank station, watch LevelRaw in Variables while the tank fills.",
+      "scene": "scene.tank-filling"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Analog modules convert currents and voltages into raw integers whose range depends on the platform.\n\n**Troubleshooting note:** Before suspecting the program, compare the measured signal at the terminal with the raw value in the PLC."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What is the raw value?",
+      "options": [
+        "The engineering value",
+        "The integer delivered by the module",
+        "The cable resistance"
+      ],
+      "answer": 1,
+      "explanation": "Scaling turns it into engineering units."
+    },
+    {
+      "question": "Which is a common analog signal?",
+      "options": [
+        "4-20 mA",
+        "24 V on/off",
+        "RS-485"
+      ],
+      "answer": 0,
+      "explanation": "4-20 mA is the classic process signal."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.analog-io"
+  ]
+}

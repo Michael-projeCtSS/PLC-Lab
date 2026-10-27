@@ -1,0 +1,67 @@
+{
+  "id": "instruction.f-trig",
+  "kind": "instruction",
+  "title": "F_TRIG: falling edge detection",
+  "summary": "F_TRIG sets Q for exactly one call when CLK changes from TRUE to FALSE.",
+  "tags": [
+    "F_TRIG",
+    "edge",
+    "falling edge"
+  ],
+  "sections": [
+    {
+      "heading": "Behavior",
+      "body": "**Q** is TRUE only in the call where **CLK** is FALSE and was TRUE in the previous call. It is used to react to a button release or a sensor becoming free."
+    },
+    {
+      "heading": "Startup behavior",
+      "body": "In PLC Lab's generic profile the remembered value starts FALSE, so F_TRIG never reports an edge in the first scan. This is a documented choice of the generic profile."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "instruction.r-trig"
+  ],
+  "instruction": {
+    "category": "Edge detection",
+    "inputs": [
+      {
+        "name": "CLK",
+        "type": "BOOL",
+        "description": "Signal to watch"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Q",
+        "type": "BOOL",
+        "description": "TRUE for one call on a TRUE-to-FALSE change"
+      }
+    ],
+    "state": "Previous value of CLK.",
+    "retentivity": "Not retentive.",
+    "timing": "Edge is relative to the previous call.",
+    "simulationSupport": "EXACT_BEHAVIORAL",
+    "equivalents": [
+      {
+        "platform": "Siemens S7-1200/S7-1500",
+        "name": "F_TRIG",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Rockwell Logix",
+        "name": "OSF",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Beckhoff TwinCAT 3 / CODESYS",
+        "name": "F_TRIG",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      }
+    ]
+  }
+}

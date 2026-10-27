@@ -1,0 +1,38 @@
+{
+  "id": "protocol.profinet",
+  "kind": "protocol",
+  "title": "PROFINET IO",
+  "summary": "PROFINET IO is an Industrial Ethernet standard from PI. An IO controller (PLC) exchanges cyclic data with IO devices that it identifies by device name.",
+  "tags": [
+    "PROFINET",
+    "device name",
+    "IO controller",
+    "IO device"
+  ],
+  "sections": [
+    {
+      "heading": "Key ideas",
+      "body": "Devices are identified by a **device name** assigned during commissioning; the controller assigns the IP address. Cyclic real-time data is exchanged at the configured update time; alarms and diagnostics are acyclic. Topology information (neighbors, ports) supports device replacement without an engineering tool."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "Device name missing or duplicated, wrong device type or firmware in the configuration, topology mismatch, watchdog timeouts caused by network load or bad cabling."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.pi-profinet"
+  ],
+  "related": [],
+  "protocol": "profinet",
+  "fidelity": {
+    "level": "NOT_IMPLEMENTED",
+    "modeled": [],
+    "approximated": [],
+    "omitted": []
+  }
+}

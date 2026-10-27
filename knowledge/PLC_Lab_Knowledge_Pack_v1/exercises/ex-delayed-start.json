@@ -1,0 +1,233 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.delayed-start",
+  "revision": 1,
+  "title": "Motor start with a warning delay",
+  "kind": "practice",
+  "difficulty": "beginner",
+  "summary": "Before a conveyor starts, people nearby must be warned. Pressing Start lights the run lamp as a warning; the motor starts 3 seconds later. Stop cancels at any time.",
+  "objectives": [
+    "Use the TON on-delay timer",
+    "Separate a start request from the actual motor command"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.motor-start-stop",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open: TRUE while pressed. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe). *)\n    MotorFeedback : BOOL; (* Contactor auxiliary contact: TRUE when the contactor has pulled in. *)\n    OverloadOK : BOOL; (* Overload relay contact, normally closed: TRUE while the motor is not overloaded. *)\nEND_VAR\nVAR_OUTPUT\n    MotorContactor : BOOL; (* Contactor coil K1: TRUE energizes the motor. *)\n    RunLamp : BOOL; (* Green run lamp H1. *)\nEND_VAR\nVAR\n    Request : BOOL;\n    Delay : TON;\nEND_VAR\n\n(* Latch a start request, warn with RunLamp, start the motor 3 s later. *)\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Start latches a start request. Stop (StopPB FALSE) or an overload clears it.",
+    "RunLamp is on while the request is active (warning and running).",
+    "MotorContactor switches on 3 s after the request becomes active, not earlier."
+  ],
+  "hints": [
+    "Call the timer every scan: Delay(IN := Request, PT := T#3s);",
+    "Use Delay.Q for the motor command.",
+    "When Request drops, TON resets its output immediately."
+  ],
+  "knowledgeRefs": [
+    "instruction.ton",
+    "fundamentals.start-stop-latch"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "contactor",
+      "source": {
+        "type": "plcTag",
+        "tag": "MotorContactor"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "plcTag",
+        "tag": "RunLamp"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "delay",
+      "title": "Start and wait",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cancel",
+      "title": "Stop during the warning",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 2300,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "warns",
+      "title": "The warning lamp lights at once",
+      "points": 20,
+      "scenario": "delay",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "withinMs": 200
+      },
+      "onFail": "RunLamp did not light when Start was pressed."
+    },
+    {
+      "id": "not-early",
+      "title": "The motor does not start before the delay",
+      "points": 30,
+      "scenario": "delay",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3000,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "The motor started before 3 s had elapsed."
+    },
+    {
+      "id": "starts",
+      "title": "The motor starts after 3 s",
+      "points": 30,
+      "scenario": "delay",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 4200,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The motor was not running 3.7 s after Start."
+    },
+    {
+      "id": "cancel",
+      "title": "Stop cancels the start",
+      "points": 20,
+      "scenario": "cancel",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The motor started although Stop was pressed during the warning."
+    }
+  ]
+}

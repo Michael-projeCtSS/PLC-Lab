@@ -1,0 +1,52 @@
+{
+  "id": "troubleshooting.analog-wire-break",
+  "kind": "troubleshooting",
+  "title": "Wire break on a 4-20 mA input",
+  "summary": "The loop current is 0 mA: the analog input reports wire break and the value is invalid.",
+  "tags": [
+    "wire break",
+    "4-20 mA",
+    "diagnostics"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "The loop current is 0 mA: the analog input reports wire break and the value is invalid."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.namur-ne43-beckhoff",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.4-20ma"
+  ],
+  "troubleshooting": {
+    "faultId": "analog-wire-break",
+    "area": "Analog",
+    "target": "Transmitter loop wiring",
+    "effect": "Invalid measurement; dependent control must react safely",
+    "symptoms": [
+      "Value jumps to an overflow or invalid code",
+      "Module status LED flashes red",
+      "Wire-break entry in the diagnostic buffer"
+    ],
+    "evidence": [
+      "Diagnostic buffer",
+      "Channel quality",
+      "Loop current measurement"
+    ],
+    "diagnosticMethod": [
+      "Check the diagnostic buffer",
+      "Measure the loop current",
+      "Check terminals, junction boxes and the transmitter supply"
+    ],
+    "repair": [
+      "Repair the wiring or replace the transmitter",
+      "Verify the value returns and the diagnostic goes outgoing"
+    ],
+    "explanation": "A live-zero signal makes a broken loop detectable: below about 3.6 mA the value cannot be a real measurement.",
+    "simulatedIn": []
+  }
+}

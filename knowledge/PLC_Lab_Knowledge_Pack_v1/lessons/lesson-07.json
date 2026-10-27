@@ -1,0 +1,87 @@
+{
+  "id": "lesson.interlocks",
+  "number": 7,
+  "title": "Interlocks",
+  "summary": "Prevent combinations that damage equipment: a pump must not run dry, a valve and a pump must not fight each other.",
+  "level": "beginner",
+  "minutes": 15,
+  "objectives": [
+    "Distinguish permissives and trips",
+    "Collect interlocks in one condition"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Protecting the process",
+      "body": "An **interlock** blocks or stops equipment when a condition makes operation unsafe for the equipment or the product. A **permissive** must be TRUE to start; a **trip** stops running equipment."
+    },
+    {
+      "type": "visual",
+      "heading": "Interlocks around a pump",
+      "body": "The drain pump needs liquid in the tank.",
+      "diagram": "  DrainRequest ---+\n                  AND --> DrainPump\n  NOT LevelLow ---+\n  (pump runs only when the tank is above the low switch)"
+    },
+    {
+      "type": "example",
+      "heading": "Pump with dry-run protection",
+      "body": "LevelLow is TRUE while the tank is below the low switch.",
+      "code": "DrainPump := DrainRequest AND NOT LevelLow;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Adding the interlock to only one of several places that start the pump. Calculate a single permit and use it everywhere."
+    },
+    {
+      "type": "challenge",
+      "heading": "Which one?",
+      "body": "Classify the condition.",
+      "question": {
+        "question": "'The pump must not start below the low level and must stop when the level drops below it.' What is LevelLow?",
+        "options": [
+          "Only a permissive",
+          "Only a trip",
+          "Both a permissive and a trip"
+        ],
+        "answer": 2,
+        "explanation": "It blocks the start and stops a running pump."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: batch sequence",
+      "body": "The fill-and-drain sequence must never run the pump dry and never run valve and pump together.",
+      "exercise": "ex.tank-batch-sequence"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Interlocks protect equipment; calculate them once and AND them into every run condition. People are protected by separate safety systems.\n\n**Troubleshooting note:** A device that refuses to start without an alarm is often blocked by an interlock; check every condition in its permit."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What protects people from hazardous motion?",
+      "options": [
+        "Standard PLC interlocks",
+        "A dedicated safety system",
+        "The HMI"
+      ],
+      "answer": 1,
+      "explanation": "Safety functions need safety-rated equipment."
+    },
+    {
+      "question": "What is a permissive?",
+      "options": [
+        "A condition needed to start",
+        "A timer",
+        "An alarm text"
+      ],
+      "answer": 0,
+      "explanation": "A permissive allows starting."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.interlocks"
+  ]
+}

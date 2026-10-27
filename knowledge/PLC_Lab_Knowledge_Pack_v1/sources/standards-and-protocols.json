@@ -1,0 +1,155 @@
+{
+  "sources": [
+    {
+      "id": "src.iec-61131-3",
+      "title": "IEC 61131-3 Programmable controllers - Part 3: Programming languages",
+      "documentType": "International standard",
+      "documentNumber": "IEC 61131-3 (edition 3.0, 2013 is the widely referenced edition)",
+      "url": "https://webstore.iec.ch/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["Structured Text", "standard function blocks", "data types"],
+      "notes": "Defines ST, LD, FBD, IL (deprecated) and SFC, the elementary data types and the standard function blocks TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, CTUD. PLC Lab summarizes behavior in original words; the standard text is not reproduced.",
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.iec-61131-2",
+      "title": "IEC 61131-2 Programmable controllers - Part 2: Equipment requirements and tests",
+      "documentType": "International standard",
+      "url": "https://webstore.iec.ch/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["digital input types", "24 V DC signal levels"],
+      "notes": "Defines digital input types 1, 2 and 3 and their voltage/current thresholds. PLC Lab uses simplified thresholds and marks them as a simulation approximation.",
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.iec-61131-9",
+      "title": "IEC 61131-9 Single-drop digital communication interface for small sensors and actuators (SDCI, IO-Link)",
+      "documentType": "International standard",
+      "url": "https://webstore.iec.ch/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["IO-Link"],
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.namur-ne43-beckhoff",
+      "vendor": "beckhoff",
+      "title": "NAMUR basic information (Beckhoff Information System, EL3182 documentation)",
+      "documentType": "Vendor product documentation page",
+      "url": "https://infosys.beckhoff.com/content/1033/el3182/4004665227.html",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["4-20 mA transmitters", "NE 43 failure signalling"],
+      "notes": "Vendor summary of NAMUR NE 43 signal levels: measurement information between 3.8 mA and 20.5 mA, failure information at or below 3.6 mA and at or above 21.0 mA. The NAMUR recommendation itself is published by NAMUR (namur.net).",
+      "confidence": "high",
+      "verification": "verified"
+    },
+    {
+      "id": "src.modbus-application-protocol",
+      "title": "MODBUS Application Protocol Specification V1.1b3",
+      "documentType": "Protocol specification",
+      "documentNumber": "V1.1b3",
+      "url": "https://modbus.org/specs.php",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["Modbus TCP", "Modbus RTU", "function codes", "exception codes"],
+      "notes": "Function codes 03 (read holding registers) and 04 (read input registers), the PDU structure and exception codes 01 to 0B. The specification download page refused automated access during authoring, so the document identity was not re-checked.",
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.modbus-tcp-guide",
+      "title": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+      "documentType": "Protocol implementation guide",
+      "documentNumber": "V1.0b",
+      "url": "https://modbus.org/specs.php",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["Modbus TCP", "MBAP header", "unit identifier", "TCP port 502"],
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.modbus-serial-guide",
+      "title": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+      "documentType": "Protocol implementation guide",
+      "documentNumber": "V1.02",
+      "url": "https://modbus.org/specs.php",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["Modbus RTU", "RS-485"],
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.pi-profinet",
+      "title": "PROFINET technology and specifications (PROFIBUS & PROFINET International)",
+      "documentType": "Technology organization portal",
+      "url": "https://www.profibus.com/technology/profinet",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["PROFINET IO", "PROFIBUS DP"],
+      "notes": "PI publishes the PROFINET and PROFIBUS specifications (IEC 61158/61784). PLC Lab does not implement either protocol.",
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.odva-ethernet-ip",
+      "title": "EtherNet/IP and the Common Industrial Protocol (ODVA)",
+      "documentType": "Technology organization portal",
+      "url": "https://www.odva.org/technology-standards/key-technologies/ethernet-ip/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["EtherNet/IP", "CIP"],
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.etg-ethercat",
+      "title": "EtherCAT technology (EtherCAT Technology Group)",
+      "documentType": "Technology organization portal",
+      "url": "https://www.ethercat.org/en/technology.html",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["EtherCAT"],
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.opc-ua",
+      "title": "OPC Unified Architecture (OPC Foundation; IEC 62541)",
+      "documentType": "Technology organization portal",
+      "url": "https://opcfoundation.org/about/opc-technologies/opc-ua/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["OPC UA"],
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.cia-canopen",
+      "title": "CANopen (CAN in Automation; CiA 301 application layer and communication profile)",
+      "documentType": "Technology organization portal",
+      "url": "https://www.can-cia.org/can-knowledge/canopen",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["CANopen"],
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.io-link",
+      "title": "IO-Link (IO-Link Community)",
+      "documentType": "Technology organization portal",
+      "url": "https://io-link.com/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["IO-Link"],
+      "confidence": "high",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.plclab-simulation",
+      "title": "PLC Lab simulation model documentation (docs/SIMULATION_FIDELITY.md in the PLC Lab repository)",
+      "documentType": "PLC Lab project documentation",
+      "url": "https://github.com/Michael-projeCtSS/PLC-Lab",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["PLC Lab behavior", "simulation approximations"],
+      "notes": "Describes what PLC Lab models exactly, approximates or omits. Cited where an article explains PLC Lab behavior rather than vendor behavior.",
+      "confidence": "high",
+      "verification": "verified"
+    }
+  ]
+}

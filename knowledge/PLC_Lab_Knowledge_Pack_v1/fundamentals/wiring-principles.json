@@ -1,0 +1,36 @@
+{
+  "id": "fundamentals.wiring-principles",
+  "kind": "topic",
+  "title": "Wiring principles for PLC I/O",
+  "summary": "Good wiring makes faults visible and keeps signals clean: separate supplies, commons, shielding and clear terminal designations.",
+  "tags": [
+    "wiring",
+    "load supply",
+    "shield",
+    "common",
+    "terminal"
+  ],
+  "sections": [
+    {
+      "heading": "Supplies and commons",
+      "body": "Digital and analog modules often have separate **load supply** terminals. A module with missing load supply can be present and configured but its outputs do not switch and its inputs read nothing. Each group of channels shares a **common** (M or 0 V for sinking inputs)."
+    },
+    {
+      "heading": "Analog wiring",
+      "body": "Use shielded twisted pairs for analog signals, ground the shield at one end according to the vendor's rules and route analog cables away from motor cables. For two-wire transmitters the loop supply is in series with the transmitter and the analog input."
+    },
+    {
+      "heading": "Documentation",
+      "body": "Every wire should be traceable from the circuit diagram to the terminal and to the PLC address and tag. Most commissioning faults (swapped wires, wrong slot, wrong channel) are found by comparing the diagram, the hardware configuration and a measurement at the terminal."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.digital-io",
+    "fundamentals.commissioning",
+    "troubleshooting.missing-field-power"
+  ]
+}

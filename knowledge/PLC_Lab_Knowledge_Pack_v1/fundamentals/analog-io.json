@@ -1,0 +1,54 @@
+{
+  "id": "fundamentals.analog-io",
+  "kind": "topic",
+  "title": "Analog inputs and outputs",
+  "summary": "Analog signals carry a value, not just on/off: 4-20 mA, 0-20 mA or 0-10 V. The module converts the signal into an integer (raw value) that the program scales into engineering units.",
+  "tags": [
+    "analog",
+    "raw value",
+    "27648",
+    "overrange",
+    "4-20 mA",
+    "0-10 V"
+  ],
+  "sections": [
+    {
+      "heading": "From signal to number",
+      "body": "An analog input module measures a current or voltage and converts it into an integer, the **raw value**. Each vendor uses its own representation. Examples:\n\n| Platform style | Nominal range of the raw value |\n| --- | --- |\n| Siemens S7-1200/S7-1500 | 0 to 27648 for the nominal signal range |\n| Beckhoff EL305x (default presentation) | 0 (4 mA) to 32767 (20 mA) |\n| PLC Lab generic profile | 0 to 10000 (= 0 to 100 %) |\n\nThe program must **scale** the raw value into the physical unit (%, bar, litres)."
+    },
+    {
+      "heading": "Over- and underrange",
+      "body": "Signals slightly outside the nominal range are still converted (**overrange/underrange**). Far outside, the module reports **overflow/underflow** with special values and, if diagnostics are enabled, a diagnostic event. With 4-20 mA inputs a current far below 4 mA is detected as **wire break**."
+    },
+    {
+      "heading": "Configuration matters",
+      "body": "Each analog channel is configured for a measurement type (for example *current 4-20 mA* or *voltage 0-10 V*). A channel configured as 0-20 mA while the transmitter delivers 4-20 mA reads a value about 20 % too high at the bottom of the range: a frequent commissioning error."
+    }
+  ],
+  "facts": [
+    {
+      "label": "S7-1500 nominal analog range",
+      "value": "0 to 27648 (bipolar ranges -27648 to 27648); overrange up to 32511, overflow 32767 - check the module manual",
+      "sources": [
+        "src.siemens-analog-value-processing"
+      ]
+    },
+    {
+      "label": "Beckhoff EL305x default presentation",
+      "value": "4 mA = 0x0000, 20 mA = 0x7FFF",
+      "sources": [
+        "src.beckhoff-el30xx-presentation"
+      ]
+    }
+  ],
+  "sources": [
+    "src.siemens-analog-value-processing",
+    "src.beckhoff-el30xx-presentation",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.4-20ma",
+    "fundamentals.scaling",
+    "troubleshooting.analog-wrong-range"
+  ]
+}

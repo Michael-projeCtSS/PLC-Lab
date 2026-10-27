@@ -1,0 +1,48 @@
+{
+  "id": "troubleshooting.wrong-module-slot",
+  "kind": "troubleshooting",
+  "title": "Module installed in the wrong slot",
+  "summary": "Two modules were swapped or a module sits in a different slot than configured; the CPU reports a configuration difference.",
+  "tags": [
+    "slot",
+    "rack",
+    "configuration difference"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "Two modules were swapped or a module sits in a different slot than configured; the CPU reports a configuration difference."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.plc-architecture",
+    "fundamentals.addressing"
+  ],
+  "troubleshooting": {
+    "faultId": "wrong-module-slot",
+    "area": "Hardware",
+    "target": "Rack configuration",
+    "effect": "Affected channels deliver no valid values or wrong signals",
+    "symptoms": [
+      "Module status: configured differs from installed",
+      "Several inputs or outputs stop working at once"
+    ],
+    "evidence": [
+      "Hardware view: configured versus installed module per slot",
+      "Diagnostic buffer"
+    ],
+    "diagnosticMethod": [
+      "Compare the configuration with the physical rack",
+      "Check wiring follows the module (front connector)"
+    ],
+    "repair": [
+      "Move the module to the configured slot or correct the configuration"
+    ],
+    "explanation": "The CPU checks each slot against the configuration; a mismatch keeps the module from exchanging data.",
+    "simulatedIn": []
+  }
+}

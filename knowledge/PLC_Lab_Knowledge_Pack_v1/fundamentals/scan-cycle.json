@@ -1,0 +1,48 @@
+{
+  "id": "fundamentals.scan-cycle",
+  "kind": "topic",
+  "title": "The PLC scan cycle",
+  "summary": "A PLC repeatedly reads all inputs into an input image, runs the program against that image, then writes the output image to the outputs. Understanding this cycle explains most beginner surprises.",
+  "tags": [
+    "scan",
+    "process image",
+    "cycle time",
+    "RUN",
+    "STOP"
+  ],
+  "sections": [
+    {
+      "heading": "Read, execute, write",
+      "body": "1. **Read inputs**: the CPU copies the state of every input into the **process input image**.\n2. **Execute the program**: the program reads only the image, never the live terminal, so every instruction in one scan sees the same input values.\n3. **Write outputs**: the results are copied from the **process output image** to the output modules.\n4. **Housekeeping**: communication, diagnostics and timers are updated, then the cycle starts again."
+    },
+    {
+      "heading": "Why the image matters",
+      "body": "Because inputs are frozen during a scan, a button pressed in the middle of the program is only seen in the **next** scan. An output written twice in one scan only reaches the field with its **last** value. Both effects are visible in PLC Lab's cause-and-effect view: *PLC read* shows the input image used by the scan, *PLC logic result* shows the committed values, and *Next PLC input* shows what was sampled for the following scan."
+    },
+    {
+      "heading": "Cycle time",
+      "body": "The time for one complete cycle is the **cycle time** (typically a few milliseconds on real machines). Signals shorter than one cycle can be missed, which is why fast counters and interrupts exist on real hardware. PLC Lab uses a fixed, configurable cycle (100 ms by default) so that every step can be inspected; this is a **simulation approximation** of a real, variable cycle time."
+    },
+    {
+      "heading": "STOP and RUN",
+      "body": "In **STOP** the program is not executed and outputs go to their configured safe state (normally off). In **RUN** the cycle above repeats. A runtime error (for example division by zero) moves the CPU to **FAULT**/STOP until the cause is corrected and the CPU is reset. In PLC Lab the machine keeps running while the PLC is stopped: a motor coasts, a tank keeps draining."
+    }
+  ],
+  "facts": [
+    {
+      "label": "Default PLC Lab cycle",
+      "value": "100 ms, configurable 10-1000 ms per project",
+      "sources": [
+        "src.plclab-simulation"
+      ]
+    }
+  ],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.plc-architecture",
+    "instruction.ton"
+  ]
+}

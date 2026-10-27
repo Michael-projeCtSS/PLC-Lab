@@ -1,0 +1,54 @@
+{
+  "id": "troubleshooting.nc-contact-replaced-by-no",
+  "kind": "troubleshooting",
+  "title": "Stop button contact replaced by a normally open block",
+  "summary": "After maintenance a machine refuses to start although Start works electrically: the Stop circuit now reads 'pressed' all the time.",
+  "tags": [
+    "NC",
+    "NO",
+    "stop button",
+    "maintenance"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "After maintenance a machine refuses to start although Start works electrically: the Stop circuit now reads 'pressed' all the time."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.no-nc-contacts"
+  ],
+  "troubleshooting": {
+    "faultId": "nc-contact-replaced-by-no",
+    "area": "I/O",
+    "target": "Stop push button contact block",
+    "effect": "The run condition never becomes true",
+    "symptoms": [
+      "Start does nothing, no alarm",
+      "The Stop input LED is off while nobody presses Stop",
+      "The Stop input tag is FALSE in the input image"
+    ],
+    "evidence": [
+      "Digital input LEDs",
+      "PLC input image of StopPB",
+      "Voltage at the Stop input terminal with the button released (0 V instead of 24 V)"
+    ],
+    "diagnosticMethod": [
+      "Watch every input in the start condition while pressing Start",
+      "Compare the Stop input with the button state",
+      "Measure the terminal voltage with the button released and pressed"
+    ],
+    "repair": [
+      "Fit a normally closed contact block",
+      "Retest Stop and Start"
+    ],
+    "explanation": "A normally closed Stop contact delivers 24 V at rest. A normally open block delivers 0 V at rest, which the program correctly interprets as 'Stop pressed'. The program is right; the hardware changed.",
+    "simulatedIn": [
+      "ts.motor-wont-start"
+    ]
+  }
+}

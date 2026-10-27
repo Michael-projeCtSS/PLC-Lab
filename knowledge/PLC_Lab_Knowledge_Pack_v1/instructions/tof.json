@@ -1,0 +1,84 @@
+{
+  "id": "instruction.tof",
+  "kind": "instruction",
+  "title": "TOF: off-delay timer",
+  "summary": "TOF switches Q on immediately with IN and keeps it on for the preset time PT after IN goes off.",
+  "tags": [
+    "TOF",
+    "off-delay",
+    "run-on",
+    "timer"
+  ],
+  "sections": [
+    {
+      "heading": "Behavior",
+      "body": "- When **IN** becomes TRUE, **Q** becomes TRUE at once and ET is 0.\n- When IN becomes FALSE, ET starts counting while Q stays TRUE.\n- When ET reaches **PT**, Q becomes FALSE.\n- If IN becomes TRUE again before PT elapses, ET resets and Q stays TRUE."
+    },
+    {
+      "heading": "Typical use",
+      "body": "Fan run-on after a heater switches off, keeping a conveyor running until the last part has left, or bridging short signal drop-outs from a sensor."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "instruction.ton",
+    "instruction.tp"
+  ],
+  "instruction": {
+    "category": "Timers",
+    "inputs": [
+      {
+        "name": "IN",
+        "type": "BOOL",
+        "description": "Q follows IN rising immediately"
+      },
+      {
+        "name": "PT",
+        "type": "TIME",
+        "description": "Run-on time after IN falls"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Q",
+        "type": "BOOL",
+        "description": "TRUE while IN is TRUE and for PT afterwards"
+      },
+      {
+        "name": "ET",
+        "type": "TIME",
+        "description": "Elapsed off-delay time"
+      }
+    ],
+    "state": "Instance holds the falling-edge time and output state.",
+    "retentivity": "Not retentive.",
+    "timing": "Evaluated once per call; resolution equals the cycle time in PLC Lab.",
+    "simulationSupport": "EXACT_BEHAVIORAL",
+    "equivalents": [
+      {
+        "platform": "Siemens S7-1200/S7-1500",
+        "name": "TOF",
+        "notes": "IEC timer with an instance data block (IEC_TIMER). Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Rockwell Logix",
+        "name": "TOF",
+        "notes": "TIMER structure with PRE/ACC in milliseconds and EN/TT/DN bits; behavior is close but not identical to IEC. Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Beckhoff TwinCAT 3 / CODESYS",
+        "name": "TOF",
+        "notes": "IEC function block from the standard library. Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Mitsubishi MELSEC",
+        "name": "timer devices (T) or IEC timer FBs",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      }
+    ]
+  }
+}

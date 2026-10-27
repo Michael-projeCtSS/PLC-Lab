@@ -1,0 +1,54 @@
+{
+  "id": "troubleshooting.missing-field-power",
+  "kind": "troubleshooting",
+  "title": "Missing load (field) supply on an I/O module",
+  "summary": "The PLC commands outputs but nothing switches; the module reports missing supply voltage.",
+  "tags": [
+    "field power",
+    "load supply",
+    "output module"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "The PLC commands outputs but nothing switches; the module reports missing supply voltage."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.digital-io",
+    "fundamentals.wiring-principles"
+  ],
+  "troubleshooting": {
+    "faultId": "missing-field-power",
+    "area": "Hardware",
+    "target": "Load voltage of a digital output module",
+    "effect": "Outputs stay off although the program sets them",
+    "symptoms": [
+      "Output tags TRUE, output LEDs off, actuators idle",
+      "Module status LED flashing red",
+      "Diagnostic buffer: load voltage missing"
+    ],
+    "evidence": [
+      "Module LEDs and status",
+      "Diagnostic buffer",
+      "Voltage at the module's supply terminals"
+    ],
+    "diagnosticMethod": [
+      "Confirm the output is commanded in the PLC",
+      "Check module status and diagnostics",
+      "Measure the load supply and the fuse"
+    ],
+    "repair": [
+      "Restore the load supply (fuse, wiring, power supply)",
+      "Verify outputs switch"
+    ],
+    "explanation": "Output modules switch the field supply to the load; without it the electronics work but no current can flow to the actuators.",
+    "simulatedIn": [
+      "ts.outputs-dead"
+    ]
+  }
+}

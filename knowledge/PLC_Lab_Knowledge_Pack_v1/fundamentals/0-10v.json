@@ -1,0 +1,33 @@
+{
+  "id": "fundamentals.0-10v",
+  "kind": "topic",
+  "title": "0-10 V voltage signals",
+  "summary": "0-10 V signals are simple and common for setpoints and short cable runs, but they have no live zero and are more sensitive to voltage drops and noise than current loops.",
+  "tags": [
+    "0-10 V",
+    "voltage",
+    "setpoint"
+  ],
+  "sections": [
+    {
+      "heading": "Use cases",
+      "body": "Voltage signals are typical for drive speed setpoints, potentiometers and sensors inside the control cabinet. The input has a high impedance, so it does not load the source."
+    },
+    {
+      "heading": "Limitations",
+      "body": "A broken wire reads as 0 V, which is indistinguishable from a real zero. Long cables and shared ground paths add errors. For field transmitters, 4-20 mA is usually preferred."
+    },
+    {
+      "heading": "Wrong type on a channel",
+      "body": "Connecting a current loop to a voltage input or the reverse produces nonsense: a current transmitter on a high-impedance voltage input drives the input towards the loop supply voltage. In PLC Lab this is simulated: configure the channel type to match the device."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.analog-io",
+    "fundamentals.4-20ma"
+  ]
+}

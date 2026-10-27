@@ -1,0 +1,88 @@
+{
+  "id": "lesson.4-20ma",
+  "number": 13,
+  "title": "The 4-20 mA loop",
+  "summary": "Why process transmitters send currents and why the zero sits at 4 mA.",
+  "level": "intermediate",
+  "minutes": 15,
+  "objectives": [
+    "Explain live zero",
+    "Recognize NE 43 failure currents"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Current loops",
+      "body": "A transmitter regulates the current in a loop between 4 and 20 mA. Because the current is the same everywhere in the loop, cable length barely matters. 4 mA is the **live zero**: 0 mA can only mean a broken loop."
+    },
+    {
+      "type": "visual",
+      "heading": "NE 43 bands",
+      "body": "Measurement and failure information are separated.",
+      "diagram": "  0 mA     3.6   3.8                         20.5  21 mA\n  |fault low|  .  |-- measurement information --|  .  |fault high\n                  4 mA = 0 %          20 mA = 100 %"
+    },
+    {
+      "type": "example",
+      "heading": "Current to percent",
+      "body": "Percent from a loop current in mA.",
+      "code": "Percent := (CurrentMA - 4.0) / 16.0 * 100.0;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Configuring the input as 0-20 mA for a 4-20 mA transmitter: 4 mA then reads as 20 % and the whole range is shifted."
+    },
+    {
+      "type": "challenge",
+      "heading": "Compute",
+      "body": "Use (I - 4) / 16.",
+      "question": {
+        "question": "A 4-20 mA transmitter delivers 12 mA. What percentage is that?",
+        "options": [
+          "50 %",
+          "60 %",
+          "75 %"
+        ],
+        "answer": 0,
+        "explanation": "(12 - 4) / 16 = 0.5."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: analog filling",
+      "body": "Fill a tank to 60 % using the transmitter.",
+      "exercise": "ex.tank-analog-scaling"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "4-20 mA gives noise immunity and a live zero; NE 43 defines failure currents below 3.6 and above 21 mA.\n\n**Troubleshooting note:** A reading stuck at the bottom with a wire-break diagnostic means 0 mA in the loop: check the loop wiring and the transmitter supply."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does 0 mA on a 4-20 mA input mean?",
+      "options": [
+        "0 %",
+        "A broken loop or missing supply",
+        "100 %"
+      ],
+      "answer": 1,
+      "explanation": "The live zero makes 0 mA a fault indication."
+    },
+    {
+      "question": "Which current is valid measurement information under NE 43?",
+      "options": [
+        "3.0 mA",
+        "12.0 mA",
+        "22.0 mA"
+      ],
+      "answer": 1,
+      "explanation": "3.8-20.5 mA carries measurement information."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.4-20ma",
+    "troubleshooting.analog-wire-break"
+  ]
+}

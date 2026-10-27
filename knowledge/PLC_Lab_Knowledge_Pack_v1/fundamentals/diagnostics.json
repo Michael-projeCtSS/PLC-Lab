@@ -1,0 +1,37 @@
+{
+  "id": "fundamentals.diagnostics",
+  "kind": "topic",
+  "title": "PLC diagnostics",
+  "summary": "Controllers and modules report problems through LEDs, a diagnostic buffer, channel status and quality information. Reading them first saves hours of guessing.",
+  "tags": [
+    "diagnostic buffer",
+    "LED",
+    "quality",
+    "wire break",
+    "incoming",
+    "outgoing"
+  ],
+  "sections": [
+    {
+      "heading": "Where diagnostic information lives",
+      "body": "- **LEDs** on CPU and modules: RUN/STOP, ERROR, MAINT, per-channel status.\n- **Diagnostic buffer**: a time-stamped list of incoming and outgoing events (module missing, wire break, CPU stop with cause).\n- **Channel quality / status**: analog values with overflow or wire-break flags.\n- **Communication status**: connection timeouts, exception codes, link state."
+    },
+    {
+      "heading": "Incoming and outgoing",
+      "body": "A diagnostic event is **incoming** when the problem appears and **outgoing** when it disappears. A list that shows a wire break going and coming every few seconds points to a loose terminal."
+    },
+    {
+      "heading": "Diagnostics in PLC Lab",
+      "body": "The Diagnostics tab shows the CPU diagnostic buffer and active process alarms. The hardware view shows module status, LEDs, channel values and quality, and offers a multimeter. Network faults appear as connection diagnostics and in the network message list."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.siemens-support",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.troubleshooting-method",
+    "fundamentals.commissioning"
+  ]
+}

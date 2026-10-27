@@ -1,0 +1,86 @@
+{
+  "id": "family.schneider-m580",
+  "kind": "family",
+  "title": "Modicon M580",
+  "summary": "Ethernet-based process controller with X80 I/O, engineered in EcoStruxure Control Expert.",
+  "tags": [
+    "M580",
+    "ePAC",
+    "X80",
+    "Control Expert"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "M580 CPUs sit in an Ethernet backplane with X80 I/O modules; remote drops connect over Ethernet. Hot standby configurations are common in process plants."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.schneider-docs",
+    "src.plclab-simulation"
+  ],
+  "related": [],
+  "vendor": "vendor.schneider",
+  "tier": "A",
+  "simulation": {
+    "id": "schneider.m580",
+    "vendor": "schneider",
+    "family": "m580",
+    "displayName": "Schneider Modicon M580 (PLC Lab profile)",
+    "tier": "a",
+    "fidelity": {
+      "level": "APPROXIMATED_BEHAVIORAL",
+      "modeled": [
+        "Cyclic scan with input image, transactional program execution and output update",
+        "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+        "Digital and analog channel behavior including wire break and over/underrange"
+      ],
+      "approximated": [
+        "Analog values use the PLC Lab 0..10000 convention",
+        "Hot standby and remote drops are not simulated"
+      ],
+      "omitted": [
+        "Vendor firmware, memory model, task model and instruction set",
+        "Vendor engineering software project formats",
+        "Online editing, retentive memory and multiple tasks",
+        "Safety and redundancy functions"
+      ]
+    },
+    "addressing": "iecDirect",
+    "analog": "perTenThousand",
+    "startup": "reinitializeNonRetentive",
+    "products": [
+      {
+        "module": "cpu.modular",
+        "product": "Modicon M580 CPU",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "di16.24vdc.sink",
+        "product": "X80 discrete input module (16 DI)",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "do16.24vdc",
+        "product": "X80 discrete output module (16 DQ)",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ai4.ui",
+        "product": "X80 analog input module (4 AI)",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ao2.ui",
+        "product": "X80 analog output module (2 AQ)",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      }
+    ],
+    "terminology": []
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "family.siemens-s7-300-400",
+  "kind": "family",
+  "title": "SIMATIC S7-300 / S7-400 (legacy)",
+  "summary": "The previous Siemens generation engineered with STEP 7 Classic (or TIA Portal for S7-300/400 in later versions). Still common in existing plants.",
+  "tags": [
+    "S7-300",
+    "S7-400",
+    "STEP 7",
+    "STL",
+    "legacy"
+  ],
+  "sections": [
+    {
+      "heading": "Why it still matters",
+      "body": "Many installed machines run S7-300 or S7-400 CPUs. Programs often use STL (statement list) and absolute addressing (`I 0.0`, `Q 4.0`, `DB10.DBW2`). Migration to S7-1500 is a frequent project."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "Covered as background knowledge only. **CONCEPTUAL**: no simulation profile."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.siemens-support"
+  ],
+  "related": [],
+  "vendor": "vendor.siemens",
+  "tier": "A"
+}

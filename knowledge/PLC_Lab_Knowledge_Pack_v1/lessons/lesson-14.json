@@ -1,0 +1,87 @@
+{
+  "id": "lesson.scaling",
+  "number": 14,
+  "title": "Scaling",
+  "summary": "Convert raw values into engineering units with a straight-line formula and avoid integer traps.",
+  "level": "intermediate",
+  "minutes": 20,
+  "objectives": [
+    "Write a scaling formula",
+    "Avoid integer truncation and overflow"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Two points define a line",
+      "body": "Scaling maps the raw range onto the engineering range: `value = (raw - rawMin) / (rawMax - rawMin) * (engMax - engMin) + engMin`. Convert to REAL first to keep decimals."
+    },
+    {
+      "type": "visual",
+      "heading": "The line",
+      "body": "Raw on the x axis, engineering value on the y axis.",
+      "diagram": "  100 % |                 *\n        |            *\n   50 % |       *\n        |  *\n    0 % *---------------------\n        0     5000     10000 raw"
+    },
+    {
+      "type": "example",
+      "heading": "Generic profile scaling",
+      "body": "0..10000 maps to 0..100 %.",
+      "code": "LevelPercent := INT_TO_REAL(LevelRaw) / 100.0;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "`LevelRaw / 10000 * 100` in INT arithmetic is 0 for every raw value below 10000, because the division truncates first."
+    },
+    {
+      "type": "challenge",
+      "heading": "Spot the bug",
+      "body": "Integer arithmetic.",
+      "question": {
+        "question": "LevelRaw = 5000. What is LevelRaw / 10000 * 100 in INT arithmetic?",
+        "options": [
+          "50",
+          "0",
+          "5000"
+        ],
+        "answer": 1,
+        "explanation": "5000 / 10000 truncates to 0."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: fill to a setpoint",
+      "body": "Scale LevelRaw and stop filling at 60 %.",
+      "exercise": "ex.tank-analog-scaling"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Scale with REAL arithmetic from two known points; know the raw range of your platform.\n\n**Troubleshooting note:** When the scaled value is wrong only near zero, suspect the measuring range (0-20 vs 4-20 mA); when it is wrong everywhere, suspect the formula or the raw range."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "Why convert INT to REAL before dividing?",
+      "options": [
+        "To save memory",
+        "To avoid truncation",
+        "Because REAL is faster"
+      ],
+      "answer": 1,
+      "explanation": "INT division drops the fraction."
+    },
+    {
+      "question": "With raw 0..27648 for 0..100 %, what is raw 13824?",
+      "options": [
+        "25 %",
+        "50 %",
+        "100 %"
+      ],
+      "answer": 1,
+      "explanation": "13824 is half of 27648."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.scaling"
+  ]
+}

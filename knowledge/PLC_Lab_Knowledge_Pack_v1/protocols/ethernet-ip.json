@@ -1,0 +1,38 @@
+{
+  "id": "protocol.ethernet-ip",
+  "kind": "protocol",
+  "title": "EtherNet/IP",
+  "summary": "EtherNet/IP carries the Common Industrial Protocol (CIP) over standard Ethernet. Cyclic I/O uses implicit connections with a requested packet interval (RPI).",
+  "tags": [
+    "EtherNet/IP",
+    "CIP",
+    "RPI",
+    "EDS"
+  ],
+  "sections": [
+    {
+      "heading": "Key ideas",
+      "body": "A scanner (controller) opens connections to adapters (I/O, drives). Explicit messaging reads or writes data on request; implicit (I/O) connections send data cyclically at the RPI. Devices are described by EDS files."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "Connection timeouts because of a wrong IP address, a duplicate address, an RPI too fast for the device or network congestion; electronic keying mismatches after a module replacement."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.odva-ethernet-ip"
+  ],
+  "related": [],
+  "protocol": "ethernet-ip",
+  "fidelity": {
+    "level": "NOT_IMPLEMENTED",
+    "modeled": [],
+    "approximated": [],
+    "omitted": []
+  }
+}

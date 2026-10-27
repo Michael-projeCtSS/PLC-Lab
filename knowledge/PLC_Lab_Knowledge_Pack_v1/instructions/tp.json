@@ -1,0 +1,83 @@
+{
+  "id": "instruction.tp",
+  "kind": "instruction",
+  "title": "TP: pulse timer",
+  "summary": "TP produces a pulse of fixed length PT on a rising edge of IN, regardless of how long IN stays TRUE.",
+  "tags": [
+    "TP",
+    "pulse",
+    "timer"
+  ],
+  "sections": [
+    {
+      "heading": "Behavior",
+      "body": "- A rising edge of **IN** starts a pulse: **Q** becomes TRUE.\n- Q stays TRUE for exactly **PT**, even if IN goes FALSE earlier.\n- While the pulse runs, further edges of IN are ignored.\n- After the pulse, ET is held at PT until IN goes FALSE, then resets."
+    },
+    {
+      "heading": "Typical use",
+      "body": "A fixed-length horn signal, a defined dosing time for a valve, or a lubrication pulse."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "instruction.ton",
+    "instruction.r-trig"
+  ],
+  "instruction": {
+    "category": "Timers",
+    "inputs": [
+      {
+        "name": "IN",
+        "type": "BOOL",
+        "description": "Rising edge starts the pulse"
+      },
+      {
+        "name": "PT",
+        "type": "TIME",
+        "description": "Pulse length"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Q",
+        "type": "BOOL",
+        "description": "TRUE during the pulse"
+      },
+      {
+        "name": "ET",
+        "type": "TIME",
+        "description": "Elapsed pulse time"
+      }
+    ],
+    "state": "Instance holds pulse start and state.",
+    "retentivity": "Not retentive.",
+    "timing": "Evaluated once per call; resolution equals the cycle time in PLC Lab.",
+    "simulationSupport": "EXACT_BEHAVIORAL",
+    "equivalents": [
+      {
+        "platform": "Siemens S7-1200/S7-1500",
+        "name": "TP",
+        "notes": "IEC timer with an instance data block (IEC_TIMER). Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Rockwell Logix",
+        "name": "(no direct equivalent)",
+        "notes": "TIMER structure with PRE/ACC in milliseconds and EN/TT/DN bits; behavior is close but not identical to IEC. Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Beckhoff TwinCAT 3 / CODESYS",
+        "name": "TP",
+        "notes": "IEC function block from the standard library. Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Mitsubishi MELSEC",
+        "name": "timer devices (T) or IEC timer FBs",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      }
+    ]
+  }
+}

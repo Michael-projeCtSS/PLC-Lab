@@ -1,0 +1,50 @@
+{
+  "id": "troubleshooting.vfd-local-remote",
+  "kind": "troubleshooting",
+  "title": "Variable frequency drive left in local control",
+  "summary": "After maintenance the drive ignores PLC start commands because its control source is set to local (keypad).",
+  "tags": [
+    "VFD",
+    "drive",
+    "local",
+    "remote"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "After maintenance the drive ignores PLC start commands because its control source is set to local (keypad)."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [],
+  "troubleshooting": {
+    "faultId": "vfd-local-remote",
+    "area": "Drives",
+    "target": "Drive control source parameter",
+    "effect": "PLC commands have no effect; the drive runs from its keypad only",
+    "symptoms": [
+      "PLC sends run command and speed setpoint, drive stays stopped",
+      "Drive display shows LOC or keypad control",
+      "No drive fault active"
+    ],
+    "evidence": [
+      "Drive display and status word",
+      "Run command and ready feedback in the PLC",
+      "Drive parameter for control source"
+    ],
+    "diagnosticMethod": [
+      "Check that the PLC command reaches the drive (terminal or fieldbus)",
+      "Read the drive's control source",
+      "Compare with the commissioning record"
+    ],
+    "repair": [
+      "Switch the drive back to remote/terminal or fieldbus control",
+      "Verify start, stop and speed from the PLC"
+    ],
+    "explanation": "Drives can be controlled locally for maintenance. A forgotten local mode is not a fault for the drive, so it raises no alarm. PLC Lab does not simulate drives yet; this guide is background knowledge.",
+    "simulatedIn": []
+  }
+}

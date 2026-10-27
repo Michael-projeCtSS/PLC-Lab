@@ -1,0 +1,33 @@
+{
+  "id": "family.siemens-et200sp",
+  "kind": "family",
+  "title": "SIMATIC ET 200SP",
+  "summary": "Fine-granular distributed I/O system: an interface module plus BaseUnits with plugged I/O modules, usually connected over PROFINET.",
+  "tags": [
+    "ET 200SP",
+    "distributed I/O",
+    "BaseUnit",
+    "PROFINET"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "An ET 200SP station consists of an interface module (for example a PROFINET IM), BaseUnits that carry the wiring and the potential groups, and electronic I/O modules plugged onto them. Light-colored BaseUnits open a new potential group and feed the load voltage."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "A missing load voltage on a potential group, a module plugged on the wrong BaseUnit type or a configuration that differs from the installed modules are reported by the IM and appear in the CPU diagnostics."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate PROFINET. ET 200SP concepts (potential groups, configured versus installed modules) are represented by the generic rack model. **CONCEPTUAL** only."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.siemens-support"
+  ],
+  "related": [],
+  "vendor": "vendor.siemens",
+  "tier": "A"
+}

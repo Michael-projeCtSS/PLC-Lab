@@ -1,0 +1,103 @@
+{
+  "id": "family.beckhoff-twincat3",
+  "kind": "family",
+  "title": "CX Embedded PC with TwinCAT 3",
+  "summary": "PC-based controller running the TwinCAT 3 runtime with EtherCAT Terminal I/O.",
+  "tags": [
+    "CX",
+    "TwinCAT 3",
+    "EL terminals"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "A CX Embedded PC sits on the DIN rail with a power supply and an EtherCAT coupler; EL terminals follow on the right. TwinCAT 3 programs are IEC 61131-3 and run in real-time tasks."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product.\n\nAnalog values use the full-scale presentation 0..32767 for the nominal range."
+    }
+  ],
+  "facts": [
+    {
+      "label": "EL305x default presentation",
+      "value": "4 mA = 0, 20 mA = 32767",
+      "sources": [
+        "src.beckhoff-el30xx-presentation"
+      ]
+    }
+  ],
+  "sources": [
+    "src.beckhoff-infosys",
+    "src.beckhoff-el30xx-presentation",
+    "src.plclab-simulation"
+  ],
+  "related": [],
+  "vendor": "vendor.beckhoff",
+  "tier": "A",
+  "simulation": {
+    "id": "beckhoff.twincat3",
+    "vendor": "beckhoff",
+    "family": "twincat3",
+    "displayName": "Beckhoff CX / TwinCAT 3 (PLC Lab profile)",
+    "tier": "a",
+    "fidelity": {
+      "level": "APPROXIMATED_BEHAVIORAL",
+      "modeled": [
+        "Cyclic scan with input image, transactional program execution and output update",
+        "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+        "Digital and analog channel behavior including wire break and over/underrange"
+      ],
+      "approximated": [
+        "Analog values use 0..32767 for the nominal range",
+        "EtherCAT is not simulated; terminals behave like local modules"
+      ],
+      "omitted": [
+        "Vendor firmware, memory model, task model and instruction set",
+        "Vendor engineering software project formats",
+        "Online editing, retentive memory and multiple tasks",
+        "Safety and redundancy functions"
+      ]
+    },
+    "addressing": "linkedTerminal",
+    "analog": "fullScale32767",
+    "startup": "reinitializeNonRetentive",
+    "products": [
+      {
+        "module": "cpu.modular",
+        "product": "CX Embedded PC with TwinCAT 3",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "di8.24vdc.sink",
+        "product": "EL1008 style 8-ch digital input",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "do8.24vdc",
+        "product": "EL2008 style 8-ch digital output",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ai4.ui",
+        "product": "EL3054 style 4-ch analog input 4..20 mA",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ao2.ui",
+        "product": "EL4002 style 2-ch analog output 0..10 V",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      }
+    ],
+    "terminology": [
+      {
+        "generic": "Mode switch RUN/STOP",
+        "platform": "TwinCAT Run / Config mode"
+      },
+      {
+        "generic": "I/O mapping",
+        "platform": "Variable linking"
+      }
+    ]
+  }
+}

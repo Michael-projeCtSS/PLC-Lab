@@ -1,0 +1,91 @@
+{
+  "id": "lesson.inputs-outputs",
+  "number": 2,
+  "title": "Inputs and outputs",
+  "summary": "Digital signals in and out: how a button becomes TRUE in the program and how TRUE in the program switches a lamp.",
+  "level": "beginner",
+  "minutes": 12,
+  "objectives": [
+    "Read a digital input in a program",
+    "Write a digital output",
+    "Explain what the input LED shows"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "TRUE and FALSE",
+      "body": "A digital input reads a voltage: 24 V means **TRUE**, 0 V means **FALSE**. A digital output switches 24 V to a load when the program sets it **TRUE**. In PLC Lab each signal has a name (a **tag**) such as `Button1` or `Lamp1`."
+    },
+    {
+      "type": "visual",
+      "heading": "From terminal to tag",
+      "body": "The I/O module converts the voltage at a terminal into a bit in the input image; your program reads the tag mapped to that bit.",
+      "diagram": "  button --24V--> [DI terminal 0] --LED--> input image bit --> tag Button1\n  tag Lamp1 --> output image bit --> [DO terminal 0] --24V--> lamp"
+    },
+    {
+      "type": "example",
+      "heading": "Your first program",
+      "body": "The lamp follows the button.",
+      "code": "Lamp1 := Button1;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Writing the assignment the wrong way round (`Button1 := Lamp1;`) does not compile: inputs are read-only in the program. The PLC Lab compiler tells you exactly that."
+    },
+    {
+      "type": "challenge",
+      "heading": "Predict",
+      "body": "Look at the example and predict.",
+      "question": {
+        "question": "Button1 is pressed and held. What is Lamp1 in the next scan?",
+        "options": [
+          "FALSE",
+          "TRUE",
+          "It blinks",
+          "Unknown"
+        ],
+        "answer": 1,
+        "explanation": "The assignment copies the input value into the output every scan."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: pushbutton and lamp",
+      "body": "Write and load the program, press S1 in the Process view and watch the cause-and-effect panel.",
+      "exercise": "ex.lamp-pushbutton"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Inputs become TRUE/FALSE tags; assigning a tag to an output switches the output.\n\n**Troubleshooting note:** If a lamp does not light, compare the output tag, the output LED and the lamp: they tell you whether the program, the module or the field wiring is at fault."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does an input LED show?",
+      "options": [
+        "The program logic",
+        "The electrical state at the terminal",
+        "The network status",
+        "The cycle time"
+      ],
+      "answer": 1,
+      "explanation": "The LED is driven by the input circuit, before the program."
+    },
+    {
+      "question": "Which statement writes an output?",
+      "options": [
+        "Button1 := Lamp1;",
+        "Lamp1 := Button1;",
+        "IF Lamp1 THEN END_IF;",
+        "Lamp1 = Button1"
+      ],
+      "answer": 1,
+      "explanation": "':=' assigns the right side to the left side."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.digital-io"
+  ]
+}

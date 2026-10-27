@@ -1,0 +1,39 @@
+{
+  "id": "protocol.ethercat",
+  "kind": "protocol",
+  "title": "EtherCAT",
+  "summary": "EtherCAT is a fast Ethernet fieldbus in which the frame passes through every device, which reads and writes its data on the fly.",
+  "tags": [
+    "EtherCAT",
+    "working counter",
+    "state machine",
+    "distributed clocks"
+  ],
+  "sections": [
+    {
+      "heading": "Key ideas",
+      "body": "The master sends frames that travel through all slaves in a logical ring. Each slave runs a state machine (INIT, PRE-OPERATIONAL, SAFE-OPERATIONAL, OPERATIONAL). Distributed clocks synchronize devices for motion control. The working counter tells the master how many slaves processed the data."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "A slave stuck in PREOP or SAFEOP, wrong configuration (device revision), cable faults that break the ring at a given position, and working-counter errors."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.etg-ethercat",
+    "src.beckhoff-infosys"
+  ],
+  "related": [],
+  "protocol": "ethercat",
+  "fidelity": {
+    "level": "NOT_IMPLEMENTED",
+    "modeled": [],
+    "approximated": [],
+    "omitted": []
+  }
+}

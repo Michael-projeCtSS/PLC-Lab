@@ -1,0 +1,87 @@
+{
+  "id": "lesson.start-stop",
+  "number": 5,
+  "title": "The start/stop circuit",
+  "summary": "Turn a momentary Start button into a running motor and stop it again with a normally closed Stop button.",
+  "level": "beginner",
+  "minutes": 15,
+  "objectives": [
+    "Explain why Stop uses a normally closed contact",
+    "Write a start/stop condition"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Two buttons, one motor",
+      "body": "A Start button is **normally open** (TRUE while pressed). A Stop button is **normally closed** (TRUE while not pressed), so a broken wire acts like pressing Stop. The motor may run only while StopPB is TRUE."
+    },
+    {
+      "type": "visual",
+      "heading": "Wiring of the panel",
+      "body": "S1 and S2 go to inputs; the contactor coil K1 to an output.",
+      "diagram": "  +24V --[S1 NO]--> DI0 (StartPB)\n  +24V --[S2 NC]--> DI1 (StopPB)   TRUE while not pressed\n  DO0 (MotorContactor) --> K1 coil --> motor M1"
+    },
+    {
+      "type": "example",
+      "heading": "Without memory",
+      "body": "This version only runs while Start is held. Lesson 6 adds memory.",
+      "code": "MotorContactor := StartPB AND StopPB;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Writing `AND NOT StopPB`. Because StopPB is TRUE at rest, `NOT StopPB` is FALSE at rest and the motor would only run while Stop is pressed."
+    },
+    {
+      "type": "challenge",
+      "heading": "Predict",
+      "body": "Think about the NC contact.",
+      "question": {
+        "question": "Nobody touches the Stop button. What is StopPB?",
+        "options": [
+          "FALSE",
+          "TRUE"
+        ],
+        "answer": 1,
+        "explanation": "A normally closed contact conducts at rest, so the input is TRUE."
+      }
+    },
+    {
+      "type": "simulation",
+      "heading": "Try the motor station",
+      "body": "Open the motor station and observe StartPB and StopPB in Variables while you press the buttons.",
+      "scene": "scene.motor-start-stop"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Start is normally open, Stop is normally closed; Stop must be AND-ed into every run condition.\n\n**Troubleshooting note:** A machine that suddenly will not start after maintenance may have a Stop contact block of the wrong type; check StopPB at rest."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "Why is a Stop button normally closed?",
+      "options": [
+        "It is cheaper",
+        "A broken wire then stops the machine",
+        "It lasts longer",
+        "It is required by the PLC"
+      ],
+      "answer": 1,
+      "explanation": "Wire-break safety."
+    },
+    {
+      "question": "Which line is correct for an NC Stop input?",
+      "options": [
+        "Motor := Start AND NOT StopPB;",
+        "Motor := Start AND StopPB;"
+      ],
+      "answer": 1,
+      "explanation": "StopPB is TRUE while Stop is not pressed."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.no-nc-contacts",
+    "fundamentals.start-stop-latch"
+  ]
+}

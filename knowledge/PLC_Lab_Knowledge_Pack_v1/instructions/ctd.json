@@ -1,0 +1,82 @@
+{
+  "id": "instruction.ctd",
+  "kind": "instruction",
+  "title": "CTD: down counter",
+  "summary": "CTD decrements CV on each rising edge of CD; LD loads PV into CV and Q is TRUE when CV <= 0.",
+  "tags": [
+    "CTD",
+    "counter",
+    "count down"
+  ],
+  "sections": [
+    {
+      "heading": "Behavior",
+      "body": "- **LD** (load) copies **PV** into **CV**.\n- Each rising edge of **CD** decrements CV by one.\n- **Q** is TRUE while CV <= 0."
+    },
+    {
+      "heading": "Typical use",
+      "body": "Counting down remaining parts in a batch or remaining attempts before a lockout."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "instruction.ctu"
+  ],
+  "instruction": {
+    "category": "Counters",
+    "inputs": [
+      {
+        "name": "CD",
+        "type": "BOOL",
+        "description": "Count down on rising edge"
+      },
+      {
+        "name": "LD",
+        "type": "BOOL",
+        "description": "Load PV into CV"
+      },
+      {
+        "name": "PV",
+        "type": "INT",
+        "description": "Preset value"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Q",
+        "type": "BOOL",
+        "description": "CV <= 0"
+      },
+      {
+        "name": "CV",
+        "type": "INT",
+        "description": "Current count"
+      }
+    ],
+    "state": "Count value and previous CD state.",
+    "retentivity": "Not retentive in PLC Lab.",
+    "timing": "One count per rising edge between calls.",
+    "simulationSupport": "EXACT_BEHAVIORAL",
+    "equivalents": [
+      {
+        "platform": "Siemens S7-1200/S7-1500",
+        "name": "CTD",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Rockwell Logix",
+        "name": "CTD",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Beckhoff TwinCAT 3 / CODESYS",
+        "name": "CTD",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      }
+    ]
+  }
+}

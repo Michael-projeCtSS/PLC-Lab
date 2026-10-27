@@ -1,0 +1,47 @@
+{
+  "id": "troubleshooting.output-overwritten",
+  "kind": "troubleshooting",
+  "title": "Output written in two places in the program",
+  "summary": "An output follows only the last assignment in the scan; earlier logic appears to have no effect.",
+  "tags": [
+    "double coil",
+    "output",
+    "scan"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "An output follows only the last assignment in the scan; earlier logic appears to have no effect."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.scan-cycle"
+  ],
+  "troubleshooting": {
+    "faultId": "output-overwritten",
+    "area": "PLC logic",
+    "target": "Program structure",
+    "effect": "Logic that should switch an output is ignored",
+    "symptoms": [
+      "The output reacts to one condition but not another",
+      "Forcing shows the hardware works"
+    ],
+    "evidence": [
+      "Cross-reference of the output tag",
+      "Cause-and-effect view: committed value at the end of the scan"
+    ],
+    "diagnosticMethod": [
+      "Search all assignments of the output",
+      "Trace which assignment executes last"
+    ],
+    "repair": [
+      "Combine the conditions into one assignment"
+    ],
+    "explanation": "Within one scan only the final value of an output is written to the output image.",
+    "simulatedIn": []
+  }
+}

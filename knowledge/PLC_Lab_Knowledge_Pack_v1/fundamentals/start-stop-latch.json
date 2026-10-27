@@ -1,0 +1,36 @@
+{
+  "id": "fundamentals.start-stop-latch",
+  "kind": "topic",
+  "title": "Start/stop circuits and seal-in",
+  "summary": "The motor start/stop circuit with a seal-in (self-holding) contact is the most important pattern in machine control. It turns two momentary buttons into a lasting run state with stop priority.",
+  "tags": [
+    "seal-in",
+    "latch",
+    "self-holding",
+    "motor",
+    "stop priority"
+  ],
+  "sections": [
+    {
+      "heading": "The pattern",
+      "body": "A momentary Start button must start a motor that keeps running after the button is released. The output itself is used as a condition (\"seal-in\"):\n\n```\nMotorContactor := (StartPB OR MotorContactor) AND StopPB AND OverloadOK;\n```\n\nRead it as: *run if Start is pressed or we are already running, as long as Stop is not pressed and the overload relay is healthy.*"
+    },
+    {
+      "heading": "Stop priority",
+      "body": "Because the stop conditions are AND-ed after the OR, Stop always wins when both buttons are pressed. Reversing the order (`StartPB OR (MotorContactor AND StopPB)`) gives **start priority**, which is unacceptable for a motor."
+    },
+    {
+      "heading": "Feedback",
+      "body": "The contactor's auxiliary contact (MotorFeedback) tells the PLC that the contactor really pulled in. Comparing command and feedback detects a failed contactor or a missing supply. In PLC Lab you can watch command, feedback and motor speed side by side in the Watch and Waveforms views."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.no-nc-contacts",
+    "fundamentals.interlocks"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "vendor.omron",
+  "kind": "vendor",
+  "title": "OMRON Sysmac",
+  "summary": "OMRON's NX and NJ machine automation controllers are programmed in Sysmac Studio and use EtherCAT for I/O and motion.",
+  "tags": [
+    "OMRON Sysmac"
+  ],
+  "sections": [
+    {
+      "heading": "Platforms",
+      "body": "NX1P/NX102 compact controllers and NJ controllers; NX I/O units are connected locally or through EtherCAT couplers."
+    },
+    {
+      "heading": "Conventions worth knowing",
+      "body": "Variables are mapped to I/O ports of NX units; programming follows IEC 61131-3."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.omron-docs"
+  ],
+  "related": [
+    "family.omron-nx-nj"
+  ],
+  "tier": "B"
+}

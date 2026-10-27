@@ -1,0 +1,27 @@
+{
+  "id": "vendor.mitsubishi",
+  "kind": "vendor",
+  "title": "Mitsubishi Electric MELSEC",
+  "summary": "MELSEC controllers include the compact iQ-F (FX5) series and the modular iQ-R series, programmed with GX Works3.",
+  "tags": [
+    "Mitsubishi Electric MELSEC"
+  ],
+  "sections": [
+    {
+      "heading": "Platforms",
+      "body": "| Family | Role |\n| --- | --- |\n| MELSEC iQ-F (FX5) | Compact controllers for small machines |\n| MELSEC iQ-R | Modular high-performance controllers |"
+    },
+    {
+      "heading": "Conventions worth knowing",
+      "body": "Devices such as X (inputs), Y (outputs), M (internal relays) and D (data registers) are addressed by number; on FX5 the X/Y devices are numbered in octal. Ladder is dominant; ST and FBD are available in GX Works3."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.mitsubishi-docs"
+  ],
+  "related": [
+    "family.mitsubishi-fx5"
+  ],
+  "tier": "B"
+}

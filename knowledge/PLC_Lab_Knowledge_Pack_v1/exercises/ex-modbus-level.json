@@ -1,0 +1,211 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.modbus-level",
+  "revision": 1,
+  "title": "Fill with a Modbus TCP level transmitter",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "The level arrives over Modbus TCP from a networked transmitter. Fill to 80 % and stop immediately if communication is lost.",
+  "objectives": [
+    "Use values received over a network",
+    "Guard control decisions with a communication status"
+  ],
+  "estimatedMinutes": 25,
+  "scene": "scene.tank-modbus",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1 (normally open). *)\n    StopPB : BOOL; (* Stop button S2 (normally closed). *)\n    LevelHighHigh : BOOL; (* Independent high-high switch at 90 % (TRUE when wet). *)\n    LevelPermille : INT; (* Level from Modbus holding register 0 (40001), 0..1000 = 0..100 %. *)\n    LevelPercent : REAL; (* Level from holding registers 1-2 (40002-40003), IEEE 754 float, high word first. *)\n    LevelCommOK : BOOL; (* TRUE while the Modbus scan of the transmitter succeeds. *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve solenoid XV-101. *)\n    DrainPump : BOOL; (* Drain pump P-102. *)\nEND_VAR\nVAR\n    Filling : BOOL;\nEND_VAR\n\n(* Fill to 80 % (LevelPermille 800) only while LevelCommOK is TRUE. *)\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelPermille",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelCommOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Start fills the tank; InletValve closes at LevelPermille >= 800 (80 %).",
+    "Without communication (LevelCommOK FALSE) the valve must stay closed.",
+    "The independent high-high switch also closes the valve.",
+    "Look at the Network tab to see the Modbus requests and responses."
+  ],
+  "hints": [
+    "LevelPermille comes from holding register 0 (classic notation 40001).",
+    "LevelCommOK is FALSE until the first good response arrives."
+  ],
+  "knowledgeRefs": [
+    "protocol.modbus-tcp",
+    "fundamentals.interlocks"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "level",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelPermille"
+      }
+    },
+    {
+      "name": "comm",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelCommOK"
+      }
+    },
+    {
+      "name": "tank",
+      "source": {
+        "type": "component",
+        "component": "tank",
+        "quantity": "levelPermille"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "fill",
+      "title": "Fill over the network",
+      "durationMs": 22000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "fills",
+      "title": "The tank fills to about 80 %",
+      "points": 40,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "tank",
+          "layer": "process",
+          "op": "ge",
+          "value": 780
+        },
+        "byMs": 20000
+      },
+      "onFail": "The tank did not reach 78 %."
+    },
+    {
+      "id": "stops",
+      "title": "The valve closes at 80 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "inputs",
+          "op": "ge",
+          "value": 800
+        },
+        "response": {
+          "type": "compare",
+          "signal": "valve",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        },
+        "withinMs": 300
+      },
+      "onFail": "InletValve stayed open after the networked level reached 80 %."
+    },
+    {
+      "id": "no-overflow",
+      "title": "No overflow",
+      "points": 10,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventAbsent",
+        "event": "overflow"
+      },
+      "onFail": "The tank overflowed."
+    },
+    {
+      "id": "comm-guard",
+      "title": "Filling requires valid communication",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "comm",
+              "layer": "inputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      "onFail": "The valve was open while the transmitter was not communicating."
+    }
+  ]
+}

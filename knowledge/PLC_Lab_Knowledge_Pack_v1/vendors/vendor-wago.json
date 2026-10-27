@@ -1,0 +1,27 @@
+{
+  "id": "vendor.wago",
+  "kind": "vendor",
+  "title": "WAGO",
+  "summary": "WAGO PFC200 controllers run CODESYS-based runtimes with the WAGO I/O System 750 modules.",
+  "tags": [
+    "WAGO"
+  ],
+  "sections": [
+    {
+      "heading": "Platforms",
+      "body": "PFC200 controllers with 750/753 I/O modules on the same rail; Ethernet and fieldbus variants exist."
+    },
+    {
+      "heading": "Engineering",
+      "body": "e!COCKPIT and CODESYS (IEC 61131-3)."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.wago-docs"
+  ],
+  "related": [
+    "family.wago-pfc200"
+  ],
+  "tier": "B"
+}

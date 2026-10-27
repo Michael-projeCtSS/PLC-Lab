@@ -1,0 +1,27 @@
+{
+  "id": "vendor.phoenix-contact",
+  "kind": "vendor",
+  "title": "Phoenix Contact PLCnext",
+  "summary": "PLCnext Technology is Phoenix Contact's open control platform: PLCnext Control devices with Axioline F I/O, programmed with PLCnext Engineer and high-level languages.",
+  "tags": [
+    "Phoenix Contact PLCnext"
+  ],
+  "sections": [
+    {
+      "heading": "Platforms",
+      "body": "PLCnext Control devices (for example the AXC F family) with Axioline F I/O modules; PROFINET is the usual fieldbus."
+    },
+    {
+      "heading": "Engineering",
+      "body": "PLCnext Engineer for IEC 61131-3; C++, C# and MATLAB Simulink programs can run alongside."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.phoenix-docs"
+  ],
+  "related": [
+    "family.phoenix-plcnext"
+  ],
+  "tier": "B"
+}

@@ -1,0 +1,119 @@
+{
+  "sources": [
+    {
+      "id": "src.siemens-analog-value-processing",
+      "vendor": "siemens",
+      "title": "SIMATIC S7-1500, ET 200MP, ET 200SP, ET 200AL, ET 200pro, ET 200eco PN: Analog value processing (function manual)",
+      "documentType": "Function manual",
+      "documentNumber": "A5E03461438 (edition seen: 06/2014, German)",
+      "url": "https://cache.industry.siemens.com/dl/files/094/67989094/att_57769/v1/s71500_analog_value_processing_manual_de-DE_de-DE.pdf",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["S7-1500", "ET 200MP", "ET 200SP"],
+      "notes": "Basic documentation for analog value representation of these families (nominal range, overrange, overflow, underrange). Check Siemens Industry Online Support for the current edition and the specific module manual before relying on a threshold.",
+      "confidence": "medium",
+      "verification": "verified"
+    },
+    {
+      "id": "src.siemens-support",
+      "vendor": "siemens",
+      "title": "Siemens Industry Online Support: SIMATIC S7-1200, S7-1500, ET 200SP and S7-300/400 manuals",
+      "documentType": "Vendor documentation portal",
+      "url": "https://support.industry.siemens.com/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["S7-1200", "S7-1500", "ET 200SP", "S7-300", "S7-400", "TIA Portal"],
+      "notes": "Portal entry point. Product names and family positioning are summarized from general vendor material; individual documents were not re-checked during authoring.",
+      "confidence": "medium",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.rockwell-literature",
+      "vendor": "rockwell",
+      "title": "Rockwell Automation Literature Library: CompactLogix, ControlLogix, POINT I/O and Logix 5000 controllers",
+      "documentType": "Vendor documentation portal",
+      "url": "https://literature.rockwellautomation.com/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["CompactLogix", "ControlLogix", "POINT I/O", "Studio 5000 Logix Designer"],
+      "notes": "Portal entry point; documents were not re-checked during authoring.",
+      "confidence": "medium",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.beckhoff-infosys",
+      "vendor": "beckhoff",
+      "title": "Beckhoff Information System: TwinCAT 3, Embedded PCs (CX) and EtherCAT Terminals",
+      "documentType": "Vendor documentation portal",
+      "url": "https://infosys.beckhoff.com/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["TwinCAT 3", "CX Embedded PC", "EtherCAT Terminals"],
+      "confidence": "medium",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.beckhoff-el30xx-presentation",
+      "vendor": "beckhoff",
+      "title": "EL30xx analog input terminals: process data presentation (Beckhoff Information System)",
+      "documentType": "Vendor product documentation page",
+      "url": "https://infosys.beckhoff.com/content/1033/el30xx/1709009675.html",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["EL30xx", "EL305x 4..20 mA terminals"],
+      "notes": "Presentation table for the standard signed integer format: for 4..20 mA terminals 0x0000 corresponds to 4 mA and 0x7FFF to 20 mA. Other presentations can be selected per channel.",
+      "confidence": "medium",
+      "verification": "verified"
+    },
+    {
+      "id": "src.schneider-docs",
+      "vendor": "schneider",
+      "title": "Schneider Electric documentation: Modicon M241, M251, M262, M580 and EcoStruxure Machine Expert / Control Expert",
+      "documentType": "Vendor documentation portal",
+      "url": "https://www.se.com/ww/en/download/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["Modicon M241", "Modicon M251", "Modicon M262", "Modicon M580"],
+      "confidence": "medium",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.mitsubishi-docs",
+      "vendor": "mitsubishi",
+      "title": "Mitsubishi Electric FA documentation: MELSEC iQ-F (FX5) and MELSEC iQ-R",
+      "documentType": "Vendor documentation portal",
+      "url": "https://www.mitsubishielectric.com/fa/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["MELSEC iQ-F FX5", "MELSEC iQ-R", "GX Works3"],
+      "confidence": "medium",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.omron-docs",
+      "vendor": "omron",
+      "title": "OMRON Industrial Automation documentation: NX/NJ machine automation controllers and Sysmac Studio",
+      "documentType": "Vendor documentation portal",
+      "url": "https://industrial.omron.eu/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["NX1P", "NX102", "NJ", "Sysmac Studio"],
+      "confidence": "medium",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.phoenix-docs",
+      "vendor": "phoenix-contact",
+      "title": "Phoenix Contact: PLCnext Technology and PLCnext Engineer documentation",
+      "documentType": "Vendor documentation portal",
+      "url": "https://www.plcnext.help/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["PLCnext Control", "Axioline F", "PLCnext Engineer"],
+      "confidence": "medium",
+      "verification": "unverified"
+    },
+    {
+      "id": "src.wago-docs",
+      "vendor": "wago",
+      "title": "WAGO documentation: PFC200 controllers, 750/753 I/O system and e!COCKPIT / CODESYS",
+      "documentType": "Vendor documentation portal",
+      "url": "https://www.wago.com/global/",
+      "retrieved": "2026-10-27",
+      "appliesTo": ["PFC200", "WAGO I/O System 750"],
+      "confidence": "medium",
+      "verification": "unverified"
+    }
+  ]
+}

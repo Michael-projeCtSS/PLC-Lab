@@ -1,0 +1,28 @@
+{
+  "id": "vendor.rockwell",
+  "kind": "vendor",
+  "title": "Rockwell Automation / Allen-Bradley",
+  "summary": "Allen-Bradley Logix controllers (CompactLogix, ControlLogix) are programmed with Studio 5000 Logix Designer and use tag-based memory and EtherNet/IP.",
+  "tags": [
+    "Rockwell Automation / Allen-Bradley"
+  ],
+  "sections": [
+    {
+      "heading": "Platforms",
+      "body": "| Family | Role |\n| --- | --- |\n| CompactLogix | Mid-range controllers with local Compact I/O (1769) or 5069 I/O |\n| ControlLogix | Chassis-based high-end controllers (1756) |\n| POINT I/O / FLEX I/O | Distributed I/O on EtherNet/IP |"
+    },
+    {
+      "heading": "Conventions worth knowing",
+      "body": "- Memory is **tag-based**; I/O appears as module-defined tags such as `Local:1:I.Data.0`.\n- Ladder Diagram is dominant; Structured Text, FBD and SFC are available.\n- Timers use a TIMER structure with PRE, ACC and DN bits.\n- Analog modules can scale to engineering units in the module configuration."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.rockwell-literature"
+  ],
+  "related": [
+    "family.rockwell-compactlogix",
+    "family.rockwell-controllogix"
+  ],
+  "tier": "A"
+}

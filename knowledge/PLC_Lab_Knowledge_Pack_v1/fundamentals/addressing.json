@@ -1,0 +1,39 @@
+{
+  "id": "fundamentals.addressing",
+  "kind": "topic",
+  "title": "I/O addressing and tags",
+  "summary": "PLC programs refer to I/O by addresses or symbolic tags. The hardware configuration ties a module channel to an address; the program ties the address to a meaningful name.",
+  "tags": [
+    "address",
+    "%I0.0",
+    "tag",
+    "I/O mapping",
+    "start address"
+  ],
+  "sections": [
+    {
+      "heading": "Address styles",
+      "body": "| Style | Example | Used by |\n| --- | --- | --- |\n| IEC direct address | `%IX0.0`, `%QX0.0`, `%IW64` | IEC 61131-3, many CODESYS-based systems |\n| Byte.bit process image | `%I0.0`, `%Q0.1`, `%IW64` | Siemens S7 |\n| Module-defined tags | `Local:1:I.Data.0` | Rockwell Logix |\n| Linked variables | variable linked to a terminal channel | Beckhoff TwinCAT |\n| Device addresses | `X0`, `Y0` (octal on FX) | Mitsubishi MELSEC |"
+    },
+    {
+      "heading": "Symbolic programming",
+      "body": "Modern projects program almost exclusively with **tags** (StartPB, LevelRaw). The address only appears in the I/O mapping. In PLC Lab the hardware view shows, for each channel, the address in the style of the selected platform profile and the tag mapped to it."
+    },
+    {
+      "heading": "Start addresses",
+      "body": "Each module occupies an address range that starts at its configured **start address**. Moving a module to another slot, or changing its start address, changes all its addresses; programs that use tags survive this, programs that use absolute addresses break."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.siemens-support",
+    "src.rockwell-literature",
+    "src.beckhoff-infosys",
+    "src.mitsubishi-docs"
+  ],
+  "related": [
+    "fundamentals.plc-architecture",
+    "troubleshooting.wrong-module-slot"
+  ]
+}

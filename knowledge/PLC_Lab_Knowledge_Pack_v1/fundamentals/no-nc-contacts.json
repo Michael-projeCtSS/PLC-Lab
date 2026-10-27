@@ -1,0 +1,35 @@
+{
+  "id": "fundamentals.no-nc-contacts",
+  "kind": "topic",
+  "title": "Normally open and normally closed contacts",
+  "summary": "A normally open (NO) contact closes when actuated; a normally closed (NC) contact opens when actuated. Stop buttons and safety-related signals use NC contacts so that a broken wire is noticed.",
+  "tags": [
+    "NO",
+    "NC",
+    "stop button",
+    "fail-safe",
+    "wire break"
+  ],
+  "sections": [
+    {
+      "heading": "Definitions",
+      "body": "- **Normally open (NO)**: open at rest, closed while actuated. A Start button is usually NO: the PLC input is TRUE only while it is pressed.\n- **Normally closed (NC)**: closed at rest, open while actuated. A Stop button is usually NC: the PLC input is TRUE while the button is **not** pressed."
+    },
+    {
+      "heading": "Why Stop uses NC",
+      "body": "If the wire to an NC Stop button breaks, the input drops to FALSE exactly as if Stop were pressed, so the machine stops. With an NO Stop button a broken wire would go unnoticed until someone needs to stop the machine. This principle is called **fail-safe** or **wire-break safe** signalling."
+    },
+    {
+      "heading": "Program consequences",
+      "body": "For an NC Stop button the program uses the input directly in the run condition:\n\n```\nMotorContactor := (StartPB OR MotorContactor) AND StopPB;\n```\n\nWriting `NOT StopPB` is a classic mistake: the motor then only runs while Stop is held down. When a contact block is replaced by the wrong type during maintenance, the input logic inverts and the machine behaves strangely although the program never changed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.start-stop-latch",
+    "troubleshooting.nc-contact-replaced-by-no"
+  ]
+}

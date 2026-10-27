@@ -1,0 +1,55 @@
+{
+  "id": "troubleshooting.analog-wrong-range",
+  "kind": "troubleshooting",
+  "title": "Analog channel configured for 0-20 mA instead of 4-20 mA",
+  "summary": "A 4-20 mA level transmitter reads about 20 % high at low levels: the analog channel is configured for 0-20 mA.",
+  "tags": [
+    "4-20 mA",
+    "0-20 mA",
+    "analog",
+    "configuration"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "A 4-20 mA level transmitter reads about 20 % high at low levels: the analog channel is configured for 0-20 mA."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.namur-ne43-beckhoff",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.4-20ma",
+    "fundamentals.analog-io"
+  ],
+  "troubleshooting": {
+    "faultId": "analog-wrong-range",
+    "area": "Analog",
+    "target": "Analog input channel configuration",
+    "effect": "Wrong engineering value, false high alarms",
+    "symptoms": [
+      "The level reads about 20 % with an empty tank",
+      "Readings agree near full scale but not near zero"
+    ],
+    "evidence": [
+      "Loop current measured at the terminal",
+      "Raw value in the PLC",
+      "Channel measurement type in the hardware configuration"
+    ],
+    "diagnosticMethod": [
+      "Measure the loop current and calculate the expected percentage",
+      "Compare with the raw value and the scaling",
+      "Inspect the channel configuration"
+    ],
+    "repair": [
+      "Configure the channel for 4-20 mA and download the hardware configuration",
+      "Verify at 4, 12 and 20 mA if possible"
+    ],
+    "explanation": "With a 0-20 mA range, 4 mA is converted as 20 % of the range. The transmitter is correct; the configuration interprets the current differently.",
+    "simulatedIn": [
+      "ts.tank-level-reads-high"
+    ]
+  }
+}

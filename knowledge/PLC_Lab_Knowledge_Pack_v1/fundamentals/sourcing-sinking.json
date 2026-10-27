@@ -1,0 +1,36 @@
+{
+  "id": "fundamentals.sourcing-sinking",
+  "kind": "topic",
+  "title": "Sourcing and sinking I/O (PNP and NPN)",
+  "summary": "Sinking inputs need a sensor that supplies +24 V (PNP); sourcing inputs need a sensor that switches to 0 V (NPN). A mismatch makes the input never switch.",
+  "tags": [
+    "PNP",
+    "NPN",
+    "sinking",
+    "sourcing",
+    "proximity sensor"
+  ],
+  "sections": [
+    {
+      "heading": "Current direction",
+      "body": "The terms describe which side supplies current. A **sinking input** receives current: the sensor must connect the input to +24 V. A **PNP** (sourcing) sensor does exactly that. A **sourcing input** delivers current: the sensor must connect the input to 0 V, which an **NPN** (sinking) sensor does. Mechanical contacts work with both when wired accordingly."
+    },
+    {
+      "heading": "Typical regional practice",
+      "body": "PNP sensors with sinking inputs dominate in Europe; NPN is common in parts of Asia. Many modules can be wired either way through a common terminal. Always check the module and the sensor data sheet."
+    },
+    {
+      "heading": "Symptom of a mismatch",
+      "body": "The sensor's own LED switches, but the PLC input LED never does and the voltage at the input terminal does not change. In PLC Lab a PNP/NPN mismatch is a simulated fault: measure the input terminal to see it."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-2",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.digital-io",
+    "fundamentals.wiring-principles"
+  ]
+}

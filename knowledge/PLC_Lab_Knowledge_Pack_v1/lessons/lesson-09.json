@@ -1,0 +1,89 @@
+{
+  "id": "lesson.counters-edges",
+  "number": 9,
+  "title": "Counters and edges",
+  "summary": "Count events with CTU and CTD, and detect the moment a signal changes with R_TRIG and F_TRIG.",
+  "level": "beginner",
+  "minutes": 20,
+  "objectives": [
+    "Count events, not scans",
+    "Use rising and falling edge detection"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Edges",
+      "body": "A pressed button is TRUE for many scans. An **edge** is the single scan where it changes: FALSE to TRUE is a **rising edge**, TRUE to FALSE a **falling edge**. Counters count edges."
+    },
+    {
+      "type": "visual",
+      "heading": "Level versus edge",
+      "body": "R_TRIG.Q is TRUE for exactly one scan.",
+      "diagram": "  Button   ___/~~~~~~~~~~~\\_____/~~~~\\___\n  R_TRIG.Q ___/\\_____________________/\\_______\n  count       1                       2"
+    },
+    {
+      "type": "example",
+      "heading": "Count to three",
+      "body": "CTU detects rising edges of CU.",
+      "code": "VAR Presses : CTU; END_VAR\nPresses(CU := Button1, R := Button2, PV := 3);\nLamp1 := Presses.Q;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "`Count := Count + 1;` inside `IF Button1 THEN` adds one every scan while the button is held, so a single press counts dozens of times."
+    },
+    {
+      "type": "challenge",
+      "heading": "Edge or level?",
+      "body": "Think in scans.",
+      "question": {
+        "question": "A button is held for 1 s with a 100 ms cycle. How often does R_TRIG.Q become TRUE?",
+        "options": [
+          "Once",
+          "10 times",
+          "Never"
+        ],
+        "answer": 0,
+        "explanation": "Only the scan in which the button changes from FALSE to TRUE."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: count button presses",
+      "body": "Count presses of S1 and reset with S2; a held button must count once.",
+      "exercise": "ex.button-counter"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Edges mark changes; counters count rising edges; R and LD reset and load counters.\n\n**Troubleshooting note:** Counters that run away usually count levels instead of edges; watch the edge output in the Waveforms view."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does CTU.Q indicate?",
+      "options": [
+        "CV >= PV",
+        "CU is TRUE",
+        "A reset"
+      ],
+      "answer": 0,
+      "explanation": "Q is TRUE once the count reaches the preset."
+    },
+    {
+      "question": "Which block detects a falling edge?",
+      "options": [
+        "R_TRIG",
+        "F_TRIG",
+        "TOF"
+      ],
+      "answer": 1,
+      "explanation": "F_TRIG reacts to TRUE-to-FALSE changes."
+    }
+  ],
+  "knowledgeRefs": [
+    "instruction.ctu",
+    "instruction.r-trig",
+    "instruction.f-trig"
+  ]
+}

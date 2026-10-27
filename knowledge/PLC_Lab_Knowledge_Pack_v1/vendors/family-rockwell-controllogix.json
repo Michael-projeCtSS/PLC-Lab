@@ -1,0 +1,79 @@
+{
+  "id": "family.rockwell-controllogix",
+  "kind": "family",
+  "title": "ControlLogix",
+  "summary": "Chassis-based Logix controllers (1756) for large machines and process applications.",
+  "tags": [
+    "ControlLogix",
+    "1756",
+    "chassis"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "ControlLogix controllers and I/O modules share a chassis backplane; modules can be inserted under power. Several controllers can share one chassis."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.rockwell-literature",
+    "src.plclab-simulation"
+  ],
+  "related": [],
+  "vendor": "vendor.rockwell",
+  "tier": "A",
+  "simulation": {
+    "id": "rockwell.controllogix",
+    "vendor": "rockwell",
+    "family": "controllogix",
+    "displayName": "Allen-Bradley ControlLogix (PLC Lab profile)",
+    "tier": "a",
+    "fidelity": {
+      "level": "APPROXIMATED_BEHAVIORAL",
+      "modeled": [
+        "Cyclic scan with input image, transactional program execution and output update",
+        "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+        "Digital and analog channel behavior including wire break and over/underrange"
+      ],
+      "approximated": [
+        "Analog channels deliver REAL engineering units (mA or V)"
+      ],
+      "omitted": [
+        "Vendor firmware, memory model, task model and instruction set",
+        "Vendor engineering software project formats",
+        "Online editing, retentive memory and multiple tasks",
+        "Safety and redundancy functions"
+      ]
+    },
+    "addressing": "moduleDefinedTags",
+    "analog": "engineeringUnits",
+    "startup": "reinitializeNonRetentive",
+    "products": [
+      {
+        "module": "cpu.modular",
+        "product": "ControlLogix controller",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "di16.24vdc.sink",
+        "product": "1756-IB16 style 24 V DC input",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "do16.24vdc",
+        "product": "1756-OB16 style 24 V DC output",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ai8.ui",
+        "product": "1756-IF8 style analog input",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      }
+    ],
+    "terminology": []
+  }
+}

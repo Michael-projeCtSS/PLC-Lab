@@ -1,0 +1,30 @@
+{
+  "id": "family.beckhoff-ethercat",
+  "kind": "family",
+  "title": "EtherCAT Terminals and I/O",
+  "summary": "EtherCAT Terminals (EL, ES, EP) and couplers that carry the I/O of Beckhoff systems.",
+  "tags": [
+    "EtherCAT",
+    "terminal",
+    "OP state"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "Terminals are processed on the fly as the EtherCAT frame passes through them. Each terminal has an EtherCAT state machine (INIT, PREOP, SAFEOP, OP); a terminal that does not reach OP delivers no valid data."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "See the EtherCAT protocol article. **CONCEPTUAL** only."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.beckhoff-infosys"
+  ],
+  "related": [
+    "protocol.ethercat"
+  ],
+  "vendor": "vendor.beckhoff",
+  "tier": "A"
+}

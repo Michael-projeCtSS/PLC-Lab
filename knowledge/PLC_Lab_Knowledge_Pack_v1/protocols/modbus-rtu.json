@@ -1,0 +1,41 @@
+{
+  "id": "protocol.modbus-rtu",
+  "kind": "protocol",
+  "title": "Modbus RTU",
+  "summary": "Modbus RTU is the serial form of Modbus, usually on RS-485 multi-drop lines with one client and up to 247 server addresses.",
+  "tags": [
+    "Modbus RTU",
+    "RS-485",
+    "CRC",
+    "baud rate"
+  ],
+  "sections": [
+    {
+      "heading": "Framing",
+      "body": "RTU frames contain the server address, the PDU and a CRC-16. Silent intervals of at least 3.5 character times separate frames, so baud rate and parity must match on every device."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "Wrong baud rate or parity, missing termination resistors, swapped A/B lines and duplicate server addresses. A protocol analyzer or the client's timeout counters help to separate wiring from configuration problems."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.modbus-serial-guide",
+    "src.modbus-application-protocol"
+  ],
+  "related": [
+    "protocol.modbus-tcp"
+  ],
+  "protocol": "modbus-rtu",
+  "fidelity": {
+    "level": "NOT_IMPLEMENTED",
+    "modeled": [],
+    "approximated": [],
+    "omitted": []
+  }
+}

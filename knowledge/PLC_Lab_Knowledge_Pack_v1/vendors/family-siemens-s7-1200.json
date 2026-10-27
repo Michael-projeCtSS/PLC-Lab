@@ -1,0 +1,107 @@
+{
+  "id": "family.siemens-s7-1200",
+  "kind": "family",
+  "title": "SIMATIC S7-1200",
+  "summary": "Compact Siemens controller with integrated I/O and side-mounted signal modules (SM 12xx).",
+  "tags": [
+    "S7-1200",
+    "TIA Portal",
+    "SM 1221"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "The S7-1200 combines CPU, integrated digital/analog I/O and an Ethernet/PROFINET port in one housing. Signal modules (SM) are added on the right, signal boards on the front. It is the common entry platform in vocational training."
+    },
+    {
+      "heading": "Addressing and analog values",
+      "body": "Integrated inputs typically start at `%I0.0`, outputs at `%Q0.0`. Analog inputs deliver a word in the nominal range 0 to 27648. PLC Lab's S7-1200 profile presents addresses as byte.bit and analog values in this banded representation."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product."
+    }
+  ],
+  "facts": [
+    {
+      "label": "Analog nominal range",
+      "value": "0 to 27648",
+      "sources": [
+        "src.siemens-analog-value-processing"
+      ]
+    }
+  ],
+  "sources": [
+    "src.siemens-support",
+    "src.siemens-analog-value-processing",
+    "src.plclab-simulation"
+  ],
+  "related": [],
+  "vendor": "vendor.siemens",
+  "tier": "A",
+  "simulation": {
+    "id": "siemens.s7-1200",
+    "vendor": "siemens",
+    "family": "s7-1200",
+    "displayName": "Siemens S7-1200 (PLC Lab profile)",
+    "tier": "a",
+    "fidelity": {
+      "level": "APPROXIMATED_BEHAVIORAL",
+      "modeled": [
+        "Cyclic scan with input image, transactional program execution and output update",
+        "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+        "Digital and analog channel behavior including wire break and over/underrange"
+      ],
+      "approximated": [
+        "Analog values use the S7 nominal band 0..27648 with overrange to 32511 and overflow 32767",
+        "Diagnostic texts are PLC Lab texts"
+      ],
+      "omitted": [
+        "Vendor firmware, memory model, task model and instruction set",
+        "Vendor engineering software project formats",
+        "Online editing, retentive memory and multiple tasks",
+        "Safety and redundancy functions"
+      ]
+    },
+    "addressing": "byteBit",
+    "analog": "s7Nominal27648",
+    "startup": "reinitializeNonRetentive",
+    "products": [
+      {
+        "module": "cpu.compact",
+        "product": "S7-1200 CPU",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "di8.24vdc.sink",
+        "product": "SM 1221 DI 8x24VDC",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "do8.24vdc",
+        "product": "SM 1222 DQ 8x24VDC",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ai4.ui",
+        "product": "SM 1231 AI 4",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ao2.ui",
+        "product": "SM 1232 AQ 2",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      }
+    ],
+    "terminology": [
+      {
+        "generic": "Mode switch RUN/STOP",
+        "platform": "RUN/STOP (CPU operating mode)"
+      },
+      {
+        "generic": "Tag",
+        "platform": "PLC tag"
+      }
+    ]
+  }
+}

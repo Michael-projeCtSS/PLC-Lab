@@ -1,0 +1,41 @@
+{
+  "id": "fundamentals.plc-architecture",
+  "kind": "topic",
+  "title": "PLC architecture",
+  "summary": "What a programmable logic controller is made of: CPU, power supply, I/O modules, communication interfaces and the engineering software that programs it.",
+  "tags": [
+    "CPU",
+    "I/O",
+    "rack",
+    "slot",
+    "hardware configuration"
+  ],
+  "sections": [
+    {
+      "heading": "The controller in the cabinet",
+      "body": "A programmable logic controller (PLC) is an industrial computer built to control machines and processes. It reads **inputs** (buttons, sensors, transmitters), runs a **user program** and drives **outputs** (contactors, valves, lamps, drives). Compared with an office computer it is designed for a hostile environment: wide temperature ranges, electrical noise, vibration and years of continuous operation."
+    },
+    {
+      "heading": "Main building blocks",
+      "body": "- **CPU**: executes the program cyclically, holds the process images and the diagnostic buffer, and has a mode switch (RUN/STOP).\n- **Power supply**: usually 24 V DC for the CPU and the I/O (\"load\" or \"field\" supply).\n- **I/O modules**: convert field signals into data. Digital modules handle on/off signals, analog modules handle currents and voltages such as 4-20 mA.\n- **Communication**: Ethernet ports for programming and fieldbuses (PROFINET, EtherNet/IP, EtherCAT, Modbus TCP) for remote I/O, drives and HMIs.\n- **Rack or backplane**: holds the modules and gives each a **slot** number that the configuration refers to."
+    },
+    {
+      "heading": "Configured versus installed hardware",
+      "body": "The engineer describes the hardware in the engineering software (the **hardware configuration**). The CPU compares this configuration with the modules really plugged in. A missing or wrong module is reported as a diagnostic event and the affected I/O delivers no valid values. PLC Lab models exactly this difference: the scene defines what is installed, the project defines what is configured."
+    },
+    {
+      "heading": "Compact and modular controllers",
+      "body": "Compact controllers integrate CPU, some I/O and the power input in one housing and are expanded with side-mounted modules. Modular controllers use a rack or DIN-rail backplane with separate modules and usually offer more memory, more communication and redundancy options. Both execute the same kind of cyclic program."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.scan-cycle",
+    "fundamentals.digital-io",
+    "fundamentals.addressing"
+  ]
+}

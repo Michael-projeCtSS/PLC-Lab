@@ -1,0 +1,88 @@
+{
+  "id": "lesson.bool-logic",
+  "number": 4,
+  "title": "BOOL logic: AND, OR, NOT",
+  "summary": "Combine signals with AND, OR, NOT and XOR to express machine conditions.",
+  "level": "beginner",
+  "minutes": 15,
+  "objectives": [
+    "Use AND, OR, NOT and XOR",
+    "Read a condition as a sentence"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Logic operators",
+      "body": "`A AND B` is TRUE only when both are TRUE. `A OR B` is TRUE when at least one is TRUE. `NOT A` inverts. `A XOR B` is TRUE when exactly one is TRUE. AND binds stronger than OR; use parentheses to make intent explicit."
+    },
+    {
+      "type": "visual",
+      "heading": "Truth table",
+      "body": "Every combination of two inputs:",
+      "diagram": "  A     B     | A AND B | A OR B | A XOR B\n  FALSE FALSE |  FALSE  | FALSE  |  FALSE\n  FALSE TRUE  |  FALSE  | TRUE   |  TRUE\n  TRUE  FALSE |  FALSE  | TRUE   |  TRUE\n  TRUE  TRUE  |  TRUE   | TRUE   |  FALSE"
+    },
+    {
+      "type": "example",
+      "heading": "Conditions as sentences",
+      "body": "'The lamp is on when the button is pressed and the selector is in AUTO.'",
+      "code": "Lamp1 := Button1 AND AutoMode;\nLamp3 := Button1 XOR Button2;  (* exactly one button pressed *)"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "`A OR B AND C` means `A OR (B AND C)`, not `(A OR B) AND C`. When in doubt, add parentheses."
+    },
+    {
+      "type": "challenge",
+      "heading": "Evaluate",
+      "body": "Apply precedence.",
+      "question": {
+        "question": "Button1 = TRUE, Button2 = FALSE, AutoMode = FALSE. What is Button1 OR Button2 AND AutoMode?",
+        "options": [
+          "TRUE",
+          "FALSE"
+        ],
+        "answer": 0,
+        "explanation": "AND first: FALSE AND FALSE = FALSE; then TRUE OR FALSE = TRUE."
+      }
+    },
+    {
+      "type": "simulation",
+      "heading": "Try combinations",
+      "body": "In the I/O panel, write a few conditions for Lamp1 to Lamp3 and test every combination of buttons and the selector.",
+      "scene": "scene.io-basics"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "AND, OR, NOT and XOR express almost every machine condition; parentheses make them unambiguous.\n\n**Troubleshooting note:** When a condition 'never becomes true', watch each operand in the Watch list; the false one is your lead."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "When is A AND NOT B TRUE?",
+      "options": [
+        "A TRUE, B TRUE",
+        "A TRUE, B FALSE",
+        "A FALSE, B FALSE",
+        "Always"
+      ],
+      "answer": 1,
+      "explanation": "NOT B must be TRUE, so B is FALSE."
+    },
+    {
+      "question": "Which operator is TRUE for exactly one TRUE input?",
+      "options": [
+        "AND",
+        "OR",
+        "XOR",
+        "NOT"
+      ],
+      "answer": 2,
+      "explanation": "XOR is the exclusive or."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.digital-io"
+  ]
+}

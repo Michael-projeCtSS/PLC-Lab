@@ -1,0 +1,229 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.button-counter",
+  "revision": 1,
+  "title": "Count button presses",
+  "kind": "practice",
+  "difficulty": "beginner",
+  "summary": "Count how often S1 is pressed. After three presses Lamp1 lights. S2 resets the count. Holding S1 down counts only once.",
+  "objectives": [
+    "Use the CTU counter",
+    "Understand edge detection: one press, one count"
+  ],
+  "estimatedMinutes": 15,
+  "scene": "scene.io-basics",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    Button1 : BOOL; (* Pushbutton S1, normally open. *)\n    Button2 : BOOL; (* Pushbutton S2, normally open. *)\n    AutoMode : BOOL; (* Selector S3 in position AUTO. *)\n    PartPresent : BOOL; (* Proximity sensor B1 detects a part. *)\nEND_VAR\nVAR_OUTPUT\n    Lamp1 : BOOL; (* Green lamp H1. *)\n    Lamp2 : BOOL; (* Amber lamp H2. *)\n    Lamp3 : BOOL; (* Red lamp H3. *)\nEND_VAR\nVAR\n    Presses : CTU;\nEND_VAR\n\n(* Count presses of Button1; Lamp1 at 3 presses; Button2 resets. *)\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "Button1",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Button2",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Lamp1",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Each press of S1 (Button1) counts once, however long it is held.",
+    "Lamp1 is on when at least three presses were counted.",
+    "S2 (Button2) resets the count to zero."
+  ],
+  "hints": [
+    "CTU counts rising edges of CU itself: Presses(CU := Button1, R := Button2, PV := 3);",
+    "Lamp1 := Presses.Q;"
+  ],
+  "knowledgeRefs": [
+    "instruction.ctu",
+    "instruction.r-trig"
+  ],
+  "evidence": [
+    {
+      "name": "lamp",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp1"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "three",
+      "title": "Three presses, then reset",
+      "durationMs": 4000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 700,
+          "action": {
+            "type": "release",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 1000,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 1200,
+          "action": {
+            "type": "release",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 1500,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 1700,
+          "action": {
+            "type": "release",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 2500,
+          "action": {
+            "type": "press",
+            "component": "pb2"
+          }
+        },
+        {
+          "atMs": 2700,
+          "action": {
+            "type": "release",
+            "component": "pb2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hold",
+      "title": "One long press",
+      "durationMs": 4000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 3000,
+          "action": {
+            "type": "release",
+            "component": "pb1"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "not-at-two",
+      "title": "Two presses are not enough",
+      "points": 20,
+      "scenario": "three",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 1300,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "Lamp1 was on after only two presses."
+    },
+    {
+      "id": "at-three",
+      "title": "Lamp1 lights after three presses",
+      "points": 40,
+      "scenario": "three",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2000,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp1 was off after three presses."
+    },
+    {
+      "id": "reset",
+      "title": "Button2 resets the count",
+      "points": 20,
+      "scenario": "three",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3200,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "Lamp1 stayed on after the reset."
+    },
+    {
+      "id": "edge",
+      "title": "Holding the button counts once",
+      "points": 20,
+      "scenario": "hold",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "A held button was counted more than once. Count edges, not levels."
+    }
+  ]
+}

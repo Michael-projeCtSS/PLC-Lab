@@ -1,0 +1,87 @@
+{
+  "id": "lesson.commissioning",
+  "number": 19,
+  "title": "Commissioning workflow",
+  "summary": "From installed hardware to a verified machine: configuration download, I/O check, function and fault tests.",
+  "level": "intermediate",
+  "minutes": 15,
+  "objectives": [
+    "List the commissioning steps",
+    "Perform an I/O check"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Step by step",
+      "body": "Commissioning proves that the installation, the configuration and the program work together. It goes from power and hardware checks through the **I/O check** (every signal on the right tag) to function and fault tests and documentation."
+    },
+    {
+      "type": "visual",
+      "heading": "The sequence",
+      "body": "Each step builds on the previous one.",
+      "diagram": "  power check -> hardware config -> I/O check -> analog check -> function test -> fault tests -> handover"
+    },
+    {
+      "type": "example",
+      "heading": "Loop check with forcing",
+      "body": "Force an output to confirm the actuator, then remove the force. Forces are shown in the toolbar and on the FORCE LED."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Skipping the I/O check because the program 'works in simulation'. Swapped wires and wrong mappings are found here, not later."
+    },
+    {
+      "type": "challenge",
+      "heading": "Order",
+      "body": "Think about dependencies.",
+      "question": {
+        "question": "Which step comes before the function test?",
+        "options": [
+          "Handover",
+          "I/O check",
+          "Fault tests"
+        ],
+        "answer": 1,
+        "explanation": "Signals must be correct before functions can be tested."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: wrong measuring range",
+      "body": "A commissioning error makes a level read high. Find and fix the configuration.",
+      "exercise": "ts.tank-level-reads-high"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Commission in order, document every check and remove every force.\n\n**Troubleshooting note:** Never leave a force active after a check: a forgotten force is a fault you created."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does an I/O check prove?",
+      "options": [
+        "The program is optimal",
+        "Each signal reaches the right tag and device",
+        "The network is fast"
+      ],
+      "answer": 1,
+      "explanation": "It is a channel-by-channel proof."
+    },
+    {
+      "question": "What must happen after forcing?",
+      "options": [
+        "Nothing",
+        "Remove the force",
+        "Restart the PLC"
+      ],
+      "answer": 1,
+      "explanation": "Forces override the program until removed."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.commissioning",
+    "troubleshooting.commissioning-io-check"
+  ]
+}

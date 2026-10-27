@@ -1,0 +1,34 @@
+{
+  "id": "fundamentals.interlocks",
+  "kind": "topic",
+  "title": "Interlocks and permissives",
+  "summary": "Interlocks prevent dangerous or damaging combinations: a pump must not run on an empty tank, two contactors must not close together, a valve must be open before a pump starts.",
+  "tags": [
+    "interlock",
+    "permissive",
+    "trip",
+    "dry run"
+  ],
+  "sections": [
+    {
+      "heading": "Permissive versus trip",
+      "body": "- A **permissive** is a condition required to **start** (for example: tank level above low-low).\n- A **trip** stops equipment that is already running when a condition is lost (for example: overload relay opened).\nMany interlocks are both: they block a start and stop a running device."
+    },
+    {
+      "heading": "Writing interlocks",
+      "body": "Collect interlocks in one place and AND them into the run condition, so they cannot be forgotten in one of several code paths:\n\n```\nPumpPermit := NOT LevelLowLow AND InletValveOpen;\nDrainPump := DrainRequest AND PumpPermit;\n```"
+    },
+    {
+      "heading": "Safety is separate",
+      "body": "Standard PLC interlocks protect equipment and product. Protection of people is the job of a **safety system** (safety relays or safety PLCs designed to the relevant standards). PLC Lab does not model safety controllers."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.start-stop-latch",
+    "troubleshooting.valve-stuck"
+  ]
+}

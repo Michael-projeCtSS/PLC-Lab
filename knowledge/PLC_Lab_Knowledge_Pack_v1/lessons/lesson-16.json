@@ -1,0 +1,86 @@
+{
+  "id": "lesson.addressing",
+  "number": 16,
+  "title": "Addressing",
+  "summary": "How channels get addresses and how tags make programs independent of them, across different PLC platforms.",
+  "level": "intermediate",
+  "minutes": 15,
+  "objectives": [
+    "Read addresses in different styles",
+    "Explain why programs use tags"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Address styles",
+      "body": "The same channel has different names on different platforms: `%IX0.0` (IEC), `%I0.0` (Siemens), `Local:1:I.Data.0` (Rockwell), a linked variable (Beckhoff) or `X0` (Mitsubishi). The **I/O map** connects addresses to tags."
+    },
+    {
+      "type": "visual",
+      "heading": "From channel to tag",
+      "body": "The program only sees the tag.",
+      "diagram": "  slot 1, channel 0 --> address (platform style) --> tag StartPB --> program"
+    },
+    {
+      "type": "example",
+      "heading": "Platform profiles",
+      "body": "Switch the platform profile of a free lab to see the addresses change while the program stays the same."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Moving a module or changing its start address while the program uses absolute addresses: every address shifts. Tags survive such changes."
+    },
+    {
+      "type": "challenge",
+      "heading": "Match",
+      "body": "Recognize the style.",
+      "question": {
+        "question": "Which address style is typical for Rockwell Logix controllers?",
+        "options": [
+          "%I0.0",
+          "Local:1:I.Data.0",
+          "X0"
+        ],
+        "answer": 1,
+        "explanation": "Logix uses module-defined tags."
+      }
+    },
+    {
+      "type": "simulation",
+      "heading": "Compare platforms",
+      "body": "Create a free lab with the Siemens S7-1200 profile and one with the generic profile, then compare the addresses in the Hardware tab.",
+      "scene": "scene.motor-start-stop"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Addresses identify channels in a platform-specific style; tags give them meaning and keep programs portable.\n\n**Troubleshooting note:** When a signal appears on the wrong tag, check the I/O map and the module's start address before touching the wiring."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does the I/O map connect?",
+      "options": [
+        "Tags and addresses/channels",
+        "Two PLCs",
+        "HMI and network"
+      ],
+      "answer": 0,
+      "explanation": "It maps channels to tags."
+    },
+    {
+      "question": "Why are tags preferred over absolute addresses?",
+      "options": [
+        "They are shorter",
+        "Programs survive hardware changes",
+        "They are faster"
+      ],
+      "answer": 1,
+      "explanation": "Only the mapping changes."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.addressing"
+  ]
+}

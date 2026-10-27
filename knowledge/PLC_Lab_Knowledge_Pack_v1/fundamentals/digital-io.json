@@ -1,0 +1,37 @@
+{
+  "id": "fundamentals.digital-io",
+  "kind": "topic",
+  "title": "Digital inputs and outputs",
+  "summary": "Digital signals are either on or off. A 24 V DC input reads a voltage at its terminal; a digital output switches 24 V DC to a load such as a contactor coil or lamp.",
+  "tags": [
+    "24 V DC",
+    "LED",
+    "field power",
+    "digital input",
+    "digital output"
+  ],
+  "sections": [
+    {
+      "heading": "Digital inputs",
+      "body": "A typical industrial digital input is a 24 V DC input: a voltage above a threshold at the terminal means **1 / TRUE**, a voltage near 0 V means **0 / FALSE**. Each channel normally has an LED that shows the electrical state at the terminal, which is the first thing a technician checks."
+    },
+    {
+      "heading": "Digital outputs",
+      "body": "Transistor outputs switch 24 V DC to a load up to a rated current (often 0.5 A). Relay outputs use a contact and can switch other voltages. Outputs only switch when the module has its **load supply**: without field power, the PLC may command an output TRUE and nothing happens in the field."
+    },
+    {
+      "heading": "What the PLC sees is not the field",
+      "body": "The input LED and the PLC input image normally agree. When they do not, the problem is in the module, its configuration or the mapping to the program. When the LED is off although the sensor is active, the problem is in the field wiring or the sensor. This simple split is the core of digital I/O troubleshooting."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-2",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.sourcing-sinking",
+    "fundamentals.no-nc-contacts",
+    "troubleshooting.missing-field-power"
+  ]
+}

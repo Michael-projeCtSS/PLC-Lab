@@ -1,0 +1,90 @@
+{
+  "id": "lesson.what-is-a-plc",
+  "number": 1,
+  "title": "What is a PLC?",
+  "summary": "Meet the industrial computer that runs machines: what it does, what it is made of and why it is different from a PC.",
+  "level": "beginner",
+  "minutes": 10,
+  "objectives": [
+    "Describe what a PLC does in one sentence",
+    "Name the parts of a PLC system"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "A computer for machines",
+      "body": "A **programmable logic controller (PLC)** reads signals from a machine, decides what to do with a program, and switches the machine's actuators. It does this over and over, many times per second, for years without rebooting. Buttons, switches and sensors are its **inputs**; motors, valves and lamps are driven by its **outputs**."
+    },
+    {
+      "type": "visual",
+      "heading": "The control loop",
+      "body": "Every automated machine has the same shape: sensors tell the PLC what is happening, the program decides, actuators change the process, and the sensors see the result.",
+      "diagram": "  [ sensors ] --> [ INPUTS ]\n                      |\n                  [ PROGRAM ]   <- written by you\n                      |\n  [ actuators] <-- [ OUTPUTS ]\n       |                      ^\n       +----> [ MACHINE ] ----+"
+    },
+    {
+      "type": "example",
+      "heading": "A real example",
+      "body": "A conveyor: a Start button and a Stop button are inputs, the motor contactor and a run lamp are outputs. The program decides that the motor runs after Start until Stop is pressed.",
+      "code": "MotorContactor := (StartPB OR MotorContactor) AND StopPB;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common misconception",
+      "body": "A PLC does not 'listen' for button presses like a phone app. It **looks** at all inputs at the start of every cycle. If something happens between two looks, it only notices it at the next look."
+    },
+    {
+      "type": "challenge",
+      "heading": "Check yourself",
+      "body": "Which of these is an output?",
+      "question": {
+        "question": "Which device is driven by a PLC output?",
+        "options": [
+          "A temperature sensor",
+          "A motor contactor",
+          "A stop button",
+          "A level switch"
+        ],
+        "answer": 1,
+        "explanation": "Contactors, valves and lamps are actuators driven by outputs; sensors and buttons are inputs."
+      }
+    },
+    {
+      "type": "simulation",
+      "heading": "Look inside a simple panel",
+      "body": "Open the I/O training panel: two buttons, a selector, a sensor and three lamps wired to a compact PLC.",
+      "scene": "scene.io-basics"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "A PLC is an industrial computer that cyclically reads inputs, runs a program and writes outputs.\n\n**Troubleshooting note:** When a machine misbehaves, first ask: is the PLC seeing the right inputs, and is it deciding what you expect?"
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does a PLC do repeatedly?",
+      "options": [
+        "Reboot",
+        "Read inputs, run the program, write outputs",
+        "Wait for the user",
+        "Only react to interrupts"
+      ],
+      "answer": 1,
+      "explanation": "This read-execute-write cycle is the scan cycle."
+    },
+    {
+      "question": "Why are PLCs used instead of office PCs?",
+      "options": [
+        "They are cheaper",
+        "They are built for harsh environments and continuous operation",
+        "They have bigger screens",
+        "They run games"
+      ],
+      "answer": 1,
+      "explanation": "Robustness and deterministic cyclic operation matter in industry."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.plc-architecture"
+  ]
+}

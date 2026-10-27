@@ -1,0 +1,59 @@
+{
+  "id": "family.mitsubishi-fx5",
+  "kind": "family",
+  "title": "MELSEC iQ-F (FX5)",
+  "summary": "Compact Mitsubishi controllers with expansion modules; X/Y devices numbered in octal.",
+  "tags": [
+    "FX5",
+    "iQ-F",
+    "GX Works3",
+    "X Y devices"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "An FX5 CPU module carries integrated I/O; expansion modules are added on the right and continue the X/Y numbering."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "Tier B knowledge profile: addresses are shown as octal X/Y devices. **SIMULATION APPROXIMATION** of presentation only."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.mitsubishi-docs",
+    "src.plclab-simulation"
+  ],
+  "related": [],
+  "vendor": "vendor.mitsubishi",
+  "tier": "B",
+  "simulation": {
+    "id": "mitsubishi.fx5",
+    "vendor": "mitsubishi",
+    "family": "fx5",
+    "displayName": "Mitsubishi MELSEC iQ-F FX5 (PLC Lab knowledge profile)",
+    "tier": "b",
+    "fidelity": {
+      "level": "CONCEPTUAL",
+      "modeled": [
+        "Cyclic scan with input image, transactional program execution and output update",
+        "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+        "Digital and analog channel behavior including wire break and over/underrange"
+      ],
+      "approximated": [
+        "Octal X/Y device numbering is presented; analog uses the PLC Lab 0..10000 convention"
+      ],
+      "omitted": [
+        "Vendor firmware, memory model, task model and instruction set",
+        "Vendor engineering software project formats",
+        "Online editing, retentive memory and multiple tasks",
+        "Safety and redundancy functions"
+      ]
+    },
+    "addressing": "octalDevices",
+    "analog": "perTenThousand",
+    "startup": "reinitializeNonRetentive",
+    "products": [],
+    "terminology": []
+  }
+}

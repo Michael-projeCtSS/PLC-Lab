@@ -1,0 +1,88 @@
+{
+  "id": "lesson.actuators",
+  "number": 11,
+  "title": "Actuators",
+  "summary": "Contactors and motors, solenoid valves, pumps and lamps: what the PLC switches and what feedback it gets back.",
+  "level": "beginner",
+  "minutes": 15,
+  "objectives": [
+    "Name common actuators",
+    "Use feedback to confirm an actuator moved"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Doing work",
+      "body": "A PLC output rarely drives a motor directly. It energizes a **contactor coil**, which switches the motor power. A **solenoid valve** opens with 24 V. **Pumps** and **fans** are motors. Lamps and horns signal to people."
+    },
+    {
+      "type": "visual",
+      "heading": "Command and feedback",
+      "body": "Good designs check that a command really had an effect.",
+      "diagram": "  PLC DO --> contactor coil K1 --> motor M1\n  PLC DI <-- K1 auxiliary contact (feedback)\n  PLC DI <-- valve limit switch (open / closed)"
+    },
+    {
+      "type": "example",
+      "heading": "Feedback check",
+      "body": "Detect a contactor that did not pull in.",
+      "code": "VAR NoFeedback : TON; END_VAR\nNoFeedback(IN := MotorContactor AND NOT MotorFeedback, PT := T#1s);\nFeedbackAlarm := NoFeedback.Q;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Assuming an actuator moved because the output is TRUE. Valves stick, fuses blow and contactors fail. Without feedback the program cannot know."
+    },
+    {
+      "type": "challenge",
+      "heading": "Reason",
+      "body": "Check the chain.",
+      "question": {
+        "question": "The output is TRUE and its LED is on, but the valve stays closed. Where is the fault?",
+        "options": [
+          "In the program",
+          "Between the output terminal and the valve",
+          "In the input module"
+        ],
+        "answer": 1,
+        "explanation": "The PLC did its part; the field side did not respond."
+      }
+    },
+    {
+      "type": "simulation",
+      "heading": "Watch command and response",
+      "body": "On the tank station, watch the valve command, the valve position and the flow.",
+      "scene": "scene.tank-filling"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Outputs command actuators through contactors and solenoids; feedback signals confirm they responded.\n\n**Troubleshooting note:** If an output is TRUE but nothing moves, check the module's load supply, the fuse, the wiring and the actuator itself."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What switches the power of a large motor?",
+      "options": [
+        "The PLC output directly",
+        "A contactor",
+        "A sensor"
+      ],
+      "answer": 1,
+      "explanation": "The PLC output drives the contactor coil."
+    },
+    {
+      "question": "Why use a valve limit switch?",
+      "options": [
+        "To make the valve faster",
+        "To confirm the valve really moved",
+        "To save energy"
+      ],
+      "answer": 1,
+      "explanation": "Feedback detects stuck valves."
+    }
+  ],
+  "knowledgeRefs": [
+    "troubleshooting.valve-stuck",
+    "troubleshooting.missing-field-power"
+  ]
+}

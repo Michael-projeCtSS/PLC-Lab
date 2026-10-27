@@ -1,0 +1,52 @@
+{
+  "id": "troubleshooting.sensor-no-nc-assumption",
+  "kind": "troubleshooting",
+  "title": "Sensor output type differs from the program's assumption",
+  "summary": "A presence sensor was replaced with a normally closed (light-operated vs dark-operated) variant: the PLC now sees 'part present' when nothing is there.",
+  "tags": [
+    "sensor",
+    "NO",
+    "NC",
+    "presence"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "A presence sensor was replaced with a normally closed (light-operated vs dark-operated) variant: the PLC now sees 'part present' when nothing is there."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.no-nc-contacts",
+    "fundamentals.sourcing-sinking"
+  ],
+  "troubleshooting": {
+    "faultId": "sensor-no-nc-assumption",
+    "area": "I/O",
+    "target": "Proximity or photoelectric sensor",
+    "effect": "Inverted presence signal; counters and sequences go wrong",
+    "symptoms": [
+      "Part counter counts when parts leave instead of when they arrive",
+      "Input is TRUE with no part in front of the sensor"
+    ],
+    "evidence": [
+      "Sensor LED and PLC input LED with and without a target",
+      "Sensor type label (NO/NC, PNP/NPN)",
+      "Input tag value in the Watch list"
+    ],
+    "diagnosticMethod": [
+      "Place and remove a target while watching the input",
+      "Compare with the data sheet of the original sensor"
+    ],
+    "repair": [
+      "Install a sensor with the correct switching function or reconfigure it if it is programmable"
+    ],
+    "explanation": "Sensors exist as normally open and normally closed variants; replacing one with the other inverts the signal without any visible damage.",
+    "simulatedIn": [
+      "ts.part-sensor-inverted"
+    ]
+  }
+}

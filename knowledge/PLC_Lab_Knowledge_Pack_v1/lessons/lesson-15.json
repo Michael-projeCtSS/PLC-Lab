@@ -1,0 +1,87 @@
+{
+  "id": "lesson.hardware-modules",
+  "number": 15,
+  "title": "Hardware modules and racks",
+  "summary": "CPU, power supply and I/O modules in slots: how the configuration describes the installed hardware.",
+  "level": "intermediate",
+  "minutes": 15,
+  "objectives": [
+    "Read a rack configuration",
+    "Explain configured versus installed modules"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Slots and modules",
+      "body": "Modules sit in numbered **slots** of a rack or rail. The engineer configures which module type belongs in each slot. At startup and continuously, the CPU compares the configuration with what is really installed."
+    },
+    {
+      "type": "visual",
+      "heading": "A small rack",
+      "body": "Slot numbers start at the CPU.",
+      "diagram": "  | slot 0 | slot 1        | slot 2        | slot 3       |\n  |  CPU   | DI 8x24 V DC  | DO 8x24 V DC  | AI 4xU/I     |\n           %I0.0..%I0.7    %Q0.0..%Q0.7    %IW64.."
+    },
+    {
+      "type": "example",
+      "heading": "Configuration is data",
+      "body": "In PLC Lab the station configuration lists modules, channel modes and the I/O map; the program only uses tags."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Swapping two modules of different types during maintenance. The CPU reports a configuration difference and the affected I/O delivers nothing."
+    },
+    {
+      "type": "challenge",
+      "heading": "Interpret",
+      "body": "Read the status.",
+      "question": {
+        "question": "The hardware view shows 'configured DI 8, installed DO 8' in slot 1. What happens to the inputs of slot 1?",
+        "options": [
+          "They work normally",
+          "They deliver no valid values",
+          "They become outputs"
+        ],
+        "answer": 1,
+        "explanation": "A mismatched module does not exchange data."
+      }
+    },
+    {
+      "type": "simulation",
+      "heading": "Explore the hardware view",
+      "body": "Open any machine and inspect modules, LEDs, channel values and the multimeter in the Hardware tab.",
+      "scene": "scene.tank-filling"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "The hardware configuration describes modules per slot; mismatches are diagnosed by the CPU.\n\n**Troubleshooting note:** Compare configured and installed modules first when several signals of one module fail at once."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does the CPU compare at startup?",
+      "options": [
+        "Program and HMI",
+        "Configured and installed modules",
+        "Two programs"
+      ],
+      "answer": 1,
+      "explanation": "Configuration versus installation."
+    },
+    {
+      "question": "Several inputs of one module fail at once. First suspect?",
+      "options": [
+        "Each sensor",
+        "The module, its supply or its configuration",
+        "The program"
+      ],
+      "answer": 1,
+      "explanation": "A common cause is likely."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.plc-architecture",
+    "troubleshooting.wrong-module-slot"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "id": "fundamentals.4-20ma",
+  "kind": "topic",
+  "title": "The 4-20 mA current loop",
+  "summary": "A 4-20 mA transmitter represents its measuring range as a current. The live zero at 4 mA lets the PLC tell a real zero from a broken wire.",
+  "tags": [
+    "4-20 mA",
+    "live zero",
+    "NE 43",
+    "wire break",
+    "transmitter"
+  ],
+  "sections": [
+    {
+      "heading": "Why current, and why 4 mA",
+      "body": "A current is the same everywhere in a series loop, so cable resistance and moderate noise do not change the value. Starting at **4 mA** instead of 0 mA gives a **live zero**: 0 mA can only mean a fault (broken wire, missing supply), while 4 mA means the lower end of the range. Two-wire transmitters are even powered from the loop current."
+    },
+    {
+      "heading": "NAMUR NE 43 signal levels",
+      "body": "The NAMUR recommendation NE 43 separates measurement from failure information:\n\n| Current | Meaning |\n| --- | --- |\n| 3.8 to 20.5 mA | measurement information (including small under- and overrange) |\n| at or below 3.6 mA | failure information (low) |\n| at or above 21.0 mA | failure information (high) |\n\nA transmitter that follows NE 43 saturates at 3.8 and 20.5 mA during normal operation and drives the failure current when its self-diagnostics detect a fault."
+    },
+    {
+      "heading": "Converting current to percent",
+      "body": "`percent = (I - 4 mA) / 16 mA * 100`. 12 mA is therefore 50 %, 8 mA is 25 %. PLC Lab's level transmitter saturates at the NE 43 limits; a broken loop delivers 0 mA, which the analog input reports as wire break when diagnostics are enabled."
+    }
+  ],
+  "facts": [
+    {
+      "label": "NE 43 measurement band",
+      "value": "3.8 mA to 20.5 mA",
+      "sources": [
+        "src.namur-ne43-beckhoff"
+      ]
+    },
+    {
+      "label": "NE 43 failure levels",
+      "value": "at or below 3.6 mA, at or above 21.0 mA",
+      "sources": [
+        "src.namur-ne43-beckhoff"
+      ]
+    }
+  ],
+  "sources": [
+    "src.namur-ne43-beckhoff",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.analog-io",
+    "fundamentals.scaling",
+    "troubleshooting.analog-wire-break"
+  ]
+}

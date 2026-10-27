@@ -1,0 +1,28 @@
+{
+  "id": "vendor.schneider",
+  "kind": "vendor",
+  "title": "Schneider Electric Modicon",
+  "summary": "Modicon controllers range from M241/M251/M262 logic and motion controllers (EcoStruxure Machine Expert) to the M580 process ePAC (EcoStruxure Control Expert).",
+  "tags": [
+    "Schneider Electric Modicon"
+  ],
+  "sections": [
+    {
+      "heading": "Platforms",
+      "body": "| Family | Role |\n| --- | --- |\n| Modicon M241 / M251 | Logic controllers for machines, TM3 expansion I/O |\n| Modicon M262 | Logic and motion controller |\n| Modicon M580 | Ethernet-based process controller (ePAC), X80 I/O |"
+    },
+    {
+      "heading": "Engineering",
+      "body": "Machine controllers are programmed in EcoStruxure Machine Expert (CODESYS-based); M580 in EcoStruxure Control Expert. Both follow IEC 61131-3 languages."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.schneider-docs"
+  ],
+  "related": [
+    "family.schneider-m200",
+    "family.schneider-m580"
+  ],
+  "tier": "A"
+}

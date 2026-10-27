@@ -1,0 +1,86 @@
+{
+  "id": "lesson.diagnostics",
+  "number": 17,
+  "title": "Diagnostics",
+  "summary": "Read LEDs, the diagnostic buffer and channel quality before guessing.",
+  "level": "intermediate",
+  "minutes": 15,
+  "objectives": [
+    "Use the diagnostic buffer",
+    "Interpret module LEDs and quality"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "The PLC tells you",
+      "body": "CPUs and modules report problems: LEDs (RUN, ERROR, FORCE, channel LEDs), a time-stamped **diagnostic buffer** with incoming and outgoing events, and **quality** information for each value."
+    },
+    {
+      "type": "visual",
+      "heading": "Reading order",
+      "body": "From the overview to the detail.",
+      "diagram": "  CPU LEDs --> diagnostic buffer --> module status --> channel quality --> measurement"
+    },
+    {
+      "type": "example",
+      "heading": "Wire break example",
+      "body": "A broken 4-20 mA loop appears as an incoming 'wire break' event for one channel, a flashing module LED and a WIRE BREAK quality."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Clearing faults without reading them. The diagnostic buffer often already names the module, the channel and the time the problem started."
+    },
+    {
+      "type": "challenge",
+      "heading": "Read the buffer",
+      "body": "Incoming and outgoing.",
+      "question": {
+        "question": "A wire-break event comes and goes every few seconds. What does that suggest?",
+        "options": [
+          "A stable cable break",
+          "A loose connection",
+          "A program error"
+        ],
+        "answer": 1,
+        "explanation": "Intermittent events point to a loose terminal or connector."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: dead outputs",
+      "body": "The PLC commands an output but nothing switches. Use the diagnostics to find out why.",
+      "exercise": "ts.outputs-dead"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "LEDs, the diagnostic buffer and quality flags locate most faults before a single wire is touched.\n\n**Troubleshooting note:** Always read and note the diagnostic buffer before you change anything; it is your evidence."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does 'incoming' mean in a diagnostic buffer?",
+      "options": [
+        "The problem appeared",
+        "The problem disappeared",
+        "A network message arrived"
+      ],
+      "answer": 0,
+      "explanation": "Outgoing means it disappeared."
+    },
+    {
+      "question": "What does a FORCE LED indicate?",
+      "options": [
+        "A wire break",
+        "Values are overridden by a force job",
+        "The CPU is in STOP"
+      ],
+      "answer": 1,
+      "explanation": "Forcing overrides program or input values."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.diagnostics"
+  ]
+}

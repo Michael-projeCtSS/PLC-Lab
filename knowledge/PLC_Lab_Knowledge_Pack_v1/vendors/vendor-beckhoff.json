@@ -1,0 +1,28 @@
+{
+  "id": "vendor.beckhoff",
+  "kind": "vendor",
+  "title": "Beckhoff",
+  "summary": "Beckhoff builds PC-based control: Embedded PCs (CX) or industrial PCs run TwinCAT 3, and EtherCAT Terminals provide the I/O.",
+  "tags": [
+    "Beckhoff"
+  ],
+  "sections": [
+    {
+      "heading": "Platforms",
+      "body": "| Component | Role |\n| --- | --- |\n| CX Embedded PC | DIN-rail PC running TwinCAT |\n| TwinCAT 3 | Engineering and runtime (IEC 61131-3, integrated in Visual Studio) |\n| EtherCAT Terminals (EL) | I/O terminals on the EtherCAT fieldbus |"
+    },
+    {
+      "heading": "Conventions worth knowing",
+      "body": "- Variables are declared with `AT %I*` / `AT %Q*` and **linked** to terminal channels in the I/O tree.\n- Analog terminals for 4..20 mA represent 4 mA as 0 and 20 mA as 32767 in the default presentation.\n- EtherCAT diagnostics (WcState, terminal state machine) are part of every fault investigation."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.beckhoff-infosys",
+    "src.beckhoff-el30xx-presentation"
+  ],
+  "related": [
+    "family.beckhoff-twincat3"
+  ],
+  "tier": "A"
+}

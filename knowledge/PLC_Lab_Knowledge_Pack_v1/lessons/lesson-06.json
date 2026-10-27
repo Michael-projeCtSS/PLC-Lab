@@ -1,0 +1,88 @@
+{
+  "id": "lesson.latching",
+  "number": 6,
+  "title": "Latching and seal-in",
+  "summary": "Give the motor a memory: the output holds itself on after Start is released until Stop is pressed.",
+  "level": "beginner",
+  "minutes": 15,
+  "objectives": [
+    "Write a seal-in latch",
+    "Explain stop priority"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "The output remembers",
+      "body": "Include the output itself as an alternative to Start: once running, the motor keeps its own condition TRUE. This is the **seal-in** or self-holding circuit."
+    },
+    {
+      "type": "visual",
+      "heading": "The seal-in rung",
+      "body": "In relay logic the auxiliary contact bridges the Start button.",
+      "diagram": "  ---+--[ StartPB ]--------+--[ StopPB ]--[ OverloadOK ]--( MotorContactor )\n      |                     |\n      +--[ MotorContactor ]-+"
+    },
+    {
+      "type": "example",
+      "heading": "Seal-in in ST",
+      "body": "Stop and the overload relay come after the OR, so they always win.",
+      "code": "MotorContactor := (StartPB OR MotorContactor) AND StopPB AND OverloadOK;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "`StartPB OR (MotorContactor AND StopPB)` gives Start priority: holding Start keeps the motor running even while Stop is pressed."
+    },
+    {
+      "type": "challenge",
+      "heading": "Priority check",
+      "body": "Both buttons are pressed together.",
+      "question": {
+        "question": "With the correct seal-in, what happens if Start and Stop are pressed together?",
+        "options": [
+          "The motor runs",
+          "The motor stops",
+          "It depends on timing"
+        ],
+        "answer": 1,
+        "explanation": "StopPB is FALSE and AND-ed after the OR, so the result is FALSE."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: motor start/stop",
+      "body": "Build the seal-in for the conveyor and let the checker test start, stop priority and the overload trip.",
+      "exercise": "ex.motor-start-stop"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "A seal-in latch uses the output as its own condition; stop conditions are AND-ed after the OR.\n\n**Troubleshooting note:** If a motor will not stay on after Start is released, the seal-in path is missing or broken; if it cannot be stopped, check stop priority."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What keeps a latched motor running after Start is released?",
+      "options": [
+        "The Start button",
+        "The output itself in its own condition",
+        "A timer",
+        "The HMI"
+      ],
+      "answer": 1,
+      "explanation": "That is the seal-in."
+    },
+    {
+      "question": "Where do stop conditions belong?",
+      "options": [
+        "Inside the OR with Start",
+        "AND-ed after the OR",
+        "Nowhere"
+      ],
+      "answer": 1,
+      "explanation": "This gives stop priority."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.start-stop-latch"
+  ]
+}

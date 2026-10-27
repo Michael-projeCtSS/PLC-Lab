@@ -1,0 +1,38 @@
+{
+  "id": "protocol.profibus-dp",
+  "kind": "protocol",
+  "title": "PROFIBUS DP",
+  "summary": "PROFIBUS DP is a serial fieldbus (RS-485) with a master polling slaves cyclically by address. It remains common in existing plants.",
+  "tags": [
+    "PROFIBUS",
+    "DP",
+    "GSD",
+    "termination"
+  ],
+  "sections": [
+    {
+      "heading": "Key ideas",
+      "body": "Each slave has an address (typically 1..125) and a GSD file describing it. The bus needs termination at both physical ends; baud rate is set on the master."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "Missing or extra termination, wrong addresses, cable damage and connectors with termination switched on in the middle of a segment."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.pi-profinet"
+  ],
+  "related": [],
+  "protocol": "profibus-dp",
+  "fidelity": {
+    "level": "NOT_IMPLEMENTED",
+    "modeled": [],
+    "approximated": [],
+    "omitted": []
+  }
+}

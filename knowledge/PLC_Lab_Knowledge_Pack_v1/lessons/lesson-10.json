@@ -1,0 +1,87 @@
+{
+  "id": "lesson.sensors",
+  "number": 10,
+  "title": "Sensors",
+  "summary": "Push buttons, limit switches, proximity and photoelectric sensors and level switches: what they report and how they fail.",
+  "level": "beginner",
+  "minutes": 15,
+  "objectives": [
+    "Name common discrete sensors",
+    "Explain PNP/NPN and NO/NC outputs"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Discrete sensors",
+      "body": "A **limit switch** detects a position mechanically. **Inductive proximity sensors** detect metal without contact. **Photoelectric sensors** detect objects with light. **Level switches** detect whether liquid reaches a point. Most deliver a 24 V on/off signal."
+    },
+    {
+      "type": "visual",
+      "heading": "Three-wire sensor",
+      "body": "Supply, 0 V and a switched output.",
+      "diagram": "  brown  +24V ---------+\n  blue   0V  ---------+  [PNP sensor] -- black --> DI (sinking input)\n  output switches +24V to the input when a target is present"
+    },
+    {
+      "type": "example",
+      "heading": "Using a presence sensor",
+      "body": "Count parts only in AUTO.",
+      "code": "Parts(CU := PartPresent AND AutoMode, R := Button2, PV := 4);"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Replacing a sensor with a 'similar' one that has the opposite switching function (NC instead of NO) or output type (NPN instead of PNP). Nothing looks broken, but the logic inverts or never switches."
+    },
+    {
+      "type": "challenge",
+      "heading": "Diagnose",
+      "body": "Use what you know.",
+      "question": {
+        "question": "The sensor's own LED switches, but the PLC input LED never does. Most likely cause?",
+        "options": [
+          "Program error",
+          "PNP/NPN or wiring mismatch",
+          "CPU in STOP"
+        ],
+        "answer": 1,
+        "explanation": "The sensor works; its signal does not reach the input circuit correctly."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: conveyor part counter",
+      "body": "Count parts with a proximity sensor and detect jams.",
+      "exercise": "ex.part-counter"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Sensors report positions, presence and levels; their contact type and output type must match the design.\n\n**Troubleshooting note:** Compare three things: the sensor LED, the input LED and the PLC tag. Where they disagree is where the fault is."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "Which sensor detects metal without contact?",
+      "options": [
+        "Limit switch",
+        "Inductive proximity sensor",
+        "Pushbutton"
+      ],
+      "answer": 1,
+      "explanation": "Inductive sensors use an electromagnetic field."
+    },
+    {
+      "question": "A PNP sensor output connects the input to…",
+      "options": [
+        "0 V",
+        "+24 V"
+      ],
+      "answer": 1,
+      "explanation": "PNP sources current to a sinking input."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.sourcing-sinking",
+    "troubleshooting.sensor-no-nc-assumption"
+  ]
+}

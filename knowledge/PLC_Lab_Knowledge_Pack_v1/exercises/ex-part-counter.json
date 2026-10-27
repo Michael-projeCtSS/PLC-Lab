@@ -1,0 +1,391 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.part-counter",
+  "revision": 1,
+  "title": "Conveyor part counter with jam detection",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "A proximity sensor sees parts passing on a conveyor. In AUTO mode count parts in batches of four and detect a jam when a part stays in front of the sensor for more than two seconds.",
+  "objectives": [
+    "Combine a mode selector, a counter and a timer",
+    "Detect abnormal states from timing"
+  ],
+  "estimatedMinutes": 25,
+  "scene": "scene.io-basics",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    Button1 : BOOL; (* Pushbutton S1, normally open. *)\n    Button2 : BOOL; (* Pushbutton S2, normally open. *)\n    AutoMode : BOOL; (* Selector S3 in position AUTO. *)\n    PartPresent : BOOL; (* Proximity sensor B1 detects a part. *)\nEND_VAR\nVAR_OUTPUT\n    Lamp1 : BOOL; (* Green lamp H1. *)\n    Lamp2 : BOOL; (* Amber lamp H2. *)\n    Lamp3 : BOOL; (* Red lamp H3. *)\nEND_VAR\nVAR\n    Parts : CTU;\n    Jam : TON;\nEND_VAR\n\n(* Count parts in AUTO, batch lamp at 4, jam lamp after 2 s of continuous detection. *)\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "AutoMode",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "PartPresent",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Button2",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Lamp1",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "Lamp2",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "Lamp3",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Lamp1 shows that the selector is in AUTO.",
+    "In AUTO, count parts seen by the proximity sensor (PartPresent). Lamp2 lights after four parts. Button2 resets the count.",
+    "In MAN, parts are not counted.",
+    "Lamp3 (jam) lights when PartPresent stays TRUE for more than 2 s in AUTO.",
+    "Change the part presence by clicking the sensor in the Process view."
+  ],
+  "hints": [
+    "Count only in AUTO: CU := PartPresent AND AutoMode",
+    "A TON on PartPresent detects how long a part stays in front of the sensor."
+  ],
+  "knowledgeRefs": [
+    "instruction.ctu",
+    "instruction.ton"
+  ],
+  "evidence": [
+    {
+      "name": "lamp1",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp1"
+      }
+    },
+    {
+      "name": "batch",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp2"
+      }
+    },
+    {
+      "name": "jam",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp3"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "auto",
+      "title": "Four parts in AUTO",
+      "durationMs": 4000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 200,
+          "action": {
+            "type": "setSelector",
+            "component": "sel",
+            "position": 1
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1100,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 1400,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1700,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 2300,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2600,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "Parts in MAN are not counted",
+      "durationMs": 4000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1100,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 1400,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1700,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 2300,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2600,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "jam",
+      "title": "A part blocks the sensor",
+      "durationMs": 5000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 200,
+          "action": {
+            "type": "setSelector",
+            "component": "sel",
+            "position": 1
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "mode-lamp",
+      "title": "Lamp1 shows AUTO",
+      "points": 10,
+      "scenario": "auto",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 1000,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp1",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp1 was off in AUTO."
+    },
+    {
+      "id": "batch",
+      "title": "Batch lamp after four parts",
+      "points": 35,
+      "scenario": "auto",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3200,
+        "condition": {
+          "type": "compare",
+          "signal": "batch",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp2 was off after four parts in AUTO."
+    },
+    {
+      "id": "batch-early",
+      "title": "No batch lamp before the fourth part",
+      "points": 15,
+      "scenario": "auto",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2100,
+        "condition": {
+          "type": "compare",
+          "signal": "batch",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "Lamp2 lit before the fourth part."
+    },
+    {
+      "id": "manual",
+      "title": "Parts are not counted in MAN",
+      "points": 15,
+      "scenario": "manual",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "batch",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Parts were counted with the selector in MAN."
+    },
+    {
+      "id": "no-false-jam",
+      "title": "Normal parts do not raise a jam",
+      "points": 10,
+      "scenario": "auto",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "jam",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp3 (jam) lit although every part passed quickly."
+    },
+    {
+      "id": "jam",
+      "title": "A blocked sensor raises a jam after 2 s",
+      "points": 15,
+      "scenario": "jam",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3000,
+        "condition": {
+          "type": "compare",
+          "signal": "jam",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp3 did not light when a part blocked the sensor for more than 2 s."
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "id": "lesson.communication",
+  "number": 18,
+  "title": "Industrial communication basics",
+  "summary": "Ethernet, IP addresses, subnets and Modbus TCP: how a PLC reads a value from a device over the network.",
+  "level": "intermediate",
+  "minutes": 20,
+  "objectives": [
+    "Explain IP address and subnet mask",
+    "Describe a Modbus TCP read"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Networks in the plant",
+      "body": "Modern devices exchange data over Ethernet. Each device has an **IP address** and a **subnet mask**; devices in the same subnet talk directly, others need a **gateway**. Protocols such as Modbus TCP, PROFINET or EtherNet/IP define the data exchange."
+    },
+    {
+      "type": "visual",
+      "heading": "A Modbus TCP read",
+      "body": "The PLC is the client, the transmitter the server.",
+      "diagram": "  PLC 192.168.0.10 --request FC03 addr 0 qty 3--> transmitter 192.168.0.20\n  PLC <-------------- response: 3 registers ------- transmitter\n  (timeout if no answer, exception if the request is invalid)"
+    },
+    {
+      "type": "example",
+      "heading": "Guarding the value",
+      "body": "Never use a value from a lost connection.",
+      "code": "InletValve := Filling AND LevelCommOK;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Confusing the documented register 40001 with protocol address 1. Modbus addresses on the wire start at 0, so 40001 is address 0."
+    },
+    {
+      "type": "challenge",
+      "heading": "Subnets",
+      "body": "Compare addresses with mask 255.255.255.0.",
+      "question": {
+        "question": "PLC 192.168.0.10/24. Which device is reachable without a gateway?",
+        "options": [
+          "192.168.1.20",
+          "192.168.0.20",
+          "10.0.0.20"
+        ],
+        "answer": 1,
+        "explanation": "Only 192.168.0.x is in the same /24 subnet."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: Modbus level",
+      "body": "Fill a tank using a level transmitter on Modbus TCP and stop on communication loss.",
+      "exercise": "ex.modbus-level"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "Devices communicate when addresses, subnets and protocol settings match; values from failed connections must not drive the process.\n\n**Troubleshooting note:** Read the connection status first: timeout, connection refused, no route and exception each point to a different cause."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does a subnet mask decide?",
+      "options": [
+        "The cable type",
+        "Which addresses are reached directly",
+        "The baud rate"
+      ],
+      "answer": 1,
+      "explanation": "It defines the local network."
+    },
+    {
+      "question": "Which Modbus function code reads holding registers?",
+      "options": [
+        "01",
+        "03",
+        "05"
+      ],
+      "answer": 1,
+      "explanation": "FC03 reads holding registers."
+    }
+  ],
+  "knowledgeRefs": [
+    "protocol.modbus-tcp",
+    "troubleshooting.ip-subnet-mismatch"
+  ]
+}

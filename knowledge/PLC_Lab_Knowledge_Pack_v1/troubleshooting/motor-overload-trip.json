@@ -1,0 +1,52 @@
+{
+  "id": "troubleshooting.motor-overload-trip",
+  "kind": "troubleshooting",
+  "title": "Motor overload relay tripped",
+  "summary": "The thermal overload relay opened: the contactor drops out and the motor cannot restart until the relay is reset and the cause removed.",
+  "tags": [
+    "overload",
+    "motor",
+    "trip"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "The thermal overload relay opened: the contactor drops out and the motor cannot restart until the relay is reset and the cause removed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.start-stop-latch"
+  ],
+  "troubleshooting": {
+    "faultId": "motor-overload-trip",
+    "area": "Drives",
+    "target": "Motor and overload relay",
+    "effect": "Motor stops; restart is blocked",
+    "symptoms": [
+      "Motor stops during operation",
+      "Overload contact input FALSE",
+      "Repeated trips after reset"
+    ],
+    "evidence": [
+      "Overload input in the PLC",
+      "Motor current",
+      "Mechanical load (jammed conveyor, bearing)"
+    ],
+    "diagnosticMethod": [
+      "Check the overload input",
+      "Measure motor current after restart",
+      "Inspect the mechanics"
+    ],
+    "repair": [
+      "Remove the mechanical cause",
+      "Reset the overload relay",
+      "Check the overload setting against the motor rating plate"
+    ],
+    "explanation": "The overload relay protects the motor winding against sustained overcurrent; resetting it without removing the cause leads to repeated trips or motor damage.",
+    "simulatedIn": []
+  }
+}

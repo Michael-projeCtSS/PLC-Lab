@@ -1,0 +1,89 @@
+{
+  "id": "lesson.timers",
+  "number": 8,
+  "title": "Timers",
+  "summary": "Delay, extend and shape signals in time with TON, TOF and TP, running on simulation time.",
+  "level": "beginner",
+  "minutes": 20,
+  "objectives": [
+    "Use TON for an on-delay",
+    "Choose between TON, TOF and TP"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Time as a condition",
+      "body": "Timers are **function blocks** with memory. **TON** delays switching on, **TOF** delays switching off, **TP** produces a fixed pulse. You declare an instance and call it every scan."
+    },
+    {
+      "type": "visual",
+      "heading": "TON timing diagram",
+      "body": "Q follows IN only after PT, and drops immediately.",
+      "diagram": "  IN  ____/~~~~~~~~~~~~~~~~\\________\n  ET  ____/ / / / /PT________\\_______\n  Q   ____________/~~~~~~~~~~\\________\n           |<- PT ->|"
+    },
+    {
+      "type": "example",
+      "heading": "Warning delay",
+      "body": "Light a warning lamp, then start the motor 3 s later.",
+      "code": "VAR Delay : TON; END_VAR\nDelay(IN := Request, PT := T#3s);\nMotorContactor := Delay.Q;"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Calling the timer only inside an IF branch. A timer must be called every scan, otherwise it never sees IN go FALSE and never resets."
+    },
+    {
+      "type": "challenge",
+      "heading": "Pick the timer",
+      "body": "Match the function.",
+      "question": {
+        "question": "A fan must keep running for 30 s after the heater switches off. Which timer?",
+        "options": [
+          "TON",
+          "TOF",
+          "TP"
+        ],
+        "answer": 1,
+        "explanation": "TOF holds Q for PT after IN goes off."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: delayed start",
+      "body": "Implement a 3 s warning before the conveyor starts.",
+      "exercise": "ex.delayed-start"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "TON delays on, TOF delays off, TP makes pulses; call every instance once per scan.\n\n**Troubleshooting note:** PLC Lab timers use simulation time: pausing the simulation pauses them, so you can step through a delay cycle by cycle."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What is ET of a TON while IN is FALSE?",
+      "options": [
+        "PT",
+        "0",
+        "Undefined"
+      ],
+      "answer": 1,
+      "explanation": "TON resets when IN is FALSE."
+    },
+    {
+      "question": "Which literal means two and a half seconds?",
+      "options": [
+        "2.5s",
+        "T#2s500ms",
+        "TIME(2.5)"
+      ],
+      "answer": 1,
+      "explanation": "IEC duration literals start with T#."
+    }
+  ],
+  "knowledgeRefs": [
+    "instruction.ton",
+    "instruction.tof",
+    "instruction.tp"
+  ]
+}

@@ -1,0 +1,258 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.tank-batch-sequence",
+  "revision": 1,
+  "title": "Fill-and-drain batch sequence",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "Write a step sequence: Start fills the tank to the high switch, then the pump drains it to the low switch, then the sequence waits for the next Start. The pump must never run dry and valve and pump never run together.",
+  "objectives": [
+    "Structure a sequence with a step variable and CASE",
+    "Protect a pump against dry running"
+  ],
+  "estimatedMinutes": 30,
+  "scene": "scene.tank-filling",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1 (normally open). *)\n    StopPB : BOOL; (* Stop button S2 (normally closed: TRUE while not pressed). *)\n    LevelLow : BOOL; (* TRUE while the level is below the low switch (LSL-104 contact closes when dry). *)\n    LevelHigh : BOOL; (* TRUE while the level is at or above the high switch (LSH-103 contact closes when wet). *)\n    InletOpen : BOOL; (* Inlet valve fully-open limit switch. *)\n    LevelRaw : INT; (* Raw analog value of LT-105 (scaling depends on the selected platform profile). *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve solenoid XV-101: TRUE opens the valve. *)\n    DrainPump : BOOL; (* Drain pump P-102 contactor. *)\nEND_VAR\nVAR\n    Step : INT;\nEND_VAR\n\n(* Step 0 idle, step 1 filling, step 2 draining. *)\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelLow",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Step 0 (idle): wait for Start.",
+    "Step 1 (fill): InletValve open until LevelHigh.",
+    "Step 2 (drain): DrainPump on until LevelLow, then back to step 0.",
+    "Stop returns to step 0 at any time.",
+    "Valve and pump must never be on together; the pump must never run while LevelLow is TRUE."
+  ],
+  "hints": [
+    "CASE Step OF 0: ... 1: ... 2: ... END_CASE;",
+    "Derive outputs from the step after the CASE: InletValve := Step = 1;",
+    "LevelLow is TRUE while the tank is below the low switch."
+  ],
+  "knowledgeRefs": [
+    "fundamentals.interlocks",
+    "troubleshooting.valve-stuck"
+  ],
+  "evidence": [
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "pump",
+      "source": {
+        "type": "plcTag",
+        "tag": "DrainPump"
+      }
+    },
+    {
+      "name": "high",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelHigh"
+      }
+    },
+    {
+      "name": "low",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelLow"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "cycle",
+      "title": "One complete batch",
+      "durationMs": 40000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "fills",
+      "title": "Start begins filling",
+      "points": 15,
+      "scenario": "cycle",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2000,
+        "condition": {
+          "type": "compare",
+          "signal": "valve",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "InletValve was not open after Start."
+    },
+    {
+      "id": "switches",
+      "title": "At the high level the pump takes over",
+      "points": 25,
+      "scenario": "cycle",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "high",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "type": "compare",
+              "signal": "pump",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        },
+        "withinMs": 200
+      },
+      "onFail": "Valve and pump did not change over at the high level."
+    },
+    {
+      "id": "stops",
+      "title": "The pump stops at the low level",
+      "points": 25,
+      "scenario": "cycle",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "low",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "pump",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        },
+        "withinMs": 200
+      },
+      "onFail": "DrainPump kept running at the low level."
+    },
+    {
+      "id": "exclusive",
+      "title": "Valve and pump never run together",
+      "points": 15,
+      "scenario": "cycle",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "pump",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      "onFail": "InletValve and DrainPump were on together."
+    },
+    {
+      "id": "no-dry-run",
+      "title": "The pump never runs dry",
+      "points": 10,
+      "scenario": "cycle",
+      "rule": {
+        "type": "eventAbsent",
+        "event": "dryRun"
+      },
+      "onFail": "The pump ran dry."
+    },
+    {
+      "id": "no-overflow",
+      "title": "No overflow",
+      "points": 10,
+      "scenario": "cycle",
+      "rule": {
+        "type": "eventAbsent",
+        "event": "overflow"
+      },
+      "onFail": "The tank overflowed."
+    }
+  ]
+}

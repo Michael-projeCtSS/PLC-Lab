@@ -1,0 +1,47 @@
+{
+  "id": "troubleshooting.commissioning-io-check",
+  "kind": "troubleshooting",
+  "title": "I/O check before the first start",
+  "summary": "Wiring and mapping errors are found cheaply during the I/O check and expensively during production.",
+  "tags": [
+    "commissioning",
+    "loop check",
+    "I/O list"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "Wiring and mapping errors are found cheaply during the I/O check and expensively during production."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.commissioning"
+  ],
+  "troubleshooting": {
+    "faultId": "commissioning-io-check",
+    "area": "Commissioning",
+    "target": "All I/O",
+    "effect": "Unchecked I/O hides swapped wires and wrong mappings",
+    "symptoms": [
+      "Actuators react to the wrong command",
+      "Sensor signals appear on unexpected tags"
+    ],
+    "evidence": [
+      "Input LEDs and tags while actuating each sensor",
+      "Forced outputs and the field device reaction"
+    ],
+    "diagnosticMethod": [
+      "Work through the I/O list channel by channel",
+      "Record each check"
+    ],
+    "repair": [
+      "Correct wiring or mapping before the function test"
+    ],
+    "explanation": "A systematic loop check proves that each tag reaches the right terminal and device.",
+    "simulatedIn": []
+  }
+}

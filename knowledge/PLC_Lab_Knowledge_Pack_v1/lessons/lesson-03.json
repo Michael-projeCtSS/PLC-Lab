@@ -1,0 +1,90 @@
+{
+  "id": "lesson.scan-cycle",
+  "number": 3,
+  "title": "The PLC scan cycle",
+  "summary": "Why the PLC sees inputs only at the start of a cycle and writes outputs at the end, and what that means for your program.",
+  "level": "beginner",
+  "minutes": 15,
+  "objectives": [
+    "Describe the three phases of the scan",
+    "Explain why a change is seen one cycle later"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Read - execute - write",
+      "body": "Each cycle the PLC copies all inputs into the **input image**, runs the whole program against that frozen image, then copies the **output image** to the outputs. PLC Lab shows exactly these steps in the cause-and-effect panel: *PLC read*, *PLC logic result*, *Process* and *Next PLC input*."
+    },
+    {
+      "type": "visual",
+      "heading": "One cycle",
+      "body": "Time runs from left to right; the process keeps moving while the program runs.",
+      "diagram": "  cycle n:  | read inputs | execute program | write outputs |\n  process:  ~~~~~~~~~~~~~~~~ machine moves for one cycle ~~~~~~~~~~\n  cycle n+1:                                               | read inputs | ..."
+    },
+    {
+      "type": "example",
+      "heading": "Last assignment wins",
+      "body": "Only the final value of an output in a scan reaches the field.",
+      "code": "Lamp1 := TRUE;\nLamp1 := Button1;  (* Lamp1 follows Button1; the first line has no visible effect *)"
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Expecting a sensor to switch off a valve 'immediately'. The valve closes at the earliest at the end of the scan in which the sensor value was read, and the valve itself needs time to move. Leave margins."
+    },
+    {
+      "type": "challenge",
+      "heading": "Think it through",
+      "body": "Use the cause-and-effect idea.",
+      "question": {
+        "question": "A level switch becomes wet in the middle of a scan. When can the program react?",
+        "options": [
+          "In the same scan",
+          "In the next scan",
+          "Never",
+          "Only after a restart"
+        ],
+        "answer": 1,
+        "explanation": "Inputs are frozen during a scan, so the change is read at the start of the next one."
+      }
+    },
+    {
+      "type": "simulation",
+      "heading": "Step through cycles",
+      "body": "Open the tank station, load a program and use Step to advance exactly one cycle at a time.",
+      "scene": "scene.tank-filling"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "The program always works on a frozen input image and produces one output image per cycle.\n\n**Troubleshooting note:** Strange one-scan delays and 'ignored' assignments are usually explained by the scan cycle, not by a broken PLC."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What does the program read during a scan?",
+      "options": [
+        "The live terminals",
+        "The input image",
+        "The HMI",
+        "The diagnostic buffer"
+      ],
+      "answer": 1,
+      "explanation": "The input image is captured at the start of the cycle."
+    },
+    {
+      "question": "An output is assigned twice in one scan. Which value reaches the field?",
+      "options": [
+        "The first",
+        "The last",
+        "Both alternately",
+        "Neither"
+      ],
+      "answer": 1,
+      "explanation": "The output image holds the last value written in the scan."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.scan-cycle"
+  ]
+}

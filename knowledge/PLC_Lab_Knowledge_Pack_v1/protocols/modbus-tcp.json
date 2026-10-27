@@ -1,0 +1,80 @@
+{
+  "id": "protocol.modbus-tcp",
+  "kind": "protocol",
+  "title": "Modbus TCP",
+  "summary": "Modbus TCP carries the simple Modbus request/response protocol over TCP/IP (port 502). A client (often the PLC) polls registers in a server (a transmitter, drive or meter).",
+  "tags": [
+    "Modbus TCP",
+    "port 502",
+    "holding register",
+    "function code 03",
+    "exception",
+    "unit identifier"
+  ],
+  "sections": [
+    {
+      "heading": "Data model",
+      "body": "Modbus defines four tables: coils (read/write bits), discrete inputs (read-only bits), holding registers (read/write 16-bit words) and input registers (read-only words). Each request names a **function code**, a start **address** and a **quantity**. Common function codes: 01 read coils, 02 read discrete inputs, **03 read holding registers**, **04 read input registers**, 05/06 write single, 15/16 write multiple."
+    },
+    {
+      "heading": "The MBAP header",
+      "body": "Modbus TCP prefixes each PDU with the MBAP header: transaction identifier (matches responses to requests), protocol identifier (0), length and **unit identifier**. Gateways use the unit identifier to address serial devices behind them; many TCP devices ignore it."
+    },
+    {
+      "heading": "Addressing pitfalls",
+      "body": "The protocol uses **zero-based** addresses. Documentation often shows the classic notation 40001 for the first holding register, which is protocol address 0. Mixing the two shifts every value by one register. 32-bit values (REAL, DINT) occupy two registers and the **word order** differs between devices."
+    },
+    {
+      "heading": "Exception responses",
+      "body": "| Code | Meaning |\n| --- | --- |\n| 01 | Illegal function (function code not supported) |\n| 02 | Illegal data address (register not available) |\n| 03 | Illegal data value |\n| 04 | Server device failure |\n| 0A | Gateway path unavailable |\n| 0B | Gateway target device failed to respond |"
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab simulates Modbus TCP behaviorally: the PLC polls servers with FC03/FC04, honors subnet rules, ARP resolution, connection refusal, timeouts, exception codes 01/02/0B, unit identifier handling and word order. Latency is a fixed educational value. **SIMULATION APPROXIMATION**: this is not a conformance-tested implementation."
+    }
+  ],
+  "facts": [
+    {
+      "label": "TCP port",
+      "value": "502",
+      "sources": [
+        "src.modbus-tcp-guide"
+      ]
+    },
+    {
+      "label": "Read holding registers",
+      "value": "function code 03",
+      "sources": [
+        "src.modbus-application-protocol"
+      ]
+    }
+  ],
+  "sources": [
+    "src.modbus-application-protocol",
+    "src.modbus-tcp-guide",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "protocol.modbus-rtu",
+    "troubleshooting.modbus-wrong-register",
+    "troubleshooting.ip-subnet-mismatch"
+  ],
+  "protocol": "modbus-tcp",
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "FC03/FC04 polling with transaction identifiers",
+      "Zero-based addressing and word order",
+      "Exception codes 01, 02 and 0B",
+      "Subnet, gateway, ARP, connection refused and timeout behavior"
+    ],
+    "approximated": [
+      "Fixed one-way latency; TCP connection setup abstracted to round trips"
+    ],
+    "omitted": [
+      "Write function codes",
+      "TCP segmentation, retransmission and congestion",
+      "Security (Modbus/TCP Security)"
+    ]
+  }
+}

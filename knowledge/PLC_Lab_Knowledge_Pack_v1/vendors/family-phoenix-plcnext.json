@@ -1,0 +1,27 @@
+{
+  "id": "family.phoenix-plcnext",
+  "kind": "family",
+  "title": "PLCnext Control",
+  "summary": "Open Linux-based controllers with Axioline F I/O.",
+  "tags": [
+    "PLCnext",
+    "Axioline"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "Controllers run a real-time Linux; IEC 61131-3 programs and high-level language programs share the Global Data Space."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "Background knowledge only. **CONCEPTUAL**."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.phoenix-docs"
+  ],
+  "related": [],
+  "vendor": "vendor.phoenix-contact",
+  "tier": "B"
+}

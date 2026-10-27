@@ -1,0 +1,31 @@
+{
+  "id": "fundamentals.commissioning",
+  "kind": "topic",
+  "title": "Commissioning workflow",
+  "summary": "Commissioning brings a machine from installed hardware to verified operation in controlled steps: hardware check, I/O check, function test, process test and handover.",
+  "tags": [
+    "commissioning",
+    "loop check",
+    "I/O check",
+    "force",
+    "handover"
+  ],
+  "sections": [
+    {
+      "heading": "A proven sequence",
+      "body": "1. **Visual and power check**: supplies, terminals, module positions.\n2. **Hardware configuration**: download, compare configured and installed modules, clear diagnostics.\n3. **I/O check (loop check)**: actuate every sensor and force every output (with the machine made safe), confirm each tag reacts on the right address.\n4. **Analog check**: inject or simulate known values (for example 4, 12, 20 mA) and verify scaling.\n5. **Function test**: run each sequence step by step, then automatically.\n6. **Fault tests**: pull a sensor, open a stop circuit, simulate communication loss; the machine must react safely.\n7. **Documentation and handover**."
+    },
+    {
+      "heading": "Forcing with care",
+      "body": "Forcing overrides inputs or outputs regardless of the program. It is indispensable for loop checks and dangerous when forgotten: a forced output stays on even when the program says off. PLC Lab shows active forces in the toolbar and the CPU FORCE LED."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.diagnostics",
+    "troubleshooting.commissioning-io-check"
+  ]
+}

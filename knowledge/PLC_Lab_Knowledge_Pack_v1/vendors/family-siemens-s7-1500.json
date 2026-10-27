@@ -1,0 +1,108 @@
+{
+  "id": "family.siemens-s7-1500",
+  "kind": "family",
+  "title": "SIMATIC S7-1500",
+  "summary": "Modular Siemens controller on a mounting rail with I/O modules in the central rack and ET 200 distributed I/O.",
+  "tags": [
+    "S7-1500",
+    "TIA Portal",
+    "ET 200MP"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "S7-1500 CPUs sit in slot 1 of a rail; I/O modules follow in slots 2 onwards. A system power supply may sit in slot 0. Distributed I/O such as ET 200SP or ET 200MP connects over PROFINET."
+    },
+    {
+      "heading": "Diagnostics",
+      "body": "The CPU display and the diagnostic buffer show module and channel events (missing module, wire break, overflow). Analog channels can enable diagnostics such as wire break per channel."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product."
+    }
+  ],
+  "facts": [
+    {
+      "label": "Analog overrange / overflow",
+      "value": "overrange up to 32511, overflow 32767 (check module manual)",
+      "sources": [
+        "src.siemens-analog-value-processing"
+      ]
+    }
+  ],
+  "sources": [
+    "src.siemens-support",
+    "src.siemens-analog-value-processing",
+    "src.plclab-simulation"
+  ],
+  "related": [],
+  "vendor": "vendor.siemens",
+  "tier": "A",
+  "simulation": {
+    "id": "siemens.s7-1500",
+    "vendor": "siemens",
+    "family": "s7-1500",
+    "displayName": "Siemens S7-1500 (PLC Lab profile)",
+    "tier": "a",
+    "fidelity": {
+      "level": "APPROXIMATED_BEHAVIORAL",
+      "modeled": [
+        "Cyclic scan with input image, transactional program execution and output update",
+        "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+        "Digital and analog channel behavior including wire break and over/underrange"
+      ],
+      "approximated": [
+        "Analog values use the S7 nominal band 0..27648 with overrange to 32511 and overflow 32767",
+        "Wire break reports 32767 with an incoming diagnostic event when diagnostics are enabled"
+      ],
+      "omitted": [
+        "Vendor firmware, memory model, task model and instruction set",
+        "Vendor engineering software project formats",
+        "Online editing, retentive memory and multiple tasks",
+        "Safety and redundancy functions"
+      ]
+    },
+    "addressing": "byteBit",
+    "analog": "s7Nominal27648",
+    "startup": "reinitializeNonRetentive",
+    "products": [
+      {
+        "module": "cpu.modular",
+        "product": "S7-1500 CPU",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ps.24vdc",
+        "product": "PM 24 V DC load power supply",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "di16.24vdc.sink",
+        "product": "DI 16x24VDC module",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "do16.24vdc",
+        "product": "DQ 16x24VDC/0.5A module",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ai8.ui",
+        "product": "AI 8xU/I module",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ai4.ui",
+        "product": "AI 4xU/I module",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      },
+      {
+        "module": "ao2.ui",
+        "product": "AQ 2xU/I module",
+        "note": "Representative product family name for presentation; not a vendor-validated configuration."
+      }
+    ],
+    "terminology": []
+  }
+}

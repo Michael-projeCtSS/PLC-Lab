@@ -1,0 +1,85 @@
+{
+  "id": "instruction.ctu",
+  "kind": "instruction",
+  "title": "CTU: up counter",
+  "summary": "CTU increments its count CV on each rising edge of CU and sets Q when CV reaches the preset PV.",
+  "tags": [
+    "CTU",
+    "counter",
+    "count up",
+    "PV",
+    "CV"
+  ],
+  "sections": [
+    {
+      "heading": "Behavior",
+      "body": "- Each FALSE-to-TRUE change of **CU** increments **CV** by one (CTU detects the edge itself).\n- **Q** is TRUE while CV >= **PV**.\n- **R** (reset) sets CV to 0; it has priority over CU.\n- CV does not increase beyond the maximum INT value."
+    },
+    {
+      "heading": "Example",
+      "body": "```\nVAR Parts : CTU; END_VAR\nParts(CU := PartPresent, R := ResetButton, PV := 10);\nBatchComplete := Parts.Q;\n```"
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "instruction.ctd",
+    "instruction.r-trig"
+  ],
+  "instruction": {
+    "category": "Counters",
+    "inputs": [
+      {
+        "name": "CU",
+        "type": "BOOL",
+        "description": "Count up on rising edge"
+      },
+      {
+        "name": "R",
+        "type": "BOOL",
+        "description": "Reset CV to 0"
+      },
+      {
+        "name": "PV",
+        "type": "INT",
+        "description": "Preset value"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Q",
+        "type": "BOOL",
+        "description": "CV >= PV"
+      },
+      {
+        "name": "CV",
+        "type": "INT",
+        "description": "Current count"
+      }
+    ],
+    "state": "Count value and previous CU state.",
+    "retentivity": "Not retentive in PLC Lab.",
+    "timing": "One count per rising edge between calls.",
+    "simulationSupport": "EXACT_BEHAVIORAL",
+    "equivalents": [
+      {
+        "platform": "Siemens S7-1200/S7-1500",
+        "name": "CTU",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Rockwell Logix",
+        "name": "CTU",
+        "notes": "COUNTER structure with PRE/ACC and DN; reset with RES. Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      },
+      {
+        "platform": "Beckhoff TwinCAT 3 / CODESYS",
+        "name": "CTU",
+        "notes": "Name as commonly used on this platform; check the platform documentation for the exact instance data type and parameters."
+      }
+    ]
+  }
+}

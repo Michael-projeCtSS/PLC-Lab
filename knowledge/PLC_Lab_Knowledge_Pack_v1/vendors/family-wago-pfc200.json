@@ -1,0 +1,28 @@
+{
+  "id": "family.wago-pfc200",
+  "kind": "family",
+  "title": "WAGO PFC200",
+  "summary": "Compact DIN-rail controllers with WAGO I/O System 750 modules.",
+  "tags": [
+    "PFC200",
+    "750 I/O",
+    "CODESYS"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "I/O modules snap onto the controller and form the local bus; power supply modules feed potential groups."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "Background knowledge only. **CONCEPTUAL**."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.wago-docs"
+  ],
+  "related": [],
+  "vendor": "vendor.wago",
+  "tier": "B"
+}

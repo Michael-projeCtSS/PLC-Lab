@@ -1,0 +1,38 @@
+{
+  "id": "protocol.canopen",
+  "kind": "protocol",
+  "title": "CANopen",
+  "summary": "CANopen is a higher-layer protocol on CAN with an object dictionary, process data objects (PDO) and service data objects (SDO).",
+  "tags": [
+    "CANopen",
+    "PDO",
+    "SDO",
+    "node ID"
+  ],
+  "sections": [
+    {
+      "heading": "Key ideas",
+      "body": "Each node has a node ID and an object dictionary. PDOs carry real-time process data, SDOs access the dictionary, NMT controls the node state, heartbeat or node guarding monitor presence."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "Bit rate mismatch, duplicate node IDs, missing termination (120 ohm at both ends) and error-passive or bus-off nodes."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.cia-canopen"
+  ],
+  "related": [],
+  "protocol": "canopen",
+  "fidelity": {
+    "level": "NOT_IMPLEMENTED",
+    "modeled": [],
+    "approximated": [],
+    "omitted": []
+  }
+}

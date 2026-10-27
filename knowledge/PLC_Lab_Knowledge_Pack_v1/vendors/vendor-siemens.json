@@ -1,0 +1,33 @@
+{
+  "id": "vendor.siemens",
+  "kind": "vendor",
+  "title": "Siemens SIMATIC",
+  "summary": "SIMATIC is Siemens' automation family. Current controllers are the S7-1200 (compact) and S7-1500 (modular), with ET 200SP distributed I/O, all engineered in TIA Portal. S7-300/400 are the previous generation.",
+  "tags": [
+    "Siemens SIMATIC"
+  ],
+  "sections": [
+    {
+      "heading": "Platforms",
+      "body": "| Family | Role |\n| --- | --- |\n| S7-1200 | Compact controller for small machines, side-mounted signal modules |\n| S7-1500 | Modular controller for medium to large machines and lines |\n| ET 200SP | Fine-granular distributed I/O, usually on PROFINET |\n| S7-300 / S7-400 | Previous generation, still widespread in existing plants |"
+    },
+    {
+      "heading": "Engineering",
+      "body": "Projects are created in **TIA Portal** (STEP 7 for programming, WinCC for HMI). Languages include LAD, FBD, SCL (Structured Text), STL (S7-300/400/1500) and GRAPH. Hardware is configured in the device view: rack, slots, start addresses and channel parameters."
+    },
+    {
+      "heading": "Conventions worth knowing",
+      "body": "- Process image addresses in byte.bit form: `%I0.0`, `%Q0.0`, analog words such as `%IW64`.\n- Analog values use a nominal range of 0 to 27648 (bipolar -27648 to 27648) independent of the module resolution.\n- Communication: PROFINET is the native fieldbus; PROFIBUS DP on older systems."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.siemens-support",
+    "src.siemens-analog-value-processing"
+  ],
+  "related": [
+    "family.siemens-s7-1200",
+    "family.siemens-s7-1500"
+  ],
+  "tier": "A"
+}

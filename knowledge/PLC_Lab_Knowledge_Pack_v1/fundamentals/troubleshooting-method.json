@@ -1,0 +1,35 @@
+{
+  "id": "fundamentals.troubleshooting-method",
+  "kind": "topic",
+  "title": "Troubleshooting methodology",
+  "summary": "Systematic fault finding: reproduce the symptom, collect evidence, form a hypothesis that explains all of it, test it, repair, and verify the whole function.",
+  "tags": [
+    "troubleshooting",
+    "root cause",
+    "evidence",
+    "hypothesis",
+    "verification"
+  ],
+  "sections": [
+    {
+      "heading": "The cycle",
+      "body": "1. **Understand the symptom**: what exactly does not work, since when, after what change?\n2. **Reproduce** it safely.\n3. **Collect evidence** from the outside in: process (what does the machine do), field devices and wiring (measure), I/O module (LEDs, quality), PLC image (variables), program logic, communication.\n4. **Hypothesis**: one cause that explains *every* observation.\n5. **Test** the hypothesis with a measurement or a safe experiment.\n6. **Repair** the root cause, not the symptom.\n7. **Verify** the complete function, not only the part that failed."
+    },
+    {
+      "heading": "Divide and conquer",
+      "body": "Split the signal path in the middle: if the input LED is on but the PLC tag is FALSE, the field side is fine and the fault is between module and program. If the LED is off, measure the terminal. Each test should halve the search space."
+    },
+    {
+      "heading": "How PLC Lab grades it",
+      "body": "Troubleshooting labs record your diagnosis attempts, the evidence you looked at and the repairs you made. Points are given for a correct first diagnosis, a repaired installation and a verified system; guessing costs points."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.diagnostics",
+    "troubleshooting.nc-contact-replaced-by-no"
+  ]
+}

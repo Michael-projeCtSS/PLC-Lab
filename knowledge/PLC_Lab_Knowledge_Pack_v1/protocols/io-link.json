@@ -1,0 +1,39 @@
+{
+  "id": "protocol.io-link",
+  "kind": "protocol",
+  "title": "IO-Link",
+  "summary": "IO-Link is a point-to-point communication for sensors and actuators over standard unshielded cables, standardized as IEC 61131-9 (SDCI).",
+  "tags": [
+    "IO-Link",
+    "SDCI",
+    "IODD",
+    "master port"
+  ],
+  "sections": [
+    {
+      "heading": "Key ideas",
+      "body": "An IO-Link master port connects one device. The device can work as a plain switching sensor or exchange process data, parameters and diagnostics. IODD files describe devices; parameter servers allow automatic re-parameterization after replacement."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "Wrong port mode (digital input instead of IO-Link), device replaced with a different variant, parameter server conflicts."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.io-link",
+    "src.iec-61131-9"
+  ],
+  "related": [],
+  "protocol": "io-link",
+  "fidelity": {
+    "level": "NOT_IMPLEMENTED",
+    "modeled": [],
+    "approximated": [],
+    "omitted": []
+  }
+}

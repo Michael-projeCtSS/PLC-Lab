@@ -1,0 +1,27 @@
+{
+  "id": "family.mitsubishi-iq-r",
+  "kind": "family",
+  "title": "MELSEC iQ-R",
+  "summary": "Modular Mitsubishi controllers on a base unit with CPU, power supply and I/O modules.",
+  "tags": [
+    "iQ-R",
+    "CC-Link IE"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "iQ-R systems use a base unit with power supply, one or more CPUs and I/O modules; CC-Link IE networks connect remote stations."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "Background knowledge only. **CONCEPTUAL**."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.mitsubishi-docs"
+  ],
+  "related": [],
+  "vendor": "vendor.mitsubishi",
+  "tier": "B"
+}

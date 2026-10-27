@@ -1,0 +1,53 @@
+{
+  "id": "troubleshooting.modbus-wrong-register",
+  "kind": "troubleshooting",
+  "title": "Modbus register address offset by one or wrong",
+  "summary": "Modbus communication works (no timeout, no exception) but the value is wrong or constant: the PLC reads the wrong register.",
+  "tags": [
+    "Modbus",
+    "register",
+    "offset",
+    "word order"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "Modbus communication works (no timeout, no exception) but the value is wrong or constant: the PLC reads the wrong register."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.modbus-application-protocol",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "protocol.modbus-tcp"
+  ],
+  "troubleshooting": {
+    "faultId": "modbus-wrong-register",
+    "area": "Networking",
+    "target": "Modbus client configuration",
+    "effect": "Plausible but wrong data",
+    "symptoms": [
+      "Communication status OK, value constant or nonsensical",
+      "Value of a neighboring register appears"
+    ],
+    "evidence": [
+      "Register table of the device",
+      "Configured start address and offsets",
+      "Raw registers received"
+    ],
+    "diagnosticMethod": [
+      "Compare the device's register map (and whether it uses 0-based or 40001 notation) with the client configuration",
+      "Check data type and word order for 32-bit values"
+    ],
+    "repair": [
+      "Correct the register address or offset",
+      "Verify against a known process value"
+    ],
+    "explanation": "Modbus addresses on the wire are zero-based; register 40001 in documentation is address 0. Off-by-one errors produce valid responses with the wrong data.",
+    "simulatedIn": [
+      "ts.remote-level-wrong"
+    ]
+  }
+}

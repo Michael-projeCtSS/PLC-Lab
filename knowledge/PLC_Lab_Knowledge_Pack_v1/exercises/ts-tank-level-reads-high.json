@@ -1,0 +1,374 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ts.tank-level-reads-high",
+  "revision": 1,
+  "title": "Tank stops filling at half level",
+  "kind": "troubleshooting",
+  "difficulty": "intermediate",
+  "summary": "The tank should fill to 60 % but stops near 50 %, and the level display reads higher than the sight glass, most of all when the tank is nearly empty.",
+  "objectives": [
+    "Check an analog signal from the transmitter to the engineering value",
+    "Find a configuration error with a measurement"
+  ],
+  "estimatedMinutes": 25,
+  "scene": "scene.tank-filling",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1 (normally open). *)\n    StopPB : BOOL; (* Stop button S2 (normally closed: TRUE while not pressed). *)\n    LevelLow : BOOL; (* TRUE while the level is below the low switch (LSL-104 contact closes when dry). *)\n    LevelHigh : BOOL; (* TRUE while the level is at or above the high switch (LSH-103 contact closes when wet). *)\n    InletOpen : BOOL; (* Inlet valve fully-open limit switch. *)\n    LevelRaw : INT; (* Raw analog value of LT-105 (scaling depends on the selected platform profile). *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve solenoid XV-101: TRUE opens the valve. *)\n    DrainPump : BOOL; (* Drain pump P-102 contactor. *)\n    LevelPercent : REAL; (* Level 0..100 % computed from LevelRaw *)\n    HighAlarm : BOOL; (* Level above 85 % *)\nEND_VAR\nVAR\n    Filling : BOOL;\nEND_VAR\n\nLevelPercent := INT_TO_REAL(LevelRaw) / 100.0;\nHighAlarm := LevelPercent > 85.0;\nFilling := (StartPB OR Filling) AND StopPB AND LevelPercent < 60.0 AND NOT HighAlarm;\nInletValve := Filling;\nDrainPump := FALSE;\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelRaw",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "LevelPercent",
+      "type": "REAL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Compare LevelPercent with the real tank level in the Process view.",
+    "Measure the loop current at the analog input and calculate the expected percentage.",
+    "Inspect the analog channel configuration (Hardware, Advanced mode).",
+    "Diagnose, correct, download, then verify."
+  ],
+  "hints": [
+    "A 4-20 mA transmitter delivers 5.6 mA at 10 % level.",
+    "What does a channel configured for 0-20 mA make of 4 mA?"
+  ],
+  "knowledgeRefs": [
+    "troubleshooting.analog-wrong-range",
+    "fundamentals.4-20ma"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "raw",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelRaw"
+      }
+    },
+    {
+      "name": "percent",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelPercent"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "level",
+      "source": {
+        "type": "component",
+        "component": "tank",
+        "quantity": "levelPermille"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "fill",
+      "title": "Fill to the setpoint",
+      "durationMs": 16000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "scaled",
+      "title": "LevelPercent matches the tank level",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 400,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 9.0
+            },
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "le",
+              "value": 11.0
+            }
+          ]
+        }
+      },
+      "onFail": "LevelPercent was not about 10 % while the tank was at 10 %. Check the scaling (generic profile: 0..10000 = 0..100 %)."
+    },
+    {
+      "id": "fills",
+      "title": "The tank fills to about 60 %",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "ge",
+          "value": 580
+        },
+        "byMs": 15000
+      },
+      "onFail": "The tank did not reach 58 %."
+    },
+    {
+      "id": "stops",
+      "title": "The valve closes at 60 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "raw",
+          "layer": "inputs",
+          "op": "ge",
+          "value": 6000
+        },
+        "response": {
+          "type": "compare",
+          "signal": "valve",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        },
+        "withinMs": 200
+      },
+      "onFail": "InletValve stayed open after the analog level reached 60 %."
+    },
+    {
+      "id": "no-overfill",
+      "title": "The level stays below 70 %",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "le",
+          "value": 700
+        },
+        "fromMs": 0
+      },
+      "onFail": "The tank was filled above 70 %."
+    }
+  ],
+  "starterStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current0To20mA",
+            "diagnostics": true
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          },
+          {
+            "channel": 2,
+            "mode": "disabled"
+          },
+          {
+            "channel": 3,
+            "mode": "disabled"
+          }
+        ]
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "LevelLow"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "tag": "LevelHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 4
+        },
+        "tag": "InletOpen"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "DrainPump"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "tag": "LevelRaw"
+      }
+    ]
+  },
+  "troubleshooting": {
+    "symptom": "Filling stops at about half the tank instead of 60 %. The HMI shows 28 % when the sight glass shows 10 %.",
+    "reportedBy": "Process operator, tank farm",
+    "faults": [],
+    "diagnosisOptions": [
+      {
+        "id": "transmitter-drift",
+        "label": "The level transmitter has drifted"
+      },
+      {
+        "id": "range-0-20",
+        "label": "The analog input channel is configured for 0-20 mA instead of 4-20 mA"
+      },
+      {
+        "id": "scaling-error",
+        "label": "The program scales the raw value wrongly"
+      },
+      {
+        "id": "wire-break",
+        "label": "The transmitter loop is broken"
+      },
+      {
+        "id": "valve-slow",
+        "label": "The inlet valve closes too early"
+      }
+    ],
+    "rootCauses": [
+      "range-0-20"
+    ],
+    "repairs": [],
+    "verification": [
+      "scaled",
+      "fills",
+      "stops",
+      "no-overfill"
+    ],
+    "knowledgeRefs": [
+      "troubleshooting.analog-wrong-range"
+    ]
+  }
+}

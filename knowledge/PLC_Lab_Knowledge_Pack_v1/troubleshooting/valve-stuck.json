@@ -1,0 +1,51 @@
+{
+  "id": "troubleshooting.valve-stuck",
+  "kind": "troubleshooting",
+  "title": "Valve mechanically stuck",
+  "summary": "The valve is commanded but does not move; its position feedback contradicts the command.",
+  "tags": [
+    "valve",
+    "feedback",
+    "stuck"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "The valve is commanded but does not move; its position feedback contradicts the command."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.interlocks"
+  ],
+  "troubleshooting": {
+    "faultId": "valve-stuck",
+    "area": "Process",
+    "target": "On/off valve",
+    "effect": "Process does not react; possible overflow or dry run",
+    "symptoms": [
+      "Command TRUE, position stays closed (or the reverse)",
+      "Process value does not change",
+      "Feedback alarm after the travel time"
+    ],
+    "evidence": [
+      "Command and position feedback",
+      "Process trend",
+      "Local inspection of the actuator"
+    ],
+    "diagnosticMethod": [
+      "Compare command and feedback over time",
+      "Check air or power supply to the actuator",
+      "Operate the valve manually if safe"
+    ],
+    "repair": [
+      "Repair or replace the actuator",
+      "Add feedback supervision to the program"
+    ],
+    "explanation": "Without feedback supervision the PLC cannot know that a commanded valve did not move.",
+    "simulatedIn": []
+  }
+}

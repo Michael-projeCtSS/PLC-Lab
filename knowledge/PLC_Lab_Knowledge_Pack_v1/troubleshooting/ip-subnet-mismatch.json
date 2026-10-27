@@ -1,0 +1,55 @@
+{
+  "id": "troubleshooting.ip-subnet-mismatch",
+  "kind": "troubleshooting",
+  "title": "Device address outside the PLC subnet",
+  "summary": "The PLC cannot reach a device: its IP address was changed to another subnet and no gateway is configured.",
+  "tags": [
+    "IP",
+    "subnet",
+    "mask",
+    "gateway",
+    "ping"
+  ],
+  "sections": [
+    {
+      "heading": "Summary",
+      "body": "The PLC cannot reach a device: its IP address was changed to another subnet and no gateway is configured."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "protocol.modbus-tcp"
+  ],
+  "troubleshooting": {
+    "faultId": "ip-subnet-mismatch",
+    "area": "Networking",
+    "target": "IP addressing",
+    "effect": "Communication timeout or no route",
+    "symptoms": [
+      "Connection status: no route or timeout",
+      "Ping from the PLC fails",
+      "Communication-OK flag FALSE"
+    ],
+    "evidence": [
+      "PLC interface address and mask",
+      "Device address",
+      "Ping result",
+      "Connection diagnostics"
+    ],
+    "diagnosticMethod": [
+      "Compare addresses and masks",
+      "Ping the device from the PLC side",
+      "Check the device's current address"
+    ],
+    "repair": [
+      "Restore the documented device address or correct the configuration"
+    ],
+    "explanation": "Without a gateway a device can only reach addresses in its own subnet; ARP requests for other subnets are never answered.",
+    "simulatedIn": [
+      "ts.remote-level-lost"
+    ]
+  }
+}

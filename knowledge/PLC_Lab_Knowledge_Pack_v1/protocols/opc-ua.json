@@ -1,0 +1,38 @@
+{
+  "id": "protocol.opc-ua",
+  "kind": "protocol",
+  "title": "OPC UA",
+  "summary": "OPC UA is a platform-independent standard for secure information exchange from the field to the enterprise, with an information model, services and built-in security.",
+  "tags": [
+    "OPC UA",
+    "IEC 62541",
+    "certificate",
+    "subscription"
+  ],
+  "sections": [
+    {
+      "heading": "Key ideas",
+      "body": "Servers expose an address space of nodes (variables, objects, methods). Clients browse, read, write and subscribe to changes. Security uses certificates and policies; PubSub adds broker-based or UDP communication."
+    },
+    {
+      "heading": "Typical faults",
+      "body": "Untrusted certificates, mismatched security policies, wrong endpoint URLs, firewall rules blocking port 4840 and subscriptions with too-short sampling intervals."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.opc-ua"
+  ],
+  "related": [],
+  "protocol": "opc-ua",
+  "fidelity": {
+    "level": "NOT_IMPLEMENTED",
+    "modeled": [],
+    "approximated": [],
+    "omitted": []
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.lamp-pushbutton",
+  "revision": 1,
+  "title": "Pushbutton lights a lamp",
+  "kind": "practice",
+  "difficulty": "beginner",
+  "summary": "Your first PLC program: a pushbutton switches a lamp, and a selector switch shows its position on a second lamp.",
+  "objectives": [
+    "Read a digital input and write a digital output",
+    "See the input image and the output image in one scan"
+  ],
+  "estimatedMinutes": 10,
+  "scene": "scene.io-basics",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    Button1 : BOOL; (* Pushbutton S1, normally open. *)\n    Button2 : BOOL; (* Pushbutton S2, normally open. *)\n    AutoMode : BOOL; (* Selector S3 in position AUTO. *)\n    PartPresent : BOOL; (* Proximity sensor B1 detects a part. *)\nEND_VAR\nVAR_OUTPUT\n    Lamp1 : BOOL; (* Green lamp H1. *)\n    Lamp2 : BOOL; (* Amber lamp H2. *)\n    Lamp3 : BOOL; (* Red lamp H3. *)\nEND_VAR\n\n(* Lamp1 must be on while Button1 is pressed. Lamp2 must show the AUTO position of the selector. *)\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "Button1",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "AutoMode",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Lamp1",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "Lamp2",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Lamp1 is on exactly while Button1 is pressed.",
+    "Lamp2 is on while the selector S3 is in AUTO.",
+    "Load the program with Build & Load, then press S1 in the Process view and watch the cause-and-effect panel."
+  ],
+  "hints": [
+    "An assignment copies a value: Lamp1 := Button1;",
+    "Every scan reads all inputs first, so the lamp follows the button one scan later."
+  ],
+  "knowledgeRefs": [
+    "fundamentals.digital-io",
+    "fundamentals.scan-cycle"
+  ],
+  "evidence": [
+    {
+      "name": "button",
+      "source": {
+        "type": "plcTag",
+        "tag": "Button1"
+      }
+    },
+    {
+      "name": "lamp1",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp1"
+      }
+    },
+    {
+      "name": "auto",
+      "source": {
+        "type": "plcTag",
+        "tag": "AutoMode"
+      }
+    },
+    {
+      "name": "lamp2",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp2"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "press",
+      "title": "Press and release S1, then select AUTO",
+      "durationMs": 3000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 1100,
+          "action": {
+            "type": "release",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "setSelector",
+            "component": "sel",
+            "position": 1
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "lamp-on",
+      "title": "Lamp1 follows the pressed button",
+      "points": 40,
+      "scenario": "press",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "button",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "lamp1",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "withinMs": 200
+      },
+      "onFail": "Lamp1 did not switch on while Button1 was TRUE."
+    },
+    {
+      "id": "lamp-off",
+      "title": "Lamp1 goes off after release",
+      "points": 30,
+      "scenario": "press",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 1500,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp1",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "Lamp1 stayed on after the button was released."
+    },
+    {
+      "id": "auto-lamp",
+      "title": "Lamp2 shows AUTO",
+      "points": 30,
+      "scenario": "press",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2600,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp2",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp2 was off with the selector in AUTO."
+    }
+  ]
+}

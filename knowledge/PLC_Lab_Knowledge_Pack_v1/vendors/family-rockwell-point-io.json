@@ -1,0 +1,28 @@
+{
+  "id": "family.rockwell-point-io",
+  "kind": "family",
+  "title": "POINT I/O",
+  "summary": "Modular distributed I/O connected over EtherNet/IP through an adapter.",
+  "tags": [
+    "POINT I/O",
+    "EtherNet/IP",
+    "adapter"
+  ],
+  "sections": [
+    {
+      "heading": "Overview",
+      "body": "An adapter module connects a row of small I/O modules to EtherNet/IP. The controller owns the connection and receives the I/O data cyclically."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "Background knowledge only. **CONCEPTUAL**: EtherNet/IP is not simulated."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.rockwell-literature"
+  ],
+  "related": [],
+  "vendor": "vendor.rockwell",
+  "tier": "A"
+}
