@@ -15,7 +15,7 @@
     "dev:web": "npm run dev --workspace @plc-lab/desktop",
     "build": "npm run typecheck && npm run build --workspace @plc-lab/desktop",
     "build:desktop": "node scripts/native.mjs build --debug --no-bundle",
-    "build:release": "npm run validate && node scripts/native.mjs build --no-bundle -- --locked && node scripts/stage-release.mjs",
+    "build:release": "npm run validate && npm run build:release:native && npm run stage:release",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write . && node scripts/rust.mjs fmt --all",
     "format:check": "prettier --check . && node scripts/rust.mjs fmt --all -- --check",
@@ -34,7 +34,11 @@
     "test:ci": "node --test tests/architecture/ci.test.mjs",
     "knowledge:validate": "node scripts/knowledge-pack.mjs validate",
     "knowledge:zip": "node scripts/knowledge-pack.mjs zip",
-    "knowledge:verify": "node scripts/knowledge-pack.mjs verify"
+    "knowledge:verify": "node scripts/knowledge-pack.mjs verify",
+    "stage:release": "node scripts/rust.mjs build --release --locked -p plc-lab-launcher && node scripts/stage-release.mjs",
+    "test:desktop:release": "node tests/e2e/desktop-smoke.mjs --exe \"releases/current/PLC Lab Desktop.exe\" --build release --out release-smoke",
+    "test:launcher": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --build release --out launcher-smoke --launcher",
+    "build:release:native": "node scripts/native.mjs build --no-bundle -- --locked"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -133,27 +133,18 @@ test("release staging preserves exact bytes and replaces the whole previous arti
 });
 
 test(
-  "actual release BAT from another working directory fails clearly when no release exists",
+  "release BAT from another working directory fails clearly when no release exists",
   { skip: process.platform !== "win32" },
   async () => {
     const directory = await fixture();
     try {
-      await mkdir(path.join(directory, "scripts"));
       await copyFile(
-        path.join(root, "RUN_PLC_LAB_RELEASE.bat"),
-        path.join(directory, "RUN_PLC_LAB_RELEASE.bat"),
-      );
-      await copyFile(
-        path.join(root, "scripts/human-launcher.bat"),
-        path.join(directory, "scripts/human-launcher.bat"),
+        path.join(root, "RUN_PLC_LAB.bat"),
+        path.join(directory, "RUN_PLC_LAB.bat"),
       );
       const result = spawnSync(
         process.env.ComSpec ?? "C:/Windows/System32/cmd.exe",
-        [
-          "/d",
-          "/c",
-          `call "${path.join(directory, "RUN_PLC_LAB_RELEASE.bat")}"`,
-        ],
+        ["/d", "/c", `call "${path.join(directory, "RUN_PLC_LAB.bat")}"`],
         {
           cwd: root,
           env: { ...process.env, PLC_LAB_NO_PAUSE: "1" },

@@ -4,6 +4,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   realpath,
   rename,
   rm,
@@ -15,6 +16,14 @@ import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { root, toolchainEnvironment } from "./toolchain.mjs";
+import {
+  DEFAULT_PACK,
+  DEFAULT_ZIP,
+  PACK_NAME,
+  verifyZip,
+} from "./knowledge-pack.mjs";
+
+export const APPLICATION = "PLC Lab Desktop.exe";
 
 function within(parent, target) {
   const relative = path.relative(parent, path.resolve(target));
@@ -36,11 +45,33 @@ async function hash(file) {
     .digest("hex");
 }
 
+async function copyTree(source, destination, prefix, records) {
+  await mkdir(destination, { recursive: true });
+  for (const entry of (await readdir(source, { withFileTypes: true })).sort(
+    (a, b) => a.name.localeCompare(b.name),
+  )) {
+    const from = path.join(source, entry.name);
+    const to = path.join(destination, entry.name);
+    const name = `${prefix}/${entry.name}`;
+    if (entry.isSymbolicLink())
+      throw new Error(`Symbolic links are not staged: ${from}`);
+    if (entry.isDirectory()) await copyTree(from, to, name, records);
+    else {
+      await copyFile(from, to, constants.COPYFILE_EXCL);
+      const sourceHash = await hash(from);
+      if (sourceHash !== (await hash(to)))
+        throw new Error(`Copied artifact verification failed: ${name}`);
+      records.push({ name, sha256: sourceHash });
+    }
+  }
+}
+
 export async function stageArtifactSet(
   sourceDir,
   outputDir,
   files,
   information,
+  trees = [],
 ) {
   await mkdir(path.dirname(outputDir), { recursive: true });
   const parent = await realpath(path.dirname(outputDir));
@@ -74,13 +105,31 @@ export async function stageArtifactSet(
         throw new Error(`Copied artifact verification failed: ${file.target}`);
       records.push({ name: file.target, sha256: sourceHash });
     }
+    for (const tree of trees) {
+      const parts = tree.target.split("/");
+      if (parts.some((part) => !part || part === "." || part === ".."))
+        throw new Error("Artifact tree targets must be relative folder names.");
+      await copyTree(
+        tree.source,
+        path.join(staging, ...parts),
+        tree.target,
+        records,
+      );
+    }
     await writeFile(
       path.join(staging, "release-manifest.json"),
       `${JSON.stringify({ ...information, stagedAt: new Date().toISOString(), files: records }, null, 2)}\n`,
     );
     await writeFile(
       path.join(staging, "RUNTIME_REQUIREMENTS.txt"),
-      "Local Windows release executable, not an installer.\r\nRequires Windows x64 and an installed Microsoft Edge WebView2 Runtime.\r\nNo WebView2 runtime is bundled. Keep any DLLs listed in release-manifest.json beside the executable.\r\nSee docs/HUMAN_TESTING.md for the validated environment and prerequisites.\r\n",
+      [
+        "PLC Lab portable release (not an installer).",
+        "Start it with PLC Lab.exe or RUN_PLC_LAB.bat in the repository root, or with PLC Lab Desktop.exe in this folder.",
+        "Requires Windows 10/11 x64 and the Microsoft Edge WebView2 Runtime (preinstalled on current Windows; not bundled).",
+        "Knowledge packs are read from knowledge-packs\\ in this folder and from %APPDATA%\\dev.plclab.desktop\\knowledge-packs.",
+        "Keep every file listed in release-manifest.json together.",
+        "",
+      ].join("\r\n"),
     );
     try {
       await rename(current, backup);
@@ -178,7 +227,7 @@ async function main() {
     throw new Error(
       "Could not identify executable DLL imports; release artifact set was not verified.",
     );
-  const files = [{ source: sourceName, target: "PLC Lab.exe" }];
+  const files = [{ source: sourceName, target: APPLICATION }];
   const systemDependencies = [];
   for (const name of dependencies) {
     try {
@@ -198,22 +247,67 @@ async function main() {
   await mkdir(parent, { recursive: true });
   within(await realpath(root), await realpath(parent));
   const destination = path.join(parent, "current");
-  await stageArtifactSet(sourceDir, destination, files, {
-    appVersion: application.version,
-    profile: "release",
-    architecture: "x64",
-    sourceExecutable: path.relative(root, sourceExe),
-    sourceModifiedAt: (await stat(sourceExe)).mtime.toISOString(),
-    systemDependencies,
-    webView2: "Installed Evergreen Runtime required; not bundled",
-  });
-  console.log(`Release ready: ${path.join(destination, "PLC Lab.exe")}`);
+  // The default knowledge pack ships as the verified release archive's content.
+  const pack = verifyZip(DEFAULT_ZIP, DEFAULT_PACK);
+  if (pack.problems.length)
+    throw new Error(
+      `The knowledge pack archive does not verify: ${pack.problems.join("; ")}. Run npm run knowledge:zip.`,
+    );
+  const launcher = path.join(sourceDir, "plc-lab-launcher.exe");
+  await stat(launcher);
+  await stageArtifactSet(
+    sourceDir,
+    destination,
+    files,
+    {
+      appVersion: application.version,
+      profile: "release",
+      architecture: "x64",
+      sourceExecutable: path.relative(root, sourceExe),
+      sourceModifiedAt: (await stat(sourceExe)).mtime.toISOString(),
+      systemDependencies,
+      webView2: "Installed Evergreen Runtime required; not bundled",
+      knowledgePack: {
+        archive: path.relative(root, DEFAULT_ZIP).split(path.sep).join("/"),
+        sha256: await hash(DEFAULT_ZIP),
+      },
+      rootLauncher: { name: "PLC Lab.exe", sha256: await hash(launcher) },
+    },
+    [{ source: DEFAULT_PACK, target: `knowledge-packs/${PACK_NAME}` }],
+  );
+  for (const required of [
+    APPLICATION,
+    "release-manifest.json",
+    "RUNTIME_REQUIREMENTS.txt",
+    `knowledge-packs/${PACK_NAME}/pack.json`,
+  ])
+    if (!(await stat(path.join(destination, required))).isFile())
+      throw new Error(`Release staging is incomplete: ${required} is missing.`);
+  await installLauncher(launcher, path.join(root, "PLC Lab.exe"));
+  console.log(`Release ready: ${path.join(destination, APPLICATION)}`);
+  console.log(`Root launcher: ${path.join(root, "PLC Lab.exe")}`);
   console.log(
-    "The copied executable is byte-identical to the successful Tauri release build.",
+    "The staged executable is byte-identical to the successful Tauri release build.",
   );
   console.log(
     "Runtime requirements: Windows x64 with Microsoft Edge WebView2 installed. This is not an installer.",
   );
+}
+
+/** Replace the root launcher atomically and verify its bytes. */
+async function installLauncher(source, target) {
+  const temporary = `${target}.${randomUUID()}.tmp`;
+  await copyFile(source, temporary, constants.COPYFILE_EXCL);
+  try {
+    if ((await hash(source)) !== (await hash(temporary)))
+      throw new Error("Root launcher copy verification failed.");
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true });
+    throw new Error(
+      `The root launcher could not be replaced (${error.message}). Close PLC Lab and try again.`,
+    );
+  }
 }
 
 if (

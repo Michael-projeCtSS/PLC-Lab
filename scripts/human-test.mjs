@@ -56,7 +56,7 @@ function prepare(mode) {
   const applicationNames =
     mode === "dev"
       ? ["plc-lab-desktop.exe"]
-      : ["plc-lab-desktop.exe", "PLC Lab.exe"];
+      : ["plc-lab-desktop.exe", "PLC Lab Desktop.exe", "PLC Lab.exe"];
   for (const name of applicationNames) {
     const query = spawnSync(
       path.join(

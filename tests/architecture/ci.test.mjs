@@ -31,7 +31,7 @@ async function workflow(name) {
     ),
   };
 }
-test("workflow YAML preserves triggers, two lanes, read permissions and scoped artifacts", async () => {
+test("workflow YAML preserves triggers, two lanes, read permissions and required artifacts", async () => {
   const { source, value } = await workflow("validation.yml");
   assert.deepEqual(Object.keys(value.on).sort(), [
     "pull_request",
@@ -52,13 +52,16 @@ test("workflow YAML preserves triggers, two lanes, read permissions and scoped a
     const node = job.steps.find((item) =>
       item.uses?.startsWith("actions/setup-node@"),
     );
-    assert.equal(node.with["node-version"], "24");
+    assert.equal(node.with["node-version"], "24.15.0", "exact Node pin");
     assert.equal(node.with["package-manager-cache"], "false");
-    const upload = job.steps.find((item) =>
+    const uploads = job.steps.filter((item) =>
       item.uses?.startsWith("actions/upload-artifact@"),
     );
-    assert.equal(upload.if, "always()");
-    assert.equal(upload.with["retention-days"], "14");
+    assert.equal(uploads[0].if, "always()");
+    for (const upload of uploads) {
+      assert.equal(upload.with["retention-days"], "14");
+      assert.equal(upload.with["if-no-files-found"], "error");
+    }
     const commands = job.steps
       .filter((item) => item.run)
       .map((item) => item.run);
@@ -67,7 +70,14 @@ test("workflow YAML preserves triggers, two lanes, read permissions and scoped a
   }
   assert.match(source, /artifacts\/desktop-smoke\/native\.log/);
   assert.match(source, /artifacts\/desktop-smoke\/result\.json/);
-  assert.match(source, /artifacts\/desktop-smoke\/desktop\.png/);
+  assert.match(source, /artifacts\/release-smoke\/result\.json/);
+  assert.match(source, /artifacts\/launcher-smoke\/result\.json/);
+  const release = value.jobs["windows-validation"].steps.find(
+    (step) => step.name === "Publish the validated Windows release",
+  );
+  assert.match(release.with.path, /releases\/current\/\*\*/);
+  assert.match(release.with.path, /PLC Lab\.exe/);
+  assert.equal(release.if, undefined, "only a validated release is published");
   assert.doesNotMatch(
     source,
     /continue-on-error|pull_request_target|secrets:|contents: write|id-token: write/,
@@ -80,50 +90,56 @@ test("workflow YAML preserves triggers, two lanes, read permissions and scoped a
   );
 });
 
-test("Windows plan preserves canonical checks and real native smoke plus both M1C profiles", () => {
+test("Windows plan runs checks, release tests, native, release and launcher smoke", () => {
   const plan = validationPlan("windows", "win32");
   assert.deepEqual(
     plan.map((item) => item.id),
-    ["canonical-check", "m1c-debug", "runtime-clock-release", "native-desktop"],
+    [
+      "canonical-check",
+      "rust-release-tests",
+      "knowledge-pack",
+      "native-desktop",
+      "release-build",
+      "release-stage",
+      "release-native",
+      "launcher-native",
+    ],
   );
   assert.equal(plan[0].args.at(-1), "npm.cmd run check");
+  assert.deepEqual(plan[1].args.slice(1), [
+    "test",
+    "--release",
+    "--locked",
+    "--workspace",
+  ]);
   assert.equal(plan[3].args.at(-1), "npm.cmd run test:desktop");
-  for (const name of [
-    "plc-types",
-    "plc-ir",
-    "plc-runtime",
-    "simulation-core",
-    "st-frontend",
-    "app-contract",
-    "desktop-session",
-    "process-simulation",
-    "trace-core",
-  ])
-    assert.ok(plan[1].args.includes(name));
-  assert.ok(plan[2].args.includes("--release"));
-  assert.ok(plan[2].args.includes("simulation-core"));
-  assert.ok(plan[2].args.includes("plc-runtime"));
-  assert.ok(plan[2].args.includes("st-frontend"));
-  assert.ok(plan[2].args.includes("app-contract"));
-  assert.ok(plan[2].args.includes("desktop-session"));
-  assert.ok(plan[2].args.includes("process-simulation"));
-  assert.ok(plan[2].args.includes("trace-core"));
-  const portable = validationPlan("core", "linux");
-  for (const packageName of [
-    "app-contract",
-    "desktop-session",
-    "process-simulation",
-    "trace-core",
-  ]) {
-    assert.ok(portable[1].args.includes(packageName));
-    assert.ok(portable[2].args.includes(packageName));
-    assert.ok(portable[3].args.includes(packageName));
-  }
+  assert.equal(plan[6].args.at(-1), "npm.cmd run test:desktop:release");
+  assert.equal(plan[7].args.at(-1), "npm.cmd run test:launcher");
   const core = validationPlan("core", "linux");
-  assert.equal(core[0].id, "rust-format");
+  assert.deepEqual(
+    core.map((item) => item.id),
+    [
+      "rust-format",
+      "core-clippy",
+      "rust-debug-tests",
+      "rust-release-tests",
+      "frontend",
+      "architecture",
+      "knowledge-pack",
+      "npm-audit",
+      "cargo-deny",
+    ],
+  );
   assert.ok(core[1].args.includes("--all-targets"));
   assert.deepEqual(core[1].args.slice(-3), ["--", "-D", "warnings"]);
-  assert.equal(core.at(-1).args.join(" "), "run test:architecture");
+  for (const stage of core.slice(1, 4)) {
+    assert.ok(stage.args.includes("--workspace"));
+    assert.ok(
+      stage.args.includes("plc-lab-desktop"),
+      "only the WebView host is excluded on Linux",
+    );
+  }
+  assert.deepEqual(core[7].args, ["audit", "--omit=dev", "--audit-level=high"]);
   assert.ok(
     core.every((item) => !item.args.join(" ").includes("test:desktop")),
   );
@@ -252,7 +268,9 @@ test("successful stages require real process success and CLI errors return nonze
 test("repository npm command launches through the real platform command path", async () => {
   const directory = await fixture();
   try {
-    const stage = validationPlan("core").at(-1);
+    const stage = validationPlan("core").find(
+      (item) => item.id === "architecture",
+    );
     stage.id = "npm-status";
     stage.args =
       process.platform === "win32"

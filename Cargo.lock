@@ -2340,6 +2340,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "plc-lab-launcher"
+version = "0.1.0"
+dependencies = [
+ "tauri-winres",
+]
+
+[[package]]
 name = "plc-runtime"
 version = "0.1.0"
 dependencies = [

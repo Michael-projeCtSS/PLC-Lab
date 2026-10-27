@@ -2,9 +2,9 @@
 // No transport mocks: the test drives the real UI, which calls the real backend.
 //
 // Usage: node tests/e2e/desktop-smoke.mjs [--exe <path>] [--build development|release]
-//                                         [--out <artifacts subfolder>]
+//                                         [--out <artifacts subfolder>] [--launcher]
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
@@ -18,6 +18,8 @@ const { values } = parseArgs({
     exe: { type: "string", default: "target/debug/plc-lab-desktop.exe" },
     build: { type: "string", default: "development" },
     out: { type: "string", default: "desktop-smoke" },
+    // The executable is the root launcher: it starts the staged app and exits.
+    launcher: { type: "boolean", default: false },
   },
 });
 if (process.platform !== "win32")
@@ -92,7 +94,10 @@ try {
     const deadline = Date.now() + 60_000;
     while (Date.now() < deadline) {
       if (launchError) throw launchError;
-      if (application.exitCode !== null)
+      if (
+        application.exitCode !== null &&
+        !(values.launcher && application.exitCode === 0)
+      )
         throw new Error(
           `Native host exited ${application.exitCode}: ${output}`,
         );
@@ -290,5 +295,9 @@ try {
 } finally {
   await browser?.close().catch(() => undefined);
   if (application.exitCode === null) application.kill();
+  if (values.launcher)
+    spawnSync("taskkill", ["/IM", "PLC Lab Desktop.exe", "/T", "/F"], {
+      stdio: "ignore",
+    });
   await writeFile(path.join(directory, "native.log"), output);
 }

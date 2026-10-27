@@ -1,0 +1,17 @@
+[package]
+name = "plc-lab-launcher"
+description = "Root launcher: starts the staged PLC Lab release next to it."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "plc-lab-launcher"
+path = "src/main.rs"
+
+[target.'cfg(windows)'.build-dependencies]
+tauri-winres = "0.3"
+
+[lints]
+workspace = true

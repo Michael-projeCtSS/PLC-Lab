@@ -11,16 +11,16 @@ permissions:
 
 jobs:
   windows-validation:
-    name: Windows canonical validation
+    name: Windows checks, native smoke and release
     runs-on: windows-2022
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 24
+          node-version: 24.15.0
           package-manager-cache: false
       - name: Install locked Node dependencies
         run: node scripts/ci.mjs dependencies
@@ -28,53 +28,66 @@ jobs:
         run: node scripts/ci.mjs setup-rust
       - name: Verify Windows build tools and provide WebView2 if needed
         run: node scripts/ci.mjs windows-prerequisites
-      - name: Execute canonical checks, M1C debug/release tests and real native smoke
+      - name: Checks, release tests, knowledge pack, native smoke, release build and launcher smoke
         run: npm run ci:windows
-      - name: Preserve scoped validation evidence
+      - name: Preserve validation evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: windows-validation-${{ github.run_attempt }}
           retention-days: 14
-          if-no-files-found: warn
+          if-no-files-found: error
           path: |
             artifacts/ci/**/*.log
             artifacts/ci/**/result.json
             artifacts/desktop-smoke/native.log
             artifacts/desktop-smoke/result.json
-            artifacts/desktop-smoke/desktop.png
-            artifacts/desktop-smoke/runtime-ton.png
-            artifacts/desktop-smoke/runtime-fault.png
-            artifacts/desktop-smoke/continuous-tank.png
-            artifacts/desktop-smoke/tank-filling.png
-            artifacts/desktop-smoke/timeline-scan-8.png
-            artifacts/desktop-smoke/timeline-scan-9.png
+            artifacts/desktop-smoke/*.png
+            artifacts/release-smoke/native.log
+            artifacts/release-smoke/result.json
+            artifacts/release-smoke/*.png
+            artifacts/launcher-smoke/native.log
+            artifacts/launcher-smoke/result.json
+            artifacts/launcher-smoke/*.png
+      - name: Publish the validated Windows release
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: plc-lab-windows-release-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            PLC Lab.exe
+            RUN_PLC_LAB.bat
+            releases/current/**
+            releases/knowledge/**
 
   linux-core:
-    name: Linux headless core validation
+    name: Linux core, frontend, knowledge and supply-chain checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 24
+          node-version: 24.15.0
           package-manager-cache: false
       - name: Install locked Node dependencies
         run: node scripts/ci.mjs dependencies
       - name: Install repository-pinned Rust and quality components
         run: node scripts/ci.mjs setup-rust
-      - name: Execute Rust quality, M1C debug/release and portable architecture checks
+      - name: Install cargo-deny
+        run: node scripts/ci.mjs install-deny
+      - name: Rust quality and tests, frontend, architecture, knowledge pack, audits
         run: npm run ci:core
-      - name: Preserve scoped core evidence
+      - name: Preserve core evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: linux-core-${{ github.run_attempt }}
           retention-days: 14
-          if-no-files-found: warn
+          if-no-files-found: error
           path: |
             artifacts/ci/**/*.log
             artifacts/ci/**/result.json

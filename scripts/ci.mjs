@@ -7,18 +7,6 @@ import { finished } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { root } from "./toolchain.mjs";
 
-const corePackages = [
-  "plc-types",
-  "plc-ir",
-  "plc-runtime",
-  "simulation-core",
-  "st-frontend",
-  "app-contract",
-  "desktop-session",
-  "process-simulation",
-  "trace-core",
-];
-const selection = corePackages.flatMap((name) => ["-p", name]);
 const rust = (id, args) => ({
   id,
   command: process.execPath,
@@ -32,34 +20,25 @@ const npm = (id, args, platform) =>
         args: ["/d", "/s", "/c", `npm.cmd ${args.join(" ")}`],
       }
     : { id, command: "npm", args };
+/** The Tauri host needs WebView system libraries; the Linux lane validates everything else. */
+const portable = ["--workspace", "--exclude", "plc-lab-desktop"];
 
 export function validationPlan(lane, platform = process.platform) {
-  const debug = rust("m1c-debug", ["test", "--locked", ...selection]);
-  const release = rust("runtime-clock-release", [
-    "test",
-    "--release",
-    "--locked",
-    "-p",
-    "plc-runtime",
-    "-p",
-    "simulation-core",
-    "-p",
-    "st-frontend",
-    "-p",
-    "app-contract",
-    "-p",
-    "desktop-session",
-    "-p",
-    "process-simulation",
-    "-p",
-    "trace-core",
-  ]);
   if (lane === "windows")
     return [
       npm("canonical-check", ["run", "check"], platform),
-      debug,
-      release,
+      rust("rust-release-tests", [
+        "test",
+        "--release",
+        "--locked",
+        "--workspace",
+      ]),
+      npm("knowledge-pack", ["run", "knowledge:verify"], platform),
       npm("native-desktop", ["run", "test:desktop"], platform),
+      npm("release-build", ["run", "build:release:native"], platform),
+      npm("release-stage", ["run", "stage:release"], platform),
+      npm("release-native", ["run", "test:desktop:release"], platform),
+      npm("launcher-native", ["run", "test:launcher"], platform),
     ];
   if (lane === "core")
     return [
@@ -67,15 +46,28 @@ export function validationPlan(lane, platform = process.platform) {
       rust("core-clippy", [
         "clippy",
         "--locked",
-        ...selection,
+        ...portable,
         "--all-targets",
         "--",
         "-D",
         "warnings",
       ]),
-      debug,
-      release,
+      rust("rust-debug-tests", ["test", "--locked", ...portable]),
+      rust("rust-release-tests", [
+        "test",
+        "--release",
+        "--locked",
+        ...portable,
+      ]),
+      npm("frontend", ["run", "test:frontend"], platform),
       npm("architecture", ["run", "test:architecture"], platform),
+      npm("knowledge-pack", ["run", "knowledge:verify"], platform),
+      npm("npm-audit", ["audit", "--omit=dev", "--audit-level=high"], platform),
+      {
+        id: "cargo-deny",
+        command: "cargo-deny",
+        args: ["--locked", "check", "--hide-inclusion-graph"],
+      },
     ];
   throw new Error(`Unknown validation lane: ${lane}`);
 }
@@ -208,6 +200,16 @@ async function main(mode) {
         ],
       },
       rust("rust-version", ["--version"]),
+    ];
+  } else if (mode === "install-deny") {
+    stages = [
+      rust("cargo-deny-install", [
+        "install",
+        "cargo-deny",
+        "--locked",
+        "--version",
+        "^0.18",
+      ]),
     ];
   } else if (mode === "windows-prerequisites") {
     if (process.platform !== "win32")
