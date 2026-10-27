@@ -93,7 +93,9 @@ try {
     while (Date.now() < deadline) {
       if (launchError) throw launchError;
       if (application.exitCode !== null)
-        throw new Error(`Native host exited ${application.exitCode}: ${output}`);
+        throw new Error(
+          `Native host exited ${application.exitCode}: ${output}`,
+        );
       try {
         const response = await fetch(`${endpoint}/json/version`, {
           signal: AbortSignal.timeout(1000),
@@ -122,7 +124,9 @@ try {
     page.evaluate(
       async ({ command, request }) => {
         try {
-          return { ok: await window.__TAURI_INTERNALS__.invoke(command, { request }) };
+          return {
+            ok: await window.__TAURI_INTERNALS__.invoke(command, { request }),
+          };
         } catch (error) {
           return { error };
         }
@@ -131,11 +135,28 @@ try {
     );
 
   await step("shell renders with primary navigation", async () => {
-    await page.getByRole("navigation", { name: "Main" }).waitFor({ timeout: 30_000 });
+    await page
+      .getByRole("navigation", { name: "Main" })
+      .waitFor({ timeout: 30_000 });
     assert.equal(await page.title(), "PLC Lab");
-    for (const name of ["HOME", "LEARN", "PRACTICE", "TROUBLESHOOT", "FREE LAB", "KNOWLEDGE", "PROGRESS"])
-      assert.equal(await page.getByRole("button", { name, exact: true }).count(), 1, name);
-    assert.doesNotMatch(await page.locator("body").innerText(), /M4B|FOUNDATION|IPC v\d/);
+    for (const name of [
+      "HOME",
+      "LEARN",
+      "PRACTICE",
+      "TROUBLESHOOT",
+      "FREE LAB",
+      "KNOWLEDGE",
+      "PROGRESS",
+    ])
+      assert.equal(
+        await page.getByRole("button", { name, exact: true }).count(),
+        1,
+        name,
+      );
+    assert.doesNotMatch(
+      await page.locator("body").innerText(),
+      /M4B|FOUNDATION|IPC v\d/,
+    );
   });
 
   await step("core contract and knowledge pack", async () => {
@@ -146,63 +167,109 @@ try {
     const stale = await invoke("core_info", { contractVersion: 7 });
     assert.equal(stale.error.code, "APP-CONTRACT-VERSION");
     const unknown = await invoke("tick", { contractVersion: 8 });
-    assert.ok(unknown.error, "no host command may let the web view drive cycles");
+    assert.ok(
+      unknown.error,
+      "no host command may let the web view drive cycles",
+    );
     const status = await invoke("knowledge_status", { contractVersion: 8 });
     const pack = status.ok.packs.find((p) => p.id === "plclab.core");
-    assert.ok(pack, `knowledge pack not discovered: ${JSON.stringify(status.ok.searchPaths)}`);
+    assert.ok(
+      pack,
+      `knowledge pack not discovered: ${JSON.stringify(status.ok.searchPaths)}`,
+    );
     assert.notEqual(pack.status, "INVALID", pack.errors.join("; "));
     assert.ok(pack.exercises >= 2);
   });
 
   await step("practice exercise opens a workspace", async () => {
     await page.getByRole("button", { name: "PRACTICE", exact: true }).click();
-    await page.getByRole("button", { name: /Start Motor start\/stop with seal-in/ }).click();
-    await page.getByRole("button", { name: "Build & Load to PLC" }).waitFor({ timeout: 30_000 });
-    await page.locator('[data-testid="st-editor"] .monaco-editor').waitFor({ timeout: 30_000 });
+    await page
+      .getByRole("button", { name: /Start Motor start\/stop with seal-in/ })
+      .click();
+    await page
+      .getByRole("button", { name: "Build & Load to PLC" })
+      .waitFor({ timeout: 30_000 });
+    await page
+      .locator('[data-testid="st-editor"] .monaco-editor')
+      .waitFor({ timeout: 30_000 });
   });
 
-  await step("edit, build and load with the real compiler and runtime", async () => {
-    await page.locator('[data-testid="st-editor"] .monaco-editor .view-lines').click();
-    await page.keyboard.press("Control+A");
-    await page.keyboard.press("Delete");
-    await page.keyboard.insertText(SOLUTION);
-    await page.getByRole("button", { name: "Build & Load to PLC" }).click();
-    await page.getByText("Sim running", { exact: true }).waitFor({ timeout: 15_000 });
-    await page.getByText("PLC RUN", { exact: true }).waitFor();
-  });
+  await step(
+    "edit, build and load with the real compiler and runtime",
+    async () => {
+      await page
+        .locator('[data-testid="st-editor"] .monaco-editor .view-lines')
+        .click();
+      await page.keyboard.press("Control+A");
+      await page.keyboard.press("Delete");
+      await page.keyboard.insertText(SOLUTION);
+      await page.getByRole("button", { name: "Build & Load to PLC" }).click();
+      await page
+        .getByText("Sim running", { exact: true })
+        .waitFor({ timeout: 15_000 });
+      await page.getByText("PLC RUN", { exact: true }).waitFor();
+    },
+  );
 
   await step("operator input drives the simulated machine", async () => {
     await page.getByRole("tab", { name: "Process" }).click();
-    const button = page.getByRole("button", { name: "Start S1 (hold to press)" });
+    const button = page.getByRole("button", {
+      name: "Start S1 (hold to press)",
+    });
     await button.dispatchEvent("pointerdown", { pointerId: 1 });
     await delay(500);
     await button.dispatchEvent("pointerup", { pointerId: 1 });
-    await page.locator('[aria-label="Conveyor motor M1: running"]').waitFor({ timeout: 10_000 });
-    await page.screenshot({ path: path.join(directory, "workspace-process.png") });
+    await page
+      .locator('[aria-label="Conveyor motor M1: running"]')
+      .waitFor({ timeout: 10_000 });
+    await page.screenshot({
+      path: path.join(directory, "workspace-process.png"),
+    });
   });
 
   await step("causal inspector shows the cycle", async () => {
     await page.getByRole("tab", { name: "Cause & effect" }).click();
-    await page.getByText(/PLC read/).first().waitFor();
-    await page.getByText(/Next PLC input/).first().waitFor();
+    await page
+      .getByText(/PLC read/)
+      .first()
+      .waitFor();
+    await page
+      .getByText(/Next PLC input/)
+      .first()
+      .waitFor();
   });
 
   await step("isolated grading passes", async () => {
     await page.getByRole("button", { name: "Pause" }).click();
     await page.getByRole("button", { name: "Check solution" }).click();
     await page.getByRole("tab", { name: "Task" }).click();
-    await page.getByLabel("Check result").getByText("Passed", { exact: true }).waitFor({ timeout: 30_000 });
+    await page
+      .getByLabel("Check result")
+      .getByText("Passed", { exact: true })
+      .waitFor({ timeout: 30_000 });
     await page.getByRole("tab", { name: "Program" }).click();
-    await page.screenshot({ path: path.join(directory, "workspace-program.png") });
+    await page.screenshot({
+      path: path.join(directory, "workspace-program.png"),
+    });
   });
 
-  await step("troubleshooting lab opens without revealing the cause", async () => {
-    await page.getByRole("button", { name: "Back", exact: true }).click();
-    await page.getByRole("button", { name: "TROUBLESHOOT", exact: true }).click();
-    await page.getByRole("button", { name: /Start Conveyor will not start/ }).click();
-    await page.getByText("Fault report").waitFor({ timeout: 30_000 });
-    assert.doesNotMatch(await page.locator("body").innerText(), /contactTypeMismatch/);
-  });
+  await step(
+    "troubleshooting lab opens without revealing the cause",
+    async () => {
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+      await page
+        .getByRole("button", { name: "TROUBLESHOOT", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: /Start Conveyor will not start/ })
+        .click();
+      await page.getByText("Fault report").waitFor({ timeout: 30_000 });
+      assert.doesNotMatch(
+        await page.locator("body").innerText(),
+        /contactTypeMismatch/,
+      );
+    },
+  );
 
   await step("knowledge search returns results", async () => {
     await page.getByRole("button", { name: "KNOWLEDGE", exact: true }).click();
@@ -215,7 +282,10 @@ try {
   await result("PASS");
   console.log(`Native smoke PASS (${values.exe}, ${steps.length} steps)`);
 } catch (error) {
-  await result("FAIL", { error: error instanceof Error ? error.stack : String(error), output });
+  await result("FAIL", {
+    error: error instanceof Error ? error.stack : String(error),
+    output,
+  });
   throw error;
 } finally {
   await browser?.close().catch(() => undefined);

@@ -64,7 +64,10 @@ fn pack_loads_without_errors_or_dangling_references() {
         "canopen",
         "io-link",
     ] {
-        assert!(lib.article(&format!("protocol.{protocol}")).is_some(), "{protocol}");
+        assert!(
+            lib.article(&format!("protocol.{protocol}")).is_some(),
+            "{protocol}"
+        );
     }
     // Every reference in lessons and exercises resolves.
     for lesson in lib.lessons() {
@@ -73,10 +76,18 @@ fn pack_loads_without_errors_or_dangling_references() {
         }
         for s in &lesson.sections {
             if let Some(e) = &s.exercise {
-                assert!(lib.exercise(e.as_str()).is_some(), "lesson {} -> {e}", lesson.id);
+                assert!(
+                    lib.exercise(e.as_str()).is_some(),
+                    "lesson {} -> {e}",
+                    lesson.id
+                );
             }
             if let Some(scene) = &s.scene {
-                assert!(lib.scene(scene.as_str()).is_some(), "lesson {} -> {scene}", lesson.id);
+                assert!(
+                    lib.scene(scene.as_str()).is_some(),
+                    "lesson {} -> {scene}",
+                    lesson.id
+                );
             }
         }
     }
@@ -88,7 +99,11 @@ fn pack_loads_without_errors_or_dangling_references() {
     for a in lib.articles() {
         if let Some(t) = &a.troubleshooting {
             for e in &t.simulated_in {
-                assert!(lib.exercise(e.as_str()).is_some(), "{} simulated in {e}", a.id);
+                assert!(
+                    lib.exercise(e.as_str()).is_some(),
+                    "{} simulated in {e}",
+                    a.id
+                );
             }
         }
     }
@@ -98,15 +113,26 @@ fn pack_loads_without_errors_or_dangling_references() {
 fn search_finds_fundamentals_vendor_and_troubleshooting_content() {
     let lib = library();
     let first = |text: &str, category: Option<Category>| {
-        lib.search(&SearchQuery { text: text.into(), category, limit: 5, ..Default::default() })
-            .first()
-            .map(|h| h.id.clone())
-            .unwrap_or_default()
+        lib.search(&SearchQuery {
+            text: text.into(),
+            category,
+            limit: 5,
+            ..Default::default()
+        })
+        .first()
+        .map(|h| h.id.clone())
+        .unwrap_or_default()
     };
     assert_eq!(first("4-20 mA live zero", None), "fundamentals.4-20ma");
     assert_eq!(first("TON on-delay timer", None), "instruction.ton");
     assert!(first("S7-1500", Some(Category::VendorSpecific)).contains("s7-1500"));
-    assert_eq!(first("stop button normally open block", Some(Category::Troubleshooting)), "troubleshooting.nc-contact-replaced-by-no");
+    assert_eq!(
+        first(
+            "stop button normally open block",
+            Some(Category::Troubleshooting)
+        ),
+        "troubleshooting.nc-contact-replaced-by-no"
+    );
     assert!(first("Modbus register offset", None).contains("modbus"));
 }
 
@@ -116,14 +142,27 @@ fn every_practice_exercise_is_solvable_and_the_starter_is_not() {
     let mut checked = 0;
     for e in lib.exercises().filter(|e| e.kind == ExerciseKind::Practice) {
         let scene = lib.scene(e.scene.as_str()).unwrap();
-        let profile = lib.profile(e.platform.as_ref().map_or("generic.iec", |p| p.as_str())).unwrap();
-        let station = e.starter_station.clone().unwrap_or_else(|| scene.reference_station.clone());
-        let solution = std::fs::read_to_string(root().join(format!("tests/conformance/solutions/{}.st", e.id)))
-            .unwrap_or_else(|_| panic!("reference solution for {} is missing", e.id));
-        let (passed, failures) = score(assess(e, scene, &station, &profile, &solution, &[], None).unwrap());
+        let profile = lib
+            .profile(e.platform.as_ref().map_or("generic.iec", |p| p.as_str()))
+            .unwrap();
+        let station = e
+            .starter_station
+            .clone()
+            .unwrap_or_else(|| scene.reference_station.clone());
+        let solution = std::fs::read_to_string(
+            root().join(format!("tests/conformance/solutions/{}.st", e.id)),
+        )
+        .unwrap_or_else(|_| panic!("reference solution for {} is missing", e.id));
+        let (passed, failures) =
+            score(assess(e, scene, &station, &profile, &solution, &[], None).unwrap());
         assert!(passed, "{}: reference solution fails: {failures}", e.id);
-        let (starter_passed, _) = score(assess(e, scene, &station, &profile, &e.starter_program, &[], None).unwrap());
-        assert!(!starter_passed, "{}: the starter program already passes", e.id);
+        let (starter_passed, _) =
+            score(assess(e, scene, &station, &profile, &e.starter_program, &[], None).unwrap());
+        assert!(
+            !starter_passed,
+            "{}: the starter program already passes",
+            e.id
+        );
         checked += 1;
     }
     assert!(checked >= 9, "{checked} practice exercises");
@@ -133,21 +172,61 @@ fn every_practice_exercise_is_solvable_and_the_starter_is_not() {
 fn troubleshooting_exercises_fail_until_repaired_and_pass_afterwards() {
     let lib = library();
     let mut checked = 0;
-    for e in lib.exercises().filter(|e| e.kind == ExerciseKind::Troubleshooting) {
+    for e in lib
+        .exercises()
+        .filter(|e| e.kind == ExerciseKind::Troubleshooting)
+    {
         let t = e.troubleshooting.as_ref().unwrap();
         let scene = lib.scene(e.scene.as_str()).unwrap();
-        let profile = lib.profile(e.platform.as_ref().map_or("generic.iec", |p| p.as_str())).unwrap();
-        let broken = e.starter_station.clone().unwrap_or_else(|| scene.reference_station.clone());
-        let running = t.loaded_program.clone().unwrap_or_else(|| e.starter_program.clone());
+        let profile = lib
+            .profile(e.platform.as_ref().map_or("generic.iec", |p| p.as_str()))
+            .unwrap();
+        let broken = e
+            .starter_station
+            .clone()
+            .unwrap_or_else(|| scene.reference_station.clone());
+        let running = t
+            .loaded_program
+            .clone()
+            .unwrap_or_else(|| e.starter_program.clone());
         let filter = Some(t.verification.as_slice());
-        let (broken_passes, _) = score(assess(e, scene, &broken, &profile, &running, &t.faults, filter).unwrap());
-        assert!(!broken_passes, "{}: verification passes with the fault present", e.id);
-        let (repaired, failures) =
-            score(assess(e, scene, &scene.reference_station, &profile, &running, &[], filter).unwrap());
-        assert!(repaired, "{}: verification fails after the repair: {failures}", e.id);
-        assert!(!t.root_causes.is_empty() && t.root_causes.iter().all(|r| t.diagnosis_options.iter().any(|o| &o.id == r)));
+        let (broken_passes, _) =
+            score(assess(e, scene, &broken, &profile, &running, &t.faults, filter).unwrap());
+        assert!(
+            !broken_passes,
+            "{}: verification passes with the fault present",
+            e.id
+        );
+        let (repaired, failures) = score(
+            assess(
+                e,
+                scene,
+                &scene.reference_station,
+                &profile,
+                &running,
+                &[],
+                filter,
+            )
+            .unwrap(),
+        );
+        assert!(
+            repaired,
+            "{}: verification fails after the repair: {failures}",
+            e.id
+        );
+        assert!(
+            !t.root_causes.is_empty()
+                && t.root_causes
+                    .iter()
+                    .all(|r| t.diagnosis_options.iter().any(|o| &o.id == r))
+        );
         for fault in &t.faults {
-            assert!(t.repairs.iter().any(|r| r.clears.contains(&fault.id)), "{}: no repair clears {}", e.id, fault.id);
+            assert!(
+                t.repairs.iter().any(|r| r.clears.contains(&fault.id)),
+                "{}: no repair clears {}",
+                e.id,
+                fault.id
+            );
         }
         checked += 1;
     }
