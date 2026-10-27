@@ -1,0 +1,12 @@
+{
+  "format": "plclab-knowledge-pack",
+  "packFormat": 1,
+  "id": "plclab.core",
+  "title": "PLC Lab Knowledge Pack",
+  "version": "1.0.0",
+  "publisher": "PLC Lab project",
+  "license": "Original PLC Lab text. Vendor and product names are trademarks of their respective owners and are used only for identification.",
+  "description": "Fundamentals, vendor platform overviews, industrial protocols, troubleshooting guides, the beginner curriculum, simulation scenes and exercises for PLC Lab. All text is original; technical facts reference provenance records in sources/.",
+  "languages": ["en"],
+  "updated": "2026-10-27"
+}

@@ -1,0 +1,110 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ts.motor-wont-start",
+  "revision": 1,
+  "title": "Conveyor will not start after panel maintenance",
+  "kind": "troubleshooting",
+  "difficulty": "beginner",
+  "summary": "The conveyor worked yesterday. After the operator panel was serviced, pressing Start does nothing. Find the root cause from evidence, repair it and prove the system works.",
+  "objectives": [
+    "Compare what the PLC sees with what the field device does",
+    "Use the input LEDs and a voltage measurement to locate a fault",
+    "Explain why a normally closed Stop button is used"
+  ],
+  "estimatedMinutes": 15,
+  "scene": "scene.motor-start-stop",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL;\n    StopPB : BOOL;\n    MotorFeedback : BOOL;\n    OverloadOK : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorContactor : BOOL;\n    RunLamp : BOOL;\nEND_VAR\nMotorContactor := (StartPB OR MotorContactor) AND StopPB AND OverloadOK;\nRunLamp := MotorFeedback;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    { "tag": "StartPB", "type": "BOOL", "direction": "input" },
+    { "tag": "StopPB", "type": "BOOL", "direction": "input" },
+    { "tag": "OverloadOK", "type": "BOOL", "direction": "input" },
+    { "tag": "MotorContactor", "type": "BOOL", "direction": "output" },
+    { "tag": "RunLamp", "type": "BOOL", "direction": "output" }
+  ],
+  "instructions": [
+    "Start the simulation. The PLC is already in RUN with the program that worked before the maintenance.",
+    "Reproduce the symptom: press Start and watch the motor, the PLC inputs and the module LEDs.",
+    "Collect evidence: watch the input image, look at the digital input LEDs and measure the terminal voltages.",
+    "Submit the root cause you can prove, apply the repair, then run Check to verify the repaired system."
+  ],
+  "hints": [
+    "Look at every input the start logic depends on, not only StartPB.",
+    "A normally closed contact delivers 24 V while the button is NOT pressed. What does the Stop input show?",
+    "Measure the Stop input terminal with the button released."
+  ],
+  "knowledgeRefs": ["fundamentals.no-nc-contacts", "troubleshooting.nc-contact-replaced-by-no"],
+  "evidence": [
+    { "name": "start", "source": { "type": "plcTag", "tag": "StartPB" } },
+    { "name": "contactor", "source": { "type": "plcTag", "tag": "MotorContactor" } }
+  ],
+  "scenarios": [
+    {
+      "id": "verify",
+      "title": "Start and stop the repaired conveyor",
+      "durationMs": 6000,
+      "actions": [
+        { "atMs": 0, "action": { "type": "setPlcMode", "mode": "run" } },
+        { "atMs": 500, "action": { "type": "press", "component": "start" } },
+        { "atMs": 800, "action": { "type": "release", "component": "start" } },
+        { "atMs": 4000, "action": { "type": "press", "component": "stop" } },
+        { "atMs": 4300, "action": { "type": "release", "component": "stop" } }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "starts",
+      "title": "Start energizes the contactor",
+      "points": 40,
+      "scenario": "verify",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": { "type": "compare", "signal": "start", "layer": "inputs", "op": "eq", "value": true },
+        "response": { "type": "compare", "signal": "contactor", "layer": "outputs", "op": "eq", "value": true },
+        "withinMs": 300
+      },
+      "onFail": "The contactor still does not switch on after Start."
+    },
+    {
+      "id": "runs",
+      "title": "The conveyor keeps running",
+      "points": 30,
+      "scenario": "verify",
+      "rule": { "type": "stateAt", "atMs": 3000, "condition": { "type": "compare", "signal": "contactor", "layer": "outputs", "op": "eq", "value": true } },
+      "onFail": "The conveyor does not keep running after Start is released."
+    },
+    {
+      "id": "stops",
+      "title": "Stop still works",
+      "points": 30,
+      "scenario": "verify",
+      "rule": { "type": "stateAt", "atMs": 5000, "condition": { "type": "compare", "signal": "contactor", "layer": "outputs", "op": "eq", "value": false } },
+      "onFail": "Stop no longer stops the conveyor. A repair must keep the Stop function safe."
+    }
+  ],
+  "troubleshooting": {
+    "symptom": "Pressing Start does nothing: the conveyor motor and the run lamp stay off. No alarm is shown. The panel was serviced this morning.",
+    "reportedBy": "Shift operator, packaging line 2",
+    "faults": [
+      { "id": "stop-contact-no", "fault": { "type": "contactTypeMismatch", "component": "stop", "installed": "normallyOpen" } }
+    ],
+    "diagnosisOptions": [
+      { "id": "start-contact-broken", "label": "The Start button contact does not close" },
+      { "id": "stop-contact-no", "label": "The Stop button contact block was replaced by a normally open block" },
+      { "id": "overload-tripped", "label": "The motor overload relay has tripped" },
+      { "id": "contactor-coil-open", "label": "The contactor coil is open-circuit" },
+      { "id": "di-module-failed", "label": "The digital input module has failed" },
+      { "id": "program-error", "label": "The PLC program contains a logic error" }
+    ],
+    "rootCauses": ["stop-contact-no"],
+    "repairs": [
+      { "id": "replace-stop-contact", "label": "Fit a normally closed contact block to the Stop button", "clears": ["stop-contact-no"] },
+      { "id": "replace-start-button", "label": "Replace the Start push button", "clears": [] },
+      { "id": "reset-overload", "label": "Reset the overload relay", "clears": [] },
+      { "id": "replace-di-module", "label": "Replace the digital input module", "clears": [] }
+    ],
+    "verification": ["starts", "runs", "stops"],
+    "knowledgeRefs": ["troubleshooting.nc-contact-replaced-by-no"]
+  }
+}
