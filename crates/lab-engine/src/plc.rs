@@ -104,13 +104,16 @@ pub fn compile(source: &str) -> Result<CompiledProgram, Vec<Diagnostic>> {
     st_frontend::compile_st(source, CompilerConfig::default())
 }
 
+/// Linked tags, function-block outputs and non-blocking binding warnings.
+pub(crate) type Linked = (Vec<TagBinding>, Vec<BlockBinding>, Vec<BindingIssue>);
+
 /// Link compiled program tags to the station's I/O map and network scans.
 pub(crate) fn link(
     compiled: &CompiledProgram,
     station: &StationConfig,
     profile: &PlatformProfile,
     registry: &mut SignalRegistry,
-) -> Result<(Vec<TagBinding>, Vec<BlockBinding>, Vec<BindingIssue>), Vec<BindingIssue>> {
+) -> Result<Linked, Vec<BindingIssue>> {
     let program = compiled.program();
     let scope = Scope::Pou(program.entry());
     let mut tags: Vec<TagBinding> = program
@@ -133,7 +136,13 @@ pub(crate) fn link(
                 name: s.name().to_owned(),
                 role,
                 plc_type: s.plc_type(),
-                signal: registry.ensure(format!("plc.{}", s.name()), s.name().to_owned(), kind, type_value(s.plc_type()), None),
+                signal: registry.ensure(
+                    format!("plc.{}", s.name()),
+                    s.name().to_owned(),
+                    kind,
+                    type_value(s.plc_type()),
+                    None,
+                ),
                 source: None,
                 sink: None,
             }
@@ -145,7 +154,10 @@ pub(crate) fn link(
         .filter(|i| i.owner() == program.entry())
         .filter_map(|i| {
             let definition = program.function_blocks().definition(i.definition())?;
-            let plc_types::function_blocks::FunctionBlockKind::Standard(kind) = definition.kind() else { return None };
+            let plc_types::function_blocks::FunctionBlockKind::Standard(kind) = definition.kind()
+            else {
+                return None;
+            };
             let outputs = kind
                 .signature()
                 .iter()
@@ -163,35 +175,55 @@ pub(crate) fn link(
                     )
                 })
                 .collect();
-            Some(BlockBinding { instance: i.id(), name: i.name().to_owned(), kind, outputs })
+            Some(BlockBinding {
+                instance: i.id(),
+                name: i.name().to_owned(),
+                kind,
+                outputs,
+            })
         })
         .collect();
     let mut issues = Vec::new();
-    let find = |tags: &[TagBinding], name: &str| tags.iter().position(|t| t.name.eq_ignore_ascii_case(name));
+    let find = |tags: &[TagBinding], name: &str| {
+        tags.iter().position(|t| t.name.eq_ignore_ascii_case(name))
+    };
     for mapping in &station.io_map {
         let location = mapping.channel.to_string();
         let Some(index) = find(&tags, mapping.tag.as_str()) else {
             issues.push(BindingIssue {
                 tag: mapping.tag.to_string(),
                 location,
-                message: format!("I/O tag '{}' on {} is not declared in the program; the channel is not used.", mapping.tag, mapping.channel),
+                message: format!(
+                    "I/O tag '{}' on {} is not declared in the program; the channel is not used.",
+                    mapping.tag, mapping.channel
+                ),
                 blocking: false,
             });
             continue;
         };
-        let Some(module) = station.module_at(mapping.channel.slot_ref()) else { continue };
+        let Some(module) = station.module_at(mapping.channel.slot_ref()) else {
+            continue;
+        };
         let (role, kind) = match module.module.class() {
             ModuleClass::DigitalInput { .. } => (TagRole::Input, PlcType::Bool),
             ModuleClass::DigitalOutput { .. } => (TagRole::Output, PlcType::Bool),
             ModuleClass::AnalogInput { .. } => (
                 TagRole::Input,
-                if profile.analog == AnalogRepresentation::EngineeringUnits { PlcType::Real } else { PlcType::Int },
+                if profile.analog == AnalogRepresentation::EngineeringUnits {
+                    PlcType::Real
+                } else {
+                    PlcType::Int
+                },
             ),
             _ => {
                 issues.push(BindingIssue {
                     tag: mapping.tag.to_string(),
                     location,
-                    message: format!("Channel {} of {} cannot be linked to a tag in this simulation.", mapping.channel, module.module.generic_name()),
+                    message: format!(
+                        "Channel {} of {} cannot be linked to a tag in this simulation.",
+                        mapping.channel,
+                        module.module.generic_name()
+                    ),
                     blocking: false,
                 });
                 continue;
@@ -221,37 +253,59 @@ pub(crate) fn link(
         }
     }
     for (scan_index, scan) in station.network.modbus_tcp.iter().enumerate() {
-        let mut link = |tags: &mut Vec<TagBinding>, name: &str, kind: PlcType, source: InputSource| {
-            let Some(index) = find(tags, name) else {
-                issues.push(BindingIssue {
-                    tag: name.to_owned(),
-                    location: format!("Modbus scan '{}'", scan.id),
-                    message: format!("Network tag '{name}' of scan '{}' is not declared in the program.", scan.id),
-                    blocking: false,
-                });
-                return;
+        let mut link =
+            |tags: &mut Vec<TagBinding>, name: &str, kind: PlcType, source: InputSource| {
+                let Some(index) = find(tags, name) else {
+                    issues.push(BindingIssue {
+                        tag: name.to_owned(),
+                        location: format!("Modbus scan '{}'", scan.id),
+                        message: format!(
+                            "Network tag '{name}' of scan '{}' is not declared in the program.",
+                            scan.id
+                        ),
+                        blocking: false,
+                    });
+                    return;
+                };
+                let tag = &mut tags[index];
+                if tag.role != TagRole::Input || tag.plc_type != kind {
+                    issues.push(BindingIssue {
+                        tag: tag.name.clone(),
+                        location: format!("Modbus scan '{}'", scan.id),
+                        message: format!(
+                            "'{}' must be VAR_INPUT {} for scan '{}'.",
+                            tag.name,
+                            type_name(kind),
+                            scan.id
+                        ),
+                        blocking: true,
+                    });
+                    return;
+                }
+                tag.source = Some(source);
             };
-            let tag = &mut tags[index];
-            if tag.role != TagRole::Input || tag.plc_type != kind {
-                issues.push(BindingIssue {
-                    tag: tag.name.clone(),
-                    location: format!("Modbus scan '{}'", scan.id),
-                    message: format!("'{}' must be VAR_INPUT {} for scan '{}'.", tag.name, type_name(kind), scan.id),
-                    blocking: true,
-                });
-                return;
-            }
-            tag.source = Some(source);
-        };
         for (mapping_index, value) in scan.values.iter().enumerate() {
             let kind = match value.data_type {
                 ModbusDataType::Int16 => PlcType::Int,
                 ModbusDataType::Float32 { .. } => PlcType::Real,
             };
-            link(&mut tags, value.tag.as_str(), kind, InputSource::Modbus { scan: scan_index, mapping: mapping_index });
+            link(
+                &mut tags,
+                value.tag.as_str(),
+                kind,
+                InputSource::Modbus {
+                    scan: scan_index,
+                    mapping: mapping_index,
+                },
+            );
         }
         if let Some(status) = &scan.status_tag {
-            link(&mut tags, status.as_str(), PlcType::Bool, InputSource::ModbusStatus { scan: scan_index });
+            link(
+                &mut tags,
+                status.as_str(),
+                PlcType::Bool,
+                InputSource::ModbusStatus { scan: scan_index },
+            );
         }
     }
     if issues.iter().any(|i| i.blocking) {
@@ -326,7 +380,9 @@ impl PlcParticipant {
         self.segment += 1;
     }
     pub fn stage(&mut self, symbol: SymbolId, value: PlcValue) -> Result<(), EngineError> {
-        let Some(p) = &mut self.program else { return Ok(()) };
+        let Some(p) = &mut self.program else {
+            return Ok(());
+        };
         p.runtime
             .set_input(symbol, value)
             .map_err(|e| EngineError::Internal(format!("input staging failed: {e}")))
@@ -335,7 +391,9 @@ impl PlcParticipant {
         if self.mode != PlcMode::Run {
             return Ok(ScanOutcome::NotScanned);
         }
-        let Some(p) = &mut self.program else { return Ok(ScanOutcome::NotScanned) };
+        let Some(p) = &mut self.program else {
+            return Ok(ScanOutcome::NotScanned);
+        };
         match p.runtime.single_scan() {
             Ok(_) => {
                 self.scans += 1;
@@ -347,8 +405,12 @@ impl PlcParticipant {
                 self.mode = PlcMode::Fault;
                 Ok(ScanOutcome::Faulted(diagnostic))
             }
-            Err(ScanError::Internal(e)) => Err(EngineError::Internal(e.diagnostic().message().to_owned())),
-            Err(ScanError::Faulted) => Err(EngineError::Internal("the runtime refused a scan in RUN mode".into())),
+            Err(ScanError::Internal(e)) => {
+                Err(EngineError::Internal(e.diagnostic().message().to_owned()))
+            }
+            Err(ScanError::Faulted) => Err(EngineError::Internal(
+                "the runtime refused a scan in RUN mode".into(),
+            )),
         }
     }
     pub fn tags(&self) -> &[TagBinding] {

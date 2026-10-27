@@ -51,11 +51,8 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 name = "app-contract"
 version = "0.1.0"
 dependencies = [
- "plc-runtime",
- "plc-types",
  "serde",
  "serde_json",
- "st-frontend",
  "ts-rs",
 ]
 
@@ -583,11 +580,17 @@ name = "desktop-session"
 version = "0.1.0"
 dependencies = [
  "app-contract",
- "plc-runtime",
+ "grading-core",
+ "hardware-model",
+ "knowledge-core",
+ "lab-engine",
+ "lab-model",
+ "network-core",
  "plc-types",
  "process-simulation",
+ "project-model",
  "serde_json",
- "st-frontend",
+ "simulation-core",
  "trace-core",
 ]
 
@@ -1149,8 +1152,8 @@ dependencies = [
 name = "grading-core"
 version = "0.1.0"
 dependencies = [
- "plc-types",
- "trace-core",
+ "lab-model",
+ "serde_json",
 ]
 
 [[package]]
@@ -1203,6 +1206,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "hardware-model"
+version = "0.1.0"
+dependencies = [
+ "lab-model",
+ "process-simulation",
+ "serde_json",
+ "simulation-core",
 ]
 
 [[package]]
@@ -1680,6 +1693,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "knowledge-core"
+version = "0.1.0"
+dependencies = [
+ "lab-model",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lab-engine"
+version = "0.1.0"
+dependencies = [
+ "grading-core",
+ "hardware-model",
+ "lab-model",
+ "network-core",
+ "plc-runtime",
+ "plc-types",
+ "process-simulation",
+ "serde_json",
+ "simulation-core",
+ "st-frontend",
+ "trace-core",
+]
+
+[[package]]
+name = "lab-model"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "libappindicator"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1876,9 +1923,9 @@ dependencies = [
 name = "network-core"
 version = "0.1.0"
 dependencies = [
- "plc-types",
+ "lab-model",
+ "serde_json",
  "simulation-core",
- "trace-core",
 ]
 
 [[package]]
@@ -2256,11 +2303,18 @@ name = "plc-conformance"
 version = "0.1.0"
 dependencies = [
  "app-contract",
+ "desktop-session",
  "grading-core",
+ "hardware-model",
+ "knowledge-core",
+ "lab-engine",
+ "lab-model",
  "network-core",
  "plc-ir",
  "plc-runtime",
  "plc-types",
+ "process-simulation",
+ "project-model",
  "serde_json",
  "simulation-core",
  "st-frontend",
@@ -2443,7 +2497,18 @@ dependencies = [
 name = "process-simulation"
 version = "0.1.0"
 dependencies = [
- "plc-types",
+ "lab-model",
+ "serde_json",
+ "simulation-core",
+]
+
+[[package]]
+name = "project-model"
+version = "0.1.0"
+dependencies = [
+ "lab-model",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3632,9 +3697,6 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 [[package]]
 name = "trace-core"
 version = "0.1.0"
-dependencies = [
- "plc-types",
-]
 
 [[package]]
 name = "tracing"

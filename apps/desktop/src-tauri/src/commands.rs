@@ -1,139 +1,98 @@
-use app_contract::{CoreInfo, CoreInfoRequest, IpcError};
-use desktop_session::RuntimeSessionService;
+//! Tauri command adapters. Each command runs one application use case on a blocking
+//! worker and returns contract DTOs. No PLC, process, network or grading logic here.
+use app_contract::*;
+use desktop_session::DesktopApp;
 use std::sync::Arc;
 
-#[tauri::command]
-pub async fn start_execution(
-    app: tauri::AppHandle,
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    let owned = Arc::clone(service.inner());
-    let started = session_work(service, move |s| s.start_execution(request)).await?;
-    if let Some(lease) = started.driver {
-        crate::execution_driver::spawn(
-            app,
-            owned,
-            lease,
-            started.snapshot.cycle_period_micros.as_micros(),
-        );
-    }
-    Ok(started.snapshot)
-}
-#[tauri::command]
-pub async fn pause_execution(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.pause_execution(request)).await
-}
-#[tauri::command]
-pub async fn stop_execution(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.stop_execution(request)).await
-}
+type App<'a> = tauri::State<'a, Arc<DesktopApp>>;
 
-#[tauri::command]
-pub async fn get_trace_page(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::TracePageRequest,
-) -> Result<app_contract::TracePageDto, IpcError> {
-    session_work(service, move |s| s.trace_page(request)).await
-}
-
-#[tauri::command]
-pub async fn attach_process_scene(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::AttachProcessSceneRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.attach_process(request)).await
-}
-#[tauri::command]
-pub async fn detach_process_scene(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.detach_process(request)).await
-}
-#[tauri::command]
-pub async fn reset_process_scene(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.reset_process(request)).await
-}
-
-async fn session_work<T: Send + 'static>(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    operation: impl FnOnce(&RuntimeSessionService) -> Result<T, IpcError> + Send + 'static,
+async fn work<T: Send + 'static>(
+    app: App<'_>,
+    operation: impl FnOnce(&DesktopApp) -> Result<T, IpcError> + Send + 'static,
 ) -> Result<T, IpcError> {
-    let service = Arc::clone(service.inner());
-    tauri::async_runtime::spawn_blocking(move || operation(&service))
+    let app = Arc::clone(app.inner());
+    tauri::async_runtime::spawn_blocking(move || operation(&app))
         .await
-        .map_err(|_| IpcError {
-            code: "APP-RUNTIME-WORKER".into(),
-            message: "The runtime request could not finish.".into(),
-        })?
+        .map_err(|_| IpcError::new("APP-WORKER", "The request could not finish."))?
 }
 
-#[tauri::command]
-pub async fn load_st_program(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::LoadStProgramRequest,
-) -> Result<app_contract::LoadProgramResponse, IpcError> {
-    session_work(service, move |s| s.load(request)).await
-}
-#[tauri::command]
-pub async fn set_runtime_input(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::SetRuntimeInputRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.set_input(request)).await
-}
-#[tauri::command]
-pub async fn single_scan(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.single_scan(request)).await
-}
-#[tauri::command]
-pub async fn reset_runtime(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.reset(request)).await
-}
-#[tauri::command]
-pub async fn unload_program(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::UnloadProgramResponse, IpcError> {
-    session_work(service, move |s| s.unload(request)).await
-}
-#[tauri::command]
-pub async fn get_runtime_snapshot(
-    service: tauri::State<'_, Arc<RuntimeSessionService>>,
-    request: app_contract::RuntimeSessionRequest,
-) -> Result<app_contract::RuntimeSnapshotDto, IpcError> {
-    session_work(service, move |s| s.snapshot(request)).await
+macro_rules! commands {
+    ($($name:ident($request:ty) -> $response:ty => $method:ident;)*) => {$(
+        #[tauri::command]
+        pub async fn $name(app: App<'_>, request: $request) -> Result<$response, IpcError> {
+            work(app, move |a| a.$method(request)).await
+        }
+    )*};
 }
 
-#[tauri::command]
-pub async fn compile_st(
-    request: app_contract::CompileStRequest,
-) -> Result<app_contract::CompileResponse, IpcError> {
-    tauri::async_runtime::spawn_blocking(move || app_contract::compile_st(request))
-        .await
-        .map_err(|_| IpcError {
-            code: "APP-IPC-005".into(),
-            message: "The compilation worker could not finish.".into(),
-        })?
+commands! {
+    core_info(VersionedRequest) -> CoreInfo => core_info;
+    knowledge_status(VersionedRequest) -> KnowledgeStatusDto => knowledge_status;
+    knowledge_search(KnowledgeSearchRequest) -> Vec<SearchHitDto> => knowledge_search;
+    knowledge_article(IdRequest) -> ArticleDto => knowledge_article;
+    knowledge_catalog(VersionedRequest) -> CatalogDto => knowledge_catalog;
+    library(VersionedRequest) -> LibraryDto => library;
+    lesson(IdRequest) -> LessonDto => lesson;
+    complete_lesson(LessonCompleteRequest) -> LibraryDto => complete_lesson;
+    exercise(IdRequest) -> ExerciseDto => exercise;
+    projects(VersionedRequest) -> ProjectListDto => projects;
+    create_project(ProjectCreateRequest) -> ProjectDto => create_project;
+    project(IdRequest) -> ProjectDto => project;
+    save_project(ProjectSaveRequest) -> ProjectDto => save_project;
+    save_project_as(ProjectSaveAsRequest) -> ProjectDto => save_project_as;
+    update_source(SourceUpdateRequest) -> ProjectSummaryDto => update_source;
+    delete_project(IdRequest) -> ProjectListDto => delete_project;
+    import_project(ProjectImportRequest) -> ProjectDto => import_project;
+    export_project(IdRequest) -> ProjectExportDto => export_project;
+    open_workspace(WorkspaceOpenRequest) -> WorkspaceDto => open_workspace;
+    close_workspace(WorkspaceRequest) -> () => close_workspace;
+    compile(CompileRequest) -> CompileResultDto => compile;
+    plc_mode(PlcModeRequest) -> LiveFrameDto => plc_mode;
+    plc_reset(WorkspaceRequest) -> LiveFrameDto => plc_reset;
+    set_speed(SpeedRequest) -> LiveFrameDto => set_speed;
+    operate(OperateRequest) -> LiveFrameDto => operate;
+    force(ForceRequest) -> LiveFrameDto => force;
+    frame(FrameRequest) -> LiveFrameDto => frame;
+    cycle(CycleRequest) -> Option<CauseEffectDto> => cycle;
+    variables(VariablesRequest) -> VariablesDto => variables;
+    trend(TrendRequest) -> TrendDto => trend;
+    events(EventsRequest) -> EventsPageDto => events;
+    hardware(WorkspaceRequest) -> HardwareDto => hardware;
+    network(WorkspaceRequest) -> NetworkDto => network;
+    measure(MeasureRequest) -> MeasurementDto => measure;
+    ping(PingRequest) -> PingDto => ping;
+    note_evidence(EvidenceRequest) -> () => note_evidence;
+    diagnose(DiagnosisRequest) -> DiagnosisResultDto => diagnose;
+    repair(RepairRequest) -> RepairResultDto => repair;
+    check(CheckRequest) -> GradeReportDto => check;
 }
 
+/// Build & Load; starts the paced simulation when the use case asks for it.
 #[tauri::command]
-pub fn get_core_info(request: CoreInfoRequest) -> Result<CoreInfo, IpcError> {
-    app_contract::get_core_info(request, env!("CARGO_PKG_VERSION"))
+pub async fn build_and_load(
+    app: App<'_>,
+    handle: tauri::AppHandle,
+    request: BuildLoadRequest,
+) -> Result<BuildLoadResultDto, IpcError> {
+    let service = Arc::clone(app.inner());
+    let (result, start) = work(app, move |a| a.build_and_load(request)).await?;
+    if let Some(start) = start {
+        crate::execution_driver::spawn(handle, service, start);
+    }
+    Ok(result)
+}
+
+/// Simulation Run/Pause/Step/Stop; a Run starts the host pacing loop.
+#[tauri::command]
+pub async fn simulation(
+    app: App<'_>,
+    handle: tauri::AppHandle,
+    request: SimulationRequest,
+) -> Result<LiveFrameDto, IpcError> {
+    let service = Arc::clone(app.inner());
+    let (frame, start) = work(app, move |a| a.simulation(request)).await?;
+    if let Some(start) = start {
+        crate::execution_driver::spawn(handle, service, start);
+    }
+    Ok(frame)
 }

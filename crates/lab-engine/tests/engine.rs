@@ -1,7 +1,7 @@
 //! Engine integration tests over the product scenes in the knowledge pack.
 use lab_engine::{
-    CycleOutcome, EngineError, LabEventKind, LabSession, OperatorAction, PlcMode, SessionConfig, SignalId, SignalKind,
-    SignalValue,
+    CycleOutcome, EngineError, LabEventKind, LabSession, OperatorAction, PlcMode, SessionConfig,
+    SignalId, SignalKind, SignalValue,
 };
 use lab_model::{
     exercise::PlcModeRequest,
@@ -13,9 +13,12 @@ use lab_model::{
     scene::SceneDefinition,
 };
 
-const TANK: &str = include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/tank-filling.json");
-const MOTOR: &str = include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/motor-start-stop.json");
-const MODBUS: &str = include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/tank-modbus.json");
+const TANK: &str =
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/tank-filling.json");
+const MOTOR: &str =
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/motor-start-stop.json");
+const MODBUS: &str =
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/tank-modbus.json");
 
 fn scene(text: &str) -> SceneDefinition {
     parse_json(text).unwrap()
@@ -23,13 +26,25 @@ fn scene(text: &str) -> SceneDefinition {
 fn session(text: &str) -> LabSession {
     let s = scene(text);
     let station = s.reference_station.clone();
-    LabSession::new(s, station, PlatformProfile::generic(), SessionConfig::default()).unwrap()
+    LabSession::new(
+        s,
+        station,
+        PlatformProfile::generic(),
+        SessionConfig::default(),
+    )
+    .unwrap()
 }
 fn signal(s: &LabSession, path: &str) -> SignalId {
-    s.signals().by_path(path).unwrap_or_else(|| panic!("missing signal {path}"))
+    s.signals()
+        .by_path(path)
+        .unwrap_or_else(|| panic!("missing signal {path}"))
 }
 fn value(layer: &[(SignalId, SignalValue)], id: SignalId) -> SignalValue {
-    layer.iter().find(|(s, _)| *s == id).map(|(_, v)| *v).unwrap()
+    layer
+        .iter()
+        .find(|(s, _)| *s == id)
+        .map(|(_, v)| *v)
+        .unwrap()
 }
 
 const TANK_FILL: &str = "PROGRAM Main
@@ -51,9 +66,16 @@ fn causal_invariant_holds_inside_every_single_observation() {
     for _ in 0..200 {
         let o = s.step_cycle().unwrap();
         assert_eq!(o.header.outcome, CycleOutcome::Scanned);
-        let SignalValue::Bool(saw) = value(&o.scan_inputs, high) else { panic!() };
+        let SignalValue::Bool(saw) = value(&o.scan_inputs, high) else {
+            panic!()
+        };
         // The audit's blocker: the decision must be provable from this row alone.
-        assert_eq!(value(&o.committed, valve), SignalValue::Bool(!saw), "cycle {}", o.header.cycle);
+        assert_eq!(
+            value(&o.committed, valve),
+            SignalValue::Bool(!saw),
+            "cycle {}",
+            o.header.cycle
+        );
         if previous_high.is_some_and(|p| p != saw) {
             transitions += 1;
         }
@@ -63,13 +85,25 @@ fn causal_invariant_holds_inside_every_single_observation() {
             && next != saw
         {
             let ce = s.latest_cause_effect().unwrap();
-            assert!(ce.next.iter().any(|e| e.signal == high && e.changed), "cause/effect flags the next-scan change");
+            assert!(
+                ce.next.iter().any(|e| e.signal == high && e.changed),
+                "cause/effect flags the next-scan change"
+            );
         }
     }
-    assert!(transitions >= 1, "the high switch must be reached and acted upon");
+    assert!(
+        transitions >= 1,
+        "the high switch must be reached and acted upon"
+    );
     // The tank never overflows: the valve closes one scan after the switch is wet.
     let overflow = s.events().iter().any(|(_, e)| {
-        matches!(&e.kind, LabEventKind::Process { kind: process_simulation::ProcessEventKind::OverflowStarted, .. })
+        matches!(
+            &e.kind,
+            LabEventKind::Process {
+                kind: process_simulation::ProcessEventKind::OverflowStarted,
+                ..
+            }
+        )
     });
     assert!(!overflow);
 }
@@ -80,7 +114,9 @@ fn identical_sessions_produce_identical_observations() {
         let mut s = session(TANK);
         s.download(TANK_FILL, 1, None).unwrap();
         s.set_plc_switch(PlcModeRequest::Run).unwrap();
-        (0..150).map(|_| s.step_cycle().unwrap()).collect::<Vec<_>>()
+        (0..150)
+            .map(|_| s.step_cycle().unwrap())
+            .collect::<Vec<_>>()
     };
     assert_eq!(run(), run());
 }
@@ -104,8 +140,15 @@ fn plc_stop_de_energizes_outputs_while_the_world_keeps_running() {
     let a = s.step_cycle().unwrap();
     let b = s.step_cycle().unwrap();
     assert_eq!(a.header.outcome, CycleOutcome::NotScanned(PlcMode::Stop));
-    assert!(b.header.start_us > a.header.start_us, "world time advances in STOP");
-    assert_eq!(value(&a.process_after, level), value(&b.process_after, level), "pump stopped with the CPU");
+    assert!(
+        b.header.start_us > a.header.start_us,
+        "world time advances in STOP"
+    );
+    assert_eq!(
+        value(&a.process_after, level),
+        value(&b.process_after, level),
+        "pump stopped with the CPU"
+    );
     // PLC task time does not advance in STOP; world time does.
     let task = s.plc_task_time_us();
     s.step_cycle().unwrap();
@@ -130,14 +173,35 @@ fn faulted_scan_commits_nothing_freezes_that_step_and_requires_reset() {
     let o = s.step_cycle().unwrap();
     assert_eq!(o.header.outcome, CycleOutcome::Faulted);
     assert_eq!(o.fault.as_ref().unwrap().code(), "PLC-RUNTIME-003");
-    assert_eq!(s.now(), start, "the faulting step does not advance the world");
+    assert_eq!(
+        s.now(),
+        start,
+        "the faulting step does not advance the world"
+    );
     assert_eq!(s.plc_mode(), PlcMode::Fault);
-    assert_eq!(value(&o.committed, signal(&s, "plc.InletValve")), SignalValue::Bool(false), "nothing committed");
-    assert_eq!(value(&o.committed, signal(&s, "plc.C.CV")), SignalValue::Int(0), "block state rolled back");
+    assert_eq!(
+        value(&o.committed, signal(&s, "plc.InletValve")),
+        SignalValue::Bool(false),
+        "nothing committed"
+    );
+    assert_eq!(
+        value(&o.committed, signal(&s, "plc.C.CV")),
+        SignalValue::Int(0),
+        "block state rolled back"
+    );
     let next = s.step_cycle().unwrap();
-    assert_eq!(next.header.outcome, CycleOutcome::NotScanned(PlcMode::Fault));
-    assert!(s.now() > start, "the plant keeps evolving while the CPU is in FAULT");
-    assert!(matches!(s.set_plc_switch(PlcModeRequest::Run), Err(EngineError::PlcFaulted)));
+    assert_eq!(
+        next.header.outcome,
+        CycleOutcome::NotScanned(PlcMode::Fault)
+    );
+    assert!(
+        s.now() > start,
+        "the plant keeps evolving while the CPU is in FAULT"
+    );
+    assert!(matches!(
+        s.set_plc_switch(PlcModeRequest::Run),
+        Err(EngineError::PlcFaulted)
+    ));
     let world = s.now();
     s.reset_plc().unwrap();
     assert_eq!(s.now(), world, "a PLC reset never rewinds world time");
@@ -161,22 +225,49 @@ fn operator_actions_reach_the_next_scan_but_never_rewrite_history() {
     let contactor = signal(&s, "plc.MotorContactor");
     let lamp = signal(&s, "plc.RunLamp");
     let idle = s.step_cycle().unwrap();
-    s.operate(OperatorAction::Press { component: "start".into() }).unwrap();
-    assert_eq!(value(&s.latest().unwrap().scan_inputs, start), SignalValue::Bool(false), "history is unchanged");
+    s.operate(OperatorAction::Press {
+        component: "start".into(),
+    })
+    .unwrap();
+    assert_eq!(
+        value(&s.latest().unwrap().scan_inputs, start),
+        SignalValue::Bool(false),
+        "history is unchanged"
+    );
     let pressed = s.step_cycle().unwrap();
     assert_eq!(value(&pressed.scan_inputs, start), SignalValue::Bool(true));
-    assert_eq!(value(&pressed.committed, contactor), SignalValue::Bool(true));
-    s.operate(OperatorAction::Release { component: "start".into() }).unwrap();
+    assert_eq!(
+        value(&pressed.committed, contactor),
+        SignalValue::Bool(true)
+    );
+    s.operate(OperatorAction::Release {
+        component: "start".into(),
+    })
+    .unwrap();
     let held = s.step_cycle().unwrap();
-    assert_eq!(value(&held.committed, contactor), SignalValue::Bool(true), "latched");
+    assert_eq!(
+        value(&held.committed, contactor),
+        SignalValue::Bool(true),
+        "latched"
+    );
     // Feedback arrives after the contactor pick-up time and lights the lamp one scan later.
     let lamp_on = s.step_cycle().unwrap();
     assert_eq!(value(&lamp_on.committed, lamp), SignalValue::Bool(true));
-    s.operate(OperatorAction::Press { component: "stop".into() }).unwrap();
+    s.operate(OperatorAction::Press {
+        component: "stop".into(),
+    })
+    .unwrap();
     let stopped = s.step_cycle().unwrap();
-    assert_eq!(value(&stopped.committed, contactor), SignalValue::Bool(false));
+    assert_eq!(
+        value(&stopped.committed, contactor),
+        SignalValue::Bool(false)
+    );
     assert_eq!(idle.header.cycle + 4, stopped.header.cycle);
-    assert!(s.events().iter().any(|(_, e)| matches!(e.kind, LabEventKind::Operator { .. })));
+    assert!(
+        s.events()
+            .iter()
+            .any(|(_, e)| matches!(e.kind, LabEventKind::Operator { .. }))
+    );
 }
 
 #[test]
@@ -187,18 +278,42 @@ fn hardware_fault_and_repair_are_diagnosable_through_the_station() {
     s.set_plc_switch(PlcModeRequest::Run).unwrap();
     let fault = FaultInjection {
         id: lab_model::Identifier::new("di-moved").unwrap(),
-        fault: FaultSpec::ModuleInWrongSlot { from: SlotRef { rack: 0, slot: 1 }, to: SlotRef { rack: 0, slot: 4 } },
+        fault: FaultSpec::ModuleInWrongSlot {
+            from: SlotRef { rack: 0, slot: 1 },
+            to: SlotRef { rack: 0, slot: 4 },
+        },
     };
     s.inject_fault(&fault).unwrap();
-    s.operate(OperatorAction::Press { component: "start".into() }).unwrap();
+    s.operate(OperatorAction::Press {
+        component: "start".into(),
+    })
+    .unwrap();
     let o = s.step_cycle().unwrap();
-    assert_eq!(value(&o.committed, signal(&s, "plc.MotorContactor")), SignalValue::Bool(false));
+    assert_eq!(
+        value(&o.committed, signal(&s, "plc.MotorContactor")),
+        SignalValue::Bool(false)
+    );
     let (_, rows) = s.variables(Some("StartPB"), 0, 10);
     assert_eq!(rows[0].quality, Some(hardware_model::Quality::ModuleFault));
-    assert!(s.station().module_views().iter().any(|m| m.status == hardware_model::ModuleStatus::Unconfigured));
-    assert_eq!(s.repair("Moved DI module back to slot 1", std::slice::from_ref(&fault.id)).unwrap(), 1);
+    assert!(
+        s.station()
+            .module_views()
+            .iter()
+            .any(|m| m.status == hardware_model::ModuleStatus::Unconfigured)
+    );
+    assert_eq!(
+        s.repair(
+            "Moved DI module back to slot 1",
+            std::slice::from_ref(&fault.id)
+        )
+        .unwrap(),
+        1
+    );
     let fixed = s.step_cycle().unwrap();
-    assert_eq!(value(&fixed.committed, signal(&s, "plc.MotorContactor")), SignalValue::Bool(true));
+    assert_eq!(
+        value(&fixed.committed, signal(&s, "plc.MotorContactor")),
+        SignalValue::Bool(true)
+    );
 }
 
 #[test]
@@ -217,7 +332,11 @@ fn analog_range_configuration_changes_the_plc_view_of_the_same_physics() {
     s.download(program, 2, Some(wrong)).unwrap();
     s.step_cycle().unwrap();
     let o = s.step_cycle().unwrap();
-    assert_eq!(value(&o.scan_inputs, raw), SignalValue::Int(2800), "5.6 mA read as 0-20 mA");
+    assert_eq!(
+        value(&o.scan_inputs, raw),
+        SignalValue::Int(2800),
+        "5.6 mA read as 0-20 mA"
+    );
 }
 
 #[test]
@@ -232,18 +351,37 @@ fn modbus_scan_feeds_plc_inputs_and_a_wrong_subnet_is_observable() {
         last = Some(s.step_cycle().unwrap());
     }
     let o = last.take().unwrap();
-    assert_eq!(value(&o.scan_inputs, signal(&s, "plc.LevelCommOK")), SignalValue::Bool(true));
-    assert_eq!(value(&o.scan_inputs, signal(&s, "plc.LevelPermille")), SignalValue::Int(100));
-    assert_eq!(value(&o.scan_inputs, signal(&s, "plc.LevelPercent")), SignalValue::Real(10.0));
+    assert_eq!(
+        value(&o.scan_inputs, signal(&s, "plc.LevelCommOK")),
+        SignalValue::Bool(true)
+    );
+    assert_eq!(
+        value(&o.scan_inputs, signal(&s, "plc.LevelPermille")),
+        SignalValue::Int(100)
+    );
+    assert_eq!(
+        value(&o.scan_inputs, signal(&s, "plc.LevelPercent")),
+        SignalValue::Real(10.0)
+    );
     let mut wrong = s.station().configuration().clone();
     wrong.network.interface.as_mut().unwrap().ip = Ipv4::parse("192.168.1.10").unwrap();
     s.download(program, 2, Some(wrong)).unwrap();
     for _ in 0..5 {
         last = Some(s.step_cycle().unwrap());
     }
-    assert_eq!(value(&last.unwrap().scan_inputs, signal(&s, "plc.LevelCommOK")), SignalValue::Bool(false));
-    assert!(s.station().active_diagnostics().any(|(_, k)| *k == hardware_model::DiagnosticKind::NoRoute));
-    assert_eq!(s.network().ping(Ipv4::parse("192.168.0.20").unwrap()), network_core::PingResult::NoRoute);
+    assert_eq!(
+        value(&last.unwrap().scan_inputs, signal(&s, "plc.LevelCommOK")),
+        SignalValue::Bool(false)
+    );
+    assert!(
+        s.station()
+            .active_diagnostics()
+            .any(|(_, k)| *k == hardware_model::DiagnosticKind::NoRoute)
+    );
+    assert_eq!(
+        s.network().ping(Ipv4::parse("192.168.0.20").unwrap()),
+        network_core::PingResult::NoRoute
+    );
 }
 
 #[test]
@@ -251,11 +389,20 @@ fn binding_errors_block_downloads_and_keep_the_running_program() {
     let mut s = session(MOTOR);
     s.download("PROGRAM Main VAR_INPUT StartPB : BOOL; END_VAR VAR_OUTPUT MotorContactor : BOOL; END_VAR MotorContactor := StartPB; END_PROGRAM", 1, None)
         .unwrap();
-    let result = s.download("PROGRAM Main VAR_INPUT StartPB : INT; END_VAR END_PROGRAM", 2, None);
-    let Err(EngineError::Binding(issues)) = result else { panic!("binding error expected") };
+    let result = s.download(
+        "PROGRAM Main VAR_INPUT StartPB : INT; END_VAR END_PROGRAM",
+        2,
+        None,
+    );
+    let Err(EngineError::Binding(issues)) = result else {
+        panic!("binding error expected")
+    };
     assert!(issues.iter().any(|i| i.blocking && i.tag == "StartPB"));
     assert_eq!(s.program().unwrap().1, 1);
-    let Err(EngineError::Compile(_)) = s.download("PROGRAM Main x := ; END_PROGRAM", 3, None) else { panic!() };
+    let Err(EngineError::Compile(_)) = s.download("PROGRAM Main x := ; END_PROGRAM", 3, None)
+    else {
+        panic!()
+    };
 }
 
 #[test]
@@ -273,7 +420,10 @@ fn trace_stays_within_its_byte_budget_for_large_programs() {
     );
     let scene = scene(TANK);
     let station = scene.reference_station.clone();
-    let config = SessionConfig { trace_bytes: 512 * 1024, ..SessionConfig::default() };
+    let config = SessionConfig {
+        trace_bytes: 512 * 1024,
+        ..SessionConfig::default()
+    };
     let mut s = LabSession::new(scene, station, PlatformProfile::generic(), config).unwrap();
     s.download(&program, 1, None).unwrap();
     s.set_plc_switch(PlcModeRequest::Run).unwrap();
@@ -281,10 +431,18 @@ fn trace_stays_within_its_byte_budget_for_large_programs() {
         s.step_cycle().unwrap();
     }
     let stats = s.trace_stats();
-    assert!(stats.used_bytes <= 512 * 1024 + 300 * 1024, "used {} bytes", stats.used_bytes);
+    assert!(
+        stats.used_bytes <= 512 * 1024 + 300 * 1024,
+        "used {} bytes",
+        stats.used_bytes
+    );
     assert!(stats.dropped_records > 0);
     assert_eq!(stats.dropped_records + stats.retained_records as u64, 3000);
-    let locals = s.signals().iter().filter(|d| d.kind == SignalKind::PlcLocal).count();
+    let locals = s
+        .signals()
+        .iter()
+        .filter(|d| d.kind == SignalKind::PlcLocal)
+        .count();
     assert_eq!(locals, 1500);
     // Trend queries over retained history are bounded.
     let level = signal(&s, "process.tank.levelMl");
@@ -292,7 +450,10 @@ fn trace_stays_within_its_byte_budget_for_large_programs() {
     assert!(series[0].points.len() <= 200);
     let latest = s.latest().unwrap().header.cycle;
     assert!(s.observation(latest).is_some());
-    assert!(s.observation(0).is_none(), "evicted history is reported missing, not invented");
+    assert!(
+        s.observation(0).is_none(),
+        "evicted history is reported missing, not invented"
+    );
 }
 
 #[test]
@@ -311,5 +472,8 @@ fn world_reset_restores_the_plant_and_keeps_program_and_signal_ids() {
     assert_eq!(s.signals().by_path("plc.InletValve"), Some(valve));
     assert_eq!(s.plc_mode(), PlcMode::Run);
     let o = s.step_cycle().unwrap();
-    assert_eq!(value(&o.scan_inputs, signal(&s, "plc.LevelHigh")), SignalValue::Bool(false));
+    assert_eq!(
+        value(&o.scan_inputs, signal(&s, "plc.LevelHigh")),
+        SignalValue::Bool(false)
+    );
 }

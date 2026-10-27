@@ -4,7 +4,10 @@
 
 use crate::{
     plc::{InputSource, TagRole},
-    session::{CycleHeader, CycleObservation, LAYER_COMMITTED, LAYER_INPUTS, LAYER_PROCESS, LabSession, Layer},
+    session::{
+        CycleHeader, CycleObservation, LAYER_COMMITTED, LAYER_INPUTS, LAYER_PROCESS, LabSession,
+        Layer,
+    },
     signals::{SignalId, SignalKind, SignalValue},
 };
 use hardware_model::Quality;
@@ -38,10 +41,17 @@ pub struct CauseEffect {
 const SECTION_LIMIT: usize = 16;
 
 fn value_in(layer: &Layer, signal: SignalId) -> Option<SignalValue> {
-    layer.binary_search_by_key(&signal, |(s, _)| *s).ok().map(|i| layer[i].1)
+    layer
+        .binary_search_by_key(&signal, |(s, _)| *s)
+        .ok()
+        .map(|i| layer[i].1)
 }
 
-fn effects(layer: &Layer, reference: Option<&Layer>, keep: impl Fn(SignalId) -> bool) -> Vec<Effect> {
+fn effects(
+    layer: &Layer,
+    reference: Option<&Layer>,
+    keep: impl Fn(SignalId) -> bool,
+) -> Vec<Effect> {
     let mut all: Vec<Effect> = layer
         .iter()
         .filter(|(s, _)| keep(*s))
@@ -58,10 +68,18 @@ fn effects(layer: &Layer, reference: Option<&Layer>, keep: impl Fn(SignalId) -> 
     all
 }
 
-pub fn cause_effect(session: &LabSession, current: &CycleObservation, previous: Option<&CycleObservation>) -> CauseEffect {
+pub fn cause_effect(
+    session: &LabSession,
+    current: &CycleObservation,
+    previous: Option<&CycleObservation>,
+) -> CauseEffect {
     let kind = |s: SignalId| session.signals().get(s).map(|d| d.kind);
     let interesting_physical = |s: SignalId| {
-        session.signals().get(s).is_some_and(|d| d.kind == SignalKind::Physical && !d.path.ends_with(".capacityMl") && !d.path.ends_with(".color"))
+        session.signals().get(s).is_some_and(|d| {
+            d.kind == SignalKind::Physical
+                && !d.path.ends_with(".capacityMl")
+                && !d.path.ends_with(".color")
+        })
     };
     let mut process: Vec<Change> = current
         .process_after
@@ -69,16 +87,27 @@ pub fn cause_effect(session: &LabSession, current: &CycleObservation, previous: 
         .filter(|(s, _)| interesting_physical(*s))
         .filter_map(|(signal, after)| {
             let before = previous.and_then(|p| value_in(&p.process_after, *signal));
-            (before != Some(*after)).then_some(Change { signal: *signal, before, after: *after })
+            (before != Some(*after)).then_some(Change {
+                signal: *signal,
+                before,
+                after: *after,
+            })
         })
         .collect();
     process.truncate(SECTION_LIMIT);
     let next = effects(&current.staged_next, Some(&current.scan_inputs), |_| true);
     CauseEffect {
         header: current.header,
-        saw: effects(&current.scan_inputs, previous.map(|p| &p.scan_inputs), |_| true),
+        saw: effects(
+            &current.scan_inputs,
+            previous.map(|p| &p.scan_inputs),
+            |_| true,
+        ),
         decided: effects(&current.committed, previous.map(|p| &p.committed), |s| {
-            matches!(kind(s), Some(SignalKind::PlcOutput | SignalKind::PlcLocal | SignalKind::BlockOutput))
+            matches!(
+                kind(s),
+                Some(SignalKind::PlcOutput | SignalKind::PlcLocal | SignalKind::BlockOutput)
+            )
         }),
         process,
         next,
@@ -121,21 +150,23 @@ pub struct HistoryRow {
 
 impl LabSession {
     pub fn latest_cause_effect(&self) -> Option<CauseEffect> {
-        self.last.as_ref().map(|c| cause_effect(self, c, self.previous.as_ref()))
+        self.last
+            .as_ref()
+            .map(|c| cause_effect(self, c, self.previous.as_ref()))
     }
 
     /// Reconstruct one retained cycle observation from the trace.
     pub fn observation(&self, cycle: u64) -> Option<CycleObservation> {
         let (header, layers) = self.trace().record(self.seq_of(cycle))?;
-        let lift = |l: &Vec<(u32, SignalValue)>| l.iter().map(|(k, v)| (SignalId(*k), *v)).collect::<Layer>();
-        let fault = self
-            .events()
-            .iter()
-            .rev()
-            .find_map(|(_, e)| match &e.kind {
-                crate::session::LabEventKind::PlcFault { diagnostic } if e.cycle == cycle => Some(diagnostic.clone()),
-                _ => None,
-            });
+        let lift = |l: &Vec<(u32, SignalValue)>| {
+            l.iter().map(|(k, v)| (SignalId(*k), *v)).collect::<Layer>()
+        };
+        let fault = self.events().iter().rev().find_map(|(_, e)| match &e.kind {
+            crate::session::LabEventKind::PlcFault { diagnostic } if e.cycle == cycle => {
+                Some(diagnostic.clone())
+            }
+            _ => None,
+        });
         Some(CycleObservation {
             header: *header,
             scan_inputs: lift(&layers[0]),
@@ -154,17 +185,27 @@ impl LabSession {
     }
 
     /// PLC variables with all images, I/O source and quality. Filtered and paged.
-    pub fn variables(&self, filter: Option<&str>, offset: usize, limit: usize) -> (usize, Vec<VariableRow>) {
+    pub fn variables(
+        &self,
+        filter: Option<&str>,
+        offset: usize,
+        limit: usize,
+    ) -> (usize, Vec<VariableRow>) {
         let snapshot = self.plc.snapshot();
         let needle = filter.map(str::to_ascii_lowercase);
-        let matches = |name: &str| needle.as_ref().is_none_or(|n| name.to_ascii_lowercase().contains(n));
+        let matches = |name: &str| {
+            needle
+                .as_ref()
+                .is_none_or(|n| name.to_ascii_lowercase().contains(n))
+        };
         let mut rows = Vec::new();
         for tag in self.tags() {
             if !matches(&tag.name) {
                 continue;
             }
             let get = |map: Option<&std::collections::BTreeMap<_, plc_types::PlcValue>>| {
-                map.and_then(|m| m.get(&tag.symbol)).map(|v| SignalValue::from_plc(*v))
+                map.and_then(|m| m.get(&tag.symbol))
+                    .map(|v| SignalValue::from_plc(*v))
             };
             let (scan_value, staged, committed) = match tag.role {
                 TagRole::Input => (
@@ -177,14 +218,24 @@ impl LabSession {
             let (source, quality) = match (tag.source, tag.sink) {
                 (Some(InputSource::Channel(c)), _) | (None, Some(c)) => (
                     Some(self.channel_address(c)),
-                    self.station().reading(c).map(|r| r.quality).or(Some(Quality::Good)),
+                    self.station()
+                        .reading(c)
+                        .map(|r| r.quality)
+                        .or(Some(Quality::Good)),
                 ),
-                (Some(InputSource::Modbus { scan, .. } | InputSource::ModbusStatus { scan }), _) => {
+                (
+                    Some(InputSource::Modbus { scan, .. } | InputSource::ModbusStatus { scan }),
+                    _,
+                ) => {
                     let status = self.network().scan_status(scan);
                     let view = self.network().scan_views().into_iter().nth(scan);
                     (
                         view.map(|v| format!("Modbus TCP {} unit {}", v.server, v.unit_id)),
-                        Some(if status == Some(network_core::ScanStatus::Ok) { Quality::Good } else { Quality::ModuleFault }),
+                        Some(if status == Some(network_core::ScanStatus::Ok) {
+                            Quality::Good
+                        } else {
+                            Quality::ModuleFault
+                        }),
                     )
                 }
                 _ => (None, None),
@@ -206,7 +257,9 @@ impl LabSession {
             });
         }
         for block in self.blocks() {
-            let state = snapshot.as_ref().and_then(|s| s.function_blocks().get(&block.instance).copied());
+            let state = snapshot
+                .as_ref()
+                .and_then(|s| s.function_blocks().get(&block.instance).copied());
             for (name, signal) in &block.outputs {
                 let label = format!("{}.{}", block.name, name);
                 if !matches(&label) {
@@ -217,7 +270,9 @@ impl LabSession {
                     name: label,
                     kind: SignalKind::BlockOutput,
                     scan_value: None,
-                    committed: state.and_then(|s| s.outputs().into_iter().find(|(n, _)| n == name)).map(|(_, v)| SignalValue::from_plc(v)),
+                    committed: state
+                        .and_then(|s| s.outputs().into_iter().find(|(n, _)| n == name))
+                        .map(|(_, v)| SignalValue::from_plc(v)),
                     staged: None,
                     source: None,
                     quality: None,
@@ -231,7 +286,9 @@ impl LabSession {
 
     pub fn channel_address(&self, channel: lab_model::hardware::ChannelRef) -> String {
         let config = self.station().configuration();
-        let Some(module) = config.module_at(channel.slot_ref()) else { return channel.to_string() };
+        let Some(module) = config.module_at(channel.slot_ref()) else {
+            return channel.to_string();
+        };
         hardware_model::address::format(
             self.profile().addressing,
             module.module,
@@ -269,15 +326,27 @@ impl LabSession {
         }
         let snapshot = self.plc.snapshot()?;
         let tag = self.tags().iter().find(|t| t.signal == signal)?;
-        let map = if tag.role == TagRole::Input { snapshot.staged_inputs() } else { snapshot.committed() };
+        let map = if tag.role == TagRole::Input {
+            snapshot.staged_inputs()
+        } else {
+            snapshot.committed()
+        };
         map.get(&tag.symbol).map(|v| SignalValue::from_plc(*v))
     }
 
     /// Change-point series for up to 16 signals in a time window, decimated to `max_points`.
-    pub fn trend(&self, signals: &[SignalId], from_us: u64, to_us: u64, max_points: usize) -> Vec<TrendSeries> {
+    pub fn trend(
+        &self,
+        signals: &[SignalId],
+        from_us: u64,
+        to_us: u64,
+        max_points: usize,
+    ) -> Vec<TrendSeries> {
         let trace = self.trace();
         let stats = trace.stats();
-        let (Some(oldest), Some(latest)) = (stats.oldest, stats.latest) else { return Vec::new() };
+        let (Some(oldest), Some(latest)) = (stats.oldest, stats.latest) else {
+            return Vec::new();
+        };
         let from = trace.find_first(|h| h.end_us >= from_us).unwrap_or(latest);
         let to = trace
             .find_first(|h| h.start_us > to_us)
@@ -294,10 +363,17 @@ impl LabSession {
                 let kind = self.signals().get(*signal)?.kind;
                 let (layer, index, at_end) = match kind {
                     SignalKind::PlcInput => (TrendLayer::Inputs, LAYER_INPUTS, false),
-                    SignalKind::PlcOutput | SignalKind::PlcLocal | SignalKind::BlockOutput => (TrendLayer::Committed, LAYER_COMMITTED, false),
-                    SignalKind::Physical | SignalKind::Channel => (TrendLayer::Process, LAYER_PROCESS, true),
+                    SignalKind::PlcOutput | SignalKind::PlcLocal | SignalKind::BlockOutput => {
+                        (TrendLayer::Committed, LAYER_COMMITTED, false)
+                    }
+                    SignalKind::Physical | SignalKind::Channel => {
+                        (TrendLayer::Process, LAYER_PROCESS, true)
+                    }
                 };
-                let series = trace.series(index, &[signal.0], from, to).pop().unwrap_or_default();
+                let series = trace
+                    .series(index, &[signal.0], from, to)
+                    .pop()
+                    .unwrap_or_default();
                 let mut points: Vec<(u64, SignalValue)> = series
                     .into_iter()
                     .filter_map(|(seq, value)| {
@@ -309,9 +385,21 @@ impl LabSession {
                 if decimated {
                     points = decimate(&points, from_us, to_us, max_points);
                 }
-                Some(TrendSeries { signal: *signal, layer, points, decimated })
+                Some(TrendSeries {
+                    signal: *signal,
+                    layer,
+                    points,
+                    decimated,
+                })
             })
             .collect()
+    }
+
+    /// World-time window covered by the retained trace: (oldest cycle start, latest cycle end).
+    pub fn retained_window(&self) -> Option<(u64, u64)> {
+        let oldest = self.trace().headers().next()?.1.start_us;
+        let latest = self.trace().headers().next_back()?.1.end_us;
+        Some((oldest, latest))
     }
 
     /// Cycle headers in a window, newest last, bounded.
@@ -331,7 +419,12 @@ impl LabSession {
 }
 
 /// Keep, per time bucket, the first, minimum, maximum and last point (in time order).
-fn decimate(points: &[(u64, SignalValue)], from: u64, to: u64, max_points: usize) -> Vec<(u64, SignalValue)> {
+fn decimate(
+    points: &[(u64, SignalValue)],
+    from: u64,
+    to: u64,
+    max_points: usize,
+) -> Vec<(u64, SignalValue)> {
     let buckets = (max_points / 4).max(1) as u64;
     let span = to.saturating_sub(from).max(1);
     let mut out: Vec<(u64, SignalValue)> = Vec::with_capacity(max_points);
@@ -339,13 +432,18 @@ fn decimate(points: &[(u64, SignalValue)], from: u64, to: u64, max_points: usize
     while start < points.len() {
         let bucket = (points[start].0.saturating_sub(from)) * buckets / span;
         let mut end = start;
-        while end < points.len() && (points[end].0.saturating_sub(from)) * buckets / span == bucket {
+        while end < points.len() && (points[end].0.saturating_sub(from)) * buckets / span == bucket
+        {
             end += 1;
         }
         let slice = &points[start..end];
         let mut keep = vec![0, slice.len() - 1];
-        let min = (0..slice.len()).min_by(|a, b| slice[*a].1.as_f64().total_cmp(&slice[*b].1.as_f64())).unwrap_or(0);
-        let max = (0..slice.len()).max_by(|a, b| slice[*a].1.as_f64().total_cmp(&slice[*b].1.as_f64())).unwrap_or(0);
+        let min = (0..slice.len())
+            .min_by(|a, b| slice[*a].1.as_f64().total_cmp(&slice[*b].1.as_f64()))
+            .unwrap_or(0);
+        let max = (0..slice.len())
+            .max_by(|a, b| slice[*a].1.as_f64().total_cmp(&slice[*b].1.as_f64()))
+            .unwrap_or(0);
         keep.extend([min, max]);
         keep.sort_unstable();
         keep.dedup();

@@ -1,159 +1,115 @@
-//! The sole host pacing exception. Delays never become domain time.
-use desktop_session::{RunLease, RuntimeSessionService, TickOutcome};
+//! The sole host pacing exception. Wall-clock delays only pace cycles; they never become
+//! simulation time. One cycle per wake, no catch-up.
+use desktop_session::{DesktopApp, RunStart, TickOutcome};
 use std::{future::Future, sync::Arc, time::Duration};
 use tauri::Emitter;
 
-async fn paced_loop<W, WF, T, TF, N>(period: Duration, mut wait: W, mut tick: T, mut notify: N)
+/// What one paced step produced, as seen by the loop.
+pub(crate) enum Step {
+    /// Continue after waiting `next_period`.
+    Continue(Duration),
+    /// Stop pacing (paused, stale lease, failure or notification failure).
+    Exit,
+}
+
+pub(crate) async fn paced_loop<W, WF, T, TF>(first_period: Duration, mut wait: W, mut step: T)
 where
     W: FnMut(Duration) -> WF,
     WF: Future<Output = ()>,
     T: FnMut() -> TF,
-    TF: Future<Output = Result<TickOutcome, app_contract::IpcError>>,
-    N: FnMut() -> bool,
+    TF: Future<Output = Step>,
 {
+    let mut period = first_period;
     loop {
-        // Wait before the first cycle and each subsequent cycle. No catch-up.
+        // Wait before every cycle, including the first.
         wait(period).await;
-        match tick().await {
-            Ok(TickOutcome::Stale) => break,
-            Ok(TickOutcome::Observed { running }) => {
-                if !notify() || !running {
-                    break;
-                }
-            }
-            Err(error) => {
-                eprintln!("{}: {}", error.code, error.message);
-                notify();
-                break;
-            }
+        match step().await {
+            Step::Continue(next) => period = next,
+            Step::Exit => break,
         }
     }
 }
 
-pub fn spawn(
-    app: tauri::AppHandle,
-    service: Arc<RuntimeSessionService>,
-    lease: RunLease,
-    period_micros: u64,
-) {
+pub fn spawn(app: tauri::AppHandle, service: Arc<DesktopApp>, start: RunStart) {
+    let lease = start.lease;
     tauri::async_runtime::spawn(async move {
-        let tick_service = Arc::clone(&service);
         paced_loop(
-            Duration::from_micros(period_micros),
+            Duration::from_micros(start.period_us),
             tokio::time::sleep,
             move || {
-                let service = Arc::clone(&tick_service);
-                let failure_service = Arc::clone(&tick_service);
+                let service = Arc::clone(&service);
+                let app = app.clone();
                 async move {
-                    match tauri::async_runtime::spawn_blocking(move || {
-                        service.continuous_tick(lease)
-                    })
-                    .await
-                    {
-                        Ok(result) => result,
+                    let worker = Arc::clone(&service);
+                    let outcome =
+                        tauri::async_runtime::spawn_blocking(move || worker.tick(lease)).await;
+                    match outcome {
+                        Ok(Ok(TickOutcome::Stale)) => Step::Exit,
+                        Ok(Ok(TickOutcome::Advanced {
+                            running,
+                            next_period_us,
+                            wake,
+                        })) => {
+                            if let Err(error) = app.emit(app_contract::EXECUTION_WAKE_EVENT, wake) {
+                                service.driver_failed(
+                                    lease,
+                                    format!("Execution wake delivery failed: {error}"),
+                                );
+                                return Step::Exit;
+                            }
+                            if running {
+                                Step::Continue(Duration::from_micros(next_period_us))
+                            } else {
+                                Step::Exit
+                            }
+                        }
+                        Ok(Err(error)) => {
+                            // The workspace already failed closed; tell the view to refresh once.
+                            let _ = app.emit(app_contract::EXECUTION_WAKE_EVENT, lease.wake(0));
+                            eprintln!("{}: {}", error.code, error.message);
+                            Step::Exit
+                        }
                         Err(_) => {
-                            let error = app_contract::IpcError {
-                                code: "APP-EXECUTION-WORKER".into(),
-                                message: "The continuous execution worker could not finish.".into(),
-                            };
-                            tick_service_failure(&failure_service, lease, error.clone());
-                            Err(error)
+                            service.driver_failed(
+                                lease,
+                                "The simulation worker could not finish.".into(),
+                            );
+                            let _ = app.emit(app_contract::EXECUTION_WAKE_EVENT, lease.wake(0));
+                            Step::Exit
                         }
                     }
                 }
-            },
-            || {
-                if let Err(error) = app.emit(app_contract::EXECUTION_WAKE_EVENT, lease.wake()) {
-                    eprintln!("APP-EXECUTION-NOTIFICATION: {error}");
-                    tick_service_failure(
-                        &service,
-                        lease,
-                        app_contract::IpcError {
-                            code: "APP-EXECUTION-NOTIFICATION".into(),
-                            message: "Execution wake delivery failed. Reload the program.".into(),
-                        },
-                    );
-                    return false;
-                }
-                true
             },
         )
         .await;
     });
 }
 
-fn tick_service_failure(
-    service: &RuntimeSessionService,
-    lease: RunLease,
-    error: app_contract::IpcError,
-) {
-    if let Err(failure) = service.driver_failed(lease, error) {
-        eprintln!("{}: {}", failure.code, failure.message);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::{cell::RefCell, future::ready};
+
     #[test]
-    fn waits_before_each_tick_one_cycle_per_wake_and_exits_on_stale() {
-        let events = RefCell::new(Vec::new());
-        let attempts = RefCell::new(0);
+    fn waits_before_each_step_follows_new_periods_and_exits() {
+        let waits = RefCell::new(Vec::new());
+        let steps = RefCell::new(0);
         tauri::async_runtime::block_on(paced_loop(
             Duration::from_millis(100),
             |period| {
-                assert_eq!(period, Duration::from_millis(100));
-                events.borrow_mut().push("wait");
+                waits.borrow_mut().push(period.as_millis());
                 ready(())
             },
             || {
-                events.borrow_mut().push("tick");
-                *attempts.borrow_mut() += 1;
-                ready(Ok(if *attempts.borrow() == 3 {
-                    TickOutcome::Stale
-                } else {
-                    TickOutcome::Observed { running: true }
-                }))
-            },
-            || {
-                events.borrow_mut().push("notify");
-                true
+                *steps.borrow_mut() += 1;
+                ready(match *steps.borrow() {
+                    1 => Step::Continue(Duration::from_millis(50)),
+                    2 => Step::Continue(Duration::from_millis(200)),
+                    _ => Step::Exit,
+                })
             },
         ));
-        assert_eq!(
-            *events.borrow(),
-            [
-                "wait", "tick", "notify", "wait", "tick", "notify", "wait", "tick"
-            ]
-        );
-    }
-    #[test]
-    fn fault_or_application_failure_notifies_once_and_never_retries() {
-        for application_failure in [false, true] {
-            let ticks = RefCell::new(0);
-            let notices = RefCell::new(0);
-            tauri::async_runtime::block_on(paced_loop(
-                Duration::from_millis(100),
-                |_| ready(()),
-                || {
-                    *ticks.borrow_mut() += 1;
-                    ready(if application_failure {
-                        Err(app_contract::IpcError {
-                            code: "APP-TEST".into(),
-                            message: "Injected host failure".into(),
-                        })
-                    } else {
-                        Ok(TickOutcome::Observed { running: false })
-                    })
-                },
-                || {
-                    *notices.borrow_mut() += 1;
-                    true
-                },
-            ));
-            assert_eq!(*ticks.borrow(), 1);
-            assert_eq!(*notices.borrow(), 1);
-        }
+        assert_eq!(*waits.borrow(), [100, 50, 200]);
+        assert_eq!(*steps.borrow(), 3);
     }
 }

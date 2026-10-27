@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "Foundation window: read-only application information; no filesystem, shell, or network plugins.",
+  "description": "Main window: application commands and execution wake events only. No filesystem, shell, HTTP or dialog plugins are exposed to the web view; project and knowledge files are accessed only by the Rust host in trusted locations.",
   "windows": ["main"],
   "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
 }

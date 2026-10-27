@@ -46,12 +46,21 @@ impl std::fmt::Display for EngineError {
             Self::Binding(issues) => write!(
                 f,
                 "The program does not match the I/O configuration: {}",
-                issues.iter().filter(|i| i.blocking).map(|i| i.message.as_str()).collect::<Vec<_>>().join(" ")
+                issues
+                    .iter()
+                    .filter(|i| i.blocking)
+                    .map(|i| i.message.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" ")
             ),
             Self::Hardware(m) | Self::Scene(m) | Self::InvalidAction(m) => f.write_str(m),
             Self::NoProgram => f.write_str("No program is loaded in the PLC."),
-            Self::PlcFaulted => f.write_str("The PLC is in FAULT. Reset the PLC before switching to RUN."),
-            Self::UnknownComponent(c) => write!(f, "The component '{c}' does not exist in this scene."),
+            Self::PlcFaulted => {
+                f.write_str("The PLC is in FAULT. Reset the PLC before switching to RUN.")
+            }
+            Self::UnknownComponent(c) => {
+                write!(f, "The component '{c}' does not exist in this scene.")
+            }
             Self::UnknownSignal(s) => write!(f, "The signal '{s}' does not exist."),
             Self::UnknownChannel(c) => write!(f, "The channel '{c}' does not exist."),
             Self::Internal(m) => write!(f, "Internal simulation error: {m}"),

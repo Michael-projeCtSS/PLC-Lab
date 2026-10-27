@@ -1,463 +1,912 @@
-//! Desktop application orchestration. No host/UI dependency or PLC semantics.
+//! Desktop application adapter: application use cases over the headless lab engine,
+//! the knowledge library and the project store, exposed as IPC contract DTOs.
+//!
+//! This crate owns no PLC, process, network or grading semantics. It sequences use cases
+//! (open a workspace, build and load, run the simulation, investigate a fault, check an
+//! exercise), owns the single open workspace and maps typed errors to transport errors
+//! at its public boundary. It has no Tauri or user-interface dependency.
+
+mod convert;
+mod error;
+mod library;
+mod projects;
+mod workspace;
+
+pub use error::AppError;
+pub use workspace::{RunLease, RunStart, TickOutcome};
+
 use app_contract::*;
-use plc_runtime::{FunctionBlockStateSnapshot, MemoryRole, Runtime, RuntimeConfig, RuntimeState};
-use plc_types::{PlcTime, diagnostics::RelatedIdentity, identity::SymbolId};
-use std::sync::{Mutex, MutexGuard};
-mod execution;
-mod process;
-use execution::Mode;
-pub use execution::{ExecutionStart, RunLease, TickOutcome};
-mod trace;
-use trace::EventKind;
-pub use trace::{TRACE_CAPACITY, TRACE_PAGE_MAX};
+use error::AppResult;
+use knowledge_core::KnowledgeLibrary;
+use lab_engine::AssessmentOutcome;
+use lab_model::exercise::ExerciseKind;
+use project_model::{ExerciseState, Progress, ProjectKind, ProjectStore};
+use std::{
+    path::PathBuf,
+    sync::{Mutex, MutexGuard},
+};
+use workspace::Workspace;
 
-pub const DEFAULT_CYCLE_MICROS: u64 = 100_000;
-pub const DEFAULT_OPERATION_BUDGET: u64 = 10_000;
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(Default)]
-pub struct RuntimeSessionService {
-    inner: Mutex<SessionSlot>,
-}
-#[derive(Default)]
-struct SessionSlot {
-    generation: u64,
-    latest_load_intent: u64,
-    loaded: Option<LoadedSession>,
-}
-/// Backend-only request ordering, distinct from a committed runtime identity.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct LoadIntentId(u64);
-enum PreparedLoad {
-    Ready(Box<LoadedSession>),
-    CompileFailed(Vec<CompilerDiagnostic>),
-}
-struct LoadedSession {
-    id: RuntimeSessionId,
-    program_name: String,
-    runtime: Runtime,
-    config: RuntimeConfig,
-    variables: Vec<VariableDescriptor>,
-    process: Option<process::AttachedTank>,
-    process_failed: bool,
-    driver_error: Option<IpcError>,
-    mode: Mode,
-    epoch: u64,
-    active_lease: Option<RunLease>,
-    trace: trace_core::TraceBuffer<trace::Event>,
-    instance_names:
-        std::collections::BTreeMap<plc_types::identity::FunctionBlockInstanceId, String>,
-}
-struct VariableDescriptor {
-    symbol: SymbolId,
-    name: String,
-    role: RuntimeRole,
-    type_name: plc_types::PlcType,
+/// Trusted locations chosen by the host.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppPaths {
+    /// Knowledge pack roots, searched in order.
+    pub knowledge_roots: Vec<PathBuf>,
+    pub projects_dir: PathBuf,
+    pub progress_file: PathBuf,
 }
 
-fn application_error(code: &str, message: impl Into<String>) -> IpcError {
-    IpcError {
-        code: code.into(),
-        message: message.into(),
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppInfo {
+    pub app_version: String,
+    pub build_context: String,
 }
-fn version(value: u32) -> Result<(), IpcError> {
-    if value == CONTRACT_VERSION {
+
+struct AppState {
+    library: KnowledgeLibrary,
+    store: ProjectStore,
+    progress: Progress,
+    workspace: Option<Workspace>,
+    next_workspace: u64,
+    next_run: u64,
+}
+
+pub struct DesktopApp {
+    paths: AppPaths,
+    info: AppInfo,
+    state: Mutex<AppState>,
+}
+
+fn version(v: u32) -> AppResult<()> {
+    if v == CONTRACT_VERSION {
         Ok(())
     } else {
-        Err(application_error(
-            "APP-IPC-001",
-            format!("IPC contract version {value} is unsupported; expected {CONTRACT_VERSION}."),
-        ))
+        Err(AppError::ContractVersion(v))
     }
-}
-fn invariant() -> IpcError {
-    application_error(
-        "APP-RUNTIME-INTERNAL",
-        "The runtime session could not produce a consistent observation.",
-    )
 }
 
-impl RuntimeSessionService {
-    fn lock(&self) -> Result<MutexGuard<'_, SessionSlot>, IpcError> {
-        self.inner.lock().map_err(|_| {
-            application_error(
-                "APP-RUNTIME-LOCK",
-                "The runtime session is unavailable after an application failure.",
-            )
-        })
+/// The boundary: typed application errors become transport errors here and only here.
+fn boundary<T>(result: AppResult<T>) -> Result<T, IpcError> {
+    result.map_err(IpcError::from)
+}
+
+impl AppState {
+    fn workspace(&mut self, id: ExactU64) -> AppResult<&mut Workspace> {
+        self.workspace
+            .as_mut()
+            .filter(|w| w.id == id.0)
+            .ok_or(AppError::StaleWorkspace)
     }
-    pub fn load(&self, request: LoadStProgramRequest) -> Result<LoadProgramResponse, IpcError> {
-        version(request.contract_version)?;
-        let intent = self.reserve_load_intent()?;
-        match Self::prepare_load(&request.source)? {
-            PreparedLoad::Ready(candidate) => self.commit_prepared_load(intent, candidate),
-            PreparedLoad::CompileFailed(diagnostics) => {
-                Ok(LoadProgramResponse::CompileFailed { diagnostics })
+    fn save_project(&self, project: &project_model::Project) -> AppResult<()> {
+        self.store.save(project).map_err(AppError::from)
+    }
+}
+
+impl DesktopApp {
+    pub fn new(paths: AppPaths, info: AppInfo) -> Self {
+        let library = KnowledgeLibrary::load(&paths.knowledge_roots);
+        let progress = Progress::load(&paths.progress_file);
+        let store = ProjectStore::new(paths.projects_dir.clone());
+        Self {
+            paths,
+            info,
+            state: Mutex::new(AppState {
+                library,
+                store,
+                progress,
+                workspace: None,
+                next_workspace: 0,
+                next_run: 0,
+            }),
+        }
+    }
+
+    fn lock(&self) -> AppResult<MutexGuard<'_, AppState>> {
+        self.state.lock().map_err(|_| AppError::Unavailable)
+    }
+
+    fn search_paths(&self) -> Vec<String> {
+        self.paths
+            .knowledge_roots
+            .iter()
+            .map(|p| p.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    // ---- application ------------------------------------------------------------------
+
+    pub fn core_info(&self, request: VersionedRequest) -> Result<CoreInfo, IpcError> {
+        boundary(version(request.contract_version).map(|()| CoreInfo {
+            application_name: "PLC Lab".into(),
+            app_version: self.info.app_version.clone(),
+            core_version: lab_engine::VERSION.into(),
+            contract_version: CONTRACT_VERSION,
+            execution: "manual-and-continuous".into(),
+            build_context: self.info.build_context.clone(),
+        }))
+    }
+
+    // ---- knowledge and curriculum ----------------------------------------------------------
+
+    pub fn knowledge_status(
+        &self,
+        request: VersionedRequest,
+    ) -> Result<KnowledgeStatusDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            Ok(library::status(&self.lock()?.library, &self.search_paths()))
+        })())
+    }
+
+    pub fn knowledge_search(
+        &self,
+        request: KnowledgeSearchRequest,
+    ) -> Result<Vec<SearchHitDto>, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            library::search(&self.lock()?.library, &request)
+        })())
+    }
+
+    pub fn knowledge_article(&self, request: IdRequest) -> Result<ArticleDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            library::article(&self.lock()?.library, &request.id)
+        })())
+    }
+
+    pub fn knowledge_catalog(&self, request: VersionedRequest) -> Result<CatalogDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            Ok(library::catalog(&self.lock()?.library))
+        })())
+    }
+
+    pub fn library(&self, request: VersionedRequest) -> Result<LibraryDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let state = self.lock()?;
+            Ok(library::library(&state.library, &state.progress))
+        })())
+    }
+
+    pub fn lesson(&self, request: IdRequest) -> Result<LessonDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            library::lesson(&self.lock()?.library, &request.id)
+        })())
+    }
+
+    pub fn complete_lesson(&self, request: LessonCompleteRequest) -> Result<LibraryDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            if state.library.lesson(&request.id).is_none() {
+                return Err(AppError::NotFound {
+                    what: "lesson",
+                    id: request.id.clone(),
+                });
             }
-        }
-    }
-    fn reserve_load_intent(&self) -> Result<LoadIntentId, IpcError> {
-        let mut slot = self.lock()?;
-        if let Some(s) = &slot.loaded {
-            s.require_stopped()?;
-        }
-        let next = slot.latest_load_intent.checked_add(1).ok_or_else(|| {
-            application_error(
-                "APP-RUNTIME-LOAD-INTENT-EXHAUSTED",
-                "The program load intent range is exhausted.",
-            )
-        })?;
-        slot.latest_load_intent = next;
-        Ok(LoadIntentId(next))
-    }
-    // No service reference: expensive preparation cannot acquire its session lock.
-    fn prepare_load(source: &str) -> Result<PreparedLoad, IpcError> {
-        let compiled = match st_frontend::compile_st(source, st_frontend::CompilerConfig::default())
-        {
-            Ok(compiled) => compiled,
-            Err(errors) => {
-                return Ok(PreparedLoad::CompileFailed(
-                    errors.iter().map(CompilerDiagnostic::from).collect(),
+            if request.correct > request.total {
+                return Err(AppError::InvalidRequest(
+                    "More correct answers than questions.".into(),
                 ));
             }
-        };
-        let validated = compiled.validated().map_err(|_| invariant())?;
-        let plan = plc_runtime::lower(&validated)
-            .map_err(|e| application_error("APP-RUNTIME-LOAD", e.to_string()))?;
-        let config = RuntimeConfig::new(
-            PlcTime::from_micros(DEFAULT_CYCLE_MICROS),
-            DEFAULT_OPERATION_BUDGET,
-        )
-        .map_err(|e| application_error("APP-RUNTIME-LOAD", e.to_string()))?;
-        let variables = compiled
-            .program()
-            .symbols()
-            .symbols()
-            .filter_map(|symbol| {
-                plan.memory_role(symbol.id())
-                    .map(|role| VariableDescriptor {
-                        symbol: symbol.id(),
-                        name: symbol.name().into(),
-                        type_name: symbol.plc_type(),
-                        role: match role {
-                            MemoryRole::ExternalInput => RuntimeRole::Input,
-                            MemoryRole::ExternalOutput => RuntimeRole::Output,
-                            MemoryRole::Internal => RuntimeRole::Local,
-                        },
-                    })
+            state
+                .progress
+                .record_lesson(&request.id, request.correct, request.total);
+            state.progress.save(&self.paths.progress_file)?;
+            Ok(library::library(&state.library, &state.progress))
+        })())
+    }
+
+    pub fn exercise(&self, request: IdRequest) -> Result<ExerciseDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            library::exercise_by_id(&self.lock()?.library, &request.id)
+        })())
+    }
+
+    // ---- projects ----------------------------------------------------------------------
+
+    pub fn projects(&self, request: VersionedRequest) -> Result<ProjectListDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let state = self.lock()?;
+            let (list, problems) = state.store.list();
+            Ok(ProjectListDto {
+                projects: list.iter().map(projects::summary_dto).collect(),
+                problems,
+                directory: state.store.directory().to_string_lossy().into_owned(),
             })
-            .collect();
-        let instance_names = compiled
-            .program()
-            .function_blocks()
-            .instances()
-            .filter(|i| i.owner() == compiled.program().entry())
-            .map(|i| (i.id(), i.name().into()))
-            .collect();
-        let candidate = LoadedSession {
-            id: RuntimeSessionId::new(1).map_err(|_| invariant())?,
-            program_name: compiled.program_name().into(),
-            runtime: Runtime::new(plan, config),
-            config,
-            variables,
-            instance_names,
-            process: None,
-            process_failed: false,
-            driver_error: None,
-            mode: Mode::Stopped,
-            epoch: 0,
-            active_lease: None,
-            trace: trace::recorder(),
-        };
-        Ok(PreparedLoad::Ready(Box::new(candidate)))
+        })())
     }
-    fn commit_prepared_load(
-        &self,
-        intent: LoadIntentId,
-        mut candidate: Box<LoadedSession>,
-    ) -> Result<LoadProgramResponse, IpcError> {
-        let mut slot = self.lock()?;
-        // A newer intent supersedes this candidate even if its preparation failed.
-        if intent.0 != slot.latest_load_intent {
-            return Err(application_error(
-                "APP-RUNTIME-STALE-LOAD",
-                "A newer program load superseded this request. Load the current source again.",
-            ));
-        }
-        if let Some(s) = &slot.loaded {
-            s.require_stopped()?;
-        }
-        let generation = slot.generation.checked_add(1).ok_or_else(|| {
-            application_error(
-                "APP-RUNTIME-GENERATION",
-                "The session generation range is exhausted.",
+
+    pub fn create_project(&self, request: ProjectCreateRequest) -> Result<ProjectDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let state = self.lock()?;
+            projects::to_dto(&projects::create(&state.store, &state.library, &request)?)
+        })())
+    }
+
+    pub fn project(&self, request: IdRequest) -> Result<ProjectDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let state = self.lock()?;
+            projects::to_dto(
+                &state
+                    .store
+                    .load(&projects::identifier(&request.id, "project")?)?,
             )
-        })?;
-        candidate.id = RuntimeSessionId::new(generation).map_err(|_| invariant())?;
-        let snapshot = candidate.record(EventKind::SessionLoaded, None)?;
-        slot.generation = generation;
-        slot.loaded = Some(*candidate);
-        Ok(LoadProgramResponse::Loaded {
-            snapshot: Box::new(snapshot),
-        })
+        })())
     }
-    fn with_session(
-        &self,
-        request: RuntimeSessionRequest,
-        action: impl FnOnce(&mut LoadedSession) -> Result<RuntimeSnapshotDto, IpcError>,
-    ) -> Result<RuntimeSnapshotDto, IpcError> {
-        version(request.contract_version)?;
-        let mut slot = self.lock()?;
-        let session = slot.target(request.session_id)?;
-        if let Some(error) = &session.driver_error {
-            return Err(error.clone());
-        }
-        if session.process_failed {
-            return Err(application_error(
-                "APP-PROCESS-INTERNAL",
-                "The process session is unavailable after an application failure. Load the program again.",
-            ));
-        }
-        let result = action(session);
-        if let Err(error) = &result
-            && error.code == "APP-RUNTIME-INTERNAL"
-        {
-            session.halt();
-            session.driver_error = Some(error.clone());
-        }
-        if result
-            .as_ref()
-            .is_err_and(|e| e.code == "APP-PROCESS-INTERNAL")
-        {
-            session.process_failed = true;
-            session.halt();
-        }
-        result
-    }
-    pub fn snapshot(&self, request: RuntimeSessionRequest) -> Result<RuntimeSnapshotDto, IpcError> {
-        self.with_session(request, |s| s.snapshot())
-    }
-    pub fn set_input(
-        &self,
-        request: SetRuntimeInputRequest,
-    ) -> Result<RuntimeSnapshotDto, IpcError> {
-        let target = RuntimeSessionRequest {
-            contract_version: request.contract_version,
-            session_id: request.session_id,
-        };
-        self.with_session(target, |s| {
-            let symbol = SymbolId::new(request.variable_id.get()).map_err(|_| invariant())?;
-            if s.process.as_ref().is_some_and(|p| p.owns(symbol)) {
-                return Err(application_error("PLC-PROCESS-004", "This sensor Input is controlled by the attached process. Detach the process to edit it."));
+
+    pub fn save_project(&self, request: ProjectSaveRequest) -> Result<ProjectDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut guard = self.lock()?;
+            let state = &mut *guard;
+            let id = projects::identifier(&request.project.id, "project")?;
+            let mut stored = match state.workspace.as_ref().filter(|w| w.project.id == id) {
+                Some(w) => w.project.clone(),
+                None => state.store.load(&id)?,
+            };
+            projects::apply_edit(&mut stored, &request.project, &state.library)?;
+            state.save_project(&stored)?;
+            if let Some(w) = state.workspace.as_mut().filter(|w| w.project.id == id) {
+                // Keep live-only fields (exercise state) owned by the workspace.
+                let exercise_state = w.project.exercise_state.clone();
+                w.project = stored.clone();
+                w.project.exercise_state = exercise_state;
             }
-            s.runtime
-                .set_input(symbol, request.value.into())
-                .map_err(|e| application_error("APP-RUNTIME-INPUT", e.to_string()))?;
-            s.record(EventKind::InputStaged, Some(symbol))
-        })
+            projects::to_dto(&stored)
+        })())
     }
-    pub fn single_scan(
+
+    pub fn save_project_as(&self, request: ProjectSaveAsRequest) -> Result<ProjectDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let state = self.lock()?;
+            let id = projects::identifier(&request.project_id, "project")?;
+            let source = match state.workspace.as_ref().filter(|w| w.project.id == id) {
+                Some(w) => w.project.clone(),
+                None => state.store.load(&id)?,
+            };
+            projects::to_dto(&projects::duplicate(&state.store, &source, &request.name)?)
+        })())
+    }
+
+    pub fn update_source(
         &self,
-        request: RuntimeSessionRequest,
-    ) -> Result<RuntimeSnapshotDto, IpcError> {
-        self.with_session(request, |s| {
-            s.require_stopped()?;
-            s.execute_one_cycle()
-        })
-    }
-    pub fn reset(&self, request: RuntimeSessionRequest) -> Result<RuntimeSnapshotDto, IpcError> {
-        self.with_session(request, |s| {
-            s.require_stopped()?;
-            s.runtime.reset();
-            if let Some(process) = &s.process {
-                process.restage(&mut s.runtime)?;
+        request: SourceUpdateRequest,
+    ) -> Result<ProjectSummaryDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            if request.source.len() > 256 * 1024 {
+                return Err(AppError::InvalidRequest(
+                    "Program documents are limited to 256 KiB.".into(),
+                ));
             }
-            s.record(EventKind::RuntimeReset, None)
-        })
+            let mut guard = self.lock()?;
+            let state = &mut *guard;
+            let id = projects::identifier(&request.project_id, "project")?;
+            let mut project = match state.workspace.as_ref().filter(|w| w.project.id == id) {
+                Some(w) => w.project.clone(),
+                None => state.store.load(&id)?,
+            };
+            let doc = project
+                .programs
+                .iter_mut()
+                .find(|p| p.id.as_str() == request.program_id)
+                .ok_or_else(|| AppError::NotFound {
+                    what: "program",
+                    id: request.program_id.clone(),
+                })?;
+            doc.source = request.source.clone();
+            project.updated_at = projects::timestamp();
+            state.save_project(&project)?;
+            if let Some(w) = state.workspace.as_mut().filter(|w| w.project.id == id)
+                && let Some(doc) = w
+                    .project
+                    .programs
+                    .iter_mut()
+                    .find(|p| p.id.as_str() == request.program_id)
+            {
+                doc.source = request.source;
+                w.project.updated_at = project.updated_at.clone();
+            }
+            Ok(projects::summary_dto(&project_model::ProjectSummary {
+                id: project.id,
+                name: project.name,
+                kind: project.kind,
+                platform: project.platform,
+                scene: project.scene,
+                updated_at: project.updated_at,
+            }))
+        })())
     }
-    pub fn unload(
+
+    pub fn delete_project(&self, request: IdRequest) -> Result<ProjectListDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            {
+                let mut state = self.lock()?;
+                let id = projects::identifier(&request.id, "project")?;
+                if state.workspace.as_ref().is_some_and(|w| w.project.id == id) {
+                    state.workspace = None;
+                }
+                state.store.delete(&id)?;
+            }
+            self.projects(VersionedRequest {
+                contract_version: CONTRACT_VERSION,
+            })
+            .map_err(|e| AppError::InvalidRequest(e.message))
+        })())
+    }
+
+    pub fn import_project(&self, request: ProjectImportRequest) -> Result<ProjectDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let state = self.lock()?;
+            projects::to_dto(&projects::import(
+                &state.store,
+                &state.library,
+                &request.text,
+            )?)
+        })())
+    }
+
+    pub fn export_project(&self, request: IdRequest) -> Result<ProjectExportDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let state = self.lock()?;
+            let id = projects::identifier(&request.id, "project")?;
+            let project = match state.workspace.as_ref().filter(|w| w.project.id == id) {
+                Some(w) => w.project.clone(),
+                None => state.store.load(&id)?,
+            };
+            let safe: String = project
+                .name
+                .chars()
+                .map(|c| {
+                    if c.is_ascii_alphanumeric() || c == '-' {
+                        c
+                    } else {
+                        '_'
+                    }
+                })
+                .collect();
+            Ok(ProjectExportDto {
+                file_name: format!("{safe}.{}", project_model::EXTENSION),
+                text: project_model::to_json(&project)?,
+            })
+        })())
+    }
+
+    // ---- workspace lifecycle ------------------------------------------------------------
+
+    pub fn open_workspace(&self, request: WorkspaceOpenRequest) -> Result<WorkspaceDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut guard = self.lock()?;
+            let state = &mut *guard;
+            let id = projects::identifier(&request.project_id, "project")?;
+            let project = state.store.load(&id)?;
+            let scene = state
+                .library
+                .scene(project.scene.as_str())
+                .cloned()
+                .ok_or_else(|| AppError::NotFound {
+                    what: "scene",
+                    id: project.scene.to_string(),
+                })?;
+            let profile = state
+                .library
+                .profile(project.platform.as_str())
+                .ok_or_else(|| AppError::NotFound {
+                    what: "platform",
+                    id: project.platform.to_string(),
+                })?;
+            let exercise = match &project.kind {
+                ProjectKind::Exercise { exercise, .. } => Some(
+                    state
+                        .library
+                        .exercise(exercise.as_str())
+                        .cloned()
+                        .ok_or_else(|| AppError::NotFound {
+                            what: "exercise",
+                            id: exercise.to_string(),
+                        })?,
+                ),
+                ProjectKind::FreeLab => None,
+            };
+            // Persist the previous workspace's live-only state before replacing it.
+            if let Some(previous) = state.workspace.take() {
+                state.save_project(&previous.project)?;
+            }
+            state.next_workspace += 1;
+            let workspace =
+                Workspace::open(state.next_workspace, project, scene, profile, exercise)?;
+            let exercise_dto = workspace
+                .exercise
+                .as_ref()
+                .map(|e| library::exercise(&state.library, e));
+            let dto = workspace.workspace_dto(&request.project_id, exercise_dto);
+            state.workspace = Some(workspace);
+            Ok(dto)
+        })())
+    }
+
+    pub fn close_workspace(&self, request: WorkspaceRequest) -> Result<(), IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            state.workspace(request.workspace_id)?;
+            if let Some(w) = state.workspace.take() {
+                state.save_project(&w.project)?;
+            }
+            Ok(())
+        })())
+    }
+
+    pub fn compile(&self, request: CompileRequest) -> Result<CompileResultDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            if request.source.len() > 256 * 1024 {
+                return Err(AppError::InvalidRequest(
+                    "Program documents are limited to 256 KiB.".into(),
+                ));
+            }
+            Ok(match lab_engine::compile(&request.source) {
+                Ok(compiled) => CompileResultDto {
+                    success: true,
+                    program_name: Some(compiled.program_name().to_owned()),
+                    diagnostics: Vec::new(),
+                    declarations: compiled
+                        .declarations()
+                        .iter()
+                        .map(|d| DeclarationDto {
+                            name: d.name.clone(),
+                            data_type: d.type_name.clone(),
+                            role: d.role.clone(),
+                        })
+                        .collect(),
+                },
+                Err(d) => CompileResultDto {
+                    success: false,
+                    program_name: None,
+                    diagnostics: d.iter().map(convert::diagnostic).collect(),
+                    declarations: Vec::new(),
+                },
+            })
+        })())
+    }
+
+    /// Basic "Build & Load to PLC": compile, validate, link to the I/O configuration and
+    /// load into the CPU in one backend transaction. With `run_after_load` the PLC is
+    /// switched to RUN and the simulation started; the host paces the returned run.
+    pub fn build_and_load(
         &self,
-        request: RuntimeSessionRequest,
-    ) -> Result<UnloadProgramResponse, IpcError> {
-        version(request.contract_version)?;
-        let mut slot = self.lock()?;
-        slot.target(request.session_id)?.require_stopped()?;
-        slot.loaded = None;
-        Ok(UnloadProgramResponse {
-            contract_version: CONTRACT_VERSION,
-            session_id: request.session_id,
-        })
+        request: BuildLoadRequest,
+    ) -> Result<(BuildLoadResultDto, Option<RunStart>), IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut guard = self.lock()?;
+            let state = &mut *guard;
+            let station = request
+                .station
+                .as_ref()
+                .map(convert::station_from_dto)
+                .transpose()
+                .map_err(|e| AppError::InvalidRequest(e.message))?;
+            let next_run = &mut state.next_run;
+            let w = state
+                .workspace
+                .as_mut()
+                .filter(|w| w.id == request.workspace_id.0)
+                .ok_or(AppError::StaleWorkspace)?;
+            let mut result = w.build_and_load(&request.source, request.revision.0, station)?;
+            let mut start = None;
+            if result.outcome == "LOADED" {
+                w.project.updated_at = projects::timestamp();
+                let project = w.project.clone();
+                if request.run_after_load {
+                    w.set_plc_mode("RUN")?;
+                    start = w.simulation("RUN", next_run)?;
+                    result.frame = w.frame(&[]);
+                }
+                state.store.save(&project)?;
+            }
+            Ok((result, start))
+        })())
     }
-}
-impl SessionSlot {
-    fn target(&mut self, id: RuntimeSessionId) -> Result<&mut LoadedSession, IpcError> {
-        self.loaded.as_mut().filter(|s| s.id == id).ok_or_else(|| {
-            application_error(
-                "APP-RUNTIME-STALE-SESSION",
-                "This program session was replaced or unloaded. Load the current source again.",
+
+    pub fn plc_mode(&self, request: PlcModeRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            w.set_plc_mode(&request.mode)?;
+            Ok(w.frame(&[]))
+        })())
+    }
+
+    pub fn plc_reset(&self, request: WorkspaceRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            w.reset_plc()?;
+            Ok(w.frame(&[]))
+        })())
+    }
+
+    pub fn simulation(
+        &self,
+        request: SimulationRequest,
+    ) -> Result<(LiveFrameDto, Option<RunStart>), IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut guard = self.lock()?;
+            let state = &mut *guard;
+            let next_run = &mut state.next_run;
+            let w = state
+                .workspace
+                .as_mut()
+                .filter(|w| w.id == request.workspace_id.0)
+                .ok_or(AppError::StaleWorkspace)?;
+            let start = w.simulation(&request.command, next_run)?;
+            Ok((w.frame(&[]), start))
+        })())
+    }
+
+    pub fn set_speed(&self, request: SpeedRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            w.set_speed(request.speed_percent)?;
+            Ok(w.frame(&[]))
+        })())
+    }
+
+    /// One paced cycle for the host. Typed outcome: the host never interprets error codes.
+    pub fn tick(&self, lease: RunLease) -> Result<TickOutcome, IpcError> {
+        boundary((|| {
+            let mut state = self.lock()?;
+            match state.workspace.as_mut() {
+                Some(w) if w.id == lease.workspace => w.tick(lease),
+                _ => Ok(TickOutcome::Stale),
+            }
+        })())
+    }
+
+    /// The host could not complete a pacing step (worker or notification failure).
+    pub fn driver_failed(&self, lease: RunLease, message: String) {
+        if let Ok(mut state) = self.state.lock()
+            && let Some(w) = state.workspace.as_mut()
+        {
+            w.driver_failed(lease, message);
+        }
+    }
+
+    // ---- operator and engineering actions -------------------------------------------------
+
+    pub fn operate(&self, request: OperateRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            w.operate(&request.component, &request.action)?;
+            Ok(w.frame(&[]))
+        })())
+    }
+
+    pub fn force(&self, request: ForceRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            w.force(request.signal, request.value)?;
+            Ok(w.frame(&[]))
+        })())
+    }
+
+    // ---- observation -----------------------------------------------------------------------
+
+    pub fn frame(&self, request: FrameRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            Ok(state.workspace(request.workspace_id)?.frame(&request.watch))
+        })())
+    }
+
+    pub fn cycle(&self, request: CycleRequest) -> Result<Option<CauseEffectDto>, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            Ok(w.session
+                .cause_effect_at(request.cycle.0)
+                .as_ref()
+                .map(convert::cause_effect))
+        })())
+    }
+
+    pub fn variables(&self, request: VariablesRequest) -> Result<VariablesDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            if request.filter.as_ref().is_some_and(|f| f.len() > 64) {
+                return Err(AppError::InvalidRequest(
+                    "The variable filter is limited to 64 characters.".into(),
+                ));
+            }
+            let mut state = self.lock()?;
+            Ok(state.workspace(request.workspace_id)?.variables(
+                request.filter.as_deref(),
+                request.offset,
+                request.limit,
+            ))
+        })())
+    }
+
+    pub fn trend(&self, request: TrendRequest) -> Result<TrendDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            state.workspace(request.workspace_id)?.trend(
+                &request.signals,
+                request.from_us.0,
+                request.to_us.0,
+                request.max_points,
             )
-        })
+        })())
     }
-}
-impl LoadedSession {
-    fn snapshot(&self) -> Result<RuntimeSnapshotDto, IpcError> {
-        self.observe_snapshot()
+
+    pub fn events(&self, request: EventsRequest) -> Result<EventsPageDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            Ok(state
+                .workspace(request.workspace_id)?
+                .events(request.after.map(|a| a.0), request.limit))
+        })())
+    }
+
+    pub fn hardware(&self, request: WorkspaceRequest) -> Result<HardwareDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            state.workspace(request.workspace_id)?.hardware()
+        })())
+    }
+
+    pub fn network(&self, request: WorkspaceRequest) -> Result<NetworkDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            Ok(state.workspace(request.workspace_id)?.network())
+        })())
+    }
+
+    // ---- troubleshooting ---------------------------------------------------------------------
+
+    pub fn measure(&self, request: MeasureRequest) -> Result<MeasurementDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            state
+                .workspace(request.workspace_id)?
+                .measure(&request.channel)
+        })())
+    }
+
+    pub fn ping(&self, request: PingRequest) -> Result<PingDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            state.workspace(request.workspace_id)?.ping(&request.ip)
+        })())
+    }
+
+    pub fn note_evidence(&self, request: EvidenceRequest) -> Result<(), IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            state
+                .workspace(request.workspace_id)?
+                .note_evidence(&request.evidence)
+        })())
+    }
+
+    pub fn diagnose(&self, request: DiagnosisRequest) -> Result<DiagnosisResultDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut guard = self.lock()?;
+            let state = &mut *guard;
+            let w = state
+                .workspace
+                .as_mut()
+                .filter(|w| w.id == request.workspace_id.0)
+                .ok_or(AppError::StaleWorkspace)?;
+            let result = w.diagnose(&request.option)?;
+            let project = w.project.clone();
+            state.store.save(&project)?;
+            Ok(result)
+        })())
+    }
+
+    pub fn repair(&self, request: RepairRequest) -> Result<RepairResultDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut guard = self.lock()?;
+            let state = &mut *guard;
+            let w = state
+                .workspace
+                .as_mut()
+                .filter(|w| w.id == request.workspace_id.0)
+                .ok_or(AppError::StaleWorkspace)?;
+            let message = w.repair(&request.repair)?;
+            let frame = w.frame(&[]);
+            let project = w.project.clone();
+            state.store.save(&project)?;
+            Ok(RepairResultDto { message, frame })
+        })())
+    }
+
+    /// Grade the exercise in an isolated headless assessment. The live session is never
+    /// used for grading; troubleshooting verification runs against the faults the student
+    /// has not repaired yet.
+    pub fn check(&self, request: CheckRequest) -> Result<GradeReportDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let (exercise, scene, profile, station, faults, investigation, exercise_id) = {
+                let mut state = self.lock()?;
+                let w = state.workspace(request.workspace_id)?;
+                let exercise = w.exercise.clone().ok_or_else(|| {
+                    AppError::InvalidRequest("Free labs have no exercise to check.".into())
+                })?;
+                let station = match &request.station {
+                    Some(s) => convert::station_from_dto(s)
+                        .map_err(|e| AppError::InvalidRequest(e.message))?,
+                    None => w.project.station.clone(),
+                };
+                (
+                    exercise,
+                    w.scene.clone(),
+                    w.profile.clone(),
+                    station,
+                    w.remaining_faults(),
+                    w.investigation.clone(),
+                    w.exercise_id(),
+                )
+            };
+            // Assessment runs without holding the application lock.
+            let filter = exercise
+                .troubleshooting
+                .as_ref()
+                .map(|t| t.verification.clone());
+            let outcome = lab_engine::assess(
+                &exercise,
+                &scene,
+                &station,
+                &profile,
+                &request.source,
+                &faults,
+                filter.as_deref(),
+            )
+            .map_err(|e| AppError::InvalidRequest(format!("{e:?}")))?;
+            let report = match outcome {
+                AssessmentOutcome::Graded(report) => {
+                    let report = match (&exercise.kind, &exercise.troubleshooting) {
+                        (ExerciseKind::Troubleshooting, Some(t)) => {
+                            grading_core::grade_troubleshooting(
+                                &t.root_causes
+                                    .iter()
+                                    .map(ToString::to_string)
+                                    .collect::<Vec<_>>(),
+                                &grading_core::InvestigationSummary {
+                                    diagnoses: investigation.diagnoses.clone(),
+                                    evidence_viewed: investigation.evidence.clone(),
+                                    repairs: investigation.repairs.clone(),
+                                    remaining_faults: faults
+                                        .iter()
+                                        .map(|f| f.id.to_string())
+                                        .collect(),
+                                },
+                                report,
+                            )
+                        }
+                        _ => report,
+                    };
+                    GradeReportDto {
+                        outcome: "GRADED".into(),
+                        score: report.score,
+                        max_score: report.max_score,
+                        passed: report.passed,
+                        criteria: report
+                            .criteria
+                            .into_iter()
+                            .map(|c| CriterionResultDto {
+                                id: c.id,
+                                title: c.title,
+                                points: c.points,
+                                earned: c.earned,
+                                passed: c.passed,
+                                feedback: c.feedback,
+                                detail: c.detail,
+                            })
+                            .collect(),
+                        diagnostics: Vec::new(),
+                        problems: Vec::new(),
+                    }
+                }
+                AssessmentOutcome::CompileFailed(d) => not_graded(
+                    "COMPILE_FAILED",
+                    d.iter().map(convert::diagnostic).collect(),
+                    Vec::new(),
+                ),
+                AssessmentOutcome::InterfaceMismatch(p) => {
+                    not_graded("INTERFACE_MISMATCH", Vec::new(), p)
+                }
+                AssessmentOutcome::BindingFailed(b) => not_graded(
+                    "BINDING_FAILED",
+                    Vec::new(),
+                    b.into_iter()
+                        .filter(|i| i.blocking)
+                        .map(|i| format!("{}: {}", i.tag, i.message))
+                        .collect(),
+                ),
+            };
+            let mut guard = self.lock()?;
+            let state = &mut *guard;
+            if let Some(id) = &exercise_id {
+                let max = if report.outcome == "GRADED" {
+                    report.max_score
+                } else {
+                    0
+                };
+                state
+                    .progress
+                    .record_exercise(id, report.score, max, report.passed);
+                state.progress.save(&self.paths.progress_file)?;
+                if let Some(w) = state
+                    .workspace
+                    .as_mut()
+                    .filter(|w| w.id == request.workspace_id.0)
+                {
+                    let s = w
+                        .project
+                        .exercise_state
+                        .get_or_insert_with(ExerciseState::default);
+                    s.attempts += 1;
+                    s.best_score = s.best_score.max(report.score);
+                    s.passed |= report.passed;
+                    let project = w.project.clone();
+                    state.store.save(&project)?;
+                }
+            }
+            Ok(report)
+        })())
     }
 }
 
-#[cfg(test)]
-mod boundary_tests {
-    use super::*;
-    fn request() -> LoadStProgramRequest {
-        LoadStProgramRequest {
-            contract_version: CONTRACT_VERSION,
-            source: "PROGRAM Main END_PROGRAM".into(),
-        }
-    }
-    fn prepared(name: &str) -> Box<LoadedSession> {
-        let PreparedLoad::Ready(candidate) = RuntimeSessionService::prepare_load(&format!(
-            "PROGRAM {name} VAR Count:INT; END_VAR Count := Count + 1; END_PROGRAM"
-        ))
-        .unwrap() else {
-            panic!("Test source must prepare successfully")
-        };
-        candidate
-    }
-    fn loaded(response: LoadProgramResponse) -> RuntimeSnapshotDto {
-        let LoadProgramResponse::Loaded { snapshot } = response else {
-            panic!("Test source must load successfully")
-        };
-        *snapshot
-    }
-    fn target(snapshot: &RuntimeSnapshotDto) -> RuntimeSessionRequest {
-        RuntimeSessionRequest {
-            contract_version: CONTRACT_VERSION,
-            session_id: snapshot.session_id,
-        }
-    }
-    #[test]
-    fn inverted_load_completion_rejects_older_intent_and_preserves_newest_session() {
-        let service = RuntimeSessionService::default();
-        let a = service.reserve_load_intent().unwrap();
-        let b = service.reserve_load_intent().unwrap();
-        assert_eq!(a, LoadIntentId(1));
-        assert_eq!(b, LoadIntentId(2));
-        let candidate_b = prepared("B");
-        let newest = loaded(service.commit_prepared_load(b, candidate_b).unwrap());
-        // A finishes preparing after B committed; no sleeps or timing assumptions.
-        let candidate_a = prepared("A");
-        assert_eq!(newest.program_name, "B");
-        assert_eq!(newest.session_id.get(), 1);
-        assert_eq!(
-            service
-                .commit_prepared_load(a, candidate_a)
-                .unwrap_err()
-                .code,
-            "APP-RUNTIME-STALE-LOAD"
-        );
-        assert_eq!(service.snapshot(target(&newest)).unwrap(), newest);
-        assert_eq!(service.inner.lock().unwrap().generation, 1);
-        let c = service.reserve_load_intent().unwrap();
-        let next = loaded(service.commit_prepared_load(c, prepared("C")).unwrap());
-        assert_eq!(c, LoadIntentId(3));
-        assert_eq!(next.session_id.get(), 2);
-    }
-    #[test]
-    fn failed_newest_load_supersedes_older_intent_preserves_existing_and_allows_next_load() {
-        let service = RuntimeSessionService::default();
-        let x = service.reserve_load_intent().unwrap();
-        let initial = loaded(service.commit_prepared_load(x, prepared("X")).unwrap());
-        let before = service.single_scan(target(&initial)).unwrap();
-        let a = service.reserve_load_intent().unwrap();
-        let candidate_a = prepared("A");
-        // Public Load must reserve B before real compilation reports failure.
-        let failed = service
-            .load(LoadStProgramRequest {
-                contract_version: CONTRACT_VERSION,
-                source: "PROGRAM B Missing := TRUE; END_PROGRAM".into(),
-            })
-            .unwrap();
-        assert!(matches!(failed, LoadProgramResponse::CompileFailed { .. }));
-        assert_eq!(service.inner.lock().unwrap().latest_load_intent, 3);
-        assert_eq!(
-            service
-                .commit_prepared_load(a, candidate_a)
-                .unwrap_err()
-                .code,
-            "APP-RUNTIME-STALE-LOAD"
-        );
-        assert_eq!(service.snapshot(target(&before)).unwrap(), before);
-        let next = loaded(
-            service
-                .load(LoadStProgramRequest {
-                    contract_version: CONTRACT_VERSION,
-                    source: "PROGRAM C END_PROGRAM".into(),
-                })
-                .unwrap(),
-        );
-        assert_eq!(next.program_name, "C");
-        assert_eq!(next.session_id.get(), 2);
-        assert_eq!(service.inner.lock().unwrap().latest_load_intent, 4);
-    }
-    #[test]
-    fn exhausted_load_intent_fails_closed_without_reusing_identity_or_mutating_session() {
-        let service = RuntimeSessionService::default();
-        let before = loaded(service.load(request()).unwrap());
-        service.inner.lock().unwrap().latest_load_intent = u64::MAX;
-        for _ in 0..2 {
-            assert_eq!(
-                service.load(request()).unwrap_err().code,
-                "APP-RUNTIME-LOAD-INTENT-EXHAUSTED"
-            );
-            assert_eq!(service.snapshot(target(&before)).unwrap(), before);
-            let slot = service.inner.lock().unwrap();
-            assert_eq!(slot.latest_load_intent, u64::MAX);
-            assert_eq!(slot.generation, 1);
-        }
-    }
-    #[test]
-    fn invalid_contract_version_does_not_reserve_or_supersede_valid_load_intent() {
-        let service = RuntimeSessionService::default();
-        let intent = service.reserve_load_intent().unwrap();
-        let mut invalid = request();
-        invalid.contract_version = CONTRACT_VERSION - 1;
-        assert_eq!(service.load(invalid).unwrap_err().code, "APP-IPC-001");
-        assert_eq!(service.inner.lock().unwrap().latest_load_intent, intent.0);
-        let committed = loaded(service.commit_prepared_load(intent, prepared("A")).unwrap());
-        assert_eq!(committed.session_id.get(), 1);
-    }
-    #[test]
-    fn exhausted_generation_preserves_loaded_session() {
-        let service = RuntimeSessionService::default();
-        let LoadProgramResponse::Loaded { snapshot } = service.load(request()).unwrap() else {
-            panic!()
-        };
-        service.inner.lock().unwrap().generation = u64::MAX;
-        assert_eq!(
-            service.load(request()).unwrap_err().code,
-            "APP-RUNTIME-GENERATION"
-        );
-        assert_eq!(
-            service
-                .snapshot(RuntimeSessionRequest {
-                    contract_version: CONTRACT_VERSION,
-                    session_id: snapshot.session_id
-                })
-                .unwrap(),
-            *snapshot
-        );
-    }
-    #[test]
-    fn poisoned_mutex_fails_closed_as_application_error() {
-        let service = RuntimeSessionService::default();
-        let failure = std::panic::catch_unwind(|| {
-            let _guard = service.inner.lock().unwrap();
-            panic!("Test-only application failure.");
-        });
-        assert!(failure.is_err());
-        assert_eq!(
-            service.load(request()).unwrap_err().code,
-            "APP-RUNTIME-LOCK"
-        );
+fn not_graded(
+    outcome: &str,
+    diagnostics: Vec<DiagnosticDto>,
+    problems: Vec<String>,
+) -> GradeReportDto {
+    GradeReportDto {
+        outcome: outcome.into(),
+        score: 0,
+        max_score: 0,
+        passed: false,
+        criteria: Vec::new(),
+        diagnostics,
+        problems,
     }
 }

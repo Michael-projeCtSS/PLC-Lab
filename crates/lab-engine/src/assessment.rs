@@ -8,9 +8,13 @@ use crate::{
     session::{CycleObservation, CycleOutcome, LabEventKind, LabSession, SessionConfig},
     signals::{SignalId, SignalValue},
 };
-use grading_core::{CycleFacts, EvidenceEvent, EvidenceValue, GradeReport, GradingEvidence, PlcFaultEvidence};
+use grading_core::{
+    CycleFacts, EvidenceEvent, EvidenceValue, GradeReport, GradingEvidence, PlcFaultEvidence,
+};
 use lab_model::{
-    exercise::{EvidenceSignal, EvidenceSource, ExerciseDefinition, PlcModeRequest, RequiredTag, Scenario},
+    exercise::{
+        EvidenceSignal, EvidenceSource, ExerciseDefinition, PlcModeRequest, RequiredTag, Scenario,
+    },
     fault::FaultInjection,
     hardware::StationConfig,
     profile::PlatformProfile,
@@ -57,18 +61,30 @@ fn tag_type(t: TagType) -> PlcType {
 }
 
 /// Check the program declares every required tag with the right type and direction.
-pub fn interface_problems(source: &str, required: &[RequiredTag]) -> Result<Vec<String>, Vec<Diagnostic>> {
+pub fn interface_problems(
+    source: &str,
+    required: &[RequiredTag],
+) -> Result<Vec<String>, Vec<Diagnostic>> {
     let compiled = crate::plc::compile(source)?;
     let program = compiled.program();
     let scope = Scope::Pou(program.entry());
     let mut problems = Vec::new();
     for r in required {
         match program.symbols().resolve(scope, r.tag.as_str()) {
-            Err(_) => problems.push(format!("Declare {} : {:?} as {}.", r.tag, r.tag_type, direction(r.direction))),
+            Err(_) => problems.push(format!(
+                "Declare {} : {:?} as {}.",
+                r.tag,
+                r.tag_type,
+                direction(r.direction)
+            )),
             Ok(symbol) => {
                 let role_ok = match r.direction {
-                    SignalDirection::Input => symbol.category() == plc_types::symbols::VariableCategory::Input,
-                    SignalDirection::Output => symbol.category() == plc_types::symbols::VariableCategory::Output,
+                    SignalDirection::Input => {
+                        symbol.category() == plc_types::symbols::VariableCategory::Input
+                    }
+                    SignalDirection::Output => {
+                        symbol.category() == plc_types::symbols::VariableCategory::Output
+                    }
                 };
                 if !role_ok || symbol.plc_type() != tag_type(r.tag_type) {
                     problems.push(format!(
@@ -108,7 +124,10 @@ fn evidence_value(v: SignalValue) -> EvidenceValue {
 }
 
 fn lookup(layer: &[(SignalId, SignalValue)], signal: SignalId) -> Option<EvidenceValue> {
-    layer.binary_search_by_key(&signal, |(s, _)| *s).ok().map(|i| evidence_value(layer[i].1))
+    layer
+        .binary_search_by_key(&signal, |(s, _)| *s)
+        .ok()
+        .map(|i| evidence_value(layer[i].1))
 }
 
 fn facts(observation: &CycleObservation, bindings: &[(String, Binding)]) -> CycleFacts {
@@ -150,15 +169,27 @@ fn facts(observation: &CycleObservation, bindings: &[(String, Binding)]) -> Cycl
 }
 
 /// Run one scenario in a fresh, isolated session and return causal evidence.
-pub fn run_scenario(setup: &AssessmentSetup<'_>, scenario: &Scenario, evidence: &[EvidenceSignal]) -> Result<GradingEvidence, AssessmentError> {
-    let mut session = LabSession::new(setup.scene.clone(), setup.station.clone(), setup.profile.clone(), setup.config)?;
+pub fn run_scenario(
+    setup: &AssessmentSetup<'_>,
+    scenario: &Scenario,
+    evidence: &[EvidenceSignal],
+) -> Result<GradingEvidence, AssessmentError> {
+    let mut session = LabSession::new(
+        setup.scene.clone(),
+        setup.station.clone(),
+        setup.profile.clone(),
+        setup.config,
+    )?;
     for fault in setup.faults {
         session.inject_fault(fault)?;
     }
     session.download(setup.program, 1, None)?;
     session.set_plc_switch(PlcModeRequest::Run)?;
     for action in &scenario.actions {
-        session.schedule(WorldTime::from_micros(u64::from(action.at_ms) * 1_000), action.action.clone())?;
+        session.schedule(
+            WorldTime::from_micros(u64::from(action.at_ms) * 1_000),
+            action.action.clone(),
+        )?;
     }
     let bindings: Vec<(String, Binding)> = evidence
         .iter()
@@ -169,9 +200,16 @@ pub fn run_scenario(setup: &AssessmentSetup<'_>, scenario: &Scenario, evidence: 
                     .iter()
                     .find(|t| t.name.eq_ignore_ascii_case(tag.as_str()))
                     .map_or(Binding::Missing, |t| {
-                        if t.role == TagRole::Input { Binding::Input(t.signal) } else { Binding::Output(t.signal) }
+                        if t.role == TagRole::Input {
+                            Binding::Input(t.signal)
+                        } else {
+                            Binding::Output(t.signal)
+                        }
                     }),
-                EvidenceSource::Component { component, quantity } => session
+                EvidenceSource::Component {
+                    component,
+                    quantity,
+                } => session
                     .signals()
                     .by_path(&format!("process.{component}.{quantity}"))
                     .map_or(Binding::Missing, Binding::Process),
@@ -180,7 +218,11 @@ pub fn run_scenario(setup: &AssessmentSetup<'_>, scenario: &Scenario, evidence: 
         })
         .collect();
     let duration = u64::from(scenario.duration_ms) * 1_000;
-    let mut result = GradingEvidence { scenario: scenario.id.to_string(), duration_us: duration, ..Default::default() };
+    let mut result = GradingEvidence {
+        scenario: scenario.id.to_string(),
+        duration_us: duration,
+        ..Default::default()
+    };
     // Bounded: a faulted scan does not advance time, so allow a few extra steps.
     let max_steps = duration / setup.config.cycle_us.max(1) + 16;
     let mut steps = 0;
@@ -200,13 +242,19 @@ pub fn run_scenario(setup: &AssessmentSetup<'_>, scenario: &Scenario, evidence: 
         if let LabEventKind::Process { component, kind } = &event.kind
             && let Some(kind) = map_event(*kind)
         {
-            result.events.push(EvidenceEvent { time_us: event.time_us, component: component.clone(), kind });
+            result.events.push(EvidenceEvent {
+                time_us: event.time_us,
+                component: component.clone(),
+                kind,
+            });
         }
     }
     Ok(result)
 }
 
-fn map_event(kind: process_simulation::ProcessEventKind) -> Option<lab_model::exercise::ProcessEventKind> {
+fn map_event(
+    kind: process_simulation::ProcessEventKind,
+) -> Option<lab_model::exercise::ProcessEventKind> {
     use lab_model::exercise::ProcessEventKind as E;
     use process_simulation::ProcessEventKind as P;
     match kind {
@@ -239,7 +287,9 @@ pub fn assess(
 ) -> Result<AssessmentOutcome, AssessmentError> {
     match interface_problems(program, &exercise.required_interface) {
         Err(d) => return Ok(AssessmentOutcome::CompileFailed(d)),
-        Ok(problems) if !problems.is_empty() => return Ok(AssessmentOutcome::InterfaceMismatch(problems)),
+        Ok(problems) if !problems.is_empty() => {
+            return Ok(AssessmentOutcome::InterfaceMismatch(problems));
+        }
         Ok(_) => {}
     }
     let criteria: Vec<_> = exercise
@@ -254,10 +304,17 @@ pub fn assess(
         profile,
         program,
         faults,
-        config: SessionConfig { seed: 7, ..SessionConfig::default() },
+        config: SessionConfig {
+            seed: 7,
+            ..SessionConfig::default()
+        },
     };
     let mut evidence = BTreeMap::new();
-    for scenario in exercise.scenarios.iter().filter(|s| criteria.iter().any(|c| c.scenario == s.id)) {
+    for scenario in exercise
+        .scenarios
+        .iter()
+        .filter(|s| criteria.iter().any(|c| c.scenario == s.id))
+    {
         match run_scenario(&setup, scenario, &exercise.evidence) {
             Ok(e) => {
                 evidence.insert(scenario.id.to_string(), e);
@@ -267,5 +324,7 @@ pub fn assess(
             Err(other) => return Err(other),
         }
     }
-    Ok(AssessmentOutcome::Graded(grading_core::grade(&criteria, &evidence)))
+    Ok(AssessmentOutcome::Graded(grading_core::grade(
+        &criteria, &evidence,
+    )))
 }

@@ -15,6 +15,13 @@ trace-core.workspace = true
 network-core.workspace = true
 grading-core.workspace = true
 st-frontend.workspace = true
+lab-model.workspace = true
+hardware-model.workspace = true
+process-simulation.workspace = true
+lab-engine.workspace = true
+knowledge-core.workspace = true
+project-model.workspace = true
+desktop-session.workspace = true
 serde_json.workspace = true
 
 [lints]

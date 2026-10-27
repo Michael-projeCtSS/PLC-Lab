@@ -96,7 +96,14 @@ pub struct SignalRegistry {
 
 impl SignalRegistry {
     /// Return the existing ID for an identical path/type or allocate a new one.
-    pub fn ensure(&mut self, path: String, label: String, kind: SignalKind, value_type: ValueType, unit: Option<&'static str>) -> SignalId {
+    pub fn ensure(
+        &mut self,
+        path: String,
+        label: String,
+        kind: SignalKind,
+        value_type: ValueType,
+        unit: Option<&'static str>,
+    ) -> SignalId {
         if let Some(id) = self.by_path.get(&path).copied() {
             let d = &mut self.descriptors[id.0 as usize];
             if d.kind == kind && d.value_type == value_type {
@@ -106,7 +113,15 @@ impl SignalRegistry {
             }
         }
         let id = SignalId(u32::try_from(self.descriptors.len()).unwrap_or(u32::MAX));
-        self.descriptors.push(SignalDescriptor { id, path: path.clone(), label, kind, value_type, unit, active: true });
+        self.descriptors.push(SignalDescriptor {
+            id,
+            path: path.clone(),
+            label,
+            kind,
+            value_type,
+            unit,
+            active: true,
+        });
         self.by_path.insert(path, id);
         id
     }

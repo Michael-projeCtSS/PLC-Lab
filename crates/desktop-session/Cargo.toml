@@ -7,15 +7,18 @@ publish.workspace = true
 
 [dependencies]
 app-contract.workspace = true
+lab-engine.workspace = true
+lab-model.workspace = true
+knowledge-core.workspace = true
+project-model.workspace = true
 plc-types.workspace = true
-plc-runtime.workspace = true
-st-frontend.workspace = true
+hardware-model.workspace = true
+network-core.workspace = true
 process-simulation.workspace = true
-trace-core.workspace = true
-
-[dev-dependencies]
+simulation-core.workspace = true
+grading-core.workspace = true
 serde_json.workspace = true
-trace-core = { workspace = true, features = ["test-support"] }
+trace-core.workspace = true
 
 [lints]
 workspace = true

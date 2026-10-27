@@ -1,1 +1,1 @@
-//! Integration/conformance harness. PLC semantic tests begin with M1/M2.
+//! Cross-crate conformance harness: contract and linkage tests that span several crates.

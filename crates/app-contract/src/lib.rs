@@ -1,54 +1,68 @@
-//! Desktop transport DTOs and read-only foundation service. No Tauri dependency.
+//! Desktop IPC contract v8: transport DTOs only.
+//!
+//! This crate has no dependency on the engine, compiler, runtime or Tauri. Requests use
+//! `deny_unknown_fields`; every request carries the contract version. 64-bit counters and
+//! times cross IPC as canonical decimal strings ([`ExactU64`]) so JavaScript never loses
+//! precision. TypeScript declarations are generated from these types
+//! (`npm run ipc:generate`); a test fails when the committed file drifts.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use ts_rs::TS;
 
-mod compilation;
-pub use compilation::*;
-mod session;
-pub use session::*;
-mod process;
-pub use process::*;
-mod trace;
-pub use trace::*;
+pub mod knowledge;
+pub mod project;
+pub mod workspace;
 
-pub const CONTRACT_VERSION: u32 = 7;
-pub const START_EXECUTION_COMMAND: &str = "start_execution";
-pub const PAUSE_EXECUTION_COMMAND: &str = "pause_execution";
-pub const STOP_EXECUTION_COMMAND: &str = "stop_execution";
-pub const EXECUTION_WAKE_EVENT: &str = "execution-state-changed";
-pub const TRACE_PAGE_COMMAND: &str = "get_trace_page";
-pub const CORE_INFO_COMMAND: &str = "get_core_info";
-pub const COMPILE_ST_COMMAND: &str = "compile_st";
-pub const LOAD_PROGRAM_COMMAND: &str = "load_st_program";
-pub const SET_INPUT_COMMAND: &str = "set_runtime_input";
-pub const SINGLE_SCAN_COMMAND: &str = "single_scan";
-pub const RESET_RUNTIME_COMMAND: &str = "reset_runtime";
-pub const UNLOAD_PROGRAM_COMMAND: &str = "unload_program";
-pub const RUNTIME_SNAPSHOT_COMMAND: &str = "get_runtime_snapshot";
-pub const ATTACH_PROCESS_COMMAND: &str = "attach_process_scene";
-pub const DETACH_PROCESS_COMMAND: &str = "detach_process_scene";
-pub const RESET_PROCESS_COMMAND: &str = "reset_process_scene";
+pub use knowledge::*;
+pub use project::*;
+pub use workspace::*;
+
+pub const CONTRACT_VERSION: u32 = 8;
+pub const EXECUTION_WAKE_EVENT: &str = "lab-cycle-advanced";
+
+/// Canonical unsigned decimal text for u64 values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, TS)]
+pub struct ExactU64(#[ts(type = "string")] pub u64);
+impl Serialize for ExactU64 {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.0.to_string())
+    }
+}
+impl<'de> Deserialize<'de> for ExactU64 {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        if text.is_empty()
+            || text.len() > 20
+            || !text.bytes().all(|b| b.is_ascii_digit())
+            || (text.len() > 1 && text.starts_with('0'))
+        {
+            return Err(serde::de::Error::custom(
+                "expected canonical unsigned decimal text",
+            ));
+        }
+        text.parse().map(Self).map_err(serde::de::Error::custom)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct CoreInfoRequest {
+pub struct IpcError {
+    pub code: String,
+    pub message: String,
+}
+impl IpcError {
+    pub fn new(code: &str, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VersionedRequest {
     pub contract_version: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
-pub enum ExecutionAvailability {
-    #[serde(rename = "manual-single-scan")]
-    ManualSingleScan,
-}
-
-/// Actual Rust build configuration, independent of frontend presentation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
-pub enum BuildContext {
-    Development,
-    Release,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -58,131 +72,128 @@ pub struct CoreInfo {
     pub app_version: String,
     pub core_version: String,
     pub contract_version: u32,
-    pub execution: ExecutionAvailability,
-    pub build_context: BuildContext,
+    /// Always "manual-and-continuous" for contract v8.
+    pub execution: String,
+    pub build_context: String,
 }
 
+/// Typed value of a signal. COUNT is a physical integer quantity.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
+#[serde(tag = "type", deny_unknown_fields)]
+pub enum SignalValueDto {
+    #[serde(rename = "BOOL")]
+    Bool { value: bool },
+    #[serde(rename = "INT")]
+    Int { value: i16 },
+    #[serde(rename = "REAL")]
+    Real { value: f32 },
+    #[serde(rename = "TIME")]
+    Time { value: ExactU64 },
+    #[serde(rename = "COUNT")]
+    Count {
+        #[ts(type = "number")]
+        value: i64,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PositionDto {
+    pub line: u32,
+    pub column: u32,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SpanDto {
+    pub start: PositionDto,
+    pub end: PositionDto,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct IpcError {
+pub struct DiagnosticDto {
     pub code: String,
+    /// "error" | "warning" | "info"
+    #[ts(type = "\"error\" | \"warning\" | \"info\"")]
+    pub severity: String,
     pub message: String,
+    pub span: Option<SpanDto>,
+    /// "compiler" | "runtime" | "internal"
+    #[ts(type = "\"compiler\" | \"runtime\" | \"internal\"")]
+    pub category: String,
 }
 
-pub fn get_core_info(request: CoreInfoRequest, app_version: &str) -> Result<CoreInfo, IpcError> {
-    if request.contract_version != CONTRACT_VERSION {
-        return Err(IpcError {
-            code: "APP-IPC-001".into(),
-            message: format!(
-                "IPC contract version {} is unsupported; expected {CONTRACT_VERSION}.",
-                request.contract_version
-            ),
-        });
-    }
-    Ok(CoreInfo {
-        application_name: "PLC Lab".into(),
-        app_version: app_version.into(),
-        core_version: plc_runtime::VERSION.into(),
-        contract_version: CONTRACT_VERSION,
-        execution: ExecutionAvailability::ManualSingleScan,
-        build_context: if cfg!(debug_assertions) {
-            BuildContext::Development
-        } else {
-            BuildContext::Release
-        },
-    })
+macro_rules! declarations {
+    ($config:expr; $($t:ty),* $(,)?) => {{
+        let mut out = String::new();
+        $(out.push_str(&format!("\nexport {}\n", <$t>::decl($config)));)*
+        out
+    }};
 }
 
-/// Deterministic declarations shared by the exporter and drift test.
+/// Deterministic TypeScript declarations for every DTO.
 pub fn typescript_contract() -> String {
     let config = ts_rs::Config::default();
-    let base = format!(
-        "// Generated by app-contract. Do not edit.\n\nexport const CONTRACT_VERSION = {CONTRACT_VERSION} as const;\nexport const CORE_INFO_COMMAND = \"{CORE_INFO_COMMAND}\" as const;\nexport const COMPILE_ST_COMMAND = \"{COMPILE_ST_COMMAND}\" as const;\n\nexport {}\n\nexport {}\n\nexport {}\n\nexport {}\n\nexport {}\n{}",
-        CoreInfoRequest::decl(&config),
-        ExecutionAvailability::decl(&config),
-        BuildContext::decl(&config),
-        CoreInfo::decl(&config),
-        IpcError::decl(&config),
-        format_args!(
-            "{}{}{}\nexport const LOAD_PROGRAM_COMMAND = \"{LOAD_PROGRAM_COMMAND}\" as const;\nexport const SET_INPUT_COMMAND = \"{SET_INPUT_COMMAND}\" as const;\nexport const SINGLE_SCAN_COMMAND = \"{SINGLE_SCAN_COMMAND}\" as const;\nexport const RESET_RUNTIME_COMMAND = \"{RESET_RUNTIME_COMMAND}\" as const;\nexport const UNLOAD_PROGRAM_COMMAND = \"{UNLOAD_PROGRAM_COMMAND}\" as const;\nexport const RUNTIME_SNAPSHOT_COMMAND = \"{RUNTIME_SNAPSHOT_COMMAND}\" as const;\nexport const ATTACH_PROCESS_COMMAND = \"{ATTACH_PROCESS_COMMAND}\" as const;\nexport const DETACH_PROCESS_COMMAND = \"{DETACH_PROCESS_COMMAND}\" as const;\nexport const RESET_PROCESS_COMMAND = \"{RESET_PROCESS_COMMAND}\" as const;\n",
-            compilation_typescript(&config),
-            session_typescript(&config),
-            process_typescript(&config)
-        ),
+    let config = &config;
+    let mut out = format!(
+        "// Generated by app-contract. Do not edit.\n\nexport const CONTRACT_VERSION = {CONTRACT_VERSION} as const;\nexport const EXECUTION_WAKE_EVENT = \"{EXECUTION_WAKE_EVENT}\" as const;\n"
     );
-    format!(
-        "{base}{}\nexport const START_EXECUTION_COMMAND = \"{START_EXECUTION_COMMAND}\" as const;\nexport const PAUSE_EXECUTION_COMMAND = \"{PAUSE_EXECUTION_COMMAND}\" as const;\nexport const STOP_EXECUTION_COMMAND = \"{STOP_EXECUTION_COMMAND}\" as const;\nexport const EXECUTION_WAKE_EVENT = \"{EXECUTION_WAKE_EVENT}\" as const;\nexport const TRACE_PAGE_COMMAND = \"{TRACE_PAGE_COMMAND}\" as const;\n",
-        trace_typescript(&config)
-    )
+    out.push_str(&declarations!(config; ExactU64, IpcError, VersionedRequest, CoreInfo, SignalValueDto, PositionDto, SpanDto, DiagnosticDto));
+    out.push_str(&knowledge::typescript(config));
+    out.push_str(&project::typescript(config));
+    out.push_str(&workspace::typescript(config));
+    out
 }
+
+pub(crate) use declarations;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn rejects_unsupported_contract_versions() {
-        for version in [0, 1, CONTRACT_VERSION - 1, CONTRACT_VERSION + 1, u32::MAX] {
-            let error = get_core_info(
-                CoreInfoRequest {
-                    contract_version: version,
-                },
-                "0.1.0",
-            )
-            .unwrap_err();
-            assert_eq!(error.code, "APP-IPC-001");
-            assert!(error.message.contains(&version.to_string()));
-        }
-    }
-
-    #[test]
-    fn rejects_malformed_or_unknown_request_fields() {
-        for request in [
-            r#"{}"#,
-            r#"{"contractVersion":-1}"#,
-            r#"{"contractVersion":1,"run":true}"#,
-        ] {
-            assert!(serde_json::from_str::<CoreInfoRequest>(request).is_err());
-        }
-    }
-
-    #[test]
-    fn requests_and_responses_round_trip() {
-        let request = CoreInfoRequest {
-            contract_version: CONTRACT_VERSION,
-        };
-        let json = serde_json::to_string(&request).unwrap();
+    fn exact_u64_is_canonical_and_exact() {
         assert_eq!(
-            serde_json::from_str::<CoreInfoRequest>(&json).unwrap(),
-            request
+            serde_json::to_string(&ExactU64(u64::MAX)).unwrap(),
+            "\"18446744073709551615\""
         );
-        let info = get_core_info(request, "test-app-version").unwrap();
-        assert_eq!(info.app_version, "test-app-version");
-        let json = serde_json::to_string(&info).unwrap();
-        assert_eq!(serde_json::from_str::<CoreInfo>(&json).unwrap(), info);
+        for bad in [
+            "\"01\"",
+            "\"-1\"",
+            "\"\"",
+            "1",
+            "\"18446744073709551616\"",
+            "\"1e3\"",
+        ] {
+            assert!(serde_json::from_str::<ExactU64>(bad).is_err(), "{bad}");
+        }
+        assert_eq!(
+            serde_json::from_str::<ExactU64>("\"0\"").unwrap(),
+            ExactU64(0)
+        );
     }
 
     #[test]
-    fn reports_the_actual_rust_build_context() {
-        let info = get_core_info(
-            CoreInfoRequest {
-                contract_version: CONTRACT_VERSION,
-            },
-            "app-version",
-        )
-        .unwrap();
-        let expected = if cfg!(debug_assertions) {
-            BuildContext::Development
-        } else {
-            BuildContext::Release
+    fn signal_values_are_tagged_and_strict() {
+        let v = SignalValueDto::Time {
+            value: ExactU64(5_000_000),
         };
-        assert_eq!(info.build_context, expected);
-        for (context, name) in [
-            (BuildContext::Development, "development"),
-            (BuildContext::Release, "release"),
-        ] {
-            assert_eq!(serde_json::to_value(context).unwrap(), name);
-        }
+        assert_eq!(
+            serde_json::to_string(&v).unwrap(),
+            r#"{"type":"TIME","value":"5000000"}"#
+        );
+        assert!(serde_json::from_str::<SignalValueDto>(r#"{"type":"INT","value":40000}"#).is_err());
+        assert!(
+            serde_json::from_str::<SignalValueDto>(r#"{"type":"BOOL","value":true,"x":1}"#)
+                .is_err()
+        );
+        assert!(serde_json::from_str::<SignalValueDto>(r#"{"type":"DINT","value":1}"#).is_err());
+    }
+
+    #[test]
+    fn requests_reject_unknown_fields() {
+        assert!(
+            serde_json::from_str::<VersionedRequest>(r#"{"contractVersion":8,"x":1}"#).is_err()
+        );
     }
 
     #[test]
@@ -190,7 +201,9 @@ mod tests {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../packages/ipc/src/generated.ts");
         assert_eq!(
-            std::fs::read_to_string(path).unwrap().replace("\r\n", "\n"),
+            std::fs::read_to_string(path)
+                .unwrap_or_default()
+                .replace("\r\n", "\n"),
             typescript_contract(),
             "Run npm run ipc:generate after changing Rust DTOs."
         );
