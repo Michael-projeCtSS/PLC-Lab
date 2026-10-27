@@ -1,20 +1,13 @@
+// Architecture rules for the rebuilt product, checked against `cargo metadata` (the real
+// dependency graph) and against the security-relevant host configuration.
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { root } from "../../scripts/toolchain.mjs";
 
-const coreNames = new Set([
-  "plc-types",
-  "plc-ir",
-  "plc-runtime",
-  "simulation-core",
-  "trace-core",
-  "network-core",
-  "grading-core",
-  "process-simulation",
-]);
+const read = (p) => readFileSync(path.join(root, p), "utf8");
 
 function workspacePackages() {
   const result = spawnSync(
@@ -33,220 +26,174 @@ function workspacePackages() {
   const metadata = JSON.parse(result.stdout);
   return new Map(metadata.packages.map((item) => [item.name, item]));
 }
-
-test("core dependency closure excludes desktop, UI, and language frontends", () => {
-  const packages = workspacePackages();
-  const inspect = (name, visited = new Set()) => {
-    if (visited.has(name)) return;
-    visited.add(name);
-    const item = packages.get(name);
-    assert.ok(item, `Missing core package ${name}`);
-    for (const dependency of item.dependencies.filter(
-      (dep) => dep.kind !== "dev",
-    )) {
-      if (dependency.path) {
-        assert.ok(
-          coreNames.has(dependency.name),
-          `${name} depends on non-core ${dependency.name}`,
-        );
-        inspect(dependency.name, visited);
-      } else {
-        assert.ok(
-          !/^tauri|react|ts-rs/.test(dependency.name),
-          `${name} contains a UI/transport dependency`,
-        );
-      }
-    }
-  };
-  for (const name of coreNames) inspect(name);
-});
-
-test("semantic crates depend only on shared vocabulary and serialization", () => {
-  const packages = workspacePackages();
-  for (const [name, expected] of [
-    ["plc-types", ["serde"]],
-    ["plc-ir", ["plc-types"]],
-  ]) {
-    const dependencies = packages
-      .get(name)
-      .dependencies.filter((dependency) => dependency.kind !== "dev")
-      .map((dependency) => dependency.name)
-      .sort();
-    assert.deepEqual(
-      dependencies,
-      expected,
-      `${name} must not depend on runtime, simulation, trace, protocols, editors, or UI`,
-    );
-  }
-});
-
-test("runtime uses a leaf simulation clock without reverse or trace execution dependencies", () => {
-  const packages = workspacePackages();
-  for (const [name, expected] of [
-    ["simulation-core", ["plc-types"]],
-    ["plc-runtime", ["plc-ir", "plc-types", "simulation-core"]],
-  ]) {
-    const dependencies = packages
-      .get(name)
-      .dependencies.filter((dependency) => dependency.kind !== "dev")
-      .map((dependency) => dependency.name)
-      .sort();
-    assert.deepEqual(
-      dependencies,
-      expected,
-      `${name} violates ADR-0010 dependency direction`,
-    );
-  }
-});
-
-test("desktop IPC exposes pure compilation and the authorized session and execution control commands", () => {
-  const host = readFileSync(
-    path.join(root, "apps/desktop/src-tauri/src/lib.rs"),
-    "utf8",
-  );
-  const handlers = host
-    .match(/generate_handler!\[([^\]]+)\]/)?.[1]
-    ?.split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  assert.deepEqual(handlers, [
-    "commands::get_core_info",
-    "commands::compile_st",
-    "commands::load_st_program",
-    "commands::set_runtime_input",
-    "commands::single_scan",
-    "commands::reset_runtime",
-    "commands::unload_program",
-    "commands::get_runtime_snapshot",
-    "commands::attach_process_scene",
-    "commands::detach_process_scene",
-    "commands::reset_process_scene",
-    "commands::get_trace_page",
-    "commands::start_execution",
-    "commands::pause_execution",
-    "commands::stop_execution",
-  ]);
-  const capability = JSON.parse(
-    readFileSync(
-      path.join(root, "apps/desktop/src-tauri/capabilities/main.json"),
-      "utf8",
-    ),
-  );
-  assert.deepEqual(capability.permissions, [
-    "core:event:allow-listen",
-    "core:event:allow-unlisten",
-  ]);
-  assert.equal(capability.remote, undefined);
-});
-
-test("session ownership is confined to the headless application service", () => {
-  const packages = workspacePackages();
-  assert.deepEqual(
-    packages
-      .get("desktop-session")
-      .dependencies.filter((d) => d.kind !== "dev")
-      .map((d) => d.name)
-      .sort(),
-    [
-      "app-contract",
-      "plc-runtime",
-      "plc-types",
-      "process-simulation",
-      "st-frontend",
-      "trace-core",
-    ],
-  );
-  const service = readFileSync(
-    path.join(root, "crates/desktop-session/src/lib.rs"),
-    "utf8",
-  );
-  assert.match(service, /Mutex<SessionSlot>/);
-  assert.match(service, /checked_add\(1\)/);
-  assert.match(service, /runtime\s*\.\s*set_input/);
-  assert.match(
-    readFileSync(
-      path.join(root, "crates/desktop-session/src/execution.rs"),
-      "utf8",
-    ),
-    /runtime\s*\.\s*single_scan/,
-  );
-  assert.match(service, /runtime\s*\.\s*reset/);
-  assert.doesNotMatch(
-    service,
-    /SystemTime|Instant::|thread::sleep|active_since|unsafe\s*\{/,
-  );
-  const contract = readFileSync(
-    path.join(root, "crates/app-contract/src/session.rs"),
-    "utf8",
-  );
-  assert.doesNotMatch(
-    contract,
-    /Mutex|Runtime::new|ExecutionPlan|active_since/,
-  );
-});
-
-test("runtime UI presents snapshots without PLC time/count or TON calculations", () => {
-  const hook = readFileSync(
-    path.join(root, "packages/ui/src/useRuntimeSession.ts"),
-    "utf8",
-  );
-  assert.doesNotMatch(
-    hook,
-    /Date\.now|performance\.now|setInterval|setTimeout|\.completedScans\s*(?:\+\+|[+-]=|=)|\.simulationTimeMicros\s*(?:\+\+|[+-]=|=)/,
-  );
-  assert.match(hook, /next\.sessionId !== expected/);
-  const editor = readFileSync(
-    path.join(root, "packages/ui/src/monaco-host.ts"),
-    "utf8",
-  );
-  assert.match(editor, /"plc-lab-runtime"/);
-  assert.match(editor, /"Rust PLC runtime"/);
-});
-
-test("ST production depends only on shared types and IR; compile adapter cannot execute", () => {
-  const dependencies = workspacePackages()
-    .get("st-frontend")
+const packages = workspacePackages();
+const deps = (name) =>
+  packages
+    .get(name)
     .dependencies.filter((d) => d.kind !== "dev")
     .map((d) => d.name)
     .sort();
-  assert.deepEqual(dependencies, ["plc-ir", "plc-types"]);
-  const adapter = readFileSync(
-    path.join(root, "crates/app-contract/src/compilation.rs"),
-    "utf8",
+function closure(name, seen = new Set()) {
+  for (const d of packages
+    .get(name)
+    .dependencies.filter((x) => x.kind !== "dev" && x.path)) {
+    if (!seen.has(d.name)) {
+      seen.add(d.name);
+      closure(d.name, seen);
+    }
+  }
+  return seen;
+}
+
+// Semantic and simulation layers: no transport, host, UI or application adapter.
+const semantic = [
+  "plc-types",
+  "plc-ir",
+  "plc-runtime",
+  "st-frontend",
+  "simulation-core",
+  "trace-core",
+  "lab-model",
+  "process-simulation",
+  "hardware-model",
+  "network-core",
+  "grading-core",
+  "lab-engine",
+  "knowledge-core",
+  "project-model",
+];
+
+test("semantic layers never depend on transport, host, UI or the desktop adapter", () => {
+  for (const name of semantic) {
+    assert.ok(packages.has(name), `missing package ${name}`);
+    for (const d of closure(name))
+      assert.ok(
+        !["app-contract", "desktop-session", "plc-lab-desktop"].includes(d),
+        `${name} depends on ${d}`,
+      );
+    for (const d of deps(name))
+      assert.doesNotMatch(d, /^tauri|^ts-rs$|^tokio$/, `${name} uses ${d}`);
+  }
+});
+
+test("vocabulary crates stay minimal and one runtime executes every language", () => {
+  assert.deepEqual(deps("plc-types"), ["serde"]);
+  assert.deepEqual(deps("plc-ir"), ["plc-types"]);
+  assert.deepEqual(deps("st-frontend"), ["plc-ir", "plc-types"]);
+  assert.ok(!closure("st-frontend").has("plc-runtime"));
+  const runtimes = [...packages.keys()].filter((n) => /runtime/.test(n));
+  assert.deepEqual(runtimes, ["plc-runtime"], "exactly one PLC runtime crate");
+  assert.ok(closure("lab-engine").has("plc-runtime"));
+});
+
+test("the engine is headless and owns no knowledge, persistence or transport", () => {
+  const engine = closure("lab-engine");
+  for (const forbidden of ["knowledge-core", "project-model", "app-contract"])
+    assert.ok(!engine.has(forbidden), `lab-engine depends on ${forbidden}`);
+  assert.ok(
+    !closure("grading-core").has("lab-engine"),
+    "grading never re-simulates",
   );
-  assert.doesNotMatch(
-    adapter,
-    /Runtime::new|single_scan\s*\(|plc_runtime::lower/,
-  );
-  const compiler = readFileSync(
-    path.join(root, "languages/st/src/compiler.rs"),
-    "utf8",
-  );
-  assert.match(compiler, /plc_ir::validate\(&program\)/);
-  assert.doesNotMatch(
-    compiler,
-    /std::(?:fs|process|net)|SystemTime|Instant::|unsafe\s*\{/,
+  assert.ok(!closure("grading-core").has("process-simulation"));
+});
+
+test("the IPC contract is DTO-only and the adapter has no host dependency", () => {
+  assert.deepEqual(deps("app-contract"), ["serde", "serde_json", "ts-rs"]);
+  for (const d of deps("desktop-session"))
+    assert.doesNotMatch(d, /^tauri|^tokio/);
+  assert.deepEqual(
+    deps("plc-lab-desktop").filter((d) => !/^tauri/.test(d)),
+    ["app-contract", "desktop-session", "tokio"],
   );
 });
 
-test("Sprint 0 renderer contains no student-code evaluator or scan scheduler", () => {
-  const visit = (directory) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      const file = path.join(directory, entry.name);
-      if (entry.isDirectory()) visit(file);
-      else if (
-        /\.(tsx?|js)$/.test(entry.name) &&
-        !entry.name.includes(".test.")
-      ) {
-        const source = readFileSync(file, "utf8");
-        assert.doesNotMatch(
-          source,
-          /\beval\s*\(|new\s+Function\s*\(|\bsetInterval\s*\(/,
-          file,
-        );
-      }
-    }
-  };
-  visit(path.join(root, "packages/ui/src"));
-  visit(path.join(root, "apps/desktop/src"));
+test("the host exposes no plugins and the web view gets only event permissions", () => {
+  const manifest = read("apps/desktop/src-tauri/Cargo.toml");
+  assert.doesNotMatch(manifest, /tauri-plugin/);
+  const capability = JSON.parse(
+    read("apps/desktop/src-tauri/capabilities/main.json"),
+  );
+  assert.deepEqual(capability.permissions.sort(), [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+  ]);
+  const config = JSON.parse(read("apps/desktop/src-tauri/tauri.conf.json"));
+  const csp = config.app.security.csp;
+  assert.match(csp, /script-src 'self'(;|$)/);
+  assert.doesNotMatch(csp, /unsafe-eval|https?:\/\/(?!ipc\.localhost)/);
+  assert.match(read("Cargo.toml"), /unsafe_code = "forbid"/);
+});
+
+function files(dir, ext) {
+  const out = [];
+  for (const entry of readdirSync(path.join(root, dir))) {
+    const rel = path.join(dir, entry);
+    if (statSync(path.join(root, rel)).isDirectory())
+      out.push(...files(rel, ext));
+    else if (ext.some((e) => entry.endsWith(e))) out.push(rel);
+  }
+  return out;
+}
+
+test("simulation time never comes from the wall clock", () => {
+  const timeless = [
+    "crates/plc-runtime/src",
+    "crates/simulation-core/src",
+    "crates/process-simulation/src",
+    "crates/hardware-model/src",
+    "crates/network-core/src",
+    "crates/lab-engine/src",
+    "crates/grading-core/src",
+    "crates/trace-core/src",
+    "crates/desktop-session/src/workspace.rs",
+  ];
+  for (const target of timeless) {
+    const list = target.endsWith(".rs") ? [target] : files(target, [".rs"]);
+    for (const f of list)
+      assert.doesNotMatch(
+        read(f),
+        /SystemTime|Instant::|thread::sleep|tokio::time/,
+        `${f} uses wall-clock time`,
+      );
+  }
+  const host = read("apps/desktop/src-tauri/src/execution_driver.rs");
+  assert.match(host, /wait\(period\)\.await;\s*match step\(\)\.await/);
+  assert.doesNotMatch(host, /interval\(|elapsed\(|Instant|SystemTime/);
+});
+
+test("the user interface never executes PLC logic or drives cycles", () => {
+  const ui = files("packages/ui/src", [".ts", ".tsx"]).filter(
+    (f) => !f.endsWith(".test.ts") && !f.endsWith(".test.tsx"),
+  );
+  for (const f of ui) {
+    const text = read(f);
+    assert.doesNotMatch(
+      text,
+      /\beval\(|new Function\(|dangerouslySetInnerHTML/,
+      f,
+    );
+    assert.doesNotMatch(
+      text,
+      /setInterval|requestAnimationFrame/,
+      `${f} drives timing`,
+    );
+    assert.doesNotMatch(
+      text,
+      /@tauri-apps\/api/,
+      `${f} bypasses the typed IPC client`,
+    );
+  }
+  const client = read("packages/ipc/src/client.ts");
+  assert.doesNotMatch(client, /"tick"|"step_cycle"/);
+});
+
+test("release builds do not embed repository knowledge paths", () => {
+  const host = read("apps/desktop/src-tauri/src/lib.rs");
+  const repoPath = host.indexOf("CARGO_MANIFEST_DIR");
+  assert.ok(repoPath > 0);
+  assert.match(
+    host.slice(Math.max(0, repoPath - 120), repoPath),
+    /#\[cfg\(debug_assertions\)\]/,
+    "the repository pack root exists only in development builds",
+  );
 });

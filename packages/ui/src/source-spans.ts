@@ -1,4 +1,4 @@
-import type { CompilerSpan } from "@plc-lab/ipc";
+import type { SpanDto } from "@plc-lab/ipc";
 
 export interface EditorRange {
   startLineNumber: number;
@@ -8,7 +8,7 @@ export interface EditorRange {
 }
 
 /** Backend one-based Unicode scalar columns -> Monaco one-based UTF-16 columns. */
-export function toEditorRange(source: string, span: CompilerSpan): EditorRange {
+export function toEditorRange(source: string, span: SpanDto): EditorRange {
   const lines = source.split(/\r\n|\n|\r/);
   const convert = (line: number, column: number): number => {
     if (

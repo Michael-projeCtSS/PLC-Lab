@@ -1,6 +1,6 @@
 import * as monaco from "monaco-editor/editor/editor.api.js";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
-import type { CompilerDiagnostic } from "@plc-lab/ipc";
+import type { DiagnosticDto } from "@plc-lab/ipc";
 import { toEditorRange } from "./source-spans";
 
 const environment = self as typeof self & {
@@ -32,13 +32,33 @@ if (
       "END_VAR",
       "IF",
       "THEN",
+      "ELSIF",
       "ELSE",
       "END_IF",
+      "CASE",
+      "OF",
+      "END_CASE",
       "NOT",
       "AND",
       "OR",
+      "XOR",
+      "MOD",
     ],
-    types: ["BOOL", "INT", "REAL", "TIME", "TON"],
+    types: [
+      "BOOL",
+      "INT",
+      "REAL",
+      "TIME",
+      "TON",
+      "TOF",
+      "TP",
+      "R_TRIG",
+      "F_TRIG",
+      "CTU",
+      "CTD",
+      "INT_TO_REAL",
+      "REAL_TO_INT",
+    ],
     tokenizer: {
       root: [
         [/\(\*/, "comment", "@comment"],
@@ -74,6 +94,23 @@ if (
   });
 }
 
+monaco.editor.defineTheme("plc-lab-dark", {
+  base: "vs-dark",
+  inherit: true,
+  rules: [
+    { token: "keyword", foreground: "7fb4e0" },
+    { token: "type", foreground: "8fc9b0" },
+    { token: "constant", foreground: "d8b56a" },
+    { token: "number", foreground: "c5a3e0" },
+    { token: "comment", foreground: "6b7b88", fontStyle: "italic" },
+  ],
+  colors: {
+    "editor.background": "#14191f",
+    "editor.lineHighlightBackground": "#1b222a",
+    "editorLineNumber.foreground": "#4b5864",
+  },
+});
+
 export function createStEditor(
   element: HTMLElement,
   source: string,
@@ -82,10 +119,10 @@ export function createStEditor(
   const model = monaco.editor.createModel(source, ST_LANGUAGE_ID);
   const editor = monaco.editor.create(element, {
     model,
-    theme: "vs-dark",
+    theme: "plc-lab-dark",
     automaticLayout: true,
     minimap: { enabled: false },
-    fontFamily: "Consolas, monospace",
+    fontFamily: "Cascadia Mono, Consolas, monospace",
     fontSize: 13,
     scrollBeyondLastLine: false,
     wordWrap: "on",
@@ -98,17 +135,13 @@ export function createStEditor(
   return {
     update(
       value: string,
-      diagnostics: CompilerDiagnostic[],
-      runtimeDiagnostics: CompilerDiagnostic[] = [],
+      diagnostics: DiagnosticDto[],
+      runtimeDiagnostics: DiagnosticDto[] = [],
       readOnly = false,
     ) {
       editor.updateOptions({ readOnly });
       if (model.getValue() !== value) model.setValue(value);
-      const markers = (
-        owner: string,
-        items: CompilerDiagnostic[],
-        source: string,
-      ) =>
+      const markers = (owner: string, items: DiagnosticDto[], source: string) =>
         monaco.editor.setModelMarkers(
           model,
           owner,
@@ -134,7 +167,7 @@ export function createStEditor(
       markers(MARKER_OWNER, diagnostics, "Rust ST compiler");
       markers("plc-lab-runtime", runtimeDiagnostics, "Rust PLC runtime");
     },
-    focus(span: CompilerDiagnostic["span"]) {
+    focus(span: DiagnosticDto["span"]) {
       if (span) {
         const range = toEditorRange(model.getValue(), span);
         editor.setSelection(range);

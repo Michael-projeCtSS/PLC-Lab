@@ -8,3 +8,5 @@ artifacts/
 **/dist/
 apps/desktop/src-tauri/gen/
 packages/ipc/src/generated.ts
+knowledge/
+feedback.md

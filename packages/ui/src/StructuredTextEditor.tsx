@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { CompilerDiagnostic } from "@plc-lab/ipc";
+import type { DiagnosticDto } from "@plc-lab/ipc";
 import type { createStEditor } from "./monaco-host";
 
+/** Monaco-based Structured Text editor. Markers come only from the Rust compiler/runtime. */
 export function StructuredTextEditor({
   source,
   readOnly = false,
@@ -13,19 +14,18 @@ export function StructuredTextEditor({
   source: string;
   readOnly?: boolean;
   onChange: (value: string) => void;
-  diagnostics: CompilerDiagnostic[];
-  runtimeDiagnostics?: CompilerDiagnostic[];
-  focusedDiagnostic: CompilerDiagnostic | null;
+  diagnostics: DiagnosticDto[];
+  runtimeDiagnostics?: DiagnosticDto[];
+  focusedDiagnostic: DiagnosticDto | null;
 }) {
-  const container = useRef<HTMLDivElement>(null),
-    instance = useRef<ReturnType<typeof createStEditor> | null>(null);
+  const container = useRef<HTMLDivElement>(null);
+  const instance = useRef<ReturnType<typeof createStEditor> | null>(null);
   const latest = useRef({
     source,
     readOnly,
     onChange,
     diagnostics,
     runtimeDiagnostics,
-    focusedDiagnostic,
   });
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -35,18 +35,12 @@ export function StructuredTextEditor({
       onChange,
       diagnostics,
       runtimeDiagnostics,
-      focusedDiagnostic,
     };
     instance.current?.update(source, diagnostics, runtimeDiagnostics, readOnly);
+  }, [source, readOnly, onChange, diagnostics, runtimeDiagnostics]);
+  useEffect(() => {
     if (focusedDiagnostic) instance.current?.focus(focusedDiagnostic.span);
-  }, [
-    source,
-    readOnly,
-    onChange,
-    diagnostics,
-    runtimeDiagnostics,
-    focusedDiagnostic,
-  ]);
+  }, [focusedDiagnostic]);
   useEffect(() => {
     let active = true;
     import("./monaco-host")
@@ -67,12 +61,10 @@ export function StructuredTextEditor({
           current.readOnly,
         );
       })
-      .catch((error: unknown) => {
+      .catch((e: unknown) => {
         if (active)
           setError(
-            error instanceof Error
-              ? error.message
-              : "The editor could not load.",
+            e instanceof Error ? e.message : "The editor could not load.",
           );
       });
     return () => {
@@ -88,7 +80,21 @@ export function StructuredTextEditor({
       aria-label="Structured Text editor"
     >
       <div className="monaco-surface" ref={container} />
-      {error && <p role="alert">Editor unavailable: {error}</p>}
+      {error && (
+        <div className="st-editor-fallback">
+          <p role="alert">
+            The code editor could not load ({error}). A plain text editor is
+            shown instead.
+          </p>
+          <textarea
+            aria-label="Structured Text source"
+            value={source}
+            readOnly={readOnly}
+            spellCheck={false}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/LabShell.tsx",
+    ".": "./src/index.ts",
     "./styles.css": "./src/styles.css"
   },
   "dependencies": {
