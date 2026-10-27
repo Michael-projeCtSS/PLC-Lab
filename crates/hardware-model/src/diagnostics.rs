@@ -60,7 +60,11 @@ pub struct DiagnosticBuffer {
 
 impl DiagnosticBuffer {
     pub fn new(capacity: usize) -> Self {
-        Self { entries: VecDeque::new(), capacity: capacity.max(1), total: 0 }
+        Self {
+            entries: VecDeque::new(),
+            capacity: capacity.max(1),
+            total: 0,
+        }
     }
     pub fn push(&mut self, entry: DiagnosticEntry) {
         if self.entries.len() == self.capacity {

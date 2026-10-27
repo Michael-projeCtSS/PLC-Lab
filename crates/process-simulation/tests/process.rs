@@ -3,9 +3,7 @@ use lab_model::{
     scene::{ContactType, OutputStyle, SceneDefinition},
     validate_scene,
 };
-use process_simulation::{
-    AnalogUnit, ComponentFault, ProcessEventKind, Quantity, SceneRuntime,
-};
+use process_simulation::{AnalogUnit, ComponentFault, ProcessEventKind, Quantity, SceneRuntime};
 use simulation_core::WorldTime;
 
 fn scene() -> SceneDefinition {
@@ -37,7 +35,8 @@ fn scene() -> SceneDefinition {
 }
 
 fn q(s: &SceneRuntime, component: &str, name: &str) -> Quantity {
-    s.quantity(s.index_of_str(component).unwrap(), name).unwrap()
+    s.quantity(s.index_of_str(component).unwrap(), name)
+        .unwrap()
 }
 fn at(ms: u64) -> WorldTime {
     WorldTime::from_micros(ms * 1000)
@@ -106,10 +105,16 @@ fn overflow_high_high_and_dry_run_events_have_exact_times() {
     s.set_coil(inlet, "solenoid", true).unwrap();
     s.advance_to(at(12_000)).unwrap();
     let events = s.drain_events();
-    let hh = events.iter().find(|e| e.kind == ProcessEventKind::HighHighOn).unwrap();
+    let hh = events
+        .iter()
+        .find(|e| e.kind == ProcessEventKind::HighHighOn)
+        .unwrap();
     // 9500 ml at 1000 ml/s after flow starts at 1.0 s.
     assert_eq!(hh.time, at(10_500));
-    let of = events.iter().find(|e| e.kind == ProcessEventKind::OverflowStarted).unwrap();
+    let of = events
+        .iter()
+        .find(|e| e.kind == ProcessEventKind::OverflowStarted)
+        .unwrap();
     assert_eq!(of.time, at(11_000));
     assert_eq!(q(&s, "tank", "spilledMl"), Quantity::Integer(1000));
     assert_eq!(q(&s, "tank", "overflowing"), Quantity::Bool(true));
@@ -119,9 +124,16 @@ fn overflow_high_high_and_dry_run_events_have_exact_times() {
     s.set_coil(pump, "motor", true).unwrap();
     s.advance_to(at(30_000)).unwrap();
     let events = s.drain_events();
-    assert!(events.iter().any(|e| e.kind == ProcessEventKind::OverflowEnded));
+    assert!(
+        events
+            .iter()
+            .any(|e| e.kind == ProcessEventKind::OverflowEnded)
+    );
     assert!(events.iter().any(|e| e.kind == ProcessEventKind::LowLowOn));
-    let dry = events.iter().find(|e| e.kind == ProcessEventKind::DryRunStarted).unwrap();
+    let dry = events
+        .iter()
+        .find(|e| e.kind == ProcessEventKind::DryRunStarted)
+        .unwrap();
     assert!(dry.time > at(12_000) && dry.time <= at(30_000));
     assert_eq!(q(&s, "pump", "dry"), Quantity::Bool(true));
     assert_eq!(q(&s, "tank", "levelMl"), Quantity::Integer(0));
@@ -133,22 +145,39 @@ fn contacts_follow_no_nc_and_faults_override_them() {
     let start = s.index_of_str("start").unwrap();
     let stop = s.index_of_str("stop").unwrap();
     assert!(!s.digital_output(start, "contact").unwrap().conducting);
-    assert!(s.digital_output(stop, "contact").unwrap().conducting, "NC stop button conducts at rest");
+    assert!(
+        s.digital_output(stop, "contact").unwrap().conducting,
+        "NC stop button conducts at rest"
+    );
     s.press("start", true).unwrap();
     s.press("stop", true).unwrap();
     assert!(s.digital_output(start, "contact").unwrap().conducting);
     assert!(!s.digital_output(stop, "contact").unwrap().conducting);
-    s.apply_fault(start, ComponentFault::ContactType(ContactType::NormallyClosed)).unwrap();
+    s.apply_fault(
+        start,
+        ComponentFault::ContactType(ContactType::NormallyClosed),
+    )
+    .unwrap();
     assert!(!s.digital_output(start, "contact").unwrap().conducting);
-    s.apply_fault(start, ComponentFault::SensorStuck(true)).unwrap();
+    s.apply_fault(start, ComponentFault::SensorStuck(true))
+        .unwrap();
     s.press("start", false).unwrap();
     assert!(s.digital_output(start, "contact").unwrap().conducting);
-    s.clear_fault(start, &ComponentFault::SensorStuck(true)).unwrap();
-    s.clear_fault(start, &ComponentFault::ContactType(ContactType::NormallyClosed)).unwrap();
+    s.clear_fault(start, &ComponentFault::SensorStuck(true))
+        .unwrap();
+    s.clear_fault(
+        start,
+        &ComponentFault::ContactType(ContactType::NormallyClosed),
+    )
+    .unwrap();
     assert!(!s.digital_output(start, "contact").unwrap().conducting);
     let high = s.index_of_str("high").unwrap();
-    s.apply_fault(high, ComponentFault::OutputStyle(OutputStyle::Npn)).unwrap();
-    assert_eq!(s.digital_output(high, "contact").unwrap().style, OutputStyle::Npn);
+    s.apply_fault(high, ComponentFault::OutputStyle(OutputStyle::Npn))
+        .unwrap();
+    assert_eq!(
+        s.digital_output(high, "contact").unwrap().style,
+        OutputStyle::Npn
+    );
     assert!(s.press("tank", true).is_err());
 }
 
@@ -164,7 +193,8 @@ fn transmitter_is_linear_saturates_and_reports_faults() {
     assert_eq!(s.analog_output(lt, "signal").unwrap().value, 12_000);
     s.advance_to(at(20_000)).unwrap(); // full and overflowing
     assert_eq!(s.analog_output(lt, "signal").unwrap().value, 20_000);
-    s.apply_fault(lt, ComponentFault::AnalogDrift(1_000)).unwrap();
+    s.apply_fault(lt, ComponentFault::AnalogDrift(1_000))
+        .unwrap();
     assert_eq!(s.analog_output(lt, "signal").unwrap().value, 21_000);
     s.apply_fault(lt, ComponentFault::LoopBreak).unwrap();
     assert_eq!(s.analog_output(lt, "signal").unwrap().value, 0);
@@ -173,7 +203,11 @@ fn transmitter_is_linear_saturates_and_reports_faults() {
     s.apply_fault(lt, ComponentFault::AnalogNoise(50)).unwrap();
     let v1 = s.analog_output(lt, "signal").unwrap().value;
     assert!((19_950..=20_050).contains(&v1));
-    assert_eq!(v1, s.analog_output(lt, "signal").unwrap().value, "noise is deterministic");
+    assert_eq!(
+        v1,
+        s.analog_output(lt, "signal").unwrap().value,
+        "noise is deterministic"
+    );
 }
 
 #[test]
@@ -190,8 +224,13 @@ fn motor_starter_picks_up_runs_up_and_trips() {
     s.apply_fault(motor, ComponentFault::MotorOverload).unwrap();
     assert_eq!(q(&s, "motor", "running"), Quantity::Bool(false));
     assert!(!s.digital_output(motor, "overload").unwrap().conducting);
-    assert!(s.drain_events().iter().any(|e| e.kind == ProcessEventKind::MotorOverloadTripped));
-    s.clear_fault(motor, &ComponentFault::MotorOverload).unwrap();
+    assert!(
+        s.drain_events()
+            .iter()
+            .any(|e| e.kind == ProcessEventKind::MotorOverloadTripped)
+    );
+    s.clear_fault(motor, &ComponentFault::MotorOverload)
+        .unwrap();
     s.advance_to(at(1_060)).unwrap();
     assert_eq!(q(&s, "motor", "running"), Quantity::Bool(true));
 }
@@ -200,12 +239,14 @@ fn motor_starter_picks_up_runs_up_and_trips() {
 fn stuck_valve_ignores_commands_and_resumes_after_repair() {
     let mut s = SceneRuntime::new(&scene(), 1).unwrap();
     let inlet = s.index_of_str("inlet").unwrap();
-    s.apply_fault(inlet, ComponentFault::ValveStuck(StuckPosition::Closed)).unwrap();
+    s.apply_fault(inlet, ComponentFault::ValveStuck(StuckPosition::Closed))
+        .unwrap();
     s.set_coil(inlet, "solenoid", true).unwrap();
     s.advance_to(at(5_000)).unwrap();
     assert_eq!(q(&s, "tank", "levelMl"), Quantity::Integer(0));
     assert!(s.digital_output(inlet, "closedSwitch").unwrap().conducting);
-    s.clear_fault(inlet, &ComponentFault::ValveStuck(StuckPosition::Closed)).unwrap();
+    s.clear_fault(inlet, &ComponentFault::ValveStuck(StuckPosition::Closed))
+        .unwrap();
     s.advance_to(at(8_000)).unwrap();
     assert_eq!(q(&s, "tank", "levelMl"), Quantity::Integer(2000));
     assert!(s.advance_to(at(1)).is_err());

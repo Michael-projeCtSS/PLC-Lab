@@ -359,7 +359,11 @@ impl Validator<'_> {
                 }
             }
             ExpressionKind::Logical { operator, operands } => {
-                if !matches!(operator, BinaryOperator::And | BinaryOperator::Or | BinaryOperator::Xor) || operands.len() < 2 {
+                if !matches!(
+                    operator,
+                    BinaryOperator::And | BinaryOperator::Or | BinaryOperator::Xor
+                ) || operands.len() < 2
+                {
                     self.emit(
                         codes::OPERAND_TYPE,
                         "A logical expression requires AND, OR or XOR over at least two operands.",
@@ -386,9 +390,10 @@ impl Validator<'_> {
                 }
                 ok.then_some(PlcType::Bool)
             }
-            ExpressionKind::FunctionBlockOutput { instance, parameter } => {
-                self.function_block_output(*instance, *parameter, expression.source())
-            }
+            ExpressionKind::FunctionBlockOutput {
+                instance,
+                parameter,
+            } => self.function_block_output(*instance, *parameter, expression.source()),
             ExpressionKind::Conversion { function, operand } => {
                 let operand = self.expression(operand, depth + 1)?;
                 let result = compatibility::conversion_result(*function, operand);
@@ -418,25 +423,54 @@ impl Validator<'_> {
     ) -> Option<PlcType> {
         let related = Some(RelatedIdentity::FunctionBlockInstance(instance));
         let Some(declared) = self.program.function_blocks().instance(instance) else {
-            self.emit(codes::UNKNOWN_FB_INSTANCE, "The read function-block instance is not declared.", Some(source), related);
+            self.emit(
+                codes::UNKNOWN_FB_INSTANCE,
+                "The read function-block instance is not declared.",
+                Some(source),
+                related,
+            );
             return None;
         };
         if declared.owner() != self.program.entry() {
-            self.emit(codes::INVALID_FB_OWNER, "The entry program cannot read another POU's instance.", Some(source), related);
+            self.emit(
+                codes::INVALID_FB_OWNER,
+                "The entry program cannot read another POU's instance.",
+                Some(source),
+                related,
+            );
             return None;
         }
-        let Some(definition) = self.program.function_blocks().definition(declared.definition()) else {
-            self.emit(codes::UNKNOWN_FB_DEFINITION, "The read instance has no declared definition.", Some(source), related);
+        let Some(definition) = self
+            .program
+            .function_blocks()
+            .definition(declared.definition())
+        else {
+            self.emit(
+                codes::UNKNOWN_FB_DEFINITION,
+                "The read instance has no declared definition.",
+                Some(source),
+                related,
+            );
             return None;
         };
         match definition.parameter(parameter) {
             Some(p) if p.direction() == ParameterDirection::Output => Some(p.plc_type()),
             Some(_) => {
-                self.emit(codes::FB_PARAMETER_DIRECTION, "Only function-block outputs can be read.", Some(source), related);
+                self.emit(
+                    codes::FB_PARAMETER_DIRECTION,
+                    "Only function-block outputs can be read.",
+                    Some(source),
+                    related,
+                );
                 None
             }
             None => {
-                self.emit(codes::UNKNOWN_FB_PARAMETER, "The read parameter does not belong to the definition.", Some(source), related);
+                self.emit(
+                    codes::UNKNOWN_FB_PARAMETER,
+                    "The read parameter does not belong to the definition.",
+                    Some(source),
+                    related,
+                );
                 None
             }
         }

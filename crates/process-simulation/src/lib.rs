@@ -13,7 +13,9 @@ use fixed::{Volume, crossing, integrate};
 use lab_model::{
     Identifier,
     fault::StuckPosition,
-    scene::{AnalogSignal, ComponentKind, ContactType, Coupling, LampColor, OutputStyle, SceneDefinition},
+    scene::{
+        AnalogSignal, ComponentKind, ContactType, Coupling, LampColor, OutputStyle, SceneDefinition,
+    },
 };
 use simulation_core::{WorldTime, deterministic_hash};
 use std::collections::{BTreeMap, BTreeSet};
@@ -38,7 +40,9 @@ impl std::fmt::Display for SceneError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnknownComponent(c) => write!(f, "Component '{c}' does not exist in this scene."),
-            Self::UnknownPort { component, port } => write!(f, "Component '{component}' has no port '{port}'."),
+            Self::UnknownPort { component, port } => {
+                write!(f, "Component '{component}' has no port '{port}'.")
+            }
             Self::NotOperable(c) => write!(f, "Component '{c}' cannot be operated this way."),
             Self::InvalidPosition(c) => write!(f, "Selector '{c}' has no such position."),
             Self::TimeReversal => f.write_str("The process cannot move backwards in world time."),
@@ -147,16 +151,64 @@ enum Contactor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum State {
-    PushButton { contact: ContactType, pressed: bool },
-    Selector { positions: u8, position: u8 },
-    Lamp { color: LampColor, lit: bool },
-    Starter { pickup: u64, run_up: u64, rated_ma: u32, coil: bool, contactor: Contactor, tripped: bool },
-    Valve { travel: u64, flow: u64, command: bool, motion: Motion },
-    Pump { flow: u64, command: bool, dry: bool },
-    Tank { capacity: u64, volume: Volume, spilled: u64, overflowing: bool, hh: Option<u64>, ll: Option<u64>, hh_on: bool, ll_on: bool },
-    LevelSwitch { tank: usize, level: u64, contact: ContactType, style: OutputStyle },
-    Transmitter { tank: usize, min: u64, max: u64, signal: AnalogSignal },
-    Presence { contact: ContactType, style: OutputStyle, present: bool },
+    PushButton {
+        contact: ContactType,
+        pressed: bool,
+    },
+    Selector {
+        positions: u8,
+        position: u8,
+    },
+    Lamp {
+        color: LampColor,
+        lit: bool,
+    },
+    Starter {
+        pickup: u64,
+        run_up: u64,
+        rated_ma: u32,
+        coil: bool,
+        contactor: Contactor,
+        tripped: bool,
+    },
+    Valve {
+        travel: u64,
+        flow: u64,
+        command: bool,
+        motion: Motion,
+    },
+    Pump {
+        flow: u64,
+        command: bool,
+        dry: bool,
+    },
+    Tank {
+        capacity: u64,
+        volume: Volume,
+        spilled: u64,
+        overflowing: bool,
+        hh: Option<u64>,
+        ll: Option<u64>,
+        hh_on: bool,
+        ll_on: bool,
+    },
+    LevelSwitch {
+        tank: usize,
+        level: u64,
+        contact: ContactType,
+        style: OutputStyle,
+    },
+    Transmitter {
+        tank: usize,
+        min: u64,
+        max: u64,
+        signal: AnalogSignal,
+    },
+    Presence {
+        contact: ContactType,
+        style: OutputStyle,
+        present: bool,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -197,13 +249,23 @@ impl SceneRuntime {
         let mut states = Vec::with_capacity(scene.components.len());
         for c in &scene.components {
             states.push(match &c.kind {
-                ComponentKind::PushButton { contact, .. } => State::PushButton { contact: *contact, pressed: false },
+                ComponentKind::PushButton { contact, .. } => State::PushButton {
+                    contact: *contact,
+                    pressed: false,
+                },
                 ComponentKind::SelectorSwitch { positions, initial } => State::Selector {
                     positions: u8::try_from(positions.len()).unwrap_or(u8::MAX),
                     position: *initial,
                 },
-                ComponentKind::PilotLamp { color } => State::Lamp { color: *color, lit: false },
-                ComponentKind::MotorStarter { pickup_ms, run_up_ms, rated_current_ma } => State::Starter {
+                ComponentKind::PilotLamp { color } => State::Lamp {
+                    color: *color,
+                    lit: false,
+                },
+                ComponentKind::MotorStarter {
+                    pickup_ms,
+                    run_up_ms,
+                    rated_current_ma,
+                } => State::Starter {
                     pickup: ms(*pickup_ms),
                     run_up: ms(*run_up_ms).max(1),
                     rated_ma: *rated_current_ma,
@@ -211,16 +273,31 @@ impl SceneRuntime {
                     contactor: Contactor::Open,
                     tripped: false,
                 },
-                ComponentKind::OnOffValve { travel_ms, flow_ml_per_s } => State::Valve {
+                ComponentKind::OnOffValve {
+                    travel_ms,
+                    flow_ml_per_s,
+                } => State::Valve {
                     travel: ms(*travel_ms).max(2),
                     flow: *flow_ml_per_s,
                     command: false,
                     motion: Motion::Closed,
                 },
-                ComponentKind::Pump { flow_ml_per_s } => State::Pump { flow: *flow_ml_per_s, command: false, dry: false },
-                ComponentKind::Tank { capacity_ml, initial_ml, high_high_ml, low_low_ml } => State::Tank {
+                ComponentKind::Pump { flow_ml_per_s } => State::Pump {
+                    flow: *flow_ml_per_s,
+                    command: false,
+                    dry: false,
+                },
+                ComponentKind::Tank {
+                    capacity_ml,
+                    initial_ml,
+                    high_high_ml,
+                    low_low_ml,
+                } => State::Tank {
                     capacity: *capacity_ml,
-                    volume: Volume { ml: (*initial_ml).min(*capacity_ml), remainder: 0 },
+                    volume: Volume {
+                        ml: (*initial_ml).min(*capacity_ml),
+                        remainder: 0,
+                    },
                     spilled: 0,
                     overflowing: false,
                     hh: *high_high_ml,
@@ -228,19 +305,33 @@ impl SceneRuntime {
                     hh_on: high_high_ml.is_some_and(|h| *initial_ml >= h),
                     ll_on: low_low_ml.is_some_and(|l| *initial_ml <= l),
                 },
-                ComponentKind::LevelSwitch { tank, switch_level_ml, contact, output } => State::LevelSwitch {
+                ComponentKind::LevelSwitch {
+                    tank,
+                    switch_level_ml,
+                    contact,
+                    output,
+                } => State::LevelSwitch {
                     tank: find(tank)?,
                     level: *switch_level_ml,
                     contact: *contact,
                     style: *output,
                 },
-                ComponentKind::LevelTransmitter { tank, range_min_ml, range_max_ml, signal } => State::Transmitter {
+                ComponentKind::LevelTransmitter {
+                    tank,
+                    range_min_ml,
+                    range_max_ml,
+                    signal,
+                } => State::Transmitter {
                     tank: find(tank)?,
                     min: *range_min_ml,
                     max: (*range_max_ml).max(range_min_ml + 1),
                     signal: *signal,
                 },
-                ComponentKind::PresenceSensor { output, contact } => State::Presence { contact: *contact, style: *output, present: false },
+                ComponentKind::PresenceSensor { output, contact } => State::Presence {
+                    contact: *contact,
+                    style: *output,
+                    present: false,
+                },
             });
         }
         let mut fills = Vec::new();
@@ -249,7 +340,9 @@ impl SceneRuntime {
         for coupling in &scene.couplings {
             match coupling {
                 Coupling::ValveFillsTank { valve, tank } => fills.push((find(valve)?, find(tank)?)),
-                Coupling::ValveDrainsTank { valve, tank } => drains.push((find(valve)?, find(tank)?)),
+                Coupling::ValveDrainsTank { valve, tank } => {
+                    drains.push((find(valve)?, find(tank)?))
+                }
                 Coupling::PumpDrainsTank { pump, tank } => pumps.push((find(pump)?, find(tank)?)),
             }
         }
@@ -258,7 +351,11 @@ impl SceneRuntime {
             seed,
             ids: scene.components.iter().map(|c| c.id.clone()).collect(),
             labels: scene.components.iter().map(|c| c.label.clone()).collect(),
-            kinds: scene.components.iter().map(|c| c.kind.type_name()).collect(),
+            kinds: scene
+                .components
+                .iter()
+                .map(|c| c.kind.type_name())
+                .collect(),
             index,
             faults: vec![Faults::default(); states.len()],
             states,
@@ -308,7 +405,10 @@ impl SceneRuntime {
         }
         self.apply_transitions();
         while self.now < target {
-            let next = self.next_transition().filter(|t| *t <= target).unwrap_or(target);
+            let next = self
+                .next_transition()
+                .filter(|t| *t <= target)
+                .unwrap_or(target);
             self.integrate(next - self.now);
             self.now = next;
             self.apply_transitions();
@@ -325,11 +425,18 @@ impl SceneRuntime {
         };
         for state in &self.states {
             match *state {
-                State::Valve { travel, motion: Motion::Opening { since } | Motion::Closing { since }, .. } => {
+                State::Valve {
+                    travel,
+                    motion: Motion::Opening { since } | Motion::Closing { since },
+                    ..
+                } => {
                     consider(since + travel / 2);
                     consider(since + travel);
                 }
-                State::Starter { contactor: Contactor::PickingUp { at }, .. } => consider(at),
+                State::Starter {
+                    contactor: Contactor::PickingUp { at },
+                    ..
+                } => consider(at),
                 _ => {}
             }
         }
@@ -358,7 +465,13 @@ impl SceneRuntime {
     }
 
     fn valve_flowing(&self, valve: usize) -> u64 {
-        let State::Valve { travel, flow, motion, .. } = self.states[valve] else {
+        let State::Valve {
+            travel,
+            flow,
+            motion,
+            ..
+        } = self.states[valve]
+        else {
             return 0;
         };
         let open = match self.faults[valve].valve_stuck {
@@ -376,19 +489,33 @@ impl SceneRuntime {
 
     fn pump_flow(&self, pump: usize) -> u64 {
         match self.states[pump] {
-            State::Pump { flow, command: true, .. } => flow,
+            State::Pump {
+                flow,
+                command: true,
+                ..
+            } => flow,
             _ => 0,
         }
     }
 
     fn tank_rate(&self, tank: usize) -> i64 {
-        let gain: u64 = self.fills.iter().filter(|(_, t)| *t == tank).map(|(v, _)| self.valve_flowing(*v)).sum();
+        let gain: u64 = self
+            .fills
+            .iter()
+            .filter(|(_, t)| *t == tank)
+            .map(|(v, _)| self.valve_flowing(*v))
+            .sum();
         let loss: u64 = self
             .drains
             .iter()
             .filter(|(_, t)| *t == tank)
             .map(|(v, _)| self.valve_flowing(*v))
-            .chain(self.pumps.iter().filter(|(_, t)| *t == tank).map(|(p, _)| self.pump_flow(*p)))
+            .chain(
+                self.pumps
+                    .iter()
+                    .filter(|(_, t)| *t == tank)
+                    .map(|(p, _)| self.pump_flow(*p)),
+            )
             .sum();
         i64::try_from(gain).unwrap_or(i64::MAX) - i64::try_from(loss).unwrap_or(i64::MAX)
     }
@@ -401,7 +528,17 @@ impl SceneRuntime {
             }
             let rate = self.tank_rate(tank);
             let id = self.ids[tank].clone();
-            let State::Tank { capacity, volume, spilled, overflowing, hh, ll, hh_on, ll_on } = &mut self.states[tank] else {
+            let State::Tank {
+                capacity,
+                volume,
+                spilled,
+                overflowing,
+                hh,
+                ll,
+                hh_on,
+                ll_on,
+            } = &mut self.states[tank]
+            else {
                 continue;
             };
             let before = *volume;
@@ -410,18 +547,37 @@ impl SceneRuntime {
             let mut events = Vec::new();
             let full_now = volume.ml >= *capacity && rate > 0;
             if full_now && !*overflowing {
-                events.push((result.full_at.unwrap_or(0), ProcessEventKind::OverflowStarted));
+                events.push((
+                    result.full_at.unwrap_or(0),
+                    ProcessEventKind::OverflowStarted,
+                ));
             }
             if !full_now && *overflowing {
                 events.push((0, ProcessEventKind::OverflowEnded));
             }
             *overflowing = full_now;
             for (limit, active, rising, on, off) in [
-                (*hh, hh_on, true, ProcessEventKind::HighHighOn, ProcessEventKind::HighHighOff),
-                (*ll, ll_on, false, ProcessEventKind::LowLowOn, ProcessEventKind::LowLowOff),
+                (
+                    *hh,
+                    hh_on,
+                    true,
+                    ProcessEventKind::HighHighOn,
+                    ProcessEventKind::HighHighOff,
+                ),
+                (
+                    *ll,
+                    ll_on,
+                    false,
+                    ProcessEventKind::LowLowOn,
+                    ProcessEventKind::LowLowOff,
+                ),
             ] {
                 let Some(limit) = limit else { continue };
-                let now_active = if rising { volume.ml >= limit } else { volume.ml <= limit };
+                let now_active = if rising {
+                    volume.ml >= limit
+                } else {
+                    volume.ml <= limit
+                };
                 if now_active != *active {
                     let at = crossing(before, rate, limit, dt).unwrap_or(dt);
                     events.push((at, if now_active { on } else { off }));
@@ -452,7 +608,11 @@ impl SceneRuntime {
                         self.events.push(ProcessEvent {
                             time: WorldTime::from_micros(start + at),
                             component: pump_id,
-                            kind: if now_dry { ProcessEventKind::DryRunStarted } else { ProcessEventKind::DryRunEnded },
+                            kind: if now_dry {
+                                ProcessEventKind::DryRunStarted
+                            } else {
+                                ProcessEventKind::DryRunEnded
+                            },
                         });
                     }
                 }
@@ -465,13 +625,31 @@ impl SceneRuntime {
     }
 
     /// Energize or de-energize a coil, solenoid or lamp at the current world time.
-    pub fn set_coil(&mut self, component: usize, port: &str, energized: bool) -> Result<(), SceneError> {
+    pub fn set_coil(
+        &mut self,
+        component: usize,
+        port: &str,
+        energized: bool,
+    ) -> Result<(), SceneError> {
         let now = self.now;
-        let id = self.ids.get(component).cloned().ok_or_else(|| SceneError::UnknownComponent(component.to_string()))?;
+        let id = self
+            .ids
+            .get(component)
+            .cloned()
+            .ok_or_else(|| SceneError::UnknownComponent(component.to_string()))?;
         let stuck = self.faults[component].valve_stuck.is_some();
         match (&mut self.states[component], port) {
             (State::Lamp { lit, .. }, "coil") => *lit = energized,
-            (State::Starter { pickup, coil, contactor, tripped, .. }, "coil") => {
+            (
+                State::Starter {
+                    pickup,
+                    coil,
+                    contactor,
+                    tripped,
+                    ..
+                },
+                "coil",
+            ) => {
                 *coil = energized;
                 if !energized {
                     *contactor = Contactor::Open;
@@ -479,7 +657,15 @@ impl SceneRuntime {
                     *contactor = Contactor::PickingUp { at: now + *pickup };
                 }
             }
-            (State::Valve { travel, command, motion, .. }, "solenoid") => {
+            (
+                State::Valve {
+                    travel,
+                    command,
+                    motion,
+                    ..
+                },
+                "solenoid",
+            ) => {
                 *command = energized;
                 if !stuck {
                     *motion = retarget(*motion, energized, now, *travel);
@@ -487,7 +673,10 @@ impl SceneRuntime {
             }
             (State::Pump { command, .. }, "motor") => *command = energized,
             _ => {
-                return Err(SceneError::UnknownPort { component: id.to_string(), port: port.into() });
+                return Err(SceneError::UnknownPort {
+                    component: id.to_string(),
+                    port: port.into(),
+                });
             }
         }
         self.apply_transitions();
@@ -507,7 +696,10 @@ impl SceneRuntime {
     pub fn set_selector(&mut self, component: &str, position: u8) -> Result<(), SceneError> {
         let i = self.component_mut(component)?;
         match &mut self.states[i] {
-            State::Selector { positions, position: p } => {
+            State::Selector {
+                positions,
+                position: p,
+            } => {
                 if position >= *positions {
                     return Err(SceneError::InvalidPosition(component.into()));
                 }
@@ -528,8 +720,16 @@ impl SceneRuntime {
         }
     }
 
-    pub fn apply_fault(&mut self, component: usize, fault: ComponentFault) -> Result<(), SceneError> {
-        let id = self.ids.get(component).cloned().ok_or_else(|| SceneError::UnknownComponent(component.to_string()))?;
+    pub fn apply_fault(
+        &mut self,
+        component: usize,
+        fault: ComponentFault,
+    ) -> Result<(), SceneError> {
+        let id = self
+            .ids
+            .get(component)
+            .cloned()
+            .ok_or_else(|| SceneError::UnknownComponent(component.to_string()))?;
         let f = &mut self.faults[component];
         match fault {
             ComponentFault::SensorStuck(v) => f.stuck = Some(v),
@@ -544,7 +744,10 @@ impl SceneRuntime {
                 f.feedback_missing.insert(port);
             }
             ComponentFault::MotorOverload => {
-                if let State::Starter { tripped, contactor, .. } = &mut self.states[component] {
+                if let State::Starter {
+                    tripped, contactor, ..
+                } = &mut self.states[component]
+                {
                     if !*tripped {
                         *tripped = true;
                         *contactor = Contactor::Open;
@@ -563,9 +766,17 @@ impl SceneRuntime {
     }
 
     /// Remove a fault. Repairs restore the component's designed behavior.
-    pub fn clear_fault(&mut self, component: usize, fault: &ComponentFault) -> Result<(), SceneError> {
+    pub fn clear_fault(
+        &mut self,
+        component: usize,
+        fault: &ComponentFault,
+    ) -> Result<(), SceneError> {
         let now = self.now;
-        let id = self.ids.get(component).cloned().ok_or_else(|| SceneError::UnknownComponent(component.to_string()))?;
+        let id = self
+            .ids
+            .get(component)
+            .cloned()
+            .ok_or_else(|| SceneError::UnknownComponent(component.to_string()))?;
         let f = &mut self.faults[component];
         match fault {
             ComponentFault::SensorStuck(_) => f.stuck = None,
@@ -577,8 +788,21 @@ impl SceneRuntime {
             ComponentFault::LoopBreak => f.loop_break = false,
             ComponentFault::ValveStuck(_) => {
                 let was = f.valve_stuck.take();
-                if let (Some(was), State::Valve { travel, command, motion, .. }) = (was, &mut self.states[component]) {
-                    let from = if was == StuckPosition::Open { Motion::Open } else { Motion::Closed };
+                if let (
+                    Some(was),
+                    State::Valve {
+                        travel,
+                        command,
+                        motion,
+                        ..
+                    },
+                ) = (was, &mut self.states[component])
+                {
+                    let from = if was == StuckPosition::Open {
+                        Motion::Open
+                    } else {
+                        Motion::Closed
+                    };
                     *motion = retarget(from, *command, now, *travel);
                 }
             }
@@ -586,7 +810,13 @@ impl SceneRuntime {
                 f.feedback_missing.remove(port);
             }
             ComponentFault::MotorOverload => {
-                if let State::Starter { tripped, coil, contactor, pickup, .. } = &mut self.states[component]
+                if let State::Starter {
+                    tripped,
+                    coil,
+                    contactor,
+                    pickup,
+                    ..
+                } = &mut self.states[component]
                     && *tripped
                 {
                     *tripped = false;
@@ -613,8 +843,16 @@ impl SceneRuntime {
 
     /// Field signal of a contact or switching sensor at the current world time.
     pub fn digital_output(&self, component: usize, port: &str) -> Result<DigitalField, SceneError> {
-        let id = || self.ids.get(component).map(ToString::to_string).unwrap_or_default();
-        let unknown = || SceneError::UnknownPort { component: id(), port: port.into() };
+        let id = || {
+            self.ids
+                .get(component)
+                .map(ToString::to_string)
+                .unwrap_or_default()
+        };
+        let unknown = || SceneError::UnknownPort {
+            component: id(),
+            port: port.into(),
+        };
         let state = self.states.get(component).ok_or_else(unknown)?;
         let f = &self.faults[component];
         let contact = |designed: ContactType, actuated: bool| {
@@ -622,12 +860,31 @@ impl SceneRuntime {
             actuated ^ (installed == ContactType::NormallyClosed)
         };
         let (conducting, style) = match (state, port) {
-            (State::PushButton { contact: c, pressed }, "contact") => (contact(*c, *pressed), OutputStyle::DryContact),
-            (State::Selector { position, positions }, p) => {
-                let wanted = p.strip_prefix("position").and_then(|n| n.parse::<u8>().ok()).filter(|n| n < positions).ok_or_else(unknown)?;
+            (
+                State::PushButton {
+                    contact: c,
+                    pressed,
+                },
+                "contact",
+            ) => (contact(*c, *pressed), OutputStyle::DryContact),
+            (
+                State::Selector {
+                    position,
+                    positions,
+                },
+                p,
+            ) => {
+                let wanted = p
+                    .strip_prefix("position")
+                    .and_then(|n| n.parse::<u8>().ok())
+                    .filter(|n| n < positions)
+                    .ok_or_else(unknown)?;
                 (*position == wanted, OutputStyle::DryContact)
             }
-            (State::Starter { contactor, .. }, "aux") => (matches!(contactor, Contactor::Closed { .. }), OutputStyle::DryContact),
+            (State::Starter { contactor, .. }, "aux") => (
+                matches!(contactor, Contactor::Closed { .. }),
+                OutputStyle::DryContact,
+            ),
             (State::Starter { tripped, .. }, "overload") => (!*tripped, OutputStyle::DryContact),
             (State::Valve { motion, .. }, "openSwitch") => {
                 let open = match f.valve_stuck {
@@ -643,32 +900,73 @@ impl SceneRuntime {
                 };
                 (closed, OutputStyle::DryContact)
             }
-            (State::LevelSwitch { tank, level, contact: c, style }, "contact") => {
+            (
+                State::LevelSwitch {
+                    tank,
+                    level,
+                    contact: c,
+                    style,
+                },
+                "contact",
+            ) => {
                 let wet = self.tank_volume(*tank) >= *level;
                 (contact(*c, wet), *style)
             }
-            (State::Presence { contact: c, style, present }, "output") => (contact(*c, *present), *style),
+            (
+                State::Presence {
+                    contact: c,
+                    style,
+                    present,
+                },
+                "output",
+            ) => (contact(*c, *present), *style),
             _ => return Err(unknown()),
         };
-        let conducting = if f.feedback_missing.contains(port) { false } else { f.stuck.unwrap_or(conducting) };
-        Ok(DigitalField { conducting, style: f.style.unwrap_or(style) })
+        let conducting = if f.feedback_missing.contains(port) {
+            false
+        } else {
+            f.stuck.unwrap_or(conducting)
+        };
+        Ok(DigitalField {
+            conducting,
+            style: f.style.unwrap_or(style),
+        })
     }
 
     /// Analog field signal at the current world time.
     pub fn analog_output(&self, component: usize, port: &str) -> Result<AnalogField, SceneError> {
-        let id = self.ids.get(component).map(ToString::to_string).unwrap_or_default();
-        let Some(State::Transmitter { tank, min, max, signal }) = self.states.get(component) else {
-            return Err(SceneError::UnknownPort { component: id, port: port.into() });
+        let id = self
+            .ids
+            .get(component)
+            .map(ToString::to_string)
+            .unwrap_or_default();
+        let Some(State::Transmitter {
+            tank,
+            min,
+            max,
+            signal,
+        }) = self.states.get(component)
+        else {
+            return Err(SceneError::UnknownPort {
+                component: id,
+                port: port.into(),
+            });
         };
         if port != "signal" {
-            return Err(SceneError::UnknownPort { component: id, port: port.into() });
+            return Err(SceneError::UnknownPort {
+                component: id,
+                port: port.into(),
+            });
         }
         let level = i128::from(self.tank_volume(*tank));
         let fraction_ppm = ((level - i128::from(*min)) * 1_000_000) / i128::from(max - min);
         let (unit, base) = match signal {
             AnalogSignal::Current4To20mA => {
                 let v = 4_000 + fraction_ppm * 16_000 / 1_000_000;
-                (AnalogUnit::Microamp, (v as i64).clamp(NE43_MIN_UA, NE43_MAX_UA))
+                (
+                    AnalogUnit::Microamp,
+                    (v as i64).clamp(NE43_MIN_UA, NE43_MAX_UA),
+                )
             }
             AnalogSignal::Current0To20mA => {
                 let v = fraction_ppm * 20_000 / 1_000_000;
@@ -694,32 +992,60 @@ impl SceneRuntime {
             };
             (base + i64::from(f.drift) + noise).max(0)
         };
-        Ok(AnalogField { unit, value, signal: *signal })
+        Ok(AnalogField {
+            unit,
+            value,
+            signal: *signal,
+        })
     }
 
     /// Named physical quantities of one component, in a fixed order.
     pub fn quantities(&self, component: usize) -> Vec<(&'static str, Quantity)> {
         let now = self.now;
-        let Some(state) = self.states.get(component) else { return Vec::new() };
+        let Some(state) = self.states.get(component) else {
+            return Vec::new();
+        };
         let f = &self.faults[component];
         match state {
             State::PushButton { pressed, .. } => vec![("pressed", Quantity::Bool(*pressed))],
-            State::Selector { position, .. } => vec![("position", Quantity::Integer(i64::from(*position)))],
-            State::Lamp { lit, color } => vec![("lit", Quantity::Bool(*lit)), ("color", Quantity::Integer(*color as i64))],
-            State::Starter { coil, contactor, tripped, run_up, rated_ma, .. } => {
+            State::Selector { position, .. } => {
+                vec![("position", Quantity::Integer(i64::from(*position)))]
+            }
+            State::Lamp { lit, color } => vec![
+                ("lit", Quantity::Bool(*lit)),
+                ("color", Quantity::Integer(*color as i64)),
+            ],
+            State::Starter {
+                coil,
+                contactor,
+                tripped,
+                run_up,
+                rated_ma,
+                ..
+            } => {
                 let (running, speed) = match contactor {
-                    Contactor::Closed { since } => (true, ((now - since) * 1000 / run_up).min(1000)),
+                    Contactor::Closed { since } => {
+                        (true, ((now - since) * 1000 / run_up).min(1000))
+                    }
                     _ => (false, 0),
                 };
                 vec![
                     ("command", Quantity::Bool(*coil)),
                     ("running", Quantity::Bool(running)),
                     ("speedPermille", Quantity::Integer(speed as i64)),
-                    ("currentMa", Quantity::Integer(if running { i64::from(*rated_ma) } else { 0 })),
+                    (
+                        "currentMa",
+                        Quantity::Integer(if running { i64::from(*rated_ma) } else { 0 }),
+                    ),
                     ("tripped", Quantity::Bool(*tripped)),
                 ]
             }
-            State::Valve { travel, command, motion, .. } => {
+            State::Valve {
+                travel,
+                command,
+                motion,
+                ..
+            } => {
                 let position = match f.valve_stuck {
                     Some(StuckPosition::Open) => 1000,
                     Some(StuckPosition::Closed) => 0,
@@ -727,7 +1053,9 @@ impl SceneRuntime {
                         Motion::Closed => 0,
                         Motion::Open => 1000,
                         Motion::Opening { since } => ((now - since) * 1000 / travel).min(1000),
-                        Motion::Closing { since } => 1000 - ((now - since) * 1000 / travel).min(1000),
+                        Motion::Closing { since } => {
+                            1000 - ((now - since) * 1000 / travel).min(1000)
+                        }
                     },
                 };
                 vec![
@@ -741,35 +1069,72 @@ impl SceneRuntime {
                 ("command", Quantity::Bool(*command)),
                 ("running", Quantity::Bool(*command)),
                 ("dry", Quantity::Bool(*dry)),
-                ("flowMlPerS", Quantity::Integer(if *command && !*dry { *flow as i64 } else { 0 })),
+                (
+                    "flowMlPerS",
+                    Quantity::Integer(if *command && !*dry { *flow as i64 } else { 0 }),
+                ),
             ],
-            State::Tank { capacity, volume, spilled, overflowing, hh_on, ll_on, .. } => vec![
+            State::Tank {
+                capacity,
+                volume,
+                spilled,
+                overflowing,
+                hh_on,
+                ll_on,
+                ..
+            } => vec![
                 ("levelMl", Quantity::Integer(volume.ml as i64)),
-                ("levelPermille", Quantity::Integer((u128::from(volume.ml) * 1000 / u128::from((*capacity).max(1))) as i64)),
+                (
+                    "levelPermille",
+                    Quantity::Integer(
+                        (u128::from(volume.ml) * 1000 / u128::from((*capacity).max(1))) as i64,
+                    ),
+                ),
                 ("capacityMl", Quantity::Integer(*capacity as i64)),
                 ("spilledMl", Quantity::Integer(*spilled as i64)),
                 ("overflowing", Quantity::Bool(*overflowing)),
                 ("highHigh", Quantity::Bool(*hh_on)),
                 ("lowLow", Quantity::Bool(*ll_on)),
-                ("netFlowMlPerS", Quantity::Integer(self.tank_rate(component))),
+                (
+                    "netFlowMlPerS",
+                    Quantity::Integer(self.tank_rate(component)),
+                ),
             ],
             State::LevelSwitch { tank, level, .. } => {
-                let conducting = self.digital_output(component, "contact").map(|d| d.conducting).unwrap_or(false);
-                vec![("wet", Quantity::Bool(self.tank_volume(*tank) >= *level)), ("conducting", Quantity::Bool(conducting))]
+                let conducting = self
+                    .digital_output(component, "contact")
+                    .map(|d| d.conducting)
+                    .unwrap_or(false);
+                vec![
+                    ("wet", Quantity::Bool(self.tank_volume(*tank) >= *level)),
+                    ("conducting", Quantity::Bool(conducting)),
+                ]
             }
             State::Transmitter { .. } => {
-                let signal = self.analog_output(component, "signal").map(|a| a.value).unwrap_or(0);
+                let signal = self
+                    .analog_output(component, "signal")
+                    .map(|a| a.value)
+                    .unwrap_or(0);
                 vec![("signal", Quantity::Integer(signal))]
             }
             State::Presence { present, .. } => {
-                let conducting = self.digital_output(component, "output").map(|d| d.conducting).unwrap_or(false);
-                vec![("present", Quantity::Bool(*present)), ("conducting", Quantity::Bool(conducting))]
+                let conducting = self
+                    .digital_output(component, "output")
+                    .map(|d| d.conducting)
+                    .unwrap_or(false);
+                vec![
+                    ("present", Quantity::Bool(*present)),
+                    ("conducting", Quantity::Bool(conducting)),
+                ]
             }
         }
     }
 
     pub fn quantity(&self, component: usize, name: &str) -> Option<Quantity> {
-        self.quantities(component).into_iter().find(|(n, _)| *n == name).map(|(_, q)| q)
+        self.quantities(component)
+            .into_iter()
+            .find(|(n, _)| *n == name)
+            .map(|(_, q)| q)
     }
 
     /// True when the component is operated by a person (buttons, selectors, presence targets).
@@ -787,11 +1152,15 @@ fn retarget(motion: Motion, open: bool, now: u64, travel: u64) -> Motion {
         (Motion::Open, false) => Motion::Closing { since: now },
         (Motion::Closing { since }, true) => {
             let elapsed = (now - since).min(travel);
-            Motion::Opening { since: now.saturating_sub(travel - elapsed) }
+            Motion::Opening {
+                since: now.saturating_sub(travel - elapsed),
+            }
         }
         (Motion::Opening { since }, false) => {
             let elapsed = (now - since).min(travel);
-            Motion::Closing { since: now.saturating_sub(travel - elapsed) }
+            Motion::Closing {
+                since: now.saturating_sub(travel - elapsed),
+            }
         }
         (m, _) => m,
     }

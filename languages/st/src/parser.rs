@@ -10,7 +10,10 @@ use plc_types::{
     symbols::VariableCategory,
 };
 
-pub(crate) fn parse(tokens: &[Token], config: CompilerConfig) -> Result<ProgramAst, Vec<Diagnostic>> {
+pub(crate) fn parse(
+    tokens: &[Token],
+    config: CompilerConfig,
+) -> Result<ProgramAst, Vec<Diagnostic>> {
     let mut parser = Parser {
         tokens,
         cursor: 0,
@@ -86,7 +89,10 @@ impl Parser<'_> {
     }
     fn program(&mut self) -> Result<ProgramAst, Diagnostic> {
         let start = self
-            .expect(TokenKind::Keyword(Keyword::Program), "Expected PROGRAM followed by its name.")?
+            .expect(
+                TokenKind::Keyword(Keyword::Program),
+                "Expected PROGRAM followed by its name.",
+            )?
             .span;
         let name = self.name()?;
         let mut declarations = Vec::new();
@@ -101,7 +107,10 @@ impl Parser<'_> {
                 TokenKind::Keyword(Keyword::VarOutput) => VariableCategory::Output,
                 _ => VariableCategory::Local,
             };
-            while !self.keyword(Keyword::EndVar) && !self.at(&TokenKind::Eof) && !self.errors.stopped {
+            while !self.keyword(Keyword::EndVar)
+                && !self.at(&TokenKind::Eof)
+                && !self.errors.stopped
+            {
                 if matches!(
                     self.peek().kind,
                     TokenKind::Keyword(
@@ -118,7 +127,8 @@ impl Parser<'_> {
                     .peek_at(1)
                     .is_some_and(|t| matches!(t.kind, TokenKind::Assign | TokenKind::LeftParen))
                 {
-                    self.errors.push(self.syntax("Expected END_VAR before program statements."));
+                    self.errors
+                        .push(self.syntax("Expected END_VAR before program statements."));
                     break;
                 }
                 let before = self.cursor;
@@ -133,12 +143,16 @@ impl Parser<'_> {
             if self.keyword(Keyword::EndVar) {
                 self.take();
             } else if self.at(&TokenKind::Eof) {
-                self.errors.push(self.syntax("Expected END_VAR after declarations."));
+                self.errors
+                    .push(self.syntax("Expected END_VAR after declarations."));
             }
         }
         let body = self.body(0, false);
         let end = self
-            .expect(TokenKind::Keyword(Keyword::EndProgram), "Expected END_PROGRAM.")?
+            .expect(
+                TokenKind::Keyword(Keyword::EndProgram),
+                "Expected END_PROGRAM.",
+            )?
             .span;
         if !self.at(&TokenKind::Eof) {
             return Err(error(
@@ -160,7 +174,10 @@ impl Parser<'_> {
     }
     fn declaration(&mut self, role: VariableCategory) -> Result<Declaration, Diagnostic> {
         let name = self.name()?;
-        self.expect(TokenKind::Colon, "Expected ':' between a declaration name and its type.")?;
+        self.expect(
+            TokenKind::Colon,
+            "Expected ':' between a declaration name and its type.",
+        )?;
         let kind = match self.peek().kind.clone() {
             TokenKind::Type(t) => {
                 self.take();
@@ -179,9 +196,14 @@ impl Parser<'_> {
                     Some(self.peek().span),
                 ));
             }
-            _ => return Err(self.syntax("Expected BOOL, INT, REAL, TIME or a standard function block type.")),
+            _ => {
+                return Err(self
+                    .syntax("Expected BOOL, INT, REAL, TIME or a standard function block type."));
+            }
         };
-        let end = self.expect(TokenKind::Semicolon, "Expected ';' after declaration.")?.span;
+        let end = self
+            .expect(TokenKind::Semicolon, "Expected ';' after declaration.")?
+            .span;
         Ok(Declaration {
             span: joined(name.span, end),
             name,
@@ -196,9 +218,12 @@ impl Parser<'_> {
             .peek_at(offset)
             .is_some_and(|t| matches!(t.kind, TokenKind::Literal(Literal::Integer(_))));
         is_int
-            && self
-                .peek_at(offset + 1)
-                .is_some_and(|t| matches!(t.kind, TokenKind::Colon | TokenKind::Comma | TokenKind::Range))
+            && self.peek_at(offset + 1).is_some_and(|t| {
+                matches!(
+                    t.kind,
+                    TokenKind::Colon | TokenKind::Comma | TokenKind::Range
+                )
+            })
     }
     fn body(&mut self, depth: usize, in_case: bool) -> Vec<Statement> {
         let mut statements = Vec::new();
@@ -206,7 +231,11 @@ impl Parser<'_> {
             && !matches!(
                 self.peek().kind,
                 TokenKind::Keyword(
-                    Keyword::Else | Keyword::Elsif | Keyword::EndIf | Keyword::EndCase | Keyword::EndProgram
+                    Keyword::Else
+                        | Keyword::Elsif
+                        | Keyword::EndIf
+                        | Keyword::EndCase
+                        | Keyword::EndProgram
                 )
             )
             && !(in_case && self.at_case_label())
@@ -247,7 +276,12 @@ impl Parser<'_> {
                 && (self.keyword(Keyword::If)
                     || self.keyword(Keyword::Case)
                     || self.peek_at(1).is_some_and(|t| {
-                        t.kind == if declaration { TokenKind::Colon } else { TokenKind::Assign }
+                        t.kind
+                            == if declaration {
+                                TokenKind::Colon
+                            } else {
+                                TokenKind::Assign
+                            }
                     }))
             {
                 return;
@@ -258,7 +292,13 @@ impl Parser<'_> {
             && !self.at(&TokenKind::Eof)
             && !matches!(
                 self.peek().kind,
-                TokenKind::Keyword(Keyword::EndIf | Keyword::Else | Keyword::Elsif | Keyword::EndCase | Keyword::EndProgram)
+                TokenKind::Keyword(
+                    Keyword::EndIf
+                        | Keyword::Else
+                        | Keyword::Elsif
+                        | Keyword::EndCase
+                        | Keyword::EndProgram
+                )
             )
         {
             self.take();
@@ -266,21 +306,39 @@ impl Parser<'_> {
     }
     fn statement(&mut self, depth: usize) -> Result<Statement, Diagnostic> {
         if depth >= self.config.nesting {
-            return Err(error(codes::LIMIT, "Parser nesting limit exceeded.", Some(self.peek().span)));
+            return Err(error(
+                codes::LIMIT,
+                "Parser nesting limit exceeded.",
+                Some(self.peek().span),
+            ));
         }
         if self.keyword(Keyword::If) {
             let start = self.take().span;
             let mut branches = Vec::new();
             let condition = self.expression(1, depth + 1)?;
-            self.expect(TokenKind::Keyword(Keyword::Then), "Expected THEN after IF condition.")?;
+            self.expect(
+                TokenKind::Keyword(Keyword::Then),
+                "Expected THEN after IF condition.",
+            )?;
             let body = self.body(depth + 1, false);
-            branches.push(Branch { span: joined(start, condition.span), condition, body });
+            branches.push(Branch {
+                span: joined(start, condition.span),
+                condition,
+                body,
+            });
             while self.keyword(Keyword::Elsif) {
                 let at = self.take().span;
                 let condition = self.expression(1, depth + 1)?;
-                self.expect(TokenKind::Keyword(Keyword::Then), "Expected THEN after ELSIF condition.")?;
+                self.expect(
+                    TokenKind::Keyword(Keyword::Then),
+                    "Expected THEN after ELSIF condition.",
+                )?;
                 let body = self.body(depth + 1, false);
-                branches.push(Branch { span: joined(at, condition.span), condition, body });
+                branches.push(Branch {
+                    span: joined(at, condition.span),
+                    condition,
+                    body,
+                });
             }
             let else_body = if self.keyword(Keyword::Else) {
                 self.take();
@@ -289,7 +347,9 @@ impl Parser<'_> {
                 Vec::new()
             };
             self.expect(TokenKind::Keyword(Keyword::EndIf), "Expected END_IF.")?;
-            let end = self.expect(TokenKind::Semicolon, "Expected ';' after END_IF.")?.span;
+            let end = self
+                .expect(TokenKind::Semicolon, "Expected ';' after END_IF.")?
+                .span;
             return Ok(Statement {
                 span: joined(start, end),
                 kind: StatementKind::If(branches, else_body),
@@ -298,7 +358,10 @@ impl Parser<'_> {
         if self.keyword(Keyword::Case) {
             let start = self.take().span;
             let selector = self.expression(1, depth + 1)?;
-            self.expect(TokenKind::Keyword(Keyword::Of), "Expected OF after the CASE selector.")?;
+            self.expect(
+                TokenKind::Keyword(Keyword::Of),
+                "Expected OF after the CASE selector.",
+            )?;
             let mut arms = Vec::new();
             while self.at_case_label() && !self.errors.stopped {
                 let first = self.peek().span;
@@ -319,9 +382,15 @@ impl Parser<'_> {
                     }
                     self.take();
                 }
-                let colon = self.expect(TokenKind::Colon, "Expected ':' after CASE labels.")?.span;
+                let colon = self
+                    .expect(TokenKind::Colon, "Expected ':' after CASE labels.")?
+                    .span;
                 let body = self.body(depth + 1, true);
-                arms.push(CaseArm { labels, body, span: joined(first, colon) });
+                arms.push(CaseArm {
+                    labels,
+                    body,
+                    span: joined(first, colon),
+                });
             }
             if arms.is_empty() {
                 return Err(self.syntax("Expected an integer CASE label such as '1:' or '2..4:'."));
@@ -333,7 +402,9 @@ impl Parser<'_> {
                 Vec::new()
             };
             self.expect(TokenKind::Keyword(Keyword::EndCase), "Expected END_CASE.")?;
-            let end = self.expect(TokenKind::Semicolon, "Expected ';' after END_CASE.")?.span;
+            let end = self
+                .expect(TokenKind::Semicolon, "Expected ';' after END_CASE.")?
+                .span;
             return Ok(Statement {
                 span: joined(start, end),
                 kind: StatementKind::Case(selector, arms, else_body),
@@ -344,7 +415,9 @@ impl Parser<'_> {
         if self.at(&TokenKind::Assign) {
             self.take();
             let value = self.expression(1, depth + 1)?;
-            let end = self.expect(TokenKind::Semicolon, "Expected ';' after assignment.")?.span;
+            let end = self
+                .expect(TokenKind::Semicolon, "Expected ';' after assignment.")?
+                .span;
             return Ok(Statement {
                 span: joined(start, end),
                 kind: StatementKind::Assignment(name, value),
@@ -373,7 +446,11 @@ impl Parser<'_> {
                     AssociationValue::Input(e) => e.span,
                     AssociationValue::Output(n) => n.span,
                 };
-                associations.push(Association { parameter, value, span: joined(span, end) });
+                associations.push(Association {
+                    parameter,
+                    value,
+                    span: joined(span, end),
+                });
                 if !self.at(&TokenKind::Comma) {
                     break;
                 }
@@ -381,7 +458,9 @@ impl Parser<'_> {
             }
         }
         self.expect(TokenKind::RightParen, "Expected ')' after block arguments.")?;
-        let end = self.expect(TokenKind::Semicolon, "Expected ';' after the call.")?.span;
+        let end = self
+            .expect(TokenKind::Semicolon, "Expected ';' after the call.")?
+            .span;
         Ok(Statement {
             span: joined(start, end),
             kind: StatementKind::Call(name, associations),
@@ -396,16 +475,28 @@ impl Parser<'_> {
         };
         let token = self.take();
         let TokenKind::Literal(Literal::Integer(raw)) = token.kind else {
-            return Err(error(codes::SYNTAX, "CASE labels must be integer literals.", Some(token.span)));
+            return Err(error(
+                codes::SYNTAX,
+                "CASE labels must be integer literals.",
+                Some(token.span),
+            ));
         };
-        let value: i64 = raw
-            .parse()
-            .map_err(|_| error(codes::LITERAL, "CASE label is out of range.", Some(token.span)))?;
+        let value: i64 = raw.parse().map_err(|_| {
+            error(
+                codes::LITERAL,
+                "CASE label is out of range.",
+                Some(token.span),
+            )
+        })?;
         Ok(if negative { -value } else { value })
     }
     fn expression(&mut self, minimum: u8, level: usize) -> Result<Expression, Diagnostic> {
         if level >= self.config.nesting {
-            return Err(error(codes::LIMIT, "Expression nesting limit exceeded.", Some(self.peek().span)));
+            return Err(error(
+                codes::LIMIT,
+                "Expression nesting limit exceeded.",
+                Some(self.peek().span),
+            ));
         }
         let token = self.take();
         let mut left = match token.kind {
@@ -415,7 +506,10 @@ impl Parser<'_> {
                 depth: 1,
             },
             TokenKind::Identifier(text) => {
-                let name = Name { text, span: token.span };
+                let name = Name {
+                    text,
+                    span: token.span,
+                };
                 if self.at(&TokenKind::Dot) {
                     self.take();
                     let member = self.name()?;
@@ -439,7 +533,12 @@ impl Parser<'_> {
                             self.take();
                         }
                     }
-                    let end = self.expect(TokenKind::RightParen, "Expected ')' after function arguments.")?.span;
+                    let end = self
+                        .expect(
+                            TokenKind::RightParen,
+                            "Expected ')' after function arguments.",
+                        )?
+                        .span;
                     Expression {
                         span: joined(name.span, end),
                         kind: ExpressionKind::Call(name, arguments),
@@ -468,7 +567,9 @@ impl Parser<'_> {
             }
             TokenKind::LeftParen => {
                 let operand = self.expression(1, level + 1)?;
-                let end = self.expect(TokenKind::RightParen, "Expected ')' after expression.")?.span;
+                let end = self
+                    .expect(TokenKind::RightParen, "Expected ')' after expression.")?
+                    .span;
                 Expression {
                     span: joined(token.span, end),
                     depth: operand.depth + 1,
@@ -496,7 +597,10 @@ impl Parser<'_> {
             }
             self.take();
             let right = self.expression(precedence + 1, level + 1)?;
-            let chainable = matches!(operator, BinaryOperator::And | BinaryOperator::Or | BinaryOperator::Xor);
+            let chainable = matches!(
+                operator,
+                BinaryOperator::And | BinaryOperator::Or | BinaryOperator::Xor
+            );
             left = match left.kind {
                 ExpressionKind::Chain(op, mut operands) if chainable && op == operator => {
                     let depth = left.depth.max(right.depth + 1);
@@ -536,7 +640,11 @@ impl Parser<'_> {
             };
         }
         if left.depth + level >= self.config.nesting {
-            return Err(error(codes::LIMIT, "Expression tree limit exceeded.", Some(left.span)));
+            return Err(error(
+                codes::LIMIT,
+                "Expression tree limit exceeded.",
+                Some(left.span),
+            ));
         }
         Ok(left)
     }

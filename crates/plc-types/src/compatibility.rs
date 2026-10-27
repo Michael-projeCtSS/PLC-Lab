@@ -104,7 +104,9 @@ impl ConversionFunction {
 pub fn conversion_result(function: ConversionFunction, operand: PlcType) -> Option<PlcType> {
     match (function, operand) {
         (ConversionFunction::IntToReal, PlcType::Int) => Some(PlcType::Real),
-        (ConversionFunction::RealToInt | ConversionFunction::Trunc, PlcType::Real) => Some(PlcType::Int),
+        (ConversionFunction::RealToInt | ConversionFunction::Trunc, PlcType::Real) => {
+            Some(PlcType::Int)
+        }
         _ => None,
     }
 }
@@ -164,7 +166,15 @@ mod tests {
         for (operators, matrix) in [
             (vec![And, Or, Xor], boolean),
             (vec![Add, Subtract, Multiply, Divide], arithmetic),
-            (vec![Modulo], [[None; 4], [None, Some(Int), None, None], [None; 4], [None; 4]]),
+            (
+                vec![Modulo],
+                [
+                    [None; 4],
+                    [None, Some(Int), None, None],
+                    [None; 4],
+                    [None; 4],
+                ],
+            ),
             (vec![Equal, NotEqual], equality),
             (vec![Less, LessEqual, Greater, GreaterEqual], ordering),
         ] {

@@ -241,7 +241,11 @@ mod tests {
             for i in 0..20u32 {
                 s.schedule(
                     WorldTime::from_micros(u64::from(i % 5) * 10),
-                    if i % 2 == 0 { Phase::Device } else { Phase::Network },
+                    if i % 2 == 0 {
+                        Phase::Device
+                    } else {
+                        Phase::Network
+                    },
                     i % 3,
                     i,
                 )

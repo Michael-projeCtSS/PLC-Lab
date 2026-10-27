@@ -12,13 +12,13 @@ The M4 trace stored one full snapshot per event. Each `ScanCompleted` row mixed 
 
 Every engine cycle produces one `CycleObservation` with five layers:
 
-| Layer | Meaning |
-| --- | --- |
-| `scan_inputs` | Values the PLC read during this scan (input image) |
-| `committed` | Outputs, locals and block outputs committed by this scan |
-| `applied` | Output channel states and device commands applied for the interval |
+| Layer           | Meaning                                                                 |
+| --------------- | ----------------------------------------------------------------------- |
+| `scan_inputs`   | Values the PLC read during this scan (input image)                      |
+| `committed`     | Outputs, locals and block outputs committed by this scan                |
+| `applied`       | Output channel states and device commands applied for the interval      |
 | `process_after` | Physical quantities and input channel values at the end of the interval |
-| `staged_next` | Inputs sampled at the end of the interval for the next scan |
+| `staged_next`   | Inputs sampled at the end of the interval for the next scan             |
 
 Invariant: for `Output := NOT Input`, `committed.Output == NOT scan_inputs.Input` holds inside a single observation. No consumer (Timeline, cause-and-effect, grading) infers causal inputs from a neighbouring row.
 

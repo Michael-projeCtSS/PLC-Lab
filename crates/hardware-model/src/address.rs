@@ -72,19 +72,83 @@ pub fn format(
 mod tests {
     use super::*;
     fn ch(slot: u8, channel: u8) -> ChannelRef {
-        ChannelRef { rack: 0, slot, channel }
+        ChannelRef {
+            rack: 0,
+            slot,
+            channel,
+        }
     }
     #[test]
     fn notations() {
-        assert_eq!(format(AddressingScheme::ByteBit, ModuleType::Di16Sinking, 2, ch(2, 9), None), "%I3.1");
-        assert_eq!(format(AddressingScheme::IecDirect, ModuleType::Do8, 0, ch(3, 4), None), "%QX0.4");
-        assert_eq!(format(AddressingScheme::ByteBit, ModuleType::Ai4, 64, ch(4, 1), None), "%IW66");
-        assert_eq!(format(AddressingScheme::ModuleDefinedTags, ModuleType::Di8Sinking, 0, ch(1, 3), None), "Local:1:I.Data.3");
-        assert_eq!(format(AddressingScheme::OctalDevices, ModuleType::Di16Sinking, 0, ch(1, 9), None), "X11");
         assert_eq!(
-            format(AddressingScheme::LinkedTerminal, ModuleType::Do8, 0, ch(2, 0), Some("EL2008")),
+            format(
+                AddressingScheme::ByteBit,
+                ModuleType::Di16Sinking,
+                2,
+                ch(2, 9),
+                None
+            ),
+            "%I3.1"
+        );
+        assert_eq!(
+            format(
+                AddressingScheme::IecDirect,
+                ModuleType::Do8,
+                0,
+                ch(3, 4),
+                None
+            ),
+            "%QX0.4"
+        );
+        assert_eq!(
+            format(
+                AddressingScheme::ByteBit,
+                ModuleType::Ai4,
+                64,
+                ch(4, 1),
+                None
+            ),
+            "%IW66"
+        );
+        assert_eq!(
+            format(
+                AddressingScheme::ModuleDefinedTags,
+                ModuleType::Di8Sinking,
+                0,
+                ch(1, 3),
+                None
+            ),
+            "Local:1:I.Data.3"
+        );
+        assert_eq!(
+            format(
+                AddressingScheme::OctalDevices,
+                ModuleType::Di16Sinking,
+                0,
+                ch(1, 9),
+                None
+            ),
+            "X11"
+        );
+        assert_eq!(
+            format(
+                AddressingScheme::LinkedTerminal,
+                ModuleType::Do8,
+                0,
+                ch(2, 0),
+                Some("EL2008")
+            ),
             "Term 2 (EL2008).Channel 1.Output"
         );
-        assert_eq!(format(AddressingScheme::UnitPorts, ModuleType::Ai4, 0, ch(5, 0), None), "Unit5_Ch1_In");
+        assert_eq!(
+            format(
+                AddressingScheme::UnitPorts,
+                ModuleType::Ai4,
+                0,
+                ch(5, 0),
+                None
+            ),
+            "Unit5_Ch1_In"
+        );
     }
 }

@@ -74,11 +74,22 @@ mod tests {
 
     #[test]
     fn partitioned_integration_equals_single_step() {
-        for (rate, total_us) in [(1000, 500_000u64), (-800, 500_000), (3, 1_000_001), (777, 99_999)] {
-            let mut whole = Volume { ml: 5_000, remainder: 0 };
+        for (rate, total_us) in [
+            (1000, 500_000u64),
+            (-800, 500_000),
+            (3, 1_000_001),
+            (777, 99_999),
+        ] {
+            let mut whole = Volume {
+                ml: 5_000,
+                remainder: 0,
+            };
             integrate(&mut whole, rate, total_us, 1_000_000);
             for step in [1u64, 3, 1_000, 10_000, 33_333] {
-                let mut parts = Volume { ml: 5_000, remainder: 0 };
+                let mut parts = Volume {
+                    ml: 5_000,
+                    remainder: 0,
+                };
                 let mut elapsed = 0;
                 while elapsed < total_us {
                     let dt = step.min(total_us - elapsed);
@@ -93,24 +104,56 @@ mod tests {
     #[test]
     fn small_steps_do_not_lose_slow_flows() {
         // 1 ml/s for 0.8 s in 1000 steps of 0.8 ms must move exactly 0.8 ml.
-        let mut v = Volume { ml: 10, remainder: 0 };
+        let mut v = Volume {
+            ml: 10,
+            remainder: 0,
+        };
         for _ in 0..1000 {
             integrate(&mut v, -1, 800, 100);
         }
-        assert_eq!(v, Volume { ml: 9, remainder: 200_000 });
+        assert_eq!(
+            v,
+            Volume {
+                ml: 9,
+                remainder: 200_000
+            }
+        );
     }
 
     #[test]
     fn clamping_reports_exact_crossings_and_spill() {
-        let mut v = Volume { ml: 990, remainder: 0 };
+        let mut v = Volume {
+            ml: 990,
+            remainder: 0,
+        };
         let r = integrate(&mut v, 100, 200_000, 1000);
-        assert_eq!(v, Volume { ml: 1000, remainder: 0 });
+        assert_eq!(
+            v,
+            Volume {
+                ml: 1000,
+                remainder: 0
+            }
+        );
         assert_eq!(r.full_at, Some(100_000));
         assert_eq!(r.spilled_ml, 10);
-        let mut e = Volume { ml: 5, remainder: 0 };
+        let mut e = Volume {
+            ml: 5,
+            remainder: 0,
+        };
         let r = integrate(&mut e, -10, 1_000_000, 1000);
         assert_eq!(e, Volume::default());
         assert_eq!(r.empty_at, Some(500_000));
-        assert_eq!(crossing(Volume { ml: 0, remainder: 0 }, 10, 1, 1_000_000), Some(100_000));
+        assert_eq!(
+            crossing(
+                Volume {
+                    ml: 0,
+                    remainder: 0
+                },
+                10,
+                1,
+                1_000_000
+            ),
+            Some(100_000)
+        );
     }
 }

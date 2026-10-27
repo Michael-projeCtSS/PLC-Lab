@@ -108,10 +108,18 @@ impl Expression {
         Self {
             source,
             result_type,
-            kind: ExpressionKind::FunctionBlockOutput { instance, parameter },
+            kind: ExpressionKind::FunctionBlockOutput {
+                instance,
+                parameter,
+            },
         }
     }
-    pub fn conversion(source: SourceRef, result_type: PlcType, function: ConversionFunction, operand: Self) -> Self {
+    pub fn conversion(
+        source: SourceRef,
+        result_type: PlcType,
+        function: ConversionFunction,
+        operand: Self,
+    ) -> Self {
         Self {
             source,
             result_type,

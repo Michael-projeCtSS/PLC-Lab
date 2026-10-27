@@ -61,13 +61,8 @@ pub fn convert(
         // Voltage source into a low-impedance current input: I = U / R.
         Some(f) if unit == AnalogUnit::Microamp => f.value * 1_000 / CURRENT_INPUT_OHMS,
         // Current loop into a high-impedance voltage input: the loop saturates near supply.
-        Some(f) => {
-            if f.value > 0 {
-                24_000
-            } else {
-                0
-            }
-        }
+        Some(f) if f.value > 0 => 24_000,
+        Some(_) => 0,
     };
     if live_zero && diagnostics && measured < WIRE_BREAK_BELOW_UA {
         return Some(AnalogReading {
@@ -161,7 +156,9 @@ mod tests {
         })
     }
     fn int(r: AnalogReading) -> (i16, AnalogCondition) {
-        let AnalogRaw::Int(v) = r.raw else { panic!("integer expected") };
+        let AnalogRaw::Int(v) = r.raw else {
+            panic!("integer expected")
+        };
         (v, r.condition)
     }
 
@@ -193,16 +190,38 @@ mod tests {
 
     #[test]
     fn other_representations() {
-        let g = int(
-            convert(current(12_000), ChannelMode::Current4To20mA, false, AnalogRepresentation::PerTenThousand).unwrap(),
-        );
+        let g = int(convert(
+            current(12_000),
+            ChannelMode::Current4To20mA,
+            false,
+            AnalogRepresentation::PerTenThousand,
+        )
+        .unwrap());
         assert_eq!(g, (5_000, AnalogCondition::Normal));
-        let b = int(
-            convert(current(20_000), ChannelMode::Current4To20mA, false, AnalogRepresentation::FullScale32767).unwrap(),
-        );
+        let b = int(convert(
+            current(20_000),
+            ChannelMode::Current4To20mA,
+            false,
+            AnalogRepresentation::FullScale32767,
+        )
+        .unwrap());
         assert_eq!(b, (32_767, AnalogCondition::Normal));
-        let e = convert(current(8_000), ChannelMode::Current4To20mA, false, AnalogRepresentation::EngineeringUnits).unwrap();
+        let e = convert(
+            current(8_000),
+            ChannelMode::Current4To20mA,
+            false,
+            AnalogRepresentation::EngineeringUnits,
+        )
+        .unwrap();
         assert_eq!(e.raw, AnalogRaw::Real(8.0));
-        assert!(convert(current(8_000), ChannelMode::Disabled, false, AnalogRepresentation::S7Nominal27648).is_none());
+        assert!(
+            convert(
+                current(8_000),
+                ChannelMode::Disabled,
+                false,
+                AnalogRepresentation::S7Nominal27648
+            )
+            .is_none()
+        );
     }
 }

@@ -6,12 +6,18 @@ use crate::{
 use plc_ir::{CallBinding, FunctionBlockCall, Program, ValidatedProgram};
 use plc_types::{
     PlcType, PlcValue,
-    compatibility::{self, AssignmentCompatibility, BinaryOperator, ConversionFunction, UnaryOperator},
+    compatibility::{
+        self, AssignmentCompatibility, BinaryOperator, ConversionFunction, UnaryOperator,
+    },
     diagnostics::Diagnostic,
     function_blocks::{
-        FunctionBlockCatalog, FunctionBlockDefinition, FunctionBlockInstance, ParameterDirection, StandardFunctionBlock,
+        FunctionBlockCatalog, FunctionBlockDefinition, FunctionBlockInstance, ParameterDirection,
+        StandardFunctionBlock,
     },
-    identity::{DocumentId, FunctionBlockId, FunctionBlockInstanceId, ParameterId, PouId, SourceElementId, SymbolId},
+    identity::{
+        DocumentId, FunctionBlockId, FunctionBlockInstanceId, ParameterId, PouId, SourceElementId,
+        SymbolId,
+    },
     source::{SourceLanguage, SourceLocation, SourceMap, SourceRef, TextSpan},
     symbols::{Pou, PouKind, Scope, Symbol, SymbolTable, VariableCategory},
 };
@@ -48,7 +54,10 @@ impl CompiledProgram {
     }
 }
 
-pub fn compile_st(source: &str, configuration: CompilerConfig) -> Result<CompiledProgram, Vec<Diagnostic>> {
+pub fn compile_st(
+    source: &str,
+    configuration: CompilerConfig,
+) -> Result<CompiledProgram, Vec<Diagnostic>> {
     let ast = crate::parse_st(source, configuration)?;
     let owner = PouId::new(1).expect("fixed entry identity");
     let document = DocumentId::new(1).expect("fixed document identity");
@@ -71,15 +80,23 @@ pub fn compile_st(source: &str, configuration: CompilerConfig) -> Result<Compile
         .register_document(document, SourceLanguage::St)
         .expect("fresh source registry");
     compiler.anchor(ast.span);
-    let pou = Pou::new(owner, &ast.name.text, PouKind::Program)
-        .map_err(|e| vec![e.diagnostic().with_source(Some(crate::diagnostics::location(ast.name.span, 1)))])?;
-    compiler.symbols.declare_pou(pou).expect("fresh program namespace");
+    let pou = Pou::new(owner, &ast.name.text, PouKind::Program).map_err(|e| {
+        vec![
+            e.diagnostic()
+                .with_source(Some(crate::diagnostics::location(ast.name.span, 1))),
+        ]
+    })?;
+    compiler
+        .symbols
+        .declare_pou(pou)
+        .expect("fresh program namespace");
     compiler.declare(&ast.declarations);
     let body = compiler.body(&ast.body);
     if !compiler.errors.items.is_empty() {
         return Err(compiler.errors.items);
     }
-    let program = Program::new(compiler.symbols, compiler.sources, owner, body).with_function_blocks(compiler.catalog);
+    let program = Program::new(compiler.symbols, compiler.sources, owner, body)
+        .with_function_blocks(compiler.catalog);
     if let Err(errors) = plc_ir::validate(&program) {
         for diagnostic in errors {
             compiler.errors.push(diagnostic);
@@ -115,7 +132,11 @@ impl Compiler {
         );
         self.next_source += 1;
         self.sources
-            .register_element(SourceLocation::new(reference, SourceLanguage::St, Some(span)))
+            .register_element(SourceLocation::new(
+                reference,
+                SourceLanguage::St,
+                Some(span),
+            ))
             .expect("fresh unique source anchor");
         reference
     }
@@ -150,8 +171,15 @@ impl Compiler {
                 ast::DeclaredType::Scalar(kind) => {
                     let id = SymbolId::new(self.next_symbol).expect("bounded declaration count");
                     self.next_symbol += 1;
-                    match Symbol::new(id, &name.text, kind, Scope::Pou(self.owner), declaration.role, Some(source))
-                        .and_then(|s| self.symbols.declare(s))
+                    match Symbol::new(
+                        id,
+                        &name.text,
+                        kind,
+                        Scope::Pou(self.owner),
+                        declaration.role,
+                        Some(source),
+                    )
+                    .and_then(|s| self.symbols.declare(s))
                     {
                         Ok(()) => self.declarations.push(DeclarationSummary {
                             name: name.text.clone(),
@@ -164,7 +192,10 @@ impl Compiler {
                             .into(),
                             span: declaration.span,
                         }),
-                        Err(e) => self.errors.push(e.diagnostic().with_source(self.sources.get(source).cloned())),
+                        Err(e) => self.errors.push(
+                            e.diagnostic()
+                                .with_source(self.sources.get(source).cloned()),
+                        ),
                     }
                 }
                 ast::DeclaredType::FunctionBlock(kind) => {
@@ -179,21 +210,33 @@ impl Compiler {
                     let definition = if let Some(id) = self.definitions.get(&kind) {
                         *id
                     } else {
-                        let id = FunctionBlockId::new(u32::try_from(self.definitions.len() + 1).unwrap_or(u32::MAX))
-                            .expect("nonzero definition identity");
+                        let id = FunctionBlockId::new(
+                            u32::try_from(self.definitions.len() + 1).unwrap_or(u32::MAX),
+                        )
+                        .expect("nonzero definition identity");
                         self.catalog
-                            .declare_definition(FunctionBlockDefinition::standard(id, kind).with_source(source))
+                            .declare_definition(
+                                FunctionBlockDefinition::standard(id, kind).with_source(source),
+                            )
                             .expect("one definition per standard kind");
                         self.definitions.insert(kind, id);
                         id
                     };
-                    let id = FunctionBlockInstanceId::new(self.next_instance).expect("bounded instance count");
+                    let id = FunctionBlockInstanceId::new(self.next_instance)
+                        .expect("bounded instance count");
                     self.next_instance += 1;
-                    match FunctionBlockInstance::new(id, definition, self.owner, &name.text, Some(source))
-                        .and_then(|i| self.catalog.declare_instance(i))
+                    match FunctionBlockInstance::new(
+                        id,
+                        definition,
+                        self.owner,
+                        &name.text,
+                        Some(source),
+                    )
+                    .and_then(|i| self.catalog.declare_instance(i))
                     {
                         Ok(()) => {
-                            self.instances.insert(name.text.to_ascii_uppercase(), (id, kind));
+                            self.instances
+                                .insert(name.text.to_ascii_uppercase(), (id, kind));
                             self.declarations.push(DeclarationSummary {
                                 name: name.text.clone(),
                                 type_name: kind.name().into(),
@@ -201,7 +244,10 @@ impl Compiler {
                                 span: declaration.span,
                             });
                         }
-                        Err(e) => self.errors.push(e.diagnostic().with_source(self.sources.get(source).cloned())),
+                        Err(e) => self.errors.push(
+                            e.diagnostic()
+                                .with_source(self.sources.get(source).cloned()),
+                        ),
                     }
                 }
             }
@@ -212,7 +258,10 @@ impl Compiler {
             Ok(symbol) => Some((symbol.id(), symbol.plc_type(), symbol.category())),
             Err(_) => {
                 let message = if self.instances.contains_key(&name.text.to_ascii_uppercase()) {
-                    format!("'{}' is a function-block instance; read one of its outputs, for example {}.Q.", name.text, name.text)
+                    format!(
+                        "'{}' is a function-block instance; read one of its outputs, for example {}.Q.",
+                        name.text, name.text
+                    )
                 } else {
                     format!("Unknown variable '{}'.", name.text)
                 };
@@ -224,7 +273,14 @@ impl Compiler {
     fn target(&mut self, name: &ast::Name, code: &str) -> Option<(SymbolId, PlcType)> {
         let (id, kind, role) = self.resolve(name)?;
         if role == VariableCategory::Input {
-            self.report(code, format!("Cannot write VAR_INPUT '{}'; inputs are read-only.", name.text), name.span);
+            self.report(
+                code,
+                format!(
+                    "Cannot write VAR_INPUT '{}'; inputs are read-only.",
+                    name.text
+                ),
+                name.span,
+            );
             None
         } else {
             Some((id, kind))
@@ -242,10 +298,18 @@ impl Compiler {
         }
         body
     }
-    fn condition(&mut self, expression: &ast::Expression, what: &str) -> Option<plc_ir::Expression> {
+    fn condition(
+        &mut self,
+        expression: &ast::Expression,
+        what: &str,
+    ) -> Option<plc_ir::Expression> {
         let value = self.expression(expression)?;
         if value.result_type() != PlcType::Bool {
-            self.report(codes::TYPE, format!("{what} must be BOOL."), expression.span);
+            self.report(
+                codes::TYPE,
+                format!("{what} must be BOOL."),
+                expression.span,
+            );
             return None;
         }
         Some(value)
@@ -257,7 +321,9 @@ impl Compiler {
                 let target = self.target(name, codes::TARGET);
                 let value = self.expression(expression);
                 let ((target, target_type), value) = (target?, value?);
-                if compatibility::assignment(target_type, value.result_type()) != AssignmentCompatibility::Identity {
+                if compatibility::assignment(target_type, value.result_type())
+                    != AssignmentCompatibility::Identity
+                {
                     self.report(
                         codes::TYPE,
                         format!(
@@ -291,11 +357,23 @@ impl Compiler {
                 let (_, first_condition, first_body) = compiled.remove(0);
                 for (span, condition, body) in compiled.into_iter().rev() {
                     let branch_source = self.anchor(span);
-                    tail = vec![plc_ir::Statement::conditional(branch_source, condition, body, tail)];
+                    tail = vec![plc_ir::Statement::conditional(
+                        branch_source,
+                        condition,
+                        body,
+                        tail,
+                    )];
                 }
-                Some(plc_ir::Statement::conditional(source, first_condition, first_body, tail))
+                Some(plc_ir::Statement::conditional(
+                    source,
+                    first_condition,
+                    first_body,
+                    tail,
+                ))
             }
-            ast::StatementKind::Case(selector, arms, else_body) => self.case(source, selector, arms, else_body),
+            ast::StatementKind::Case(selector, arms, else_body) => {
+                self.case(source, selector, arms, else_body)
+            }
             ast::StatementKind::Call(name, associations) => self
                 .call(name, associations)
                 .map(|call| plc_ir::Statement::function_block_call(source, call)),
@@ -310,7 +388,11 @@ impl Compiler {
     ) -> Option<plc_ir::Statement> {
         let probe = self.expression(selector)?;
         if probe.result_type() != PlcType::Int {
-            self.report(codes::TYPE, "CASE selector must be INT in Alpha Structured Text.", selector.span);
+            self.report(
+                codes::TYPE,
+                "CASE selector must be INT in Alpha Structured Text.",
+                selector.span,
+            );
             return None;
         }
         let mut seen: Vec<(i64, i64)> = Vec::new();
@@ -323,7 +405,11 @@ impl Compiler {
                     ast::CaseLabel::Range(lo, hi, span) => (*lo, *hi, *span),
                 };
                 if lo > hi || lo < i64::from(i16::MIN) || hi > i64::from(i16::MAX) {
-                    self.report(codes::LITERAL, "CASE label range must be ascending INT values.", span);
+                    self.report(
+                        codes::LITERAL,
+                        "CASE label range must be ascending INT values.",
+                        span,
+                    );
                     return None;
                 }
                 if seen.iter().any(|(a, b)| lo <= *b && *a <= hi) {
@@ -332,11 +418,19 @@ impl Compiler {
                 }
                 seen.push((lo, hi));
                 let label_source = self.anchor(span);
-                let compare = |me: &mut Self, op: BinaryOperator, value: i64| -> Option<plc_ir::Expression> {
-                    let left = me.expression(selector)?;
-                    let constant = plc_ir::Expression::constant(label_source, PlcValue::Int(value as i16));
-                    Some(plc_ir::Expression::binary(label_source, PlcType::Bool, op, left, constant))
-                };
+                let compare =
+                    |me: &mut Self, op: BinaryOperator, value: i64| -> Option<plc_ir::Expression> {
+                        let left = me.expression(selector)?;
+                        let constant =
+                            plc_ir::Expression::constant(label_source, PlcValue::Int(value as i16));
+                        Some(plc_ir::Expression::binary(
+                            label_source,
+                            PlcType::Bool,
+                            op,
+                            left,
+                            constant,
+                        ))
+                    };
                 let test = if lo == hi {
                     compare(self, BinaryOperator::Equal, lo)?
                 } else {
@@ -357,8 +451,17 @@ impl Compiler {
         }
         let mut tail = self.body(else_body);
         while let Some((arm_source, condition, body)) = branches.pop() {
-            let statement_source = if branches.is_empty() { source } else { arm_source };
-            tail = vec![plc_ir::Statement::conditional(statement_source, condition, body, tail)];
+            let statement_source = if branches.is_empty() {
+                source
+            } else {
+                arm_source
+            };
+            tail = vec![plc_ir::Statement::conditional(
+                statement_source,
+                condition,
+                body,
+                tail,
+            )];
         }
         tail.pop()
     }
@@ -368,7 +471,9 @@ impl Compiler {
         }
         let source = self.anchor(expression.span);
         match &expression.kind {
-            ast::ExpressionKind::Literal(literal) => self.literal(source, literal, false, expression.span),
+            ast::ExpressionKind::Literal(literal) => {
+                self.literal(source, literal, false, expression.span)
+            }
             ast::ExpressionKind::Identifier(name) => {
                 let (id, kind, _) = self.resolve(name)?;
                 Some(plc_ir::Expression::read(source, id, kind))
@@ -384,7 +489,10 @@ impl Compiler {
                 let Some(kind) = compatibility::unary_result(*operator, value.result_type()) else {
                     self.report(
                         codes::TYPE,
-                        format!("Unary {operator:?} cannot accept {}.", type_name(value.result_type())),
+                        format!(
+                            "Unary {operator:?} cannot accept {}.",
+                            type_name(value.result_type())
+                        ),
                         expression.span,
                     );
                     return None;
@@ -395,9 +503,11 @@ impl Compiler {
                 let left_value = self.expression(left);
                 let right_value = self.expression(right);
                 let (left_value, right_value) = (left_value?, right_value?);
-                let Some(kind) =
-                    compatibility::binary_result(*operator, left_value.result_type(), right_value.result_type())
-                else {
+                let Some(kind) = compatibility::binary_result(
+                    *operator,
+                    left_value.result_type(),
+                    right_value.result_type(),
+                ) else {
                     self.report(
                         codes::TYPE,
                         format!(
@@ -410,17 +520,28 @@ impl Compiler {
                     );
                     return None;
                 };
-                Some(plc_ir::Expression::binary(source, kind, *operator, left_value, right_value))
+                Some(plc_ir::Expression::binary(
+                    source,
+                    kind,
+                    *operator,
+                    left_value,
+                    right_value,
+                ))
             }
             ast::ExpressionKind::Chain(operator, operands) => {
-                let values: Vec<Option<plc_ir::Expression>> = operands.iter().map(|o| self.expression(o)).collect();
+                let values: Vec<Option<plc_ir::Expression>> =
+                    operands.iter().map(|o| self.expression(o)).collect();
                 let mut compiled = Vec::with_capacity(values.len());
                 for (value, operand) in values.into_iter().zip(operands) {
                     let value = value?;
                     if value.result_type() != PlcType::Bool {
                         self.report(
                             codes::TYPE,
-                            format!("{} requires BOOL operands, received {}.", operator_name(*operator), type_name(value.result_type())),
+                            format!(
+                                "{} requires BOOL operands, received {}.",
+                                operator_name(*operator),
+                                type_name(value.result_type())
+                            ),
                             operand.span,
                         );
                         return None;
@@ -430,7 +551,11 @@ impl Compiler {
                 Some(plc_ir::Expression::logical(source, *operator, compiled))
             }
             ast::ExpressionKind::Member(instance, member) => {
-                let Some((id, kind)) = self.instances.get(&instance.text.to_ascii_uppercase()).copied() else {
+                let Some((id, kind)) = self
+                    .instances
+                    .get(&instance.text.to_ascii_uppercase())
+                    .copied()
+                else {
                     self.report(
                         codes::UNKNOWN,
                         format!("'{}' is not a function-block instance; only block outputs can be read with '.'.", instance.text),
@@ -439,16 +564,21 @@ impl Compiler {
                     return None;
                 };
                 match kind.parameter_named(&member.text) {
-                    Some(p) if p.direction == ParameterDirection::Output => Some(plc_ir::Expression::function_block_output(
-                        source,
-                        p.plc_type,
-                        id,
-                        ParameterId::new(p.id).expect("fixed parameter identity"),
-                    )),
+                    Some(p) if p.direction == ParameterDirection::Output => {
+                        Some(plc_ir::Expression::function_block_output(
+                            source,
+                            p.plc_type,
+                            id,
+                            ParameterId::new(p.id).expect("fixed parameter identity"),
+                        ))
+                    }
                     Some(p) => {
                         self.report(
                             codes::BLOCK,
-                            format!("{}.{} is an input; only outputs can be read.", instance.text, p.name),
+                            format!(
+                                "{}.{} is an input; only outputs can be read.",
+                                instance.text, p.name
+                            ),
                             member.span,
                         );
                         None
@@ -462,7 +592,12 @@ impl Compiler {
                             .collect();
                         self.report(
                             codes::BLOCK,
-                            format!("{} has no output '{}'; use {}.", kind.name(), member.text, outputs.join(" or ")),
+                            format!(
+                                "{} has no output '{}'; use {}.",
+                                kind.name(),
+                                member.text,
+                                outputs.join(" or ")
+                            ),
                             member.span,
                         );
                         None
@@ -479,23 +614,41 @@ impl Compiler {
                     return None;
                 };
                 if arguments.len() != 1 {
-                    self.report(codes::SYNTAX, format!("{} takes exactly one argument.", conversion.name()), expression.span);
+                    self.report(
+                        codes::SYNTAX,
+                        format!("{} takes exactly one argument.", conversion.name()),
+                        expression.span,
+                    );
                     return None;
                 }
                 let operand = self.expression(&arguments[0])?;
-                let Some(kind) = compatibility::conversion_result(conversion, operand.result_type()) else {
+                let Some(kind) =
+                    compatibility::conversion_result(conversion, operand.result_type())
+                else {
                     self.report(
                         codes::TYPE,
-                        format!("{} cannot convert {}.", conversion.name(), type_name(operand.result_type())),
+                        format!(
+                            "{} cannot convert {}.",
+                            conversion.name(),
+                            type_name(operand.result_type())
+                        ),
                         arguments[0].span,
                     );
                     return None;
                 };
-                Some(plc_ir::Expression::conversion(source, kind, conversion, operand))
+                Some(plc_ir::Expression::conversion(
+                    source, kind, conversion, operand,
+                ))
             }
         }
     }
-    fn literal(&mut self, source: SourceRef, literal: &ast::Literal, negative: bool, span: TextSpan) -> Option<plc_ir::Expression> {
+    fn literal(
+        &mut self,
+        source: SourceRef,
+        literal: &ast::Literal,
+        negative: bool,
+        span: TextSpan,
+    ) -> Option<plc_ir::Expression> {
         match literals::value(literal, negative) {
             Ok(value) => Some(plc_ir::Expression::constant(source, value)),
             Err(message) => {
@@ -504,11 +657,19 @@ impl Compiler {
             }
         }
     }
-    fn call(&mut self, name: &ast::Name, associations: &[ast::Association]) -> Option<FunctionBlockCall> {
-        let Some((instance, kind)) = self.instances.get(&name.text.to_ascii_uppercase()).copied() else {
+    fn call(
+        &mut self,
+        name: &ast::Name,
+        associations: &[ast::Association],
+    ) -> Option<FunctionBlockCall> {
+        let Some((instance, kind)) = self.instances.get(&name.text.to_ascii_uppercase()).copied()
+        else {
             self.report(
                 codes::BLOCK,
-                format!("Unknown function-block instance '{}'; declare it in VAR first.", name.text),
+                format!(
+                    "Unknown function-block instance '{}'; declare it in VAR first.",
+                    name.text
+                ),
                 name.span,
             );
             return None;
@@ -537,7 +698,11 @@ impl Compiler {
             if !seen.insert(parameter.id) {
                 self.report(
                     codes::BLOCK,
-                    format!("{} parameter '{}' is associated more than once.", kind.name(), association.parameter.text),
+                    format!(
+                        "{} parameter '{}' is associated more than once.",
+                        kind.name(),
+                        association.parameter.text
+                    ),
                     association.parameter.span,
                 );
                 continue;
@@ -586,7 +751,11 @@ impl Compiler {
                     codes::BLOCK,
                     format!(
                         "Use {} for {} {}.",
-                        if parameter.direction == ParameterDirection::Input { ":=" } else { "=>" },
+                        if parameter.direction == ParameterDirection::Input {
+                            ":="
+                        } else {
+                            "=>"
+                        },
                         kind.name(),
                         parameter.name
                     ),
@@ -598,7 +767,11 @@ impl Compiler {
             if !seen.contains(&parameter.id) {
                 self.report(
                     codes::BLOCK,
-                    format!("Required {} input {} is missing.", kind.name(), parameter.name),
+                    format!(
+                        "Required {} input {} is missing.",
+                        kind.name(),
+                        parameter.name
+                    ),
                     name.span,
                 );
             }
@@ -609,7 +782,11 @@ impl Compiler {
         match FunctionBlockCall::new(instance, bindings) {
             Ok(call) => Some(call),
             Err(_) => {
-                self.report(codes::BLOCK, "Block parameters must be associated at most once.", name.span);
+                self.report(
+                    codes::BLOCK,
+                    "Block parameters must be associated at most once.",
+                    name.span,
+                );
                 None
             }
         }
@@ -617,7 +794,9 @@ impl Compiler {
 }
 fn signed_literal(expression: &ast::Expression) -> Option<&ast::Literal> {
     match &expression.kind {
-        ast::ExpressionKind::Literal(literal @ (ast::Literal::Integer(_) | ast::Literal::Real(_))) => Some(literal),
+        ast::ExpressionKind::Literal(
+            literal @ (ast::Literal::Integer(_) | ast::Literal::Real(_)),
+        ) => Some(literal),
         ast::ExpressionKind::Parentheses(inner) => signed_literal(inner),
         _ => None,
     }

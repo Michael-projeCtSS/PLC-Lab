@@ -49,7 +49,12 @@ pub enum ProjectFormat {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase", deny_unknown_fields)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
 pub enum ProjectKind {
     FreeLab,
     Exercise { exercise: Identifier, revision: u32 },
@@ -72,7 +77,10 @@ pub struct SimulationSettings {
 }
 impl Default for SimulationSettings {
     fn default() -> Self {
-        Self { cycle_ms: 100, speed_percent: 100 }
+        Self {
+            cycle_ms: 100,
+            speed_percent: 100,
+        }
     }
 }
 
@@ -124,19 +132,35 @@ impl Project {
             return Err(ProjectError::UnsupportedVersion(self.format_version));
         }
         if self.name.trim().is_empty() || self.name.len() > 120 {
-            return Err(ProjectError::Invalid("the project name must have 1 to 120 characters".into()));
+            return Err(ProjectError::Invalid(
+                "the project name must have 1 to 120 characters".into(),
+            ));
         }
         if self.programs.is_empty() || self.programs.len() > 32 {
-            return Err(ProjectError::Invalid("a project needs 1 to 32 program documents".into()));
+            return Err(ProjectError::Invalid(
+                "a project needs 1 to 32 program documents".into(),
+            ));
         }
-        if self.programs.iter().any(|p| p.language != "ST" || p.source.len() > 256 * 1024) {
-            return Err(ProjectError::Invalid("program documents must be Structured Text of at most 256 KiB".into()));
+        if self
+            .programs
+            .iter()
+            .any(|p| p.language != "ST" || p.source.len() > 256 * 1024)
+        {
+            return Err(ProjectError::Invalid(
+                "program documents must be Structured Text of at most 256 KiB".into(),
+            ));
         }
         if self.watch.len() > 64 {
-            return Err(ProjectError::Invalid("a watch list holds at most 64 signals".into()));
+            return Err(ProjectError::Invalid(
+                "a watch list holds at most 64 signals".into(),
+            ));
         }
-        if !(10..=1000).contains(&self.simulation.cycle_ms) || !(10..=1000).contains(&self.simulation.speed_percent) {
-            return Err(ProjectError::Invalid("cycle time must be 10..1000 ms and speed 10..1000 %".into()));
+        if !(10..=1000).contains(&self.simulation.cycle_ms)
+            || !(10..=1000).contains(&self.simulation.speed_percent)
+        {
+            return Err(ProjectError::Invalid(
+                "cycle time must be 10..1000 ms and speed 10..1000 %".into(),
+            ));
         }
         validate_station(&self.station).map_err(|e| ProjectError::Invalid(e.to_string()))
     }
@@ -144,7 +168,8 @@ impl Project {
 
 /// Parse a project file, migrating older formats. Newer formats are rejected.
 pub fn parse(text: &str) -> Result<Project, ProjectError> {
-    let mut value: serde_json::Value = serde_json::from_str(text).map_err(|e| ProjectError::Parse(e.to_string()))?;
+    let mut value: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| ProjectError::Parse(e.to_string()))?;
     let version = value
         .get("formatVersion")
         .and_then(serde_json::Value::as_u64)
@@ -156,14 +181,17 @@ pub fn parse(text: &str) -> Result<Project, ProjectError> {
     if version == 0 {
         value = migrate_v0(value)?;
     }
-    let project: Project = serde_json::from_value(value).map_err(|e| ProjectError::Parse(e.to_string()))?;
+    let project: Project =
+        serde_json::from_value(value).map_err(|e| ProjectError::Parse(e.to_string()))?;
     project.validate()?;
     Ok(project)
 }
 
 /// Format 0 (pre-release drafts) stored a single `source` string instead of `programs`.
 fn migrate_v0(mut value: serde_json::Value) -> Result<serde_json::Value, ProjectError> {
-    let object = value.as_object_mut().ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?;
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?;
     let source = object
         .remove("source")
         .and_then(|s| s.as_str().map(str::to_owned))
@@ -177,14 +205,21 @@ fn migrate_v0(mut value: serde_json::Value) -> Result<serde_json::Value, Project
 }
 
 pub fn to_json(project: &Project) -> Result<String, ProjectError> {
-    serde_json::to_string_pretty(project).map(|s| s + "\n").map_err(|e| ProjectError::Io(e.to_string()))
+    serde_json::to_string_pretty(project)
+        .map(|s| s + "\n")
+        .map_err(|e| ProjectError::Io(e.to_string()))
 }
 
 /// Write via a temporary file in the same directory and rename into place.
 pub fn write_atomic(path: &Path, contents: &str) -> Result<(), ProjectError> {
-    let dir = path.parent().ok_or_else(|| ProjectError::Io("the file has no parent folder".into()))?;
+    let dir = path
+        .parent()
+        .ok_or_else(|| ProjectError::Io("the file has no parent folder".into()))?;
     fs::create_dir_all(dir).map_err(|e| ProjectError::Io(e.to_string()))?;
-    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let temp = dir.join(format!(".{name}.tmp"));
     fs::write(&temp, contents).map_err(|e| ProjectError::Io(e.to_string()))?;
     fs::rename(&temp, path).map_err(|e| {
@@ -227,12 +262,16 @@ impl ProjectStore {
         let path = self.path(id);
         let meta = fs::metadata(&path).map_err(|_| ProjectError::NotFound(id.to_string()))?;
         if meta.len() > MAX_PROJECT_BYTES {
-            return Err(ProjectError::Invalid("the project file is too large".into()));
+            return Err(ProjectError::Invalid(
+                "the project file is too large".into(),
+            ));
         }
         let text = fs::read_to_string(&path).map_err(|e| ProjectError::Io(e.to_string()))?;
         let project = parse(&text)?;
         if &project.id != id {
-            return Err(ProjectError::Invalid("the file name does not match the project identifier".into()));
+            return Err(ProjectError::Invalid(
+                "the file name does not match the project identifier".into(),
+            ));
         }
         Ok(project)
     }
@@ -243,13 +282,17 @@ impl ProjectStore {
     pub fn list(&self) -> (Vec<ProjectSummary>, Vec<String>) {
         let mut out = Vec::new();
         let mut problems = Vec::new();
-        let Ok(entries) = fs::read_dir(&self.dir) else { return (out, problems) };
+        let Ok(entries) = fs::read_dir(&self.dir) else {
+            return (out, problems);
+        };
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
             if path.extension().is_none_or(|e| e != EXTENSION) {
                 continue;
             }
-            let Some(stem) = path.file_stem().map(|s| s.to_string_lossy().into_owned()) else { continue };
+            let Some(stem) = path.file_stem().map(|s| s.to_string_lossy().into_owned()) else {
+                continue;
+            };
             let Ok(id) = Identifier::new(stem.clone()) else {
                 problems.push(format!("{stem}: invalid project file name"));
                 continue;
@@ -266,7 +309,11 @@ impl ProjectStore {
                 Err(e) => problems.push(format!("{stem}: {e}")),
             }
         }
-        out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at).then_with(|| a.id.cmp(&b.id)));
+        out.sort_by(|a, b| {
+            b.updated_at
+                .cmp(&a.updated_at)
+                .then_with(|| a.id.cmp(&b.id))
+        });
         (out, problems)
     }
 }
@@ -304,10 +351,14 @@ impl Progress {
             .ok()
             .and_then(|t| serde_json::from_str::<Progress>(&t).ok())
             .filter(|p| p.format_version == FORMAT_VERSION)
-            .unwrap_or(Progress { format_version: FORMAT_VERSION, ..Default::default() })
+            .unwrap_or(Progress {
+                format_version: FORMAT_VERSION,
+                ..Default::default()
+            })
     }
     pub fn save(&self, path: &Path) -> Result<(), ProjectError> {
-        let text = serde_json::to_string_pretty(self).map_err(|e| ProjectError::Io(e.to_string()))?;
+        let text =
+            serde_json::to_string_pretty(self).map_err(|e| ProjectError::Io(e.to_string()))?;
         write_atomic(path, &text)
     }
     pub fn record_exercise(&mut self, id: &str, score: u32, max_score: u32, passed: bool) {
@@ -361,11 +412,20 @@ mod tests {
         .to_string();
         let migrated = parse(&v0).unwrap();
         assert_eq!(migrated.format_version, FORMAT_VERSION);
-        assert_eq!(migrated.main_program().unwrap().source, "PROGRAM Old END_PROGRAM");
-        assert_eq!(parse(&project_json(2)), Err(ProjectError::UnsupportedVersion(2)));
+        assert_eq!(
+            migrated.main_program().unwrap().source,
+            "PROGRAM Old END_PROGRAM"
+        );
+        assert_eq!(
+            parse(&project_json(2)),
+            Err(ProjectError::UnsupportedVersion(2))
+        );
         assert!(parse(&project_json(1).replace("\"name\":\"My lab\"", "\"name\":\"\"")).is_err());
         assert!(parse("{not json").is_err());
-        assert!(parse(&project_json(1).replace("\"kind\"", "\"extra\": 1, \"kind\"")).is_err(), "unknown fields are rejected");
+        assert!(
+            parse(&project_json(1).replace("\"kind\"", "\"extra\": 1, \"kind\"")).is_err(),
+            "unknown fields are rejected"
+        );
     }
 
     #[test]
@@ -391,7 +451,10 @@ mod tests {
 
     #[test]
     fn progress_records_best_scores() {
-        let mut progress = Progress { format_version: FORMAT_VERSION, ..Default::default() };
+        let mut progress = Progress {
+            format_version: FORMAT_VERSION,
+            ..Default::default()
+        };
         progress.record_exercise("ex", 40, 100, false);
         progress.record_exercise("ex", 100, 100, true);
         progress.record_exercise("ex", 10, 100, false);

@@ -203,12 +203,14 @@ fn lower_expression(
                 .map(|o| lower_expression(o, original, retained))
                 .collect::<Result<_, _>>()?,
         ),
-        ExpressionKind::FunctionBlockOutput { instance, parameter } => {
-            ExecExpressionKind::FunctionBlockOutput(*instance, *parameter)
-        }
-        ExpressionKind::Conversion { function, operand } => {
-            ExecExpressionKind::Conversion(*function, Box::new(lower_expression(operand, original, retained)?))
-        }
+        ExpressionKind::FunctionBlockOutput {
+            instance,
+            parameter,
+        } => ExecExpressionKind::FunctionBlockOutput(*instance, *parameter),
+        ExpressionKind::Conversion { function, operand } => ExecExpressionKind::Conversion(
+            *function,
+            Box::new(lower_expression(operand, original, retained)?),
+        ),
     };
     Ok(ExecExpression {
         source: expression.source(),
@@ -282,10 +284,16 @@ fn lower_call(
     let mut inputs = Vec::new();
     let mut outputs = Vec::new();
     for parameter in definition.parameters() {
-        let binding = call.bindings().iter().find(|b| b.parameter() == parameter.id());
+        let binding = call
+            .bindings()
+            .iter()
+            .find(|b| b.parameter() == parameter.id());
         match (parameter.direction(), binding) {
             (ParameterDirection::Input, Some(CallBinding::Input { value, .. })) => {
-                inputs.push((parameter.id().get(), lower_expression(value, program.sources(), retained)?));
+                inputs.push((
+                    parameter.id().get(),
+                    lower_expression(value, program.sources(), retained)?,
+                ));
             }
             (ParameterDirection::Input, None) if !parameter.required() => {}
             (ParameterDirection::Output, Some(CallBinding::Output { target, .. })) => {
@@ -299,7 +307,11 @@ fn lower_call(
             }
         }
     }
-    Ok(ExecStatementKind::StandardCall { instance: call.instance(), inputs, outputs })
+    Ok(ExecStatementKind::StandardCall {
+        instance: call.instance(),
+        inputs,
+        outputs,
+    })
 }
 
 #[cfg(test)]

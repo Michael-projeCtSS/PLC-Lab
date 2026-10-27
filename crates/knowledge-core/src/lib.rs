@@ -11,7 +11,9 @@ pub mod search;
 pub use model::*;
 pub use search::{IndexedDocument, SearchHit, SearchIndex, SearchQuery, tokenize};
 
-use lab_model::{Identifier, exercise::ExerciseDefinition, profile::PlatformProfile, scene::SceneDefinition};
+use lab_model::{
+    Identifier, exercise::ExerciseDefinition, profile::PlatformProfile, scene::SceneDefinition,
+};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
@@ -73,12 +75,24 @@ enum Loaded {
 }
 
 fn relative(root: &Path, path: &Path) -> String {
-    path.strip_prefix(root).unwrap_or(path).to_string_lossy().replace('\\', "/")
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
 }
 
-fn collect_json(root: &Path, dir: &Path, depth: usize, out: &mut Vec<PathBuf>, errors: &mut Vec<String>) {
+fn collect_json(
+    root: &Path,
+    dir: &Path,
+    depth: usize,
+    out: &mut Vec<PathBuf>,
+    errors: &mut Vec<String>,
+) {
     if depth > MAX_DEPTH {
-        errors.push(format!("{}: directory nesting exceeds {MAX_DEPTH} levels", relative(root, dir)));
+        errors.push(format!(
+            "{}: directory nesting exceeds {MAX_DEPTH} levels",
+            relative(root, dir)
+        ));
         return;
     }
     let Ok(entries) = fs::read_dir(dir) else {
@@ -89,18 +103,30 @@ fn collect_json(root: &Path, dir: &Path, depth: usize, out: &mut Vec<PathBuf>, e
     entries.sort_by_key(|e| e.file_name());
     for entry in entries {
         let path = entry.path();
-        let Ok(meta) = fs::symlink_metadata(&path) else { continue };
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
         if meta.file_type().is_symlink() {
-            errors.push(format!("{}: symbolic links are not followed", relative(root, &path)));
+            errors.push(format!(
+                "{}: symbolic links are not followed",
+                relative(root, &path)
+            ));
         } else if meta.is_dir() {
             collect_json(root, &path, depth + 1, out, errors);
-        } else if path.extension().is_some_and(|e| e == "json") && path.file_name().is_some_and(|n| n != "pack.json") {
+        } else if path.extension().is_some_and(|e| e == "json")
+            && path.file_name().is_some_and(|n| n != "pack.json")
+        {
             if out.len() >= MAX_FILES_PER_PACK {
-                errors.push(format!("pack exceeds {MAX_FILES_PER_PACK} content files; remaining files skipped"));
+                errors.push(format!(
+                    "pack exceeds {MAX_FILES_PER_PACK} content files; remaining files skipped"
+                ));
                 return;
             }
             if meta.len() > MAX_FILE_BYTES {
-                errors.push(format!("{}: file exceeds {MAX_FILE_BYTES} bytes", relative(root, &path)));
+                errors.push(format!(
+                    "{}: file exceeds {MAX_FILE_BYTES} bytes",
+                    relative(root, &path)
+                ));
                 continue;
             }
             out.push(path);
@@ -189,8 +215,15 @@ impl KnowledgeLibrary {
                 return;
             }
             Ok(m) => {
-                if self.packs.iter().any(|p| p.manifest.as_ref().is_some_and(|o| o.id == m.id && p.status != PackStatus::Invalid)) {
-                    report.errors.push(format!("pack '{}' is already installed from another folder", m.id));
+                if self.packs.iter().any(|p| {
+                    p.manifest
+                        .as_ref()
+                        .is_some_and(|o| o.id == m.id && p.status != PackStatus::Invalid)
+                }) {
+                    report.errors.push(format!(
+                        "pack '{}' is already installed from another folder",
+                        m.id
+                    ));
                     report.manifest = Some(m);
                     report.status = PackStatus::Invalid;
                     self.packs.push(report);
@@ -200,7 +233,9 @@ impl KnowledgeLibrary {
             }
         }
         if !dir.join("schemas").is_dir() {
-            report.warnings.push("schemas/ folder is missing; authoring tools cannot validate this pack".into());
+            report.warnings.push(
+                "schemas/ folder is missing; authoring tools cannot validate this pack".into(),
+            );
         }
         let mut files = Vec::new();
         collect_json(dir, dir, 0, &mut files, &mut report.errors);
@@ -219,7 +254,9 @@ impl KnowledgeLibrary {
 
     fn claim(&mut self, id: &Identifier, pack: usize, rel: &str, report: &mut PackReport) -> bool {
         if self.origin.contains_key(id) {
-            report.errors.push(format!("{rel}: identifier '{id}' is already defined"));
+            report
+                .errors
+                .push(format!("{rel}: identifier '{id}' is already defined"));
             return false;
         }
         self.origin.insert(id.clone(), pack);
@@ -230,8 +267,13 @@ impl KnowledgeLibrary {
         match item {
             Loaded::Article(a) => {
                 if let Some(profile) = &a.simulation {
-                    if self.profiles.contains_key(&profile.id) || profile.id.as_str() == "generic.iec" {
-                        report.errors.push(format!("{rel}: simulation profile '{}' is duplicated", profile.id));
+                    if self.profiles.contains_key(&profile.id)
+                        || profile.id.as_str() == "generic.iec"
+                    {
+                        report.errors.push(format!(
+                            "{rel}: simulation profile '{}' is duplicated",
+                            profile.id
+                        ));
                     } else {
                         self.profiles.insert(profile.id.clone(), profile.clone());
                         report.counts.profiles += 1;
@@ -246,7 +288,10 @@ impl KnowledgeLibrary {
                 for s in file.sources {
                     if self.claim(&s.id, pack, rel, report) {
                         if !s.url.starts_with("https://") {
-                            report.warnings.push(format!("{rel}: source '{}' does not use an https URL", s.id));
+                            report.warnings.push(format!(
+                                "{rel}: source '{}' does not use an https URL",
+                                s.id
+                            ));
                         }
                         self.sources.insert(s.id.clone(), s);
                         report.counts.sources += 1;
@@ -254,9 +299,15 @@ impl KnowledgeLibrary {
                 }
             }
             Loaded::Lesson(l) => {
-                let bad = l.checkpoint.iter().chain(l.sections.iter().filter_map(|s| s.question.as_ref())).any(|q| usize::from(q.answer) >= q.options.len());
+                let bad = l
+                    .checkpoint
+                    .iter()
+                    .chain(l.sections.iter().filter_map(|s| s.question.as_ref()))
+                    .any(|q| usize::from(q.answer) >= q.options.len());
                 if bad {
-                    report.errors.push(format!("{rel}: a question answer index is out of range"));
+                    report
+                        .errors
+                        .push(format!("{rel}: a question answer index is out of range"));
                 } else if self.claim(&l.id, pack, rel, report) {
                     self.lessons.insert(l.id.clone(), *l);
                     report.counts.lessons += 1;
@@ -286,8 +337,13 @@ impl KnowledgeLibrary {
         for (id, exercise) in &self.exercises {
             let pack = self.origin[id];
             let problem = match self.scenes.get(&exercise.scene) {
-                None => Some(format!("exercise '{id}' references missing scene '{}'", exercise.scene)),
-                Some(scene) => lab_model::validate_exercise(exercise, scene).err().map(|e| format!("exercise '{id}': {e}")),
+                None => Some(format!(
+                    "exercise '{id}' references missing scene '{}'",
+                    exercise.scene
+                )),
+                Some(scene) => lab_model::validate_exercise(exercise, scene)
+                    .err()
+                    .map(|e| format!("exercise '{id}': {e}")),
             }
             .or_else(|| {
                 exercise
@@ -311,21 +367,38 @@ impl KnowledgeLibrary {
         let mut rejected_articles = Vec::new();
         for (id, article) in &self.articles {
             let pack = self.origin[id];
-            let missing: Vec<&Identifier> = article.sources.iter().filter(|s| !self.sources.contains_key(*s)).collect();
-            let fact_missing = article.facts.iter().flat_map(|f| f.sources.iter()).any(|s| !self.sources.contains_key(s));
+            let missing: Vec<&Identifier> = article
+                .sources
+                .iter()
+                .filter(|s| !self.sources.contains_key(*s))
+                .collect();
+            let fact_missing = article
+                .facts
+                .iter()
+                .flat_map(|f| f.sources.iter())
+                .any(|s| !self.sources.contains_key(s));
             if !missing.is_empty() || fact_missing {
-                self.packs[pack]
-                    .errors
-                    .push(format!("article '{id}' cites unknown sources: {}", missing.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")));
+                self.packs[pack].errors.push(format!(
+                    "article '{id}' cites unknown sources: {}",
+                    missing
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
                 rejected_articles.push(id.clone());
                 continue;
             }
             if article.sources.is_empty() && article.kind != ArticleKind::Topic {
-                self.packs[pack].warnings.push(format!("article '{id}' has no provenance sources"));
+                self.packs[pack]
+                    .warnings
+                    .push(format!("article '{id}' has no provenance sources"));
             }
             for r in &article.related {
                 if !known.contains(r) {
-                    self.packs[pack].warnings.push(format!("article '{id}' relates to unknown item '{r}'"));
+                    self.packs[pack]
+                        .warnings
+                        .push(format!("article '{id}' relates to unknown item '{r}'"));
                 }
             }
         }
@@ -341,12 +414,16 @@ impl KnowledgeLibrary {
                 if let Some(scene) = &s.scene
                     && !self.scenes.contains_key(scene)
                 {
-                    self.packs[pack].warnings.push(format!("lesson '{id}' references missing scene '{scene}'"));
+                    self.packs[pack]
+                        .warnings
+                        .push(format!("lesson '{id}' references missing scene '{scene}'"));
                 }
                 if let Some(ex) = &s.exercise
                     && !self.exercises.contains_key(ex)
                 {
-                    self.packs[pack].warnings.push(format!("lesson '{id}' references missing exercise '{ex}'"));
+                    self.packs[pack]
+                        .warnings
+                        .push(format!("lesson '{id}' references missing exercise '{ex}'"));
                 }
             }
         }
@@ -361,18 +438,44 @@ impl KnowledgeLibrary {
         let mut docs = Vec::new();
         for a in self.articles.values() {
             let mut fields: Vec<(u8, String)> = vec![(4, a.tags.join(" "))];
-            fields.extend(a.sections.iter().map(|s| (1u8, format!("{}\n{}", s.heading, s.body))));
-            fields.extend(a.facts.iter().map(|f| (2u8, format!("{} {}", f.label, f.value))));
+            fields.extend(
+                a.sections
+                    .iter()
+                    .map(|s| (1u8, format!("{}\n{}", s.heading, s.body))),
+            );
+            fields.extend(
+                a.facts
+                    .iter()
+                    .map(|f| (2u8, format!("{} {}", f.label, f.value))),
+            );
             if let Some(t) = &a.troubleshooting {
                 fields.push((2, t.symptoms.join("\n")));
-                fields.push((1, format!("{}\n{}\n{}", t.evidence.join("\n"), t.diagnostic_method.join("\n"), t.repair.join("\n"))));
+                fields.push((
+                    1,
+                    format!(
+                        "{}\n{}\n{}",
+                        t.evidence.join("\n"),
+                        t.diagnostic_method.join("\n"),
+                        t.repair.join("\n")
+                    ),
+                ));
             }
             if let Some(i) = &a.instruction {
-                fields.push((2, i.equivalents.iter().map(|e| format!("{} {}", e.platform, e.name)).collect::<Vec<_>>().join(" ")));
+                fields.push((
+                    2,
+                    i.equivalents
+                        .iter()
+                        .map(|e| format!("{} {}", e.platform, e.name))
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                ));
             }
             docs.push(IndexedDocument {
                 id: a.id.to_string(),
-                doc_type: serde_json::to_value(a.kind).ok().and_then(|v| v.as_str().map(str::to_owned)).unwrap_or_default(),
+                doc_type: serde_json::to_value(a.kind)
+                    .ok()
+                    .and_then(|v| v.as_str().map(str::to_owned))
+                    .unwrap_or_default(),
                 category: a.category(),
                 title: a.title.clone(),
                 summary: a.summary.clone(),
@@ -392,7 +495,11 @@ impl KnowledgeLibrary {
                 vendor: None,
                 family: None,
                 protocol: None,
-                fields: l.sections.iter().map(|s| (1u8, format!("{}\n{}", s.heading, s.body))).collect(),
+                fields: l
+                    .sections
+                    .iter()
+                    .map(|s| (1u8, format!("{}\n{}", s.heading, s.body)))
+                    .collect(),
             });
         }
         for e in self.exercises.values() {
@@ -452,7 +559,10 @@ impl KnowledgeLibrary {
         if id == "generic.iec" {
             return Some(PlatformProfile::generic());
         }
-        self.profiles.values().find(|p| p.id.as_str() == id).cloned()
+        self.profiles
+            .values()
+            .find(|p| p.id.as_str() == id)
+            .cloned()
     }
     pub fn profiles(&self) -> Vec<PlatformProfile> {
         let mut all = vec![PlatformProfile::generic()];

@@ -16,11 +16,11 @@ Until M4B the simulation clock lived inside the PLC runtime and the process adva
 
 Three time bases exist and are never mixed:
 
-| Time base | Owner | Purpose |
-| --- | --- | --- |
-| Host wall time | desktop host (`execution_driver`) | Pacing only. Never enters simulation state. |
-| World time (`simulation_core::WorldTime`) | `lab-engine` session | Authoritative chronology of the whole lab: physics, network, devices, scenario actions, trace timestamps. |
-| PLC task time (`simulation_core::SimulationClock`) | `plc-runtime` | The semantic time a PLC task observes (TON/TOF/TP). Advances only by committed scans. |
+| Time base                                          | Owner                             | Purpose                                                                                                   |
+| -------------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Host wall time                                     | desktop host (`execution_driver`) | Pacing only. Never enters simulation state.                                                               |
+| World time (`simulation_core::WorldTime`)          | `lab-engine` session              | Authoritative chronology of the whole lab: physics, network, devices, scenario actions, trace timestamps. |
+| PLC task time (`simulation_core::SimulationClock`) | `plc-runtime`                     | The semantic time a PLC task observes (TON/TOF/TP). Advances only by committed scans.                     |
 
 World events are ordered by `(time, phase, participant, sequence)` with the documented phase order Stimulus < Fault < Network < Device. Continuous physics is integrated exactly between events with fixed-point arithmetic, so partitioning time never changes results.
 

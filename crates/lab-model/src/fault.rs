@@ -33,35 +33,87 @@ pub enum StuckPosition {
 )]
 pub enum FaultSpec {
     /// A digital sensor or contact output is stuck regardless of the process.
-    SensorStuck { component: Identifier, conducting: bool },
+    SensorStuck {
+        component: Identifier,
+        conducting: bool,
+    },
     /// The installed device has the other contact type than the design assumes.
-    ContactTypeMismatch { component: Identifier, installed: ContactType },
+    ContactTypeMismatch {
+        component: Identifier,
+        installed: ContactType,
+    },
     /// The installed sensor has another output style (sink/source mismatch).
-    OutputStyleMismatch { component: Identifier, installed: OutputStyle },
+    OutputStyleMismatch {
+        component: Identifier,
+        installed: OutputStyle,
+    },
     /// Analog transmitter output offset in microamperes (or millivolts).
-    AnalogDrift { component: Identifier, offset: i32 },
+    AnalogDrift {
+        component: Identifier,
+        offset: i32,
+    },
     /// Analog transmitter output frozen at a value (microamperes or millivolts).
-    AnalogStuck { component: Identifier, value: u32 },
+    AnalogStuck {
+        component: Identifier,
+        value: u32,
+    },
     /// Deterministic seeded noise with peak amplitude (microamperes or millivolts).
-    AnalogNoise { component: Identifier, amplitude: u32 },
+    AnalogNoise {
+        component: Identifier,
+        amplitude: u32,
+    },
     /// Current loop or signal wire broken at the transmitter.
-    LoopBreak { component: Identifier },
-    ValveStuck { component: Identifier, position: StuckPosition },
+    LoopBreak {
+        component: Identifier,
+    },
+    ValveStuck {
+        component: Identifier,
+        position: StuckPosition,
+    },
     /// A feedback contact never closes (broken limit switch or auxiliary contact).
-    FeedbackMissing { component: Identifier, port: String },
-    MotorOverloadTrip { component: Identifier },
-    OpenCircuit { channel: ChannelRef },
-    ShortToSupply { channel: ChannelRef },
-    SwappedWires { first: ChannelRef, second: ChannelRef },
-    ModuleMissing { position: SlotRef },
-    WrongModuleInstalled { position: SlotRef, installed: ModuleType },
-    ModuleInWrongSlot { from: SlotRef, to: SlotRef },
-    FieldPowerMissing { position: SlotRef },
-    NetworkLinkDown { device: Identifier },
+    FeedbackMissing {
+        component: Identifier,
+        port: String,
+    },
+    MotorOverloadTrip {
+        component: Identifier,
+    },
+    OpenCircuit {
+        channel: ChannelRef,
+    },
+    ShortToSupply {
+        channel: ChannelRef,
+    },
+    SwappedWires {
+        first: ChannelRef,
+        second: ChannelRef,
+    },
+    ModuleMissing {
+        position: SlotRef,
+    },
+    WrongModuleInstalled {
+        position: SlotRef,
+        installed: ModuleType,
+    },
+    ModuleInWrongSlot {
+        from: SlotRef,
+        to: SlotRef,
+    },
+    FieldPowerMissing {
+        position: SlotRef,
+    },
+    NetworkLinkDown {
+        device: Identifier,
+    },
     PlcLinkDown,
-    DeviceOffline { device: Identifier },
+    DeviceOffline {
+        device: Identifier,
+    },
     /// The physical device answers on another address than documented.
-    DeviceAddressChanged { device: Identifier, ip: Ipv4 },
+    DeviceAddressChanged {
+        device: Identifier,
+        ip: Ipv4,
+    },
 }
 
 impl FaultSpec {

@@ -40,7 +40,9 @@ impl FunctionBlockStateSnapshot {
                 vec![("Q", PlcValue::Bool(q)), ("ET", PlcValue::Time(et))]
             }
             Self::RTrig { q } | Self::FTrig { q } => vec![("Q", PlcValue::Bool(q))],
-            Self::Ctu { q, cv } | Self::Ctd { q, cv } => vec![("Q", PlcValue::Bool(q)), ("CV", PlcValue::Int(cv))],
+            Self::Ctu { q, cv } | Self::Ctd { q, cv } => {
+                vec![("Q", PlcValue::Bool(q)), ("CV", PlcValue::Int(cv))]
+            }
         }
     }
     pub fn output(self, parameter: ParameterId) -> Option<PlcValue> {
@@ -50,26 +52,62 @@ impl FunctionBlockStateSnapshot {
             .iter()
             .find(|p| p.id == parameter.get())?
             .name;
-        self.outputs().into_iter().find(|(n, _)| *n == name).map(|(_, v)| v)
+        self.outputs()
+            .into_iter()
+            .find(|(n, _)| *n == name)
+            .map(|(_, v)| v)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum InstanceState {
-    Ton { active_since: Option<PlcTime>, q: bool, et: PlcTime },
-    Tof { off_since: Option<PlcTime>, q: bool, et: PlcTime },
-    Tp { start: Option<PlcTime>, previous: bool, q: bool, et: PlcTime },
-    RTrig { previous: bool, q: bool },
-    FTrig { previous: bool, q: bool },
-    Ctu { previous: bool, reset: bool, preset: i16, q: bool, cv: i16 },
-    Ctd { previous: bool, load: bool, preset: i16, q: bool, cv: i16 },
+    Ton {
+        active_since: Option<PlcTime>,
+        q: bool,
+        et: PlcTime,
+    },
+    Tof {
+        off_since: Option<PlcTime>,
+        q: bool,
+        et: PlcTime,
+    },
+    Tp {
+        start: Option<PlcTime>,
+        previous: bool,
+        q: bool,
+        et: PlcTime,
+    },
+    RTrig {
+        previous: bool,
+        q: bool,
+    },
+    FTrig {
+        previous: bool,
+        q: bool,
+    },
+    Ctu {
+        previous: bool,
+        reset: bool,
+        preset: i16,
+        q: bool,
+        cv: i16,
+    },
+    Ctd {
+        previous: bool,
+        load: bool,
+        preset: i16,
+        q: bool,
+        cv: i16,
+    },
 }
 pub(crate) type InstanceStates = BTreeMap<FunctionBlockInstanceId, InstanceState>;
 
 fn elapsed(now: PlcTime, since: PlcTime) -> Result<u64, InternalError> {
     now.as_micros()
         .checked_sub(since.as_micros())
-        .ok_or_else(|| InternalError::new("A timer activation time exceeds the scan-start virtual clock."))
+        .ok_or_else(|| {
+            InternalError::new("A timer activation time exceeds the scan-start virtual clock.")
+        })
 }
 
 /// Bound input values of one call, by signature parameter ID.
@@ -82,20 +120,26 @@ impl CallInputs<'_> {
         match self.get(id) {
             None => Ok(fallback),
             Some(PlcValue::Bool(b)) => Ok(b),
-            Some(_) => Err(InternalError::new("A validated block input has an incompatible type.")),
+            Some(_) => Err(InternalError::new(
+                "A validated block input has an incompatible type.",
+            )),
         }
     }
     fn time(&self, id: u32) -> Result<PlcTime, InternalError> {
         match self.get(id) {
             Some(PlcValue::Time(t)) => Ok(t),
-            _ => Err(InternalError::new("A validated timer preset is missing or mistyped.")),
+            _ => Err(InternalError::new(
+                "A validated timer preset is missing or mistyped.",
+            )),
         }
     }
     fn int(&self, id: u32, fallback: i16) -> Result<i16, InternalError> {
         match self.get(id) {
             None => Ok(fallback),
             Some(PlcValue::Int(i)) => Ok(i),
-            Some(_) => Err(InternalError::new("A validated counter input has an incompatible type.")),
+            Some(_) => Err(InternalError::new(
+                "A validated counter input has an incompatible type.",
+            )),
         }
     }
 }
@@ -103,14 +147,45 @@ impl CallInputs<'_> {
 impl InstanceState {
     pub(crate) fn new(kind: StandardFunctionBlock) -> Self {
         match kind {
-            StandardFunctionBlock::Ton => Self::Ton { active_since: None, q: false, et: PlcTime::ZERO },
-            StandardFunctionBlock::Tof => Self::Tof { off_since: None, q: false, et: PlcTime::ZERO },
-            StandardFunctionBlock::Tp => Self::Tp { start: None, previous: false, q: false, et: PlcTime::ZERO },
-            StandardFunctionBlock::RTrig => Self::RTrig { previous: false, q: false },
+            StandardFunctionBlock::Ton => Self::Ton {
+                active_since: None,
+                q: false,
+                et: PlcTime::ZERO,
+            },
+            StandardFunctionBlock::Tof => Self::Tof {
+                off_since: None,
+                q: false,
+                et: PlcTime::ZERO,
+            },
+            StandardFunctionBlock::Tp => Self::Tp {
+                start: None,
+                previous: false,
+                q: false,
+                et: PlcTime::ZERO,
+            },
+            StandardFunctionBlock::RTrig => Self::RTrig {
+                previous: false,
+                q: false,
+            },
             // Previous CLK starts FALSE, so a FALSE input at the first call is not an edge.
-            StandardFunctionBlock::FTrig => Self::FTrig { previous: false, q: false },
-            StandardFunctionBlock::Ctu => Self::Ctu { previous: false, reset: false, preset: 0, q: false, cv: 0 },
-            StandardFunctionBlock::Ctd => Self::Ctd { previous: false, load: false, preset: 0, q: true, cv: 0 },
+            StandardFunctionBlock::FTrig => Self::FTrig {
+                previous: false,
+                q: false,
+            },
+            StandardFunctionBlock::Ctu => Self::Ctu {
+                previous: false,
+                reset: false,
+                preset: 0,
+                q: false,
+                cv: 0,
+            },
+            StandardFunctionBlock::Ctd => Self::Ctd {
+                previous: false,
+                load: false,
+                preset: 0,
+                q: true,
+                cv: 0,
+            },
         }
     }
     pub(crate) fn snapshot(&self) -> FunctionBlockStateSnapshot {
@@ -129,9 +204,17 @@ impl InstanceState {
     }
 
     /// Execute one call. All checks complete before any field changes.
-    pub(crate) fn call(&mut self, inputs: CallInputs<'_>, now: PlcTime) -> Result<(), InternalError> {
+    pub(crate) fn call(
+        &mut self,
+        inputs: CallInputs<'_>,
+        now: PlcTime,
+    ) -> Result<(), InternalError> {
         match self {
-            Self::Ton { active_since, q, et } => {
+            Self::Ton {
+                active_since,
+                q,
+                et,
+            } => {
                 let input = inputs.bool(1, false)?;
                 let preset = inputs.time(2)?;
                 if !input {
@@ -166,7 +249,12 @@ impl InstanceState {
                     }
                 }
             }
-            Self::Tp { start, previous, q, et } => {
+            Self::Tp {
+                start,
+                previous,
+                q,
+                et,
+            } => {
                 let input = inputs.bool(1, false)?;
                 let preset = inputs.time(2)?;
                 let rising = input && !*previous;
@@ -199,7 +287,13 @@ impl InstanceState {
                 *q = !clk && *previous;
                 *previous = clk;
             }
-            Self::Ctu { previous, reset, preset, q, cv } => {
+            Self::Ctu {
+                previous,
+                reset,
+                preset,
+                q,
+                cv,
+            } => {
                 let cu = inputs.bool(1, false)?;
                 let r = inputs.bool(2, *reset)?;
                 let pv = inputs.int(3, *preset)?;
@@ -213,7 +307,13 @@ impl InstanceState {
                 *preset = pv;
                 *q = *cv >= pv;
             }
-            Self::Ctd { previous, load, preset, q, cv } => {
+            Self::Ctd {
+                previous,
+                load,
+                preset,
+                q,
+                cv,
+            } => {
                 let cd = inputs.bool(1, false)?;
                 let ld = inputs.bool(2, *load)?;
                 let pv = inputs.int(3, *preset)?;
@@ -232,7 +332,9 @@ impl InstanceState {
     }
 }
 
-pub(crate) fn initial_states(instances: &BTreeMap<FunctionBlockInstanceId, StandardFunctionBlock>) -> InstanceStates {
+pub(crate) fn initial_states(
+    instances: &BTreeMap<FunctionBlockInstanceId, StandardFunctionBlock>,
+) -> InstanceStates {
     instances
         .iter()
         .map(|(id, kind)| (*id, InstanceState::new(*kind)))
@@ -247,7 +349,10 @@ mod tests {
     }
     fn timer(state: &mut InstanceState, input: bool, pt: u64, now: u64) -> (bool, u64) {
         state
-            .call(CallInputs(&[(1, PlcValue::Bool(input)), (2, PlcValue::Time(ms(pt)))]), ms(now))
+            .call(
+                CallInputs(&[(1, PlcValue::Bool(input)), (2, PlcValue::Time(ms(pt)))]),
+                ms(now),
+            )
             .unwrap();
         match state.snapshot() {
             FunctionBlockStateSnapshot::Ton { q, et }
@@ -263,7 +368,10 @@ mod tests {
         timer(&mut state, true, 10, 5);
         let before = state.clone();
         let error = state
-            .call(CallInputs(&[(1, PlcValue::Bool(true)), (2, PlcValue::Time(ms(10)))]), ms(4))
+            .call(
+                CallInputs(&[(1, PlcValue::Bool(true)), (2, PlcValue::Time(ms(10)))]),
+                ms(4),
+            )
             .unwrap_err();
         assert_eq!(error.diagnostic().code(), "APP-CORE-001");
         assert_eq!(state, before);
@@ -272,7 +380,11 @@ mod tests {
     #[test]
     fn tof_holds_q_for_preset_after_falling_input() {
         let mut s = InstanceState::new(StandardFunctionBlock::Tof);
-        assert_eq!(timer(&mut s, false, 300, 0), (false, 0), "no output without a prior TRUE input");
+        assert_eq!(
+            timer(&mut s, false, 300, 0),
+            (false, 0),
+            "no output without a prior TRUE input"
+        );
         assert_eq!(timer(&mut s, true, 300, 100), (true, 0));
         assert_eq!(timer(&mut s, false, 300, 200), (true, 0));
         assert_eq!(timer(&mut s, false, 300, 300), (true, 100));
@@ -286,9 +398,17 @@ mod tests {
         let mut s = InstanceState::new(StandardFunctionBlock::Tp);
         assert_eq!(timer(&mut s, true, 300, 0), (true, 0));
         assert_eq!(timer(&mut s, false, 300, 100), (true, 100));
-        assert_eq!(timer(&mut s, true, 300, 200), (true, 200), "a new edge during the pulse is ignored");
+        assert_eq!(
+            timer(&mut s, true, 300, 200),
+            (true, 200),
+            "a new edge during the pulse is ignored"
+        );
         assert_eq!(timer(&mut s, true, 300, 300), (false, 300));
-        assert_eq!(timer(&mut s, true, 300, 400), (false, 300), "ET holds while IN stays TRUE");
+        assert_eq!(
+            timer(&mut s, true, 300, 400),
+            (false, 300),
+            "ET holds while IN stays TRUE"
+        );
         assert_eq!(timer(&mut s, false, 300, 500), (false, 0));
         assert_eq!(timer(&mut s, true, 300, 600), (true, 0));
     }
@@ -299,37 +419,89 @@ mod tests {
         let mut f = InstanceState::new(StandardFunctionBlock::FTrig);
         let mut seen = Vec::new();
         for clk in [false, true, true, false, false, true] {
-            r.call(CallInputs(&[(1, PlcValue::Bool(clk))]), PlcTime::ZERO).unwrap();
-            f.call(CallInputs(&[(1, PlcValue::Bool(clk))]), PlcTime::ZERO).unwrap();
-            seen.push((r.output(ParameterId::new(2).unwrap()), f.output(ParameterId::new(2).unwrap())));
+            r.call(CallInputs(&[(1, PlcValue::Bool(clk))]), PlcTime::ZERO)
+                .unwrap();
+            f.call(CallInputs(&[(1, PlcValue::Bool(clk))]), PlcTime::ZERO)
+                .unwrap();
+            seen.push((
+                r.output(ParameterId::new(2).unwrap()),
+                f.output(ParameterId::new(2).unwrap()),
+            ));
         }
         let b = |x| Some(PlcValue::Bool(x));
         assert_eq!(
             seen,
-            [(b(false), b(false)), (b(true), b(false)), (b(false), b(false)), (b(false), b(true)), (b(false), b(false)), (b(true), b(false))]
+            [
+                (b(false), b(false)),
+                (b(true), b(false)),
+                (b(false), b(false)),
+                (b(false), b(true)),
+                (b(false), b(false)),
+                (b(true), b(false))
+            ]
         );
         let mut c = InstanceState::new(StandardFunctionBlock::Ctu);
         let pulse = |c: &mut InstanceState, cu: bool| {
-            c.call(CallInputs(&[(1, PlcValue::Bool(cu)), (3, PlcValue::Int(2))]), PlcTime::ZERO).unwrap();
+            c.call(
+                CallInputs(&[(1, PlcValue::Bool(cu)), (3, PlcValue::Int(2))]),
+                PlcTime::ZERO,
+            )
+            .unwrap();
             c.snapshot()
         };
         pulse(&mut c, true);
         pulse(&mut c, true);
         pulse(&mut c, false);
-        assert_eq!(pulse(&mut c, true), FunctionBlockStateSnapshot::Ctu { q: true, cv: 2 });
-        c.call(CallInputs(&[(1, PlcValue::Bool(false)), (2, PlcValue::Bool(true)), (3, PlcValue::Int(2))]), PlcTime::ZERO)
-            .unwrap();
-        assert_eq!(c.snapshot(), FunctionBlockStateSnapshot::Ctu { q: false, cv: 0 });
+        assert_eq!(
+            pulse(&mut c, true),
+            FunctionBlockStateSnapshot::Ctu { q: true, cv: 2 }
+        );
+        c.call(
+            CallInputs(&[
+                (1, PlcValue::Bool(false)),
+                (2, PlcValue::Bool(true)),
+                (3, PlcValue::Int(2)),
+            ]),
+            PlcTime::ZERO,
+        )
+        .unwrap();
+        assert_eq!(
+            c.snapshot(),
+            FunctionBlockStateSnapshot::Ctu { q: false, cv: 0 }
+        );
         // R persists when a later call omits it.
-        assert_eq!(pulse(&mut c, true), FunctionBlockStateSnapshot::Ctu { q: false, cv: 0 });
+        assert_eq!(
+            pulse(&mut c, true),
+            FunctionBlockStateSnapshot::Ctu { q: false, cv: 0 }
+        );
         let mut d = InstanceState::new(StandardFunctionBlock::Ctd);
-        d.call(CallInputs(&[(1, PlcValue::Bool(false)), (2, PlcValue::Bool(true)), (3, PlcValue::Int(2))]), PlcTime::ZERO)
-            .unwrap();
-        assert_eq!(d.snapshot(), FunctionBlockStateSnapshot::Ctd { q: false, cv: 2 });
+        d.call(
+            CallInputs(&[
+                (1, PlcValue::Bool(false)),
+                (2, PlcValue::Bool(true)),
+                (3, PlcValue::Int(2)),
+            ]),
+            PlcTime::ZERO,
+        )
+        .unwrap();
+        assert_eq!(
+            d.snapshot(),
+            FunctionBlockStateSnapshot::Ctd { q: false, cv: 2 }
+        );
         for cd in [true, false, true] {
-            d.call(CallInputs(&[(1, PlcValue::Bool(cd)), (2, PlcValue::Bool(false)), (3, PlcValue::Int(2))]), PlcTime::ZERO)
-                .unwrap();
+            d.call(
+                CallInputs(&[
+                    (1, PlcValue::Bool(cd)),
+                    (2, PlcValue::Bool(false)),
+                    (3, PlcValue::Int(2)),
+                ]),
+                PlcTime::ZERO,
+            )
+            .unwrap();
         }
-        assert_eq!(d.snapshot(), FunctionBlockStateSnapshot::Ctd { q: true, cv: 0 });
+        assert_eq!(
+            d.snapshot(),
+            FunctionBlockStateSnapshot::Ctd { q: true, cv: 0 }
+        );
     }
 }

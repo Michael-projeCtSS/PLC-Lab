@@ -48,10 +48,19 @@ pub enum DigitalInputStyle {
 pub enum ModuleClass {
     Cpu,
     PowerSupply,
-    DigitalInput { channels: u8, style: DigitalInputStyle },
-    DigitalOutput { channels: u8 },
-    AnalogInput { channels: u8 },
-    AnalogOutput { channels: u8 },
+    DigitalInput {
+        channels: u8,
+        style: DigitalInputStyle,
+    },
+    DigitalOutput {
+        channels: u8,
+    },
+    AnalogInput {
+        channels: u8,
+    },
+    AnalogOutput {
+        channels: u8,
+    },
 }
 
 impl ModuleType {

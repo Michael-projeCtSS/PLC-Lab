@@ -122,7 +122,11 @@ impl<'a> Executor<'a> {
             ExecExpressionKind::Conversion(function, operand) => {
                 let operand = self.expression(operand, related)?;
                 self.charge(expression.source, related)?;
-                self.operation(operators::convert(*function, operand), expression.source, related)?
+                self.operation(
+                    operators::convert(*function, operand),
+                    expression.source,
+                    related,
+                )?
             }
         };
         if value.plc_type() != expression.result_type {
@@ -156,7 +160,11 @@ impl<'a> Executor<'a> {
                     };
                     self.body(if condition { then_body } else { else_body })?;
                 }
-                ExecStatementKind::StandardCall { instance, inputs, outputs } => {
+                ExecStatementKind::StandardCall {
+                    instance,
+                    inputs,
+                    outputs,
+                } => {
                     let mut values = Vec::with_capacity(inputs.len());
                     for (parameter, expression) in inputs {
                         values.push((*parameter, self.expression(expression, None)?));
@@ -169,15 +177,27 @@ impl<'a> Executor<'a> {
                                 .at(self.plan.sources.get(source).cloned()),
                         )
                     })?;
-                    state
-                        .call(CallInputs(&values), self.now)
-                        .map_err(|e| ScanError::Internal(e.at(self.plan.sources.get(source).cloned())))?;
+                    state.call(CallInputs(&values), self.now).map_err(|e| {
+                        ScanError::Internal(e.at(self.plan.sources.get(source).cloned()))
+                    })?;
                     for (parameter, target) in outputs {
                         let value = self.instances[instance]
-                            .output(plc_types::identity::ParameterId::new(*parameter).map_err(|_| {
-                                self.internal(InternalError::new("A compiled block output identity is zero."), source)
-                            })?)
-                            .ok_or_else(|| self.internal(InternalError::new("A compiled block output is unknown."), source))?;
+                            .output(plc_types::identity::ParameterId::new(*parameter).map_err(
+                                |_| {
+                                    self.internal(
+                                        InternalError::new(
+                                            "A compiled block output identity is zero.",
+                                        ),
+                                        source,
+                                    )
+                                },
+                            )?)
+                            .ok_or_else(|| {
+                                self.internal(
+                                    InternalError::new("A compiled block output is unknown."),
+                                    source,
+                                )
+                            })?;
                         self.charge(source, Some(*target))?;
                         self.working
                             .write(*target, value)

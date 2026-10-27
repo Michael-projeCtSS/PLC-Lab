@@ -135,11 +135,16 @@ impl<H: Clone, V: TraceValue> SignalTrace<H, V> {
         let seq = RecordSeq(self.next);
         self.next = self.next.checked_add(1).ok_or(TraceError::Exhausted)?;
         let keys_changed = self.current.len() != layers.len()
-            || self.current.iter().zip(&layers).any(|(a, b)| !same_keys(a, b));
+            || self
+                .current
+                .iter()
+                .zip(&layers)
+                .any(|(a, b)| !same_keys(a, b));
         let start_chunk = keys_changed
-            || self.chunks.back().is_none_or(|c| {
-                c.records.len() >= self.config.keyframe_interval.get()
-            });
+            || self
+                .chunks
+                .back()
+                .is_none_or(|c| c.records.len() >= self.config.keyframe_interval.get());
         let stored = if start_chunk {
             layers.clone()
         } else {
@@ -380,7 +385,12 @@ impl<E: TraceEvent> EventLog<E> {
         self.entries.iter().map(|(s, e, _)| (*s, e))
     }
     /// Entries strictly after `after`, limited by count and estimated bytes.
-    pub fn page(&self, after: Option<EventSeq>, max_entries: usize, max_bytes: usize) -> EventPage<'_, E> {
+    pub fn page(
+        &self,
+        after: Option<EventSeq>,
+        max_entries: usize,
+        max_bytes: usize,
+    ) -> EventPage<'_, E> {
         let gap = after.is_some_and(|cursor| {
             self.oldest()
                 .is_some_and(|oldest| cursor.0.saturating_add(1) < oldest.0)
@@ -408,7 +418,11 @@ impl<E: TraceEvent> EventLog<E> {
     /// The most recent entries (newest last), limited by count.
     pub fn tail(&self, count: usize) -> Vec<(EventSeq, &E)> {
         let skip = self.entries.len().saturating_sub(count);
-        self.entries.iter().skip(skip).map(|(s, e, _)| (*s, e)).collect()
+        self.entries
+            .iter()
+            .skip(skip)
+            .map(|(s, e, _)| (*s, e))
+            .collect()
     }
     pub fn clear(&mut self) {
         self.dropped += self.entries.len() as u64;
@@ -541,7 +555,14 @@ mod tests {
         );
         assert!(!log.page(Some(EventSeq(2)), 10, 1 << 20).gap);
         let limited = log.page(None, 10, 1);
-        assert_eq!(limited.entries.len(), 1, "at least one entry is always returned");
-        assert_eq!(log.tail(2).iter().map(|(_, e)| **e).collect::<Vec<_>>(), ["d", "e"]);
+        assert_eq!(
+            limited.entries.len(),
+            1,
+            "at least one entry is always returned"
+        );
+        assert_eq!(
+            log.tail(2).iter().map(|(_, e)| **e).collect::<Vec<_>>(),
+            ["d", "e"]
+        );
     }
 }

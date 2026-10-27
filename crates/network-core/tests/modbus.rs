@@ -2,7 +2,9 @@ use lab_model::{
     Identifier,
     network::{InterfaceConfig, Ipv4, ModbusTcpScan, NetworkInstallation},
 };
-use network_core::{NetworkEventKind, NetworkRuntime, PingResult, QuantitySource, ScanStatus, ScanValue, exception};
+use network_core::{
+    NetworkEventKind, NetworkRuntime, PingResult, QuantitySource, ScanStatus, ScanValue, exception,
+};
 use simulation_core::WorldTime;
 
 struct Level(i64);
@@ -33,7 +35,11 @@ fn ip(s: &str) -> Ipv4 {
     Ipv4::parse(s).unwrap()
 }
 fn plc(addr: &str) -> Option<InterfaceConfig> {
-    Some(InterfaceConfig { ip: ip(addr), mask: ip("255.255.255.0"), gateway: None })
+    Some(InterfaceConfig {
+        ip: ip(addr),
+        mask: ip("255.255.255.0"),
+        gateway: None,
+    })
 }
 const GOOD: &str = r#"{"id": "level", "server": "192.168.0.20", "unitId": 1, "function": "readHoldingRegisters",
   "startAddress": 0, "quantity": 3, "periodMs": 100, "timeoutMs": 300,
@@ -60,7 +66,12 @@ fn healthy_scan_reads_int_and_float_registers_with_round_trip() {
     });
     // Connection setup (2 x latency) + request (latency) + processing + response (latency).
     assert_eq!(rtt, Some(1000 + 500 + 2000 + 500));
-    assert_eq!(net.ping(ip("192.168.0.20")), PingResult::Reply { round_trip_us: 1000 });
+    assert_eq!(
+        net.ping(ip("192.168.0.20")),
+        PingResult::Reply {
+            round_trip_us: 1000
+        }
+    );
 }
 
 #[test]
@@ -72,23 +83,41 @@ fn wrong_subnet_has_no_route_and_unknown_host_times_out() {
     assert_eq!(net.ping(ip("192.168.0.20")), PingResult::NoRoute);
 
     let mut net = NetworkRuntime::new(Some(&installation()));
-    net.configure(plc("192.168.0.10"), &[scan(&GOOD.replace("192.168.0.20", "192.168.0.21"))]);
+    net.configure(
+        plc("192.168.0.10"),
+        &[scan(&GOOD.replace("192.168.0.20", "192.168.0.21"))],
+    );
     run(&mut net, 1000, 500);
     assert_eq!(net.scan_status(0), Some(ScanStatus::Timeout));
-    assert!(net.drain_events().iter().any(|e| matches!(e.kind, NetworkEventKind::ArpUnresolved { .. })));
+    assert!(
+        net.drain_events()
+            .iter()
+            .any(|e| matches!(e.kind, NetworkEventKind::ArpUnresolved { .. }))
+    );
 }
 
 #[test]
 fn host_without_server_refuses_and_offset_errors_return_exceptions() {
     let mut net = NetworkRuntime::new(Some(&installation()));
-    net.configure(plc("192.168.0.10"), &[scan(&GOOD.replace("192.168.0.20", "192.168.0.30"))]);
+    net.configure(
+        plc("192.168.0.10"),
+        &[scan(&GOOD.replace("192.168.0.20", "192.168.0.30"))],
+    );
     run(&mut net, 50, 500);
     assert_eq!(net.scan_status(0), Some(ScanStatus::ConnectionRefused));
 
     let mut net = NetworkRuntime::new(Some(&installation()));
-    net.configure(plc("192.168.0.10"), &[scan(&GOOD.replace("\"startAddress\": 0", "\"startAddress\": 1"))]);
+    net.configure(
+        plc("192.168.0.10"),
+        &[scan(
+            &GOOD.replace("\"startAddress\": 0", "\"startAddress\": 1"),
+        )],
+    );
     run(&mut net, 50, 500);
-    assert_eq!(net.scan_status(0), Some(ScanStatus::Exception(exception::ILLEGAL_DATA_ADDRESS)));
+    assert_eq!(
+        net.scan_status(0),
+        Some(ScanStatus::Exception(exception::ILLEGAL_DATA_ADDRESS))
+    );
 }
 
 #[test]
@@ -100,8 +129,13 @@ fn word_order_mismatch_produces_a_wrong_but_explainable_value() {
     );
     net.configure(plc("192.168.0.10"), &[scan(&swapped)]);
     run(&mut net, 50, 625);
-    let ScanValue::Real(v) = net.value(0, 1).unwrap() else { panic!("finite expected") };
-    assert!(v != 62.5 && v.abs() < 1e-30, "62.5 with swapped words is a denormal, got {v}");
+    let ScanValue::Real(v) = net.value(0, 1).unwrap() else {
+        panic!("finite expected")
+    };
+    assert!(
+        v != 62.5 && v.abs() < 1e-30,
+        "62.5 with swapped words is a denormal, got {v}"
+    );
 }
 
 #[test]
@@ -118,8 +152,17 @@ fn faults_link_down_offline_and_address_conflict() {
     assert_eq!(net.ping(ip("192.168.0.20")), PingResult::DuplicateReplies);
     run(&mut net, 4000, 500);
     let events = net.drain_events();
-    assert!(events.iter().any(|e| matches!(e.kind, NetworkEventKind::AddressConflict { .. })));
-    assert!(events.iter().any(|e| e.kind == NetworkEventKind::ConnectionRefused), "half the transactions reach the HMI");
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e.kind, NetworkEventKind::AddressConflict { .. }))
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| e.kind == NetworkEventKind::ConnectionRefused),
+        "half the transactions reach the HMI"
+    );
 }
 
 #[test]

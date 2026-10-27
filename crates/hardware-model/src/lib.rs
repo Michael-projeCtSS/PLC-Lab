@@ -8,7 +8,9 @@ pub mod analog;
 mod diagnostics;
 
 pub use analog::{AnalogCondition, AnalogRaw, AnalogReading};
-pub use diagnostics::{DiagnosticBuffer, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource};
+pub use diagnostics::{
+    DiagnosticBuffer, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource,
+};
 
 use lab_model::{
     hardware::{
@@ -27,14 +29,20 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HardwareError {
     Invalid(String),
-    CpuMismatch { configured: ModuleType, installed: ModuleType },
+    CpuMismatch {
+        configured: ModuleType,
+        installed: ModuleType,
+    },
     Scene(SceneError),
 }
 impl std::fmt::Display for HardwareError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Invalid(m) => f.write_str(m),
-            Self::CpuMismatch { configured, installed } => write!(
+            Self::CpuMismatch {
+                configured,
+                installed,
+            } => write!(
                 f,
                 "The configured CPU ({}) does not match the installed CPU ({}). The hardware configuration was not downloaded.",
                 configured.generic_name(),
@@ -172,7 +180,8 @@ impl StationRuntime {
         installation: InstalledHardware,
         profile: PlatformProfile,
     ) -> Result<Self, HardwareError> {
-        lab_model::validate_station(&configured).map_err(|e| HardwareError::Invalid(e.to_string()))?;
+        lab_model::validate_station(&configured)
+            .map_err(|e| HardwareError::Invalid(e.to_string()))?;
         if configured.cpu != installation.cpu {
             return Err(HardwareError::CpuMismatch {
                 configured: configured.cpu,
@@ -209,8 +218,13 @@ impl StationRuntime {
     }
 
     /// Replace the configuration (hardware download). The CPU type must match.
-    pub fn reconfigure(&mut self, configured: StationConfig, now: WorldTime) -> Result<(), HardwareError> {
-        lab_model::validate_station(&configured).map_err(|e| HardwareError::Invalid(e.to_string()))?;
+    pub fn reconfigure(
+        &mut self,
+        configured: StationConfig,
+        now: WorldTime,
+    ) -> Result<(), HardwareError> {
+        lab_model::validate_station(&configured)
+            .map_err(|e| HardwareError::Invalid(e.to_string()))?;
         if configured.cpu != self.installation.cpu {
             return Err(HardwareError::CpuMismatch {
                 configured: configured.cpu,
@@ -267,7 +281,14 @@ impl StationRuntime {
                     if let Some(m) = map.get_mut(p) {
                         m.module = *module;
                     } else {
-                        map.insert(*p, Installed { module: *module, powered: true, wired_as: *p });
+                        map.insert(
+                            *p,
+                            Installed {
+                                module: *module,
+                                powered: true,
+                                wired_as: *p,
+                            },
+                        );
                     }
                 }
                 HardwareFault::WrongSlot(from, to) => {
@@ -286,8 +307,15 @@ impl StationRuntime {
         map
     }
 
-    fn status_of(&self, position: SlotRef, effective: &BTreeMap<SlotRef, Installed>) -> ModuleStatus {
-        match (self.configured.module_at(position), effective.get(&position)) {
+    fn status_of(
+        &self,
+        position: SlotRef,
+        effective: &BTreeMap<SlotRef, Installed>,
+    ) -> ModuleStatus {
+        match (
+            self.configured.module_at(position),
+            effective.get(&position),
+        ) {
             (Some(_), None) => ModuleStatus::Missing,
             (Some(c), Some(i)) if c.module != i.module => ModuleStatus::Mismatch(i.module),
             (Some(_), Some(i)) if !i.powered => ModuleStatus::NoFieldPower,
@@ -307,7 +335,10 @@ impl StationRuntime {
             .map(|m| m.position)
             .chain(effective.keys().copied())
             .collect();
-        self.statuses = positions.iter().map(|p| (*p, self.status_of(*p, &effective))).collect();
+        self.statuses = positions
+            .iter()
+            .map(|p| (*p, self.status_of(*p, &effective)))
+            .collect();
         let mut current = BTreeSet::new();
         for (position, status) in &self.statuses {
             let source = DiagnosticSource::Module(*position);
@@ -327,9 +358,14 @@ impl StationRuntime {
         self.reconcile(current, now);
     }
 
-    fn update_channel_diagnostics(&self, current: &mut BTreeSet<(DiagnosticSource, DiagnosticKind)>) {
+    fn update_channel_diagnostics(
+        &self,
+        current: &mut BTreeSet<(DiagnosticSource, DiagnosticKind)>,
+    ) {
         for (channel, reading) in &self.readings {
-            let Some(config) = self.configured.channel_config(*channel) else { continue };
+            let Some(config) = self.configured.channel_config(*channel) else {
+                continue;
+            };
             if !config.diagnostics {
                 continue;
             }
@@ -345,26 +381,62 @@ impl StationRuntime {
 
     fn reconcile(&mut self, current: BTreeSet<(DiagnosticSource, DiagnosticKind)>, now: WorldTime) {
         // Only hardware-owned sources are reconciled here; network sources are managed by the engine.
-        let owned = |s: &DiagnosticSource| matches!(s, DiagnosticSource::Module(_) | DiagnosticSource::Channel(_));
-        let gone: Vec<_> = self.active.iter().filter(|e| owned(&e.0) && !current.contains(*e)).cloned().collect();
+        let owned = |s: &DiagnosticSource| {
+            matches!(
+                s,
+                DiagnosticSource::Module(_) | DiagnosticSource::Channel(_)
+            )
+        };
+        let gone: Vec<_> = self
+            .active
+            .iter()
+            .filter(|e| owned(&e.0) && !current.contains(*e))
+            .cloned()
+            .collect();
         for (source, kind) in gone {
             self.active.remove(&(source, kind));
-            self.buffer.push(DiagnosticEntry { time: now, source, kind, event: DiagnosticEvent::Outgoing });
+            self.buffer.push(DiagnosticEntry {
+                time: now,
+                source,
+                kind,
+                event: DiagnosticEvent::Outgoing,
+            });
         }
         for (source, kind) in current {
             if self.active.insert((source, kind)) {
-                self.buffer.push(DiagnosticEntry { time: now, source, kind, event: DiagnosticEvent::Incoming });
+                self.buffer.push(DiagnosticEntry {
+                    time: now,
+                    source,
+                    kind,
+                    event: DiagnosticEvent::Incoming,
+                });
             }
         }
     }
 
     /// Raise or clear an externally owned diagnostic (for example a network connection).
-    pub fn set_external_diagnostic(&mut self, source: DiagnosticSource, kind: DiagnosticKind, active: bool, now: WorldTime) {
+    pub fn set_external_diagnostic(
+        &mut self,
+        source: DiagnosticSource,
+        kind: DiagnosticKind,
+        active: bool,
+        now: WorldTime,
+    ) {
         let key = (source, kind);
         if active && self.active.insert(key) {
-            self.buffer.push(DiagnosticEntry { time: now, source, kind, event: DiagnosticEvent::Incoming });
+            self.buffer.push(DiagnosticEntry {
+                time: now,
+                source,
+                kind,
+                event: DiagnosticEvent::Incoming,
+            });
         } else if !active && self.active.remove(&key) {
-            self.buffer.push(DiagnosticEntry { time: now, source, kind, event: DiagnosticEvent::Outgoing });
+            self.buffer.push(DiagnosticEntry {
+                time: now,
+                source,
+                kind,
+                event: DiagnosticEvent::Outgoing,
+            });
         }
     }
 
@@ -373,11 +445,18 @@ impl StationRuntime {
     }
 
     pub fn module_status(&self, position: SlotRef) -> ModuleStatus {
-        self.statuses.get(&position).copied().unwrap_or(ModuleStatus::Missing)
+        self.statuses
+            .get(&position)
+            .copied()
+            .unwrap_or(ModuleStatus::Missing)
     }
 
     /// Resolve which component port is physically connected to a terminal, after wiring faults.
-    fn wire_at(&self, channel: ChannelRef, effective: &BTreeMap<SlotRef, Installed>) -> Option<(&str, &str)> {
+    fn wire_at(
+        &self,
+        channel: ChannelRef,
+        effective: &BTreeMap<SlotRef, Installed>,
+    ) -> Option<(&str, &str)> {
         let installed = effective.get(&channel.slot_ref())?;
         let mut terminal = ChannelRef {
             rack: installed.wired_as.rack,
@@ -408,30 +487,53 @@ impl StationRuntime {
     }
 
     /// Digital terminal voltage in millivolts (input "signal present" for either input style).
-    fn digital_terminal(&self, channel: ChannelRef, style: DigitalInputStyle, scene: &SceneRuntime, effective: &BTreeMap<SlotRef, Installed>) -> i64 {
+    fn digital_terminal(
+        &self,
+        channel: ChannelRef,
+        style: DigitalInputStyle,
+        scene: &SceneRuntime,
+        effective: &BTreeMap<SlotRef, Installed>,
+    ) -> i64 {
         if self.shorted(channel) {
             return 24_000;
         }
         if self.open(channel) {
             return 0;
         }
-        let Some(installed) = effective.get(&channel.slot_ref()) else { return 0 };
+        let Some(installed) = effective.get(&channel.slot_ref()) else {
+            return 0;
+        };
         if !installed.powered {
             return 0;
         }
-        let Some((component, port)) = self.wire_at(channel, effective) else { return 0 };
-        let Ok(index) = scene.index_of_str(component) else { return 0 };
-        let Ok(field) = scene.digital_output(index, port) else { return 0 };
-        let compatible = match (style, field.style) {
-            (_, OutputStyle::DryContact) => true,
-            (DigitalInputStyle::Sinking, OutputStyle::Pnp) => true,
-            (DigitalInputStyle::Sourcing, OutputStyle::Npn) => true,
-            _ => false,
+        let Some((component, port)) = self.wire_at(channel, effective) else {
+            return 0;
         };
-        if field.conducting && compatible { 24_000 } else { 0 }
+        let Ok(index) = scene.index_of_str(component) else {
+            return 0;
+        };
+        let Ok(field) = scene.digital_output(index, port) else {
+            return 0;
+        };
+        let compatible = matches!(
+            (style, field.style),
+            (_, OutputStyle::DryContact)
+                | (DigitalInputStyle::Sinking, OutputStyle::Pnp)
+                | (DigitalInputStyle::Sourcing, OutputStyle::Npn)
+        );
+        if field.conducting && compatible {
+            24_000
+        } else {
+            0
+        }
     }
 
-    fn analog_field(&self, channel: ChannelRef, scene: &SceneRuntime, effective: &BTreeMap<SlotRef, Installed>) -> Option<AnalogField> {
+    fn analog_field(
+        &self,
+        channel: ChannelRef,
+        scene: &SceneRuntime,
+        effective: &BTreeMap<SlotRef, Installed>,
+    ) -> Option<AnalogField> {
         if self.open(channel) {
             return None;
         }
@@ -441,45 +543,78 @@ impl StationRuntime {
     }
 
     /// Sample every configured input channel from the physical process.
-    pub fn sample_inputs(&mut self, scene: &SceneRuntime, now: WorldTime) -> &BTreeMap<ChannelRef, ChannelReading> {
+    pub fn sample_inputs(
+        &mut self,
+        scene: &SceneRuntime,
+        now: WorldTime,
+    ) -> &BTreeMap<ChannelRef, ChannelReading> {
         let effective = self.effective();
         let mut readings = BTreeMap::new();
         for module in &self.configured.modules {
             let status = self.status_of(module.position, &effective);
             for channel_index in 0..module.module.channel_count() {
-                let channel = ChannelRef { rack: module.position.rack, slot: module.position.slot, channel: channel_index };
+                let channel = ChannelRef {
+                    rack: module.position.rack,
+                    slot: module.position.slot,
+                    channel: channel_index,
+                };
                 let config = self.configured.channel_config(channel);
                 let mode = config.map_or(default_mode(module.module), |c| c.mode);
                 let reading = match module.module.class() {
                     ModuleClass::DigitalInput { style, .. } => {
                         if mode == ChannelMode::Disabled {
-                            ChannelReading { value: ChannelValue::Bool(false), quality: Quality::ChannelDisabled }
+                            ChannelReading {
+                                value: ChannelValue::Bool(false),
+                                quality: Quality::ChannelDisabled,
+                            }
                         } else {
                             match status {
                                 ModuleStatus::Ok => ChannelReading {
-                                    value: ChannelValue::Bool(self.digital_terminal(channel, style, scene, &effective) > 15_000),
+                                    value: ChannelValue::Bool(
+                                        self.digital_terminal(channel, style, scene, &effective)
+                                            > 15_000,
+                                    ),
                                     quality: Quality::Good,
                                 },
-                                ModuleStatus::NoFieldPower => ChannelReading { value: ChannelValue::Bool(false), quality: Quality::NoFieldPower },
-                                _ => ChannelReading { value: ChannelValue::Bool(false), quality: Quality::ModuleFault },
+                                ModuleStatus::NoFieldPower => ChannelReading {
+                                    value: ChannelValue::Bool(false),
+                                    quality: Quality::NoFieldPower,
+                                },
+                                _ => ChannelReading {
+                                    value: ChannelValue::Bool(false),
+                                    quality: Quality::ModuleFault,
+                                },
                             }
                         }
                     }
                     ModuleClass::AnalogInput { .. } => {
                         let fallback = match self.profile.analog {
-                            lab_model::profile::AnalogRepresentation::EngineeringUnits => ChannelValue::Real(0.0),
+                            lab_model::profile::AnalogRepresentation::EngineeringUnits => {
+                                ChannelValue::Real(0.0)
+                            }
                             _ => ChannelValue::Int(0),
                         };
                         if mode == ChannelMode::Disabled {
-                            ChannelReading { value: fallback, quality: Quality::ChannelDisabled }
-                        } else if status != ModuleStatus::Ok && status != ModuleStatus::NoFieldPower {
-                            ChannelReading { value: fallback, quality: Quality::ModuleFault }
+                            ChannelReading {
+                                value: fallback,
+                                quality: Quality::ChannelDisabled,
+                            }
+                        } else if status != ModuleStatus::Ok && status != ModuleStatus::NoFieldPower
+                        {
+                            ChannelReading {
+                                value: fallback,
+                                quality: Quality::ModuleFault,
+                            }
                         } else {
                             let field = self.analog_field(channel, scene, &effective);
                             let diagnostics = config.is_some_and(|c| c.diagnostics);
                             let shorted = self.shorted(channel);
                             let field = if shorted {
-                                Some(AnalogField { unit: process_simulation::AnalogUnit::Millivolt, value: 24_000, signal: lab_model::scene::AnalogSignal::Voltage0To10V })
+                                Some(AnalogField {
+                                    unit: process_simulation::AnalogUnit::Millivolt,
+                                    value: 24_000,
+                                    signal: lab_model::scene::AnalogSignal::Voltage0To10V,
+                                })
                             } else {
                                 field
                             };
@@ -498,7 +633,10 @@ impl StationRuntime {
                                         AnalogCondition::WireBreak => Quality::WireBreak,
                                     },
                                 },
-                                None => ChannelReading { value: fallback, quality: Quality::ChannelDisabled },
+                                None => ChannelReading {
+                                    value: fallback,
+                                    quality: Quality::ChannelDisabled,
+                                },
                             }
                         }
                     }
@@ -524,7 +662,12 @@ impl StationRuntime {
     }
 
     /// Apply output channel commands (CPU in RUN) and drive wired actuators.
-    pub fn drive_outputs(&mut self, commands: &BTreeMap<ChannelRef, bool>, cpu_running: bool, scene: &mut SceneRuntime) -> Result<(), HardwareError> {
+    pub fn drive_outputs(
+        &mut self,
+        commands: &BTreeMap<ChannelRef, bool>,
+        cpu_running: bool,
+        scene: &mut SceneRuntime,
+    ) -> Result<(), HardwareError> {
         let effective = self.effective();
         let mut outputs = BTreeMap::new();
         for module in &self.configured.modules {
@@ -532,7 +675,11 @@ impl StationRuntime {
                 continue;
             }
             for index in 0..module.module.channel_count() {
-                let channel = ChannelRef { rack: module.position.rack, slot: module.position.slot, channel: index };
+                let channel = ChannelRef {
+                    rack: module.position.rack,
+                    slot: module.position.slot,
+                    channel: index,
+                };
                 let config = self.configured.channel_config(channel);
                 let enabled = config.is_none_or(|c| c.mode != ChannelMode::Disabled);
                 let requested = commands.get(&channel).copied().unwrap_or(false);
@@ -541,7 +688,11 @@ impl StationRuntime {
                 } else {
                     match config.map(|c| c.stop_behavior).unwrap_or_default() {
                         OutputStopBehavior::Off => false,
-                        OutputStopBehavior::HoldLast => self.last_run_outputs.get(&channel).copied().unwrap_or(false),
+                        OutputStopBehavior::HoldLast => self
+                            .last_run_outputs
+                            .get(&channel)
+                            .copied()
+                            .unwrap_or(false),
                     }
                 };
                 outputs.insert(channel, enabled && value);
@@ -553,10 +704,10 @@ impl StationRuntime {
         // De-energize every wired sink first, then energize the driven ones.
         let mut energize: BTreeMap<(String, String), bool> = BTreeMap::new();
         for wire in &self.installation.wiring {
-            let Ok(index) = scene.index_of_str(wire.component.as_str()) else { continue };
-            let is_sink = scene
-                .component_kind(index)
-                .is_some()
+            let Ok(index) = scene.index_of_str(wire.component.as_str()) else {
+                continue;
+            };
+            let is_sink = scene.component_kind(index).is_some()
                 && !wire.port.is_empty()
                 && matches!(wire.port.as_str(), "coil" | "solenoid" | "motor");
             if is_sink {
@@ -564,7 +715,9 @@ impl StationRuntime {
             }
         }
         for (channel, on) in &outputs {
-            let Some(installed) = effective.get(&channel.slot_ref()) else { continue };
+            let Some(installed) = effective.get(&channel.slot_ref()) else {
+                continue;
+            };
             let module_ok = self.status_of(channel.slot_ref(), &effective) == ModuleStatus::Ok;
             let live = *on && module_ok && installed.powered && !self.open(*channel);
             if let Some((component, port)) = self.wire_at(*channel, &effective)
@@ -588,27 +741,41 @@ impl StationRuntime {
     /// What a multimeter shows at a terminal right now.
     pub fn measure(&self, channel: ChannelRef, scene: &SceneRuntime) -> Measurement {
         let effective = self.effective();
-        let Some(installed) = effective.get(&channel.slot_ref()) else { return Measurement::NoModule };
+        let Some(installed) = effective.get(&channel.slot_ref()) else {
+            return Measurement::NoModule;
+        };
         match installed.module.class() {
-            ModuleClass::DigitalInput { style, .. } => Measurement::Millivolts(self.digital_terminal(channel, style, scene, &effective)),
+            ModuleClass::DigitalInput { style, .. } => {
+                Measurement::Millivolts(self.digital_terminal(channel, style, scene, &effective))
+            }
             ModuleClass::DigitalOutput { .. } => {
                 let module_ok = self.status_of(channel.slot_ref(), &effective) == ModuleStatus::Ok;
-                let on = self.outputs.get(&channel).copied().unwrap_or(false) && module_ok && installed.powered;
+                let on = self.outputs.get(&channel).copied().unwrap_or(false)
+                    && module_ok
+                    && installed.powered;
                 Measurement::Millivolts(if on { 24_000 } else { 0 })
             }
-            ModuleClass::AnalogInput { .. } => match self.analog_field(channel, scene, &effective) {
-                Some(f) => match f.unit {
-                    process_simulation::AnalogUnit::Microamp => Measurement::Microamps(f.value),
-                    process_simulation::AnalogUnit::Millivolt => Measurement::Millivolts(f.value),
-                },
-                None => Measurement::Microamps(0),
-            },
+            ModuleClass::AnalogInput { .. } => {
+                match self.analog_field(channel, scene, &effective) {
+                    Some(f) => match f.unit {
+                        process_simulation::AnalogUnit::Microamp => Measurement::Microamps(f.value),
+                        process_simulation::AnalogUnit::Millivolt => {
+                            Measurement::Millivolts(f.value)
+                        }
+                    },
+                    None => Measurement::Microamps(0),
+                }
+            }
             _ => Measurement::NoModule,
         }
     }
 
     pub fn tag_for(&self, channel: ChannelRef) -> Option<&str> {
-        self.configured.io_map.iter().find(|m| m.channel == channel).map(|m| m.tag.as_str())
+        self.configured
+            .io_map
+            .iter()
+            .find(|m| m.channel == channel)
+            .map(|m| m.tag.as_str())
     }
 
     pub fn module_views(&self) -> Vec<ModuleView> {
@@ -625,9 +792,15 @@ impl StationRuntime {
             .map(|position| {
                 let configured = self.configured.module_at(position);
                 let installed = effective.get(&position).map(|i| i.module);
-                let status = self.statuses.get(&position).copied().unwrap_or(ModuleStatus::Missing);
+                let status = self
+                    .statuses
+                    .get(&position)
+                    .copied()
+                    .unwrap_or(ModuleStatus::Missing);
                 let module_type = configured.map(|c| c.module).or(installed);
-                let channel_faults = self.active.iter().any(|(s, _)| matches!(s, DiagnosticSource::Channel(c) if c.slot_ref() == position));
+                let channel_faults = self.active.iter().any(
+                    |(s, _)| matches!(s, DiagnosticSource::Channel(c) if c.slot_ref() == position),
+                );
                 let status_led = match status {
                     ModuleStatus::Ok if channel_faults => LedState::RedFlashing,
                     ModuleStatus::Ok => LedState::Green,
@@ -639,20 +812,41 @@ impl StationRuntime {
                     .map(|m| {
                         (0..m.channel_count())
                             .map(|index| {
-                                let channel = ChannelRef { rack: position.rack, slot: position.slot, channel: index };
+                                let channel = ChannelRef {
+                                    rack: position.rack,
+                                    slot: position.slot,
+                                    channel: index,
+                                };
                                 let reading = self.readings.get(&channel).copied();
                                 let output = self.outputs.get(&channel).copied();
                                 let led = status != ModuleStatus::Missing
                                     && match m.class() {
-                                        ModuleClass::DigitalInput { .. } => matches!(reading, Some(ChannelReading { value: ChannelValue::Bool(true), .. })),
-                                        ModuleClass::DigitalOutput { .. } => output == Some(true) && status == ModuleStatus::Ok,
+                                        ModuleClass::DigitalInput { .. } => matches!(
+                                            reading,
+                                            Some(ChannelReading {
+                                                value: ChannelValue::Bool(true),
+                                                ..
+                                            })
+                                        ),
+                                        ModuleClass::DigitalOutput { .. } => {
+                                            output == Some(true) && status == ModuleStatus::Ok
+                                        }
                                         _ => false,
                                     };
                                 ChannelView {
                                     channel: index,
-                                    mode: self.configured.channel_config(channel).map_or(default_mode(m), |c| c.mode),
+                                    mode: self
+                                        .configured
+                                        .channel_config(channel)
+                                        .map_or(default_mode(m), |c| c.mode),
                                     tag: self.tag_for(channel).map(str::to_owned),
-                                    address: address::format(self.profile.addressing, m, configured.map_or(0, |c| c.start_address), channel, self.profile.product_name(m)),
+                                    address: address::format(
+                                        self.profile.addressing,
+                                        m,
+                                        configured.map_or(0, |c| c.start_address),
+                                        channel,
+                                        self.profile.product_name(m),
+                                    ),
                                     reading,
                                     output,
                                     led,
@@ -666,7 +860,8 @@ impl StationRuntime {
                     configured: configured.map(|c| c.module),
                     installed,
                     status,
-                    product: module_type.and_then(|m| self.profile.product_name(m).map(str::to_owned)),
+                    product: module_type
+                        .and_then(|m| self.profile.product_name(m).map(str::to_owned)),
                     status_led,
                     channels,
                 }
@@ -677,7 +872,9 @@ impl StationRuntime {
 
 pub fn default_mode(module: ModuleType) -> ChannelMode {
     match module.class() {
-        ModuleClass::AnalogInput { .. } | ModuleClass::AnalogOutput { .. } => ChannelMode::Current4To20mA,
+        ModuleClass::AnalogInput { .. } | ModuleClass::AnalogOutput { .. } => {
+            ChannelMode::Current4To20mA
+        }
         _ => ChannelMode::Digital,
     }
 }

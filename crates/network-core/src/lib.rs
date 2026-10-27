@@ -13,8 +13,8 @@
 use lab_model::{
     Identifier,
     network::{
-        DeviceRole, InterfaceConfig, Ipv4, ModbusDataType, ModbusReadFunction, ModbusTcpScan, NetworkDevice,
-        NetworkInstallation, RegisterValue, UnitIdBehavior, WordOrder,
+        DeviceRole, InterfaceConfig, Ipv4, ModbusDataType, ModbusReadFunction, ModbusTcpScan,
+        NetworkDevice, NetworkInstallation, RegisterValue, UnitIdBehavior, WordOrder,
     },
 };
 use simulation_core::WorldTime;
@@ -47,14 +47,27 @@ pub enum ScanStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NetworkEventKind {
-    RequestSent { function: u8, address: u16, quantity: u16, unit: u8 },
-    ResponseReceived { round_trip_us: u64 },
-    ExceptionReceived { code: u8 },
+    RequestSent {
+        function: u8,
+        address: u16,
+        quantity: u16,
+        unit: u8,
+    },
+    ResponseReceived {
+        round_trip_us: u64,
+    },
+    ExceptionReceived {
+        code: u8,
+    },
     Timeout,
     NoRoute,
-    ArpUnresolved { ip: Ipv4 },
+    ArpUnresolved {
+        ip: Ipv4,
+    },
     ConnectionRefused,
-    AddressConflict { ip: Ipv4 },
+    AddressConflict {
+        ip: Ipv4,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,11 +117,28 @@ pub struct DeviceView {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Event {
-    Poll { scan: usize },
-    Arrive { scan: usize, tx: u16, device: usize },
-    Refused { scan: usize, tx: u16 },
-    Respond { scan: usize, tx: u16, result: Result<(), u8>, device: usize },
-    Expire { scan: usize, tx: u16 },
+    Poll {
+        scan: usize,
+    },
+    Arrive {
+        scan: usize,
+        tx: u16,
+        device: usize,
+    },
+    Refused {
+        scan: usize,
+        tx: u16,
+    },
+    Respond {
+        scan: usize,
+        tx: u16,
+        result: Result<(), u8>,
+        device: usize,
+    },
+    Expire {
+        scan: usize,
+        tx: u16,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -216,7 +246,10 @@ impl NetworkRuntime {
     }
 
     pub fn next_event_time(&self) -> Option<WorldTime> {
-        self.queue.keys().next().map(|(t, _)| WorldTime::from_micros(*t))
+        self.queue
+            .keys()
+            .next()
+            .map(|(t, _)| WorldTime::from_micros(*t))
     }
 
     pub fn drain_events(&mut self) -> Vec<NetworkEvent> {
@@ -227,10 +260,14 @@ impl NetworkRuntime {
         self.devices.iter().position(|d| &d.def.id == id)
     }
     pub fn set_device_link(&mut self, id: &Identifier, up: bool) -> bool {
-        self.device_index(id).map(|i| self.devices[i].link_up = up).is_some()
+        self.device_index(id)
+            .map(|i| self.devices[i].link_up = up)
+            .is_some()
     }
     pub fn set_device_online(&mut self, id: &Identifier, online: bool) -> bool {
-        self.device_index(id).map(|i| self.devices[i].online = online).is_some()
+        self.device_index(id)
+            .map(|i| self.devices[i].online = online)
+            .is_some()
     }
     pub fn set_device_ip(&mut self, id: &Identifier, ip: Option<Ipv4>) -> bool {
         self.device_index(id)
@@ -243,7 +280,9 @@ impl NetworkRuntime {
 
     /// Process the next internal event if it is due at or before `limit`.
     pub fn process_next(&mut self, limit: WorldTime, source: &dyn QuantitySource) -> bool {
-        let Some((&(time, seq), _)) = self.queue.iter().next() else { return false };
+        let Some((&(time, seq), _)) = self.queue.iter().next() else {
+            return false;
+        };
         if time > limit.as_micros() {
             return false;
         }
@@ -259,7 +298,13 @@ impl NetworkRuntime {
     }
 
     fn emit(&mut self, scan: usize, tx: u16, peer: Ipv4, kind: NetworkEventKind) {
-        self.events.push(NetworkEvent { time: WorldTime::from_micros(self.now), scan, transaction: tx, peer, kind });
+        self.events.push(NetworkEvent {
+            time: WorldTime::from_micros(self.now),
+            scan,
+            transaction: tx,
+            peer,
+            kind,
+        });
     }
 
     fn resolve(&mut self, scan: usize, tx: u16, ip: Ipv4) -> Option<usize> {
@@ -300,7 +345,9 @@ impl NetworkRuntime {
                 self.scans[scan].requests += 1;
                 self.plc_activity = Some(now);
                 let timeout = u64::from(config.timeout_ms) * 1_000;
-                if !interface.ip.same_subnet(config.server, interface.mask) && interface.gateway.is_none() {
+                if !interface.ip.same_subnet(config.server, interface.mask)
+                    && interface.gateway.is_none()
+                {
                     self.scans[scan].status = ScanStatus::NoRoute;
                     self.scans[scan].connected = false;
                     self.emit(scan, tx, config.server, NetworkEventKind::NoRoute);
@@ -328,16 +375,32 @@ impl NetworkRuntime {
                     interface.gateway.unwrap_or(config.server)
                 };
                 // A gateway would forward to another subnet; no routers are modeled on the segment.
-                let device = if next_hop == config.server { self.resolve(scan, tx, next_hop) } else { None };
+                let device = if next_hop == config.server {
+                    self.resolve(scan, tx, next_hop)
+                } else {
+                    None
+                };
                 let Some(device) = device else {
-                    self.emit(scan, tx, next_hop, NetworkEventKind::ArpUnresolved { ip: next_hop });
+                    self.emit(
+                        scan,
+                        tx,
+                        next_hop,
+                        NetworkEventKind::ArpUnresolved { ip: next_hop },
+                    );
                     return;
                 };
-                let setup = if self.scans[scan].connected { 0 } else { 2 * self.latency };
+                let setup = if self.scans[scan].connected {
+                    0
+                } else {
+                    2 * self.latency
+                };
                 if matches!(self.devices[device].def.role, DeviceRole::Host) || config.port != 502 {
                     self.push(now + 2 * self.latency, Event::Refused { scan, tx });
                 } else {
-                    self.push(now + setup + self.latency, Event::Arrive { scan, tx, device });
+                    self.push(
+                        now + setup + self.latency,
+                        Event::Arrive { scan, tx, device },
+                    );
                 }
             }
             Event::Refused { scan, tx } => {
@@ -351,17 +414,27 @@ impl NetworkRuntime {
             }
             Event::Arrive { scan, tx, device } => {
                 self.scans[scan].connected = true;
-                let Some(interface) = self.interface.clone() else { return };
+                let Some(interface) = self.interface.clone() else {
+                    return;
+                };
                 let d = &mut self.devices[device];
                 d.last_activity = Some(now);
                 if !d.link_up || !d.online {
                     return;
                 }
                 // The server must be able to route its reply back to the client.
-                if !d.ip.same_subnet(interface.ip, d.def.interface.mask) && d.def.interface.gateway.is_none() {
+                if !d.ip.same_subnet(interface.ip, d.def.interface.mask)
+                    && d.def.interface.gateway.is_none()
+                {
                     return;
                 }
-                let DeviceRole::ModbusTcpServer { unit_ids, processing_us, holding_registers, input_registers } = &d.def.role else {
+                let DeviceRole::ModbusTcpServer {
+                    unit_ids,
+                    processing_us,
+                    holding_registers,
+                    input_registers,
+                } = &d.def.role
+                else {
                     return;
                 };
                 let config = &self.scans[scan].config;
@@ -402,11 +475,26 @@ impl NetworkRuntime {
                 };
                 let processing = u64::from(*processing_us);
                 d.served += 1;
-                self.push(now + processing + self.latency, Event::Respond { scan, tx, result, device });
+                self.push(
+                    now + processing + self.latency,
+                    Event::Respond {
+                        scan,
+                        tx,
+                        result,
+                        device,
+                    },
+                );
             }
-            Event::Respond { scan, tx, result, device } => {
+            Event::Respond {
+                scan,
+                tx,
+                result,
+                device,
+            } => {
                 let _ = device;
-                let Some((pending, sent)) = self.scans[scan].pending else { return };
+                let Some((pending, sent)) = self.scans[scan].pending else {
+                    return;
+                };
                 if pending != tx {
                     return;
                 }
@@ -420,7 +508,14 @@ impl NetworkRuntime {
                         state.registers = std::mem::take(&mut state.staged);
                         state.status = ScanStatus::Ok;
                         state.responses += 1;
-                        self.emit(scan, tx, peer, NetworkEventKind::ResponseReceived { round_trip_us: now - sent });
+                        self.emit(
+                            scan,
+                            tx,
+                            peer,
+                            NetworkEventKind::ResponseReceived {
+                                round_trip_us: now - sent,
+                            },
+                        );
                     }
                     Err(code) => {
                         state.status = ScanStatus::Exception(code);
@@ -464,7 +559,11 @@ impl NetworkRuntime {
                     WordOrder::LowWordFirst => (b, a),
                 };
                 let v = f32::from_bits((u32::from(high) << 16) | u32::from(low));
-                Some(if v.is_finite() { ScanValue::Real(if v == 0.0 { 0.0 } else { v }) } else { ScanValue::NotFinite })
+                Some(if v.is_finite() {
+                    ScanValue::Real(if v == 0.0 { 0.0 } else { v })
+                } else {
+                    ScanValue::NotFinite
+                })
             }
         }
     }
@@ -514,18 +613,28 @@ impl NetworkRuntime {
 
     /// ICMP-style reachability check from the PLC, answered synchronously from topology.
     pub fn ping(&self, target: Ipv4) -> PingResult {
-        let Some(interface) = &self.interface else { return PingResult::NoInterface };
+        let Some(interface) = &self.interface else {
+            return PingResult::NoInterface;
+        };
         if !self.plc_link_up {
             return PingResult::Timeout;
         }
         if !interface.ip.same_subnet(target, interface.mask) && interface.gateway.is_none() {
             return PingResult::NoRoute;
         }
-        let replies: Vec<&DeviceState> = self.devices.iter().filter(|d| d.ip == target && d.link_up && d.online).collect();
+        let replies: Vec<&DeviceState> = self
+            .devices
+            .iter()
+            .filter(|d| d.ip == target && d.link_up && d.online)
+            .collect();
         match replies.as_slice() {
             [] => PingResult::Timeout,
-            [d] if d.ip.same_subnet(interface.ip, d.def.interface.mask) || d.def.interface.gateway.is_some() => {
-                PingResult::Reply { round_trip_us: 2 * self.latency }
+            [d] if d.ip.same_subnet(interface.ip, d.def.interface.mask)
+                || d.def.interface.gateway.is_some() =>
+            {
+                PingResult::Reply {
+                    round_trip_us: 2 * self.latency,
+                }
             }
             [_] => PingResult::Timeout,
             _ => PingResult::DuplicateReplies,
@@ -547,25 +656,41 @@ fn quantity(source: &dyn QuantitySource, component: &Identifier, name: &str) -> 
 }
 
 /// Read one register word from a server table, or `None` if the address is not mapped.
-fn register(table: &[lab_model::network::RegisterBinding], address: u16, source: &dyn QuantitySource) -> Option<u16> {
+fn register(
+    table: &[lab_model::network::RegisterBinding],
+    address: u16,
+    source: &dyn QuantitySource,
+) -> Option<u16> {
     for binding in table {
         match &binding.value {
             RegisterValue::Constant { value } if binding.address == address => return Some(*value),
-            RegisterValue::ScaledInt16 { component, quantity: q, scale, divisor } if binding.address == address => {
+            RegisterValue::ScaledInt16 {
+                component,
+                quantity: q,
+                scale,
+                divisor,
+            } if binding.address == address => {
                 let v = quantity(source, component, q) * i64::from(*scale) / i64::from(*divisor);
                 return Some(v.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16 as u16);
             }
-            RegisterValue::Float32 { component, quantity: q, divisor, word_order } => {
-                if address == binding.address || Some(address) == binding.address.checked_add(1) {
-                    let v = quantity(source, component, q) as f64 / f64::from(*divisor);
-                    let bits = (v as f32).to_bits();
-                    let (high, low) = ((bits >> 16) as u16, bits as u16);
-                    let (first, second) = match word_order {
-                        WordOrder::HighWordFirst => (high, low),
-                        WordOrder::LowWordFirst => (low, high),
-                    };
-                    return Some(if address == binding.address { first } else { second });
-                }
+            RegisterValue::Float32 {
+                component,
+                quantity: q,
+                divisor,
+                word_order,
+            } if address == binding.address || Some(address) == binding.address.checked_add(1) => {
+                let v = quantity(source, component, q) as f64 / f64::from(*divisor);
+                let bits = (v as f32).to_bits();
+                let (high, low) = ((bits >> 16) as u16, bits as u16);
+                let (first, second) = match word_order {
+                    WordOrder::HighWordFirst => (high, low),
+                    WordOrder::LowWordFirst => (low, high),
+                };
+                return Some(if address == binding.address {
+                    first
+                } else {
+                    second
+                });
             }
             _ => {}
         }

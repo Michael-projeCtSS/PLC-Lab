@@ -93,7 +93,10 @@ pub enum EvidenceSource {
     /// A PLC tag: inputs come from the scan input image, outputs from the commit.
     PlcTag { tag: TagName },
     /// A physical component quantity after the process interval.
-    Component { component: Identifier, quantity: String },
+    Component {
+        component: Identifier,
+        quantity: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,13 +131,29 @@ pub enum PlcModeRequest {
     deny_unknown_fields
 )]
 pub enum ScenarioAction {
-    Press { component: Identifier },
-    Release { component: Identifier },
-    SetSelector { component: Identifier, position: u8 },
-    SetPresence { component: Identifier, present: bool },
-    SetPlcMode { mode: PlcModeRequest },
-    InjectFault { fault: FaultInjection },
-    ClearFault { id: Identifier },
+    Press {
+        component: Identifier,
+    },
+    Release {
+        component: Identifier,
+    },
+    SetSelector {
+        component: Identifier,
+        position: u8,
+    },
+    SetPresence {
+        component: Identifier,
+        present: bool,
+    },
+    SetPlcMode {
+        mode: PlcModeRequest,
+    },
+    InjectFault {
+        fault: FaultInjection,
+    },
+    ClearFault {
+        id: Identifier,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -222,9 +241,15 @@ pub enum Comparison {
     deny_unknown_fields
 )]
 pub enum Condition {
-    All { of: Vec<Condition> },
-    Any { of: Vec<Condition> },
-    Not { of: Box<Condition> },
+    All {
+        of: Vec<Condition>,
+    },
+    Any {
+        of: Vec<Condition>,
+    },
+    Not {
+        of: Box<Condition>,
+    },
     Compare {
         signal: Identifier,
         layer: EvidenceLayer,

@@ -35,8 +35,20 @@ pub struct StandardParameter {
     pub required: bool,
 }
 
-const fn param(id: u32, name: &'static str, direction: ParameterDirection, plc_type: PlcType, required: bool) -> StandardParameter {
-    StandardParameter { id, name, direction, plc_type, required }
+const fn param(
+    id: u32,
+    name: &'static str,
+    direction: ParameterDirection,
+    plc_type: PlcType,
+    required: bool,
+) -> StandardParameter {
+    StandardParameter {
+        id,
+        name,
+        direction,
+        plc_type,
+        required,
+    }
 }
 use ParameterDirection::{Input as IN, Output as OUT};
 const TIMER: [StandardParameter; 4] = [
@@ -45,7 +57,10 @@ const TIMER: [StandardParameter; 4] = [
     param(3, "Q", OUT, PlcType::Bool, false),
     param(4, "ET", OUT, PlcType::Time, false),
 ];
-const TRIGGER: [StandardParameter; 2] = [param(1, "CLK", IN, PlcType::Bool, true), param(2, "Q", OUT, PlcType::Bool, false)];
+const TRIGGER: [StandardParameter; 2] = [
+    param(1, "CLK", IN, PlcType::Bool, true),
+    param(2, "Q", OUT, PlcType::Bool, false),
+];
 const UP_COUNTER: [StandardParameter; 5] = [
     param(1, "CU", IN, PlcType::Bool, true),
     param(2, "R", IN, PlcType::Bool, false),
@@ -62,7 +77,15 @@ const DOWN_COUNTER: [StandardParameter; 5] = [
 ];
 
 impl StandardFunctionBlock {
-    pub const ALL: [Self; 7] = [Self::Ton, Self::Tof, Self::Tp, Self::RTrig, Self::FTrig, Self::Ctu, Self::Ctd];
+    pub const ALL: [Self; 7] = [
+        Self::Ton,
+        Self::Tof,
+        Self::Tp,
+        Self::RTrig,
+        Self::FTrig,
+        Self::Ctu,
+        Self::Ctd,
+    ];
     pub fn name(self) -> &'static str {
         match self {
             Self::Ton => "TON",
@@ -87,7 +110,10 @@ impl StandardFunctionBlock {
         }
     }
     pub fn parameter_named(self, name: &str) -> Option<StandardParameter> {
-        self.signature().iter().copied().find(|p| p.name.eq_ignore_ascii_case(name))
+        self.signature()
+            .iter()
+            .copied()
+            .find(|p| p.name.eq_ignore_ascii_case(name))
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

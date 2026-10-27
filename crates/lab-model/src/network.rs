@@ -58,8 +58,9 @@ impl Serialize for Ipv4 {
 impl<'de> Deserialize<'de> for Ipv4 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let text = String::deserialize(deserializer)?;
-        Ipv4::parse(&text)
-            .ok_or_else(|| serde::de::Error::custom(format!("'{text}' is not a dotted IPv4 address")))
+        Ipv4::parse(&text).ok_or_else(|| {
+            serde::de::Error::custom(format!("'{text}' is not a dotted IPv4 address"))
+        })
     }
 }
 
@@ -250,8 +251,18 @@ mod tests {
     use super::*;
     #[test]
     fn ipv4_parsing_and_subnets_are_exact() {
-        assert_eq!(Ipv4::parse("192.168.0.10").unwrap().octets(), [192, 168, 0, 10]);
-        for bad in ["1.2.3", "1.2.3.4.5", "256.0.0.1", "01.2.3.4", "a.b.c.d", "1..2.3"] {
+        assert_eq!(
+            Ipv4::parse("192.168.0.10").unwrap().octets(),
+            [192, 168, 0, 10]
+        );
+        for bad in [
+            "1.2.3",
+            "1.2.3.4.5",
+            "256.0.0.1",
+            "01.2.3.4",
+            "a.b.c.d",
+            "1..2.3",
+        ] {
             assert!(Ipv4::parse(bad).is_none(), "{bad}");
         }
         let mask = Ipv4::parse("255.255.255.0").unwrap();

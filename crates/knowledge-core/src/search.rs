@@ -56,12 +56,19 @@ pub struct SearchIndex {
 /// are kept whole and also split into parts.
 pub fn tokenize(text: &str) -> Vec<String> {
     let mut out = Vec::new();
-    for raw in text.split(|c: char| !(c.is_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '%')) {
-        let word = raw.trim_matches(|c: char| c == '-' || c == '.' || c == '_').to_lowercase();
+    for raw in
+        text.split(|c: char| !(c.is_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '%'))
+    {
+        let word = raw
+            .trim_matches(|c: char| c == '-' || c == '.' || c == '_')
+            .to_lowercase();
         if word.is_empty() {
             continue;
         }
-        let parts: Vec<&str> = word.split(['-', '.', '_']).filter(|p| !p.is_empty()).collect();
+        let parts: Vec<&str> = word
+            .split(['-', '.', '_'])
+            .filter(|p| !p.is_empty())
+            .collect();
         if parts.len() > 1 {
             out.push(word.clone());
             out.extend(parts.into_iter().map(str::to_owned));
@@ -73,7 +80,8 @@ pub fn tokenize(text: &str) -> Vec<String> {
 }
 
 const STOP_WORDS: [&str; 18] = [
-    "a", "an", "the", "of", "to", "in", "on", "is", "and", "or", "for", "with", "how", "what", "why", "does", "my", "vs",
+    "a", "an", "the", "of", "to", "in", "on", "is", "and", "or", "for", "with", "how", "what",
+    "why", "does", "my", "vs",
 ];
 
 impl SearchIndex {
@@ -89,7 +97,11 @@ impl SearchIndex {
             for (weight, text) in &fields {
                 for token in tokenize(text) {
                     length += 1;
-                    *postings.entry(token.clone()).or_default().entry(index).or_default() += u32::from(*weight);
+                    *postings
+                        .entry(token.clone())
+                        .or_default()
+                        .entry(index)
+                        .or_default() += u32::from(*weight);
                     if *weight >= 3 {
                         seq.push(token);
                     }
@@ -104,7 +116,10 @@ impl SearchIndex {
             lengths.iter().map(|l| f64::from(*l)).sum::<f64>() / lengths.len() as f64
         };
         Self {
-            postings: postings.into_iter().map(|(t, m)| (t, m.into_iter().collect())).collect(),
+            postings: postings
+                .into_iter()
+                .map(|(t, m)| (t, m.into_iter().collect()))
+                .collect(),
             documents,
             sequences,
             lengths,
@@ -128,7 +143,10 @@ impl SearchIndex {
             .collect();
         let allowed = |d: &IndexedDocument| {
             query.category.is_none_or(|c| c == d.category)
-                && query.vendor.as_ref().is_none_or(|v| d.vendor.as_deref() == Some(v.as_str()))
+                && query
+                    .vendor
+                    .as_ref()
+                    .is_none_or(|v| d.vendor.as_deref() == Some(v.as_str()))
                 && query.doc_type.as_ref().is_none_or(|t| &d.doc_type == t)
         };
         let n = self.documents.len() as f64;
@@ -148,7 +166,11 @@ impl SearchIndex {
                 matched.push((term, 1.0));
             }
             if term.chars().count() >= 3 {
-                for (key, _) in self.postings.range(term.clone()..).take_while(|(k, _)| k.starts_with(term.as_str())) {
+                for (key, _) in self
+                    .postings
+                    .range(term.clone()..)
+                    .take_while(|(k, _)| k.starts_with(term.as_str()))
+                {
                     if key != term {
                         matched.push((key, 0.6));
                     }
@@ -163,7 +185,8 @@ impl SearchIndex {
                         continue;
                     }
                     let tf = f64::from(*tf);
-                    let norm = 1.2 * (0.25 + 0.75 * f64::from(self.lengths[*doc]) / self.average_length);
+                    let norm =
+                        1.2 * (0.25 + 0.75 * f64::from(self.lengths[*doc]) / self.average_length);
                     *scores.entry(*doc).or_default() += factor * idf * (tf * 2.2) / (tf + norm);
                 }
             }
@@ -179,9 +202,19 @@ impl SearchIndex {
                 *score += bonus as f64 * 1.5;
             }
         }
-        let mut hits: Vec<(usize, f64)> = scores.into_iter().filter(|(_, s)| terms.is_empty() || *s > 0.0).collect();
-        hits.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| self.documents[a.0].id.cmp(&self.documents[b.0].id)));
-        let limit = if query.limit == 0 { 20 } else { query.limit.min(100) };
+        let mut hits: Vec<(usize, f64)> = scores
+            .into_iter()
+            .filter(|(_, s)| terms.is_empty() || *s > 0.0)
+            .collect();
+        hits.sort_by(|a, b| {
+            b.1.total_cmp(&a.1)
+                .then_with(|| self.documents[a.0].id.cmp(&self.documents[b.0].id))
+        });
+        let limit = if query.limit == 0 {
+            20
+        } else {
+            query.limit.min(100)
+        };
         hits.into_iter()
             .take(limit)
             .map(|(i, score)| {
@@ -205,7 +238,10 @@ fn snippet(doc: &IndexedDocument, terms: &[String]) -> String {
     for (_, text) in &doc.fields {
         for sentence in text.split(['.', '\n']) {
             let lower = sentence.to_lowercase();
-            if terms.iter().any(|t| t.len() >= 2 && lower.contains(t.as_str())) {
+            if terms
+                .iter()
+                .any(|t| t.len() >= 2 && lower.contains(t.as_str()))
+            {
                 let trimmed = sentence.trim().trim_start_matches(['-', '*', '#', ' ']);
                 if trimmed.len() > 12 {
                     let mut s: String = trimmed.chars().take(220).collect();
@@ -238,21 +274,46 @@ mod tests {
     }
     #[test]
     fn tokenizer_keeps_compounds_and_parts() {
-        assert_eq!(tokenize("4-20 mA S7-1500"), ["4-20", "4", "20", "ma", "s7-1500", "s7", "1500"]);
-        assert_eq!(tokenize("Modbus 40001 offset."), ["modbus", "40001", "offset"]);
+        assert_eq!(
+            tokenize("4-20 mA S7-1500"),
+            ["4-20", "4", "20", "ma", "s7-1500", "s7", "1500"]
+        );
+        assert_eq!(
+            tokenize("Modbus 40001 offset."),
+            ["modbus", "40001", "offset"]
+        );
     }
     #[test]
     fn ranking_is_deterministic_and_relevant() {
         let index = SearchIndex::build(vec![
-            doc("a", "4-20 mA current loop", "Live zero detects a broken loop at 0 mA."),
-            doc("b", "Modbus register addressing", "Holding register 40001 is protocol address 0."),
-            doc("c", "PROFINET device name", "The controller assigns IP addresses by device name."),
+            doc(
+                "a",
+                "4-20 mA current loop",
+                "Live zero detects a broken loop at 0 mA.",
+            ),
+            doc(
+                "b",
+                "Modbus register addressing",
+                "Holding register 40001 is protocol address 0.",
+            ),
+            doc(
+                "c",
+                "PROFINET device name",
+                "The controller assigns IP addresses by device name.",
+            ),
         ]);
-        let q = |t: &str| SearchQuery { text: t.into(), limit: 5, ..Default::default() };
+        let q = |t: &str| SearchQuery {
+            text: t.into(),
+            limit: 5,
+            ..Default::default()
+        };
         assert_eq!(index.search(&q("4-20 mA 0 value"))[0].id, "a");
         assert_eq!(index.search(&q("Modbus 40001 offset"))[0].id, "b");
         assert_eq!(index.search(&q("profin"))[0].id, "c", "prefix match");
-        assert_eq!(index.search(&q("PROFINET device name")), index.search(&q("PROFINET device name")));
+        assert_eq!(
+            index.search(&q("PROFINET device name")),
+            index.search(&q("PROFINET device name"))
+        );
         assert!(index.search(&q("zzzz")).is_empty());
     }
 }

@@ -68,7 +68,9 @@ pub(crate) fn binary(
         (And, PlcValue::Bool(a), PlcValue::Bool(b)) => Ok(PlcValue::Bool(a && b)),
         (Or, PlcValue::Bool(a), PlcValue::Bool(b)) => Ok(PlcValue::Bool(a || b)),
         (Xor, PlcValue::Bool(a), PlcValue::Bool(b)) => Ok(PlcValue::Bool(a ^ b)),
-        (Modulo, PlcValue::Int(_), PlcValue::Int(0)) => Err(OperationError::Fault(FaultKind::DivisionByZero)),
+        (Modulo, PlcValue::Int(_), PlcValue::Int(0)) => {
+            Err(OperationError::Fault(FaultKind::DivisionByZero))
+        }
         // i16::MIN MOD -1 is mathematically 0; checked_rem reports it as overflow.
         (Modulo, PlcValue::Int(_), PlcValue::Int(-1)) => Ok(PlcValue::Int(0)),
         (Modulo, PlcValue::Int(a), PlcValue::Int(b)) => int(a.checked_rem(b)),
@@ -91,7 +93,9 @@ pub(crate) fn binary(
 pub(crate) fn logical(op: BinaryOperator, values: &[PlcValue]) -> Result<PlcValue, OperationError> {
     let mut bits = Vec::with_capacity(values.len());
     for v in values {
-        let PlcValue::Bool(b) = v else { return Err(invalid_operands()) };
+        let PlcValue::Bool(b) = v else {
+            return Err(invalid_operands());
+        };
         bits.push(*b);
     }
     match op {
@@ -102,7 +106,10 @@ pub(crate) fn logical(op: BinaryOperator, values: &[PlcValue]) -> Result<PlcValu
     }
 }
 
-pub(crate) fn convert(function: ConversionFunction, operand: PlcValue) -> Result<PlcValue, OperationError> {
+pub(crate) fn convert(
+    function: ConversionFunction,
+    operand: PlcValue,
+) -> Result<PlcValue, OperationError> {
     let to_int = |v: f32| {
         if (f32::from(i16::MIN)..=f32::from(i16::MAX)).contains(&v) {
             Ok(PlcValue::Int(v as i16))
