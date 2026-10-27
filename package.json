@@ -31,7 +31,10 @@
     "ci:windows": "node scripts/ci.mjs windows",
     "ci:core": "node scripts/ci.mjs core",
     "ci:status": "node scripts/ci.mjs status",
-    "test:ci": "node --test tests/architecture/ci.test.mjs"
+    "test:ci": "node --test tests/architecture/ci.test.mjs",
+    "knowledge:validate": "node scripts/knowledge-pack.mjs validate",
+    "knowledge:zip": "node scripts/knowledge-pack.mjs zip",
+    "knowledge:verify": "node scripts/knowledge-pack.mjs verify"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

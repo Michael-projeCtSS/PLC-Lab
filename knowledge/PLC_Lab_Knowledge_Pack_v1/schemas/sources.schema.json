@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plclab.invalid/schemas/sources.schema.json",
+  "title": "PLC Lab provenance records",
+  "type": "object",
+  "properties": {
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "vendor": {
+            "$ref": "#/$defs/id"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "documentType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "documentNumber": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://"
+          },
+          "retrieved": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "appliesTo": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "notes": {
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "verification": {
+            "enum": [
+              "verified",
+              "unverified"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "documentType",
+          "url",
+          "retrieved",
+          "appliesTo",
+          "confidence",
+          "verification"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "sources"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "tag": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+    }
+  }
+}

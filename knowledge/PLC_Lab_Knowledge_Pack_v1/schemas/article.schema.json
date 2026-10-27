@@ -1,0 +1,486 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plclab.invalid/schemas/article.schema.json",
+  "title": "PLC Lab knowledge article",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "kind": {
+      "enum": [
+        "vendor",
+        "family",
+        "hardware",
+        "instruction",
+        "protocol",
+        "topic",
+        "troubleshooting",
+        "diagnostic"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vendor": {
+      "$ref": "#/$defs/id"
+    },
+    "family": {
+      "$ref": "#/$defs/id"
+    },
+    "protocol": {
+      "$ref": "#/$defs/id"
+    },
+    "tier": {
+      "enum": [
+        "A",
+        "B"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "heading": {
+            "type": "string",
+            "minLength": 1
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "heading",
+          "body"
+        ]
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "value"
+        ]
+      }
+    },
+    "fidelity": {
+      "$ref": "#/$defs/fidelity"
+    },
+    "instruction": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "type",
+              "description"
+            ]
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "type",
+              "description"
+            ]
+          }
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retentivity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timing": {
+          "type": "string",
+          "minLength": 1
+        },
+        "simulationSupport": {
+          "enum": [
+            "EXACT_BEHAVIORAL",
+            "APPROXIMATED_BEHAVIORAL",
+            "CONCEPTUAL",
+            "NOT_IMPLEMENTED"
+          ]
+        },
+        "equivalents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "notes": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "platform",
+              "name",
+              "notes"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "inputs",
+        "outputs",
+        "state",
+        "retentivity",
+        "timing",
+        "simulationSupport"
+      ]
+    },
+    "troubleshooting": {
+      "type": "object",
+      "properties": {
+        "faultId": {
+          "$ref": "#/$defs/id"
+        },
+        "area": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "effect": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symptoms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "diagnosticMethod": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "repair": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "simulatedIn": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "faultId",
+        "area",
+        "target",
+        "effect",
+        "symptoms",
+        "evidence",
+        "diagnosticMethod",
+        "repair",
+        "explanation"
+      ]
+    },
+    "simulation": {
+      "$ref": "#/$defs/profile"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "related": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "title",
+    "summary",
+    "sections",
+    "sources"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "tag": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$"
+    },
+    "fidelity": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "enum": [
+            "EXACT_BEHAVIORAL",
+            "APPROXIMATED_BEHAVIORAL",
+            "CONCEPTUAL",
+            "NOT_IMPLEMENTED"
+          ]
+        },
+        "modeled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "approximated": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "omitted": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "modeled",
+        "approximated",
+        "omitted"
+      ]
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "vendor": {
+          "$ref": "#/$defs/id"
+        },
+        "family": {
+          "$ref": "#/$defs/id"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tier": {
+          "enum": [
+            "a",
+            "b",
+            "generic"
+          ]
+        },
+        "fidelity": {
+          "$ref": "#/$defs/fidelity"
+        },
+        "addressing": {
+          "enum": [
+            "iecDirect",
+            "byteBit",
+            "moduleDefinedTags",
+            "linkedTerminal",
+            "octalDevices",
+            "unitPorts"
+          ]
+        },
+        "analog": {
+          "enum": [
+            "perTenThousand",
+            "s7Nominal27648",
+            "fullScale32767",
+            "engineeringUnits"
+          ]
+        },
+        "startup": {
+          "enum": [
+            "reinitializeNonRetentive"
+          ]
+        },
+        "products": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "module": {
+                "enum": [
+                  "cpu.compact",
+                  "cpu.modular",
+                  "ps.24vdc",
+                  "di8.24vdc.sink",
+                  "di16.24vdc.sink",
+                  "di8.24vdc.source",
+                  "do8.24vdc",
+                  "do16.24vdc",
+                  "ai4.ui",
+                  "ai8.ui",
+                  "ao2.ui"
+                ]
+              },
+              "product": {
+                "type": "string",
+                "minLength": 1
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "module",
+              "product"
+            ]
+          }
+        },
+        "terminology": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "generic": {
+                "type": "string",
+                "minLength": 1
+              },
+              "platform": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "generic",
+              "platform"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "vendor",
+        "family",
+        "displayName",
+        "tier",
+        "fidelity",
+        "addressing",
+        "analog",
+        "startup",
+        "products"
+      ]
+    }
+  }
+}

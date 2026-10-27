@@ -14,3 +14,6 @@ apps/desktop/src-tauri/icons/*
 .env
 .env.*
 !.env.example
+!releases/knowledge/
+!releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip
+!releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip.sha256
