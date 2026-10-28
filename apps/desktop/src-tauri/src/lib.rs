@@ -24,8 +24,24 @@ fn knowledge_roots(app_data: &std::path::Path) -> Vec<PathBuf> {
     roots
 }
 
+/// Bring the main window to the front (restoring it when minimized).
+fn focus_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
+        // One application state per user: a second launch (double-click, root launcher or
+        // BAT) must not load its own copy of progress and projects and later overwrite the
+        // first. It hands over to the running instance, which comes to the front, and exits.
+        // The second launch's arguments and working directory are untrusted and ignored.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            focus_main_window(app);
+        }))
         .setup(|app| {
             // PLC_LAB_DATA_DIR lets a test harness or a portable installation choose the
             // data folder; it is read once by the trusted host, never by student code.

@@ -36,6 +36,11 @@ const detached = values.launcher || values.bat;
 if (process.platform !== "win32")
   throw new Error("The native smoke test requires Windows and WebView2.");
 
+// Human-visible text that names the cause of ts.motor-wont-start.
+const LAB_GUIDE = "Stop button contact replaced by a normally open block";
+const LAB_REPAIR = "Fit a normally closed contact block to the Stop button";
+const LAB_ROOT_CAUSE = "received a normally open contact block";
+
 const SOLUTION = `PROGRAM Main
 VAR_INPUT
     StartPB : BOOL;
@@ -264,6 +269,26 @@ try {
     },
   );
 
+  await step("PLC and simulation controls explain themselves", async () => {
+    const plcGroup = page.getByRole("group", { name: "PLC mode switch" });
+    for (const [locator, text] of [
+      [plcGroup.getByRole("button", { name: "RUN" }), "PLC mode switch RUN"],
+      [plcGroup.getByRole("button", { name: "STOP" }), "keeps running"],
+      [
+        page.getByRole("button", { name: "Step", exact: true }),
+        "exactly one PLC cycle",
+      ],
+      [
+        page.getByRole("button", { name: "Stop", exact: true }),
+        "not the PLC STOP switch",
+      ],
+    ])
+      assert.match(
+        (await locator.getAttribute("title")) ?? "",
+        new RegExp(text),
+      );
+  });
+
   await step("operator input drives the simulated machine", async () => {
     await page.getByRole("tab", { name: "Process" }).click();
     const button = page.getByRole("button", {
@@ -317,9 +342,21 @@ try {
         .getByRole("button", { name: /Start Conveyor will not start/ })
         .click();
       await page.getByText("Fault report").waitFor({ timeout: 30_000 });
+      // Nothing visible names the cause before the diagnosis.
       const before = await page.locator("body").innerText();
-      assert.doesNotMatch(before, /contactTypeMismatch/);
-      assert.doesNotMatch(before, /What was wrong/);
+      for (const secret of [
+        "contactTypeMismatch",
+        LAB_GUIDE,
+        LAB_REPAIR,
+        LAB_ROOT_CAUSE,
+        "What was wrong",
+      ])
+        assert.ok(
+          !before.includes(secret),
+          `visible before diagnosis: ${secret}`,
+        );
+      await page.getByText("Helpful concepts").waitFor();
+      await page.getByText(/unlock the repair step/).waitFor();
       // Symptom: Start does nothing.
       await page.getByRole("button", { name: "Run", exact: true }).click();
       await page.getByRole("tab", { name: "Process" }).click();
@@ -341,11 +378,11 @@ try {
       await page
         .locator(".notice.success", { hasText: "(attempt 1)" })
         .waitFor({ timeout: 10_000 });
-      await page
-        .getByRole("button", {
-          name: "Fit a normally closed contact block to the Stop button",
-        })
-        .click();
+      assert.ok(
+        !(await page.locator("body").innerText()).includes(LAB_GUIDE),
+        "the guide stays hidden until verification",
+      );
+      await page.getByRole("button", { name: LAB_REPAIR }).click();
       await page
         .getByRole("button", { name: /^✓ Fit a normally closed contact block/ })
         .waitFor({ timeout: 10_000 });
@@ -362,6 +399,8 @@ try {
         "How to reason about it",
       ])
         await debrief.getByText(heading, { exact: true }).waitFor();
+      await debrief.getByText(new RegExp(LAB_ROOT_CAUSE)).waitFor();
+      await debrief.getByRole("button", { name: LAB_GUIDE }).waitFor();
       await page.screenshot({
         path: path.join(directory, "troubleshooting-debrief.png"),
       });
@@ -474,6 +513,68 @@ try {
 
   assert.deepEqual(pageErrors, [], "the web view reported script errors");
   await page.screenshot({ path: path.join(directory, "final.png") });
+
+  await step("a second launch activates the running instance", async () => {
+    const image = detached ? "PLC Lab Desktop.exe" : path.basename(target);
+    const second = values.bat
+      ? spawn(
+          process.env.ComSpec ?? "cmd.exe",
+          ["/d", "/s", "/c", `""${target}""`],
+          {
+            cwd: os.tmpdir(),
+            env: environment,
+            windowsHide: true,
+            windowsVerbatimArguments: true,
+            stdio: "ignore",
+          },
+        )
+      : spawn(target, [], {
+          cwd: os.tmpdir(),
+          env: environment,
+          windowsHide: true,
+          stdio: "ignore",
+        });
+    const code = await new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("the second launch did not exit")),
+        30_000,
+      );
+      second.once("error", reject);
+      second.once("exit", (c) => {
+        clearTimeout(timer);
+        resolve(c);
+      });
+    });
+    assert.equal(code, 0, "the second launch exits cleanly");
+    // A launcher or BAT exits at once; give a second application time to appear.
+    await delay(5_000);
+    const instances = (
+      spawnSync(
+        path.join(
+          process.env.SystemRoot ?? "C:/Windows",
+          "System32",
+          "tasklist.exe",
+        ),
+        ["/FO", "CSV", "/NH", "/FI", `IMAGENAME eq ${image}`],
+        { encoding: "utf8" },
+      ).stdout ?? ""
+    )
+      .split(/\r?\n/)
+      .filter((line) =>
+        line.toLowerCase().startsWith(`"${image.toLowerCase()}",`),
+      );
+    assert.equal(
+      instances.length,
+      1,
+      `${image} instances: ${instances.join(" | ")}`,
+    );
+    const info = await invoke("core_info", { contractVersion: 8 });
+    assert.equal(
+      info.ok.contractVersion,
+      8,
+      "the first instance still answers",
+    );
+  });
 
   await step("application exits on a close request", async () => {
     await browser.close().catch(() => undefined);

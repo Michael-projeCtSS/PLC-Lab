@@ -107,9 +107,24 @@ test("the IPC contract is DTO-only and the adapter has no host dependency", () =
   );
 });
 
-test("the host exposes no plugins and the web view gets only event permissions", () => {
+test("the host uses only the reviewed single-instance plugin and the web view gets only event permissions", () => {
   const manifest = read("apps/desktop/src-tauri/Cargo.toml");
-  assert.doesNotMatch(manifest, /tauri-plugin/);
+  // tauri-plugin-single-instance has no web-view commands: on Windows a named mutex and a
+  // message-only window, on Linux the session D-Bus. No other plugin is allowed.
+  assert.deepEqual(manifest.match(/tauri-plugin[\w-]*/g), [
+    "tauri-plugin-single-instance",
+  ]);
+  const host = read("apps/desktop/src-tauri/src/lib.rs");
+  assert.match(
+    host,
+    /tauri_plugin_single_instance::init\(\|app, _args, _cwd\|/,
+    "the second launch's arguments and working directory are ignored",
+  );
+  assert.ok(
+    host.indexOf(".plugin(tauri_plugin_single_instance") <
+      host.indexOf(".setup("),
+    "the single-instance plugin is registered before the application starts",
+  );
   const capability = JSON.parse(
     read("apps/desktop/src-tauri/capabilities/main.json"),
   );
@@ -196,4 +211,21 @@ test("release builds do not embed repository knowledge paths", () => {
     /#\[cfg\(debug_assertions\)\]/,
     "the repository pack root exists only in development builds",
   );
+});
+
+test("user-visible diagnostics use product terminology, not milestone names", () => {
+  const offenders = [];
+  for (const dir of ["languages/st/src", "crates"]) {
+    for (const file of files(dir, [".rs"])) {
+      if (file.split(path.sep).includes("tests")) continue;
+      read(file)
+        .split("\n")
+        .forEach((line, i) => {
+          const code = line.replace(/\/\/.*$/, "");
+          if (/"[^"]*\b(Alpha|M[0-9][AB]?|FOUNDATION)\b[^"]*"/.test(code))
+            offenders.push(`${file}:${i + 1}: ${line.trim()}`);
+        });
+    }
+  }
+  assert.deepEqual(offenders, []);
 });
