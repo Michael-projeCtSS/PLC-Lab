@@ -260,6 +260,7 @@ pub fn cause_effect(ce: &CauseEffect) -> CauseEffectDto {
         outcome: outcome(ce.header.outcome).into(),
         saw: effects(&ce.saw),
         decided: effects(&ce.decided),
+        applied: effects(&ce.applied),
         process: ce
             .process
             .iter()

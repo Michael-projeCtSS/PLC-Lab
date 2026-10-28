@@ -136,7 +136,7 @@ function Variables({ lab }: { lab: Lab }) {
             checked={detail}
             onChange={(e) => setDetail(e.target.checked)}
           />{" "}
-          Show all process images
+          Show I/O source and quality
         </label>
         <span className="spacer" />
         <span className="dim" style={{ fontSize: 11 }}>
@@ -154,26 +154,23 @@ function Variables({ lab }: { lab: Lab }) {
               <tr>
                 <th>Name</th>
                 <th>Kind</th>
-                <th title="Value the PLC used in the last scan (input image) or committed (outputs and variables)">
-                  PLC value
+                <th title="The input image the PLC used in its last scan">
+                  Scan input
                 </th>
-                {detail && (
-                  <th title="Input sampled at the end of the cycle for the next scan">
-                    Next input
-                  </th>
-                )}
-                <th>I/O</th>
-                <th>Quality</th>
+                <th title="The value the last scan committed (outputs, variables, block outputs)">
+                  Committed
+                </th>
+                <th title="The input sampled at the end of the cycle, used by the next scan">
+                  Next input
+                </th>
+                {detail && <th>I/O</th>}
+                {detail && <th>Quality</th>}
                 <th>Force</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => {
-                const value =
-                  r.kind === "PLC_INPUT"
-                    ? (r.scanValue ?? r.staged)
-                    : r.committed;
                 const s = signals.get(r.signal);
                 const watched = s ? lab.watch.includes(s.path) : false;
                 return (
@@ -188,22 +185,34 @@ function Variables({ lab }: { lab: Lab }) {
                             ? "block"
                             : "local"}
                     </td>
-                    <td className={valueClass(value)}>{formatValue(value)}</td>
+                    <td className={valueClass(r.scanValue)}>
+                      {r.kind === "PLC_INPUT" ? formatValue(r.scanValue) : ""}
+                    </td>
+                    <td className={valueClass(r.committed)}>
+                      {r.kind === "PLC_INPUT" ? "" : formatValue(r.committed)}
+                    </td>
+                    <td
+                      className={`${valueClass(r.staged)}${
+                        r.kind === "PLC_INPUT" &&
+                        JSON.stringify(r.staged) !== JSON.stringify(r.scanValue)
+                          ? " changed"
+                          : ""
+                      }`}
+                    >
+                      {r.kind === "PLC_INPUT" ? formatValue(r.staged) : ""}
+                    </td>
+                    {detail && <td className="mono dim">{r.source ?? ""}</td>}
                     {detail && (
-                      <td className={valueClass(r.staged)}>
-                        {r.kind === "PLC_INPUT" ? formatValue(r.staged) : ""}
+                      <td>
+                        {r.quality && r.quality !== "GOOD" ? (
+                          <Badge kind="bad">
+                            {r.quality.replaceAll("_", " ")}
+                          </Badge>
+                        ) : (
+                          ""
+                        )}
                       </td>
                     )}
-                    <td className="mono dim">{r.source ?? ""}</td>
-                    <td>
-                      {r.quality && r.quality !== "GOOD" ? (
-                        <Badge kind="bad">
-                          {r.quality.replaceAll("_", " ")}
-                        </Badge>
-                      ) : (
-                        ""
-                      )}
-                    </td>
                     <td>
                       <ForceCell
                         lab={lab}

@@ -241,7 +241,11 @@ export type CauseEffectDto = { cycle: ExactU64, startUs: ExactU64, endUs: ExactU
 /**
  * "SCANNED" | "FAULTED" | "NOT_SCANNED_STOP" | "NOT_SCANNED_FAULT"
  */
-outcome: "SCANNED" | "FAULTED" | "NOT_SCANNED_STOP" | "NOT_SCANNED_FAULT", saw: Array<EffectDto>, decided: Array<EffectDto>, process: Array<ChangeDto>, next: Array<EffectDto>, fault: DiagnosticDto | null, };
+outcome: "SCANNED" | "FAULTED" | "NOT_SCANNED_STOP" | "NOT_SCANNED_FAULT", saw: Array<EffectDto>, decided: Array<EffectDto>, 
+/**
+ * Commands as received by field devices (after output modules and field power).
+ */
+applied: Array<EffectDto>, process: Array<ChangeDto>, next: Array<EffectDto>, fault: DiagnosticDto | null, };
 
 export type AlarmDto = { component: string, kind: string, text: string, };
 
@@ -379,10 +383,12 @@ export type CheckRequest = { contractVersion: number, workspaceId: ExactU64, sou
 
 export type CriterionResultDto = { id: string, title: string, points: number, earned: number, passed: boolean, feedback: string, detail: string, };
 
+export type DebriefDto = { rootCause: string, evidence: Array<string>, repair: string, reasoning: string, };
+
 export type GradeReportDto = { 
 /**
  * "GRADED" | "COMPILE_FAILED" | "INTERFACE_MISMATCH" | "BINDING_FAILED"
  */
-outcome: "GRADED" | "COMPILE_FAILED" | "INTERFACE_MISMATCH" | "BINDING_FAILED", score: number, maxScore: number, passed: boolean, criteria: Array<CriterionResultDto>, diagnostics: Array<DiagnosticDto>, problems: Array<string>, };
+outcome: "GRADED" | "COMPILE_FAILED" | "INTERFACE_MISMATCH" | "BINDING_FAILED", score: number, maxScore: number, passed: boolean, criteria: Array<CriterionResultDto>, diagnostics: Array<DiagnosticDto>, problems: Array<string>, debrief: DebriefDto | null, };
 
 export type ExecutionWakeDto = { contractVersion: number, workspaceId: ExactU64, runId: ExactU64, cycle: ExactU64, };

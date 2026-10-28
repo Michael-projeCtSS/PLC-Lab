@@ -33,6 +33,9 @@ pub struct CauseEffect {
     pub header: CycleHeader,
     pub saw: Vec<Effect>,
     pub decided: Vec<Effect>,
+    /// Commands as received by the field devices during the cycle (after output modules,
+    /// field power and forces): what the actuators were actually told to do.
+    pub applied: Vec<Effect>,
     pub process: Vec<Change>,
     pub next: Vec<Effect>,
     pub fault: Option<plc_types::diagnostics::Diagnostic>,
@@ -108,6 +111,9 @@ pub fn cause_effect(
                 kind(s),
                 Some(SignalKind::PlcOutput | SignalKind::PlcLocal | SignalKind::BlockOutput)
             )
+        }),
+        applied: effects(&current.applied, previous.map(|p| &p.applied), |s| {
+            kind(s) == Some(SignalKind::Physical)
         }),
         process,
         next,

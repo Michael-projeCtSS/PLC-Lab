@@ -286,6 +286,19 @@ pub struct TroubleshootingSetup {
     pub verification: Vec<Identifier>,
     #[serde(default)]
     pub knowledge_refs: Vec<Identifier>,
+    /// Explanation revealed only after the repaired system passes verification.
+    #[serde(default)]
+    pub debrief: Option<Debrief>,
+}
+
+/// What a competent investigation should have found, shown after completion.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct Debrief {
+    pub root_cause: String,
+    pub evidence: Vec<String>,
+    pub repair: String,
+    pub reasoning: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

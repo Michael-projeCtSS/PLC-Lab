@@ -167,6 +167,8 @@ it("shows the causal chain of one cycle from backend data", async () => {
   const ce = await screen.findByLabelText("Cycle 11");
   expect(within(ce).getByText(/PLC read/)).toBeInTheDocument();
   expect(within(ce).getByText(/PLC logic result/)).toBeInTheDocument();
+  expect(within(ce).getByText(/Output command/)).toBeInTheDocument();
+  expect(within(ce).getByText(/Process/)).toBeInTheDocument();
   expect(within(ce).getByText(/Next PLC input/)).toBeInTheDocument();
   expect(within(ce).getByText("StartPB")).toBeInTheDocument();
   expect(within(ce).getByText("FALSE → TRUE")).toBeInTheDocument();

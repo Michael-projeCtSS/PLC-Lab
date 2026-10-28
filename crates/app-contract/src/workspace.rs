@@ -165,6 +165,8 @@ pub struct CauseEffectDto {
     pub outcome: String,
     pub saw: Vec<EffectDto>,
     pub decided: Vec<EffectDto>,
+    /// Commands as received by field devices (after output modules and field power).
+    pub applied: Vec<EffectDto>,
     pub process: Vec<ChangeDto>,
     pub next: Vec<EffectDto>,
     pub fault: Option<DiagnosticDto>,
@@ -614,6 +616,15 @@ pub struct CriterionResultDto {
     pub feedback: String,
     pub detail: String,
 }
+/// Troubleshooting explanation, present only after a passed verification.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DebriefDto {
+    pub root_cause: String,
+    pub evidence: Vec<String>,
+    pub repair: String,
+    pub reasoning: String,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GradeReportDto {
@@ -626,6 +637,7 @@ pub struct GradeReportDto {
     pub criteria: Vec<CriterionResultDto>,
     pub diagnostics: Vec<DiagnosticDto>,
     pub problems: Vec<String>,
+    pub debrief: Option<DebriefDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -647,6 +659,6 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticEntryDto, ModuleTypeDto,
         HardwareDto, ScanViewDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,
-        CriterionResultDto, GradeReportDto, ExecutionWakeDto
+        CriterionResultDto, DebriefDto, GradeReportDto, ExecutionWakeDto
     )
 }

@@ -446,6 +446,10 @@ fn troubleshooting_workflow_requires_evidence_diagnosis_repair_and_verification(
     assert_eq!(before.outcome, "GRADED");
     assert!(!before.passed);
     assert!(
+        before.debrief.is_none(),
+        "the debrief is withheld until the lab passes"
+    );
+    assert!(
         before
             .criteria
             .iter()
@@ -483,6 +487,12 @@ fn troubleshooting_workflow_requires_evidence_diagnosis_repair_and_verification(
         })
         .unwrap();
     assert!(after.passed, "{:?}", after.criteria);
+    let debrief = after
+        .debrief
+        .as_ref()
+        .expect("a passed lab shows its debrief");
+    assert!(debrief.root_cause.contains("normally open"));
+    assert!(!debrief.evidence.is_empty() && !debrief.reasoning.is_empty());
     assert_eq!(
         after.score,
         15 + 20 + 50,

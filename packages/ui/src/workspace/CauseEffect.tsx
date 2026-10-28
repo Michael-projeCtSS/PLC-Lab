@@ -1,7 +1,8 @@
 /**
  * Causal inspector for one PLC cycle, rendered from the backend observation:
- * PLC read (scan input image) → logic result (committed values) → process response →
- * inputs staged for the next scan. Nothing is recomputed here.
+ * PLC read (scan input image) → logic result (committed values) → output command as
+ * received by the field devices → process response → inputs staged for the next scan.
+ * Nothing is recomputed here.
  */
 import type { CauseEffectDto, EffectDto, SignalDto } from "@plc-lab/ipc";
 import { formatValue, seconds, valueClass } from "../format";
@@ -91,10 +92,21 @@ export function CauseEffect({
           />
         )}
       </div>
-      <div className="ce-arrow">▼ outputs drive the machine for one cycle</div>
+      <div className="ce-arrow">▼ output modules switch the field devices</div>
       <div className="ce-step">
         <h5>
-          3 · Process <span>physical change</span>
+          3 · Output command <span>received by the devices</span>
+        </h5>
+        <Items
+          items={ce.applied}
+          signals={map}
+          empty="No actuator in this machine."
+        />
+      </div>
+      <div className="ce-arrow">▼ the machine runs for one cycle</div>
+      <div className="ce-step">
+        <h5>
+          4 · Process <span>physical change</span>
         </h5>
         {ce.process.length === 0 ? (
           <div className="dim">No physical change in this cycle.</div>
@@ -116,7 +128,7 @@ export function CauseEffect({
       <div className="ce-arrow">▼ sensors sampled at the end of the cycle</div>
       <div className="ce-step">
         <h5>
-          4 · Next PLC input <span>staged for the next scan</span>
+          5 · Next PLC input <span>staged for the next scan</span>
         </h5>
         <Items items={ce.next} signals={map} empty="No inputs declared." />
       </div>

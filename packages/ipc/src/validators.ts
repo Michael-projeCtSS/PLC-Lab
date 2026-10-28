@@ -425,6 +425,7 @@ export const causeEffect = obj<G.CauseEffectDto>({
   ),
   saw: arr(effect),
   decided: arr(effect),
+  applied: arr(effect),
   process: arr(
     obj<G.ChangeDto>({
       signal: u32,
@@ -730,6 +731,14 @@ export const gradeReport = obj<G.GradeReportDto>({
   ),
   diagnostics: arr(diagnostic),
   problems: arr(str),
+  debrief: nullable(
+    obj<G.DebriefDto>({
+      rootCause: str,
+      evidence: arr(str),
+      repair: str,
+      reasoning: str,
+    }),
+  ),
 });
 export const executionWake = obj<G.ExecutionWakeDto>({
   contractVersion: int(8, 8),

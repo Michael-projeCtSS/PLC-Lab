@@ -823,6 +823,18 @@ impl DesktopApp {
                         }
                         _ => report,
                     };
+                    // The explanation is revealed only once the repaired system passes.
+                    let debrief = exercise
+                        .troubleshooting
+                        .as_ref()
+                        .and_then(|t| t.debrief.as_ref())
+                        .filter(|_| report.passed)
+                        .map(|d| DebriefDto {
+                            root_cause: d.root_cause.clone(),
+                            evidence: d.evidence.clone(),
+                            repair: d.repair.clone(),
+                            reasoning: d.reasoning.clone(),
+                        });
                     GradeReportDto {
                         outcome: "GRADED".into(),
                         score: report.score,
@@ -843,6 +855,7 @@ impl DesktopApp {
                             .collect(),
                         diagnostics: Vec::new(),
                         problems: Vec::new(),
+                        debrief,
                     }
                 }
                 AssessmentOutcome::CompileFailed(d) => not_graded(
@@ -908,5 +921,6 @@ fn not_graded(
         criteria: Vec::new(),
         diagnostics,
         problems,
+        debrief: None,
     }
 }

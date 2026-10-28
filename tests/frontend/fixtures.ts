@@ -61,6 +61,9 @@ export function frame(overrides: Partial<LiveFrameDto> = {}): LiveFrameDto {
       decided: [
         { signal: 11, value: { type: "BOOL", value: true }, changed: true },
       ],
+      applied: [
+        { signal: 21, value: { type: "BOOL", value: true }, changed: true },
+      ],
       process: [
         {
           signal: 20,
@@ -209,6 +212,15 @@ export function workspace(overrides: Partial<WorkspaceDto> = {}): WorkspaceDto {
         path: "plc.MotorFeedback",
         label: "MotorFeedback",
         kind: "PLC_INPUT",
+        valueType: "BOOL",
+        unit: null,
+        active: true,
+      },
+      {
+        id: 21,
+        path: "process.motor.command",
+        label: "Conveyor motor M1 command",
+        kind: "PHYSICAL",
         valueType: "BOOL",
         unit: null,
         active: true,

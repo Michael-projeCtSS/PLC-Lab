@@ -115,6 +115,26 @@ function Report({ report }: { report: GradeReportDto | null }) {
               </div>
             </div>
           ))}
+          {report.debrief && (
+            <div
+              className="callout task"
+              aria-label="Debrief"
+              style={{ marginTop: 10 }}
+            >
+              <h4>What was wrong</h4>
+              <p>{report.debrief.rootCause}</p>
+              <h4>Evidence that pointed to it</h4>
+              <ul style={{ paddingLeft: 18, margin: "4px 0" }}>
+                {report.debrief.evidence.map((e) => (
+                  <li key={e}>{e}</li>
+                ))}
+              </ul>
+              <h4>Correct repair</h4>
+              <p>{report.debrief.repair}</p>
+              <h4>How to reason about it</h4>
+              <p style={{ margin: 0 }}>{report.debrief.reasoning}</p>
+            </div>
+          )}
         </>
       ) : (
         <div className="notice error">
