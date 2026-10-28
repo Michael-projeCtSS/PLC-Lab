@@ -13,20 +13,26 @@ React user interface only displays authoritative state and sends operator action
 
 ## Start PLC Lab
 
-| What you want                       | Do this                                                              |
-| ----------------------------------- | -------------------------------------------------------------------- |
-| Use the application                 | Double-click **`PLC Lab.exe`** (or `RUN_PLC_LAB.bat`) in this folder |
-| Build the release from source first | Double-click `BUILD_PLC_LAB_RELEASE.bat`, then start `PLC Lab.exe`   |
-| Develop with hot reload             | `RUN_PLC_LAB_DEV.bat` or `npm run dev`                               |
-| Run every check                     | `RUN_ALL_CHECKS.bat` or `npm run validate`                           |
+| What you want                       | Do this                                                                |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| Use the application                 | Double-click **`Launcher.exe`** in this folder, then **Start PLC Lab** |
+| Open a project file                 | **Open Project...** in the launcher, or `Launcher.exe "<file.plclab>"` |
+| Build the release from source first | Double-click `BUILD_PLC_LAB_RELEASE.bat`, then start `Launcher.exe`    |
+| Develop with hot reload             | `RUN_PLC_LAB_DEV.bat` or `npm run dev`                                 |
+| Run every check                     | `RUN_ALL_CHECKS.bat` or `npm run validate`                             |
 
-`PLC Lab.exe` is a small launcher that starts the staged release in `releases/current/`.
-It is created by the release build and is not stored in Git. It finds the release next to
-itself, so the folder may be moved or copied anywhere, including paths with spaces, as
-long as `PLC Lab.exe` and `releases/current/` stay together. Only one PLC Lab window runs at a time: starting it again brings the open window to the front. Requirements: Windows 10/11
-x64 with the Microsoft Edge WebView2 Runtime (preinstalled on current Windows). The
-executables are not code-signed; Windows Smart App Control or SmartScreen may refuse to
-start a locally built copy. See [build and run](docs/BUILD_AND_RUN.md).
+`Launcher.exe` is a small native window that shows whether the installation is ready
+(application, knowledge pack, WebView2, project folder), the most recent project and a
+diagnostics report you can copy. It starts the staged release in `releases/current/` and
+closes. It is created by the release build and is not stored in Git. It finds the release
+next to itself, so the folder may be moved or copied anywhere, including paths with
+spaces, as long as `Launcher.exe` and `releases/current/` stay together. `PLC Lab.exe`
+and `RUN_PLC_LAB.bat` start the release directly. Only one PLC Lab window runs at a
+time: starting it again, or opening a project, brings the open window to the front.
+Requirements: Windows 10/11 x64 with the Microsoft Edge WebView2 Runtime (preinstalled on
+current Windows). The executables are not code-signed; Windows Smart App Control or
+SmartScreen may refuse to start a locally built copy. See
+[build and run](docs/BUILD_AND_RUN.md).
 
 ## How to learn with it
 

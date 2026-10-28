@@ -5,7 +5,8 @@ while testing; it explains what runs and preserves errors.
 
 ## Start the release
 
-Double-click **PLC Lab.exe** (or **RUN_PLC_LAB.bat**) in the repository root. Both start
+Double-click **Launcher.exe** in the repository root and press **Start PLC Lab**
+(**PLC Lab.exe** and **RUN_PLC_LAB.bat** start the release directly). All of them start
 `releases/current/PLC Lab Desktop.exe`, the last successfully staged release, which may be
 older than the current source. If no release exists:
 

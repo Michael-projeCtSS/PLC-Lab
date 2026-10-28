@@ -1,6 +1,7 @@
 # ADR-0025: Portable release staging and root launcher
 
-- Status: Accepted for the product rebuild
+- Status: Accepted for the product rebuild; amended by ADR-0026 (`Launcher.exe` is the
+  primary entry point, native message boxes through `winsafe`)
 - Date: 2026-10-27
 
 ## Context

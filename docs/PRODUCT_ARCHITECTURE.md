@@ -44,7 +44,7 @@ Tauri host (commands, pacing, trusted paths) ─> packages/ipc (strict validator
 | `app-contract`       | IPC v8 transport DTOs only (serde, ts-rs); generates TypeScript declarations   |
 | `desktop-session`    | Application adapter: use cases over engine, library and projects               |
 | `plc-lab-desktop`    | Tauri host: lifecycle, trusted paths, command adapters, pacing loop            |
-| `plc-lab-launcher`   | Root `PLC Lab.exe` that starts the staged release                              |
+| `plc-lab-launcher`   | Root `Launcher.exe` window and the `PLC Lab.exe` alias (ADR-0026)              |
 
 Dependency rules are enforced by `tests/architecture/boundaries.test.mjs` against the real
 `cargo metadata` graph: semantic crates never depend on the contract, adapter, host or

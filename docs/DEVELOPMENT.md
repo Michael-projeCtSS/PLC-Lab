@@ -13,7 +13,7 @@
 
 ```
 apps/desktop/            Vite entry and Tauri host (src-tauri)
-apps/launcher/           root PLC Lab.exe launcher
+apps/launcher/           root Launcher.exe window and PLC Lab.exe alias
 crates/                  Rust core (see docs/PRODUCT_ARCHITECTURE.md)
 languages/st/            Structured Text frontend
 packages/ipc/            generated contract, strict validators, typed client
