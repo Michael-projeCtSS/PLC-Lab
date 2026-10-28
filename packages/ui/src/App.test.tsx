@@ -84,13 +84,10 @@ beforeEach(() => {
     troubleshooting: [],
   });
   fake.search.mockResolvedValue([]);
-  fake.buildAndLoad.mockResolvedValue({
-    outcome: "LOADED",
-    diagnostics: [],
-    bindingIssues: [],
-    message: "Program Main loaded into the PLC.",
-    signals: workspace().signals,
-    frame: frame({
+  // Like the real backend, every frame read after a successful load reports the loaded,
+  // running simulation; the UI re-reads the frame after each use case.
+  fake.buildAndLoad.mockImplementation(() => {
+    const running = frame({
       simulation: {
         state: "RUNNING",
         speedPercent: 100,
@@ -98,7 +95,16 @@ beforeEach(() => {
         cycleUs: "100000",
         failure: null,
       },
-    }),
+    });
+    fake.frame.mockResolvedValue(running);
+    return Promise.resolve({
+      outcome: "LOADED",
+      diagnostics: [],
+      bindingIssues: [],
+      message: "Program Main loaded into the PLC.",
+      signals: workspace().signals,
+      frame: running,
+    });
   });
 });
 
