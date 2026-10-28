@@ -602,7 +602,7 @@ impl LabSession {
             .filter_map(|(c, s)| self.station.output(*c).map(|v| (*s, SignalValue::Bool(v))))
             .collect();
         for (index, name, signal) in &self.physical {
-            if matches!(*name, "command" | "lit")
+            if self.scene.is_commanded_quantity(*index, name)
                 && let Some(q) = self.scene.quantity(*index, name)
             {
                 layer.push((*signal, quantity_value(q)));

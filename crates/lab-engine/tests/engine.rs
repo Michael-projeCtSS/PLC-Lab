@@ -477,3 +477,70 @@ fn world_reset_restores_the_plant_and_keeps_program_and_signal_ids() {
         SignalValue::Bool(false)
     );
 }
+
+/// Components whose identifiers look like quantity names: the applied layer must follow
+/// the kinds' port metadata, not any name.
+const MISLEADING: &str = r#"{
+  "format": "plclab-scene", "schemaVersion": 1, "id": "test.misleading-names", "revision": 1,
+  "title": "Names", "summary": "Identifiers that look like quantities",
+  "components": [
+    {"id": "command", "label": "Lamp called command", "kind": {"type": "pilotLamp", "color": "green"}},
+    {"id": "lit", "label": "Starter called lit", "kind": {"type": "motorStarter", "pickupMs": 30, "runUpMs": 500, "ratedCurrentMa": 2000}},
+    {"id": "running", "label": "Drive called running", "kind": {"type": "variableFrequencyDrive", "rampMs": 1000, "ratedCurrentMa": 3000}}
+  ],
+  "installation": {"cpu": "cpu.compact", "modules": [
+      {"position": {"rack": 0, "slot": 2}, "module": "do8.24vdc"}
+    ], "wiring": [
+      {"channel": {"rack": 0, "slot": 2, "channel": 0}, "component": "command", "port": "coil"},
+      {"channel": {"rack": 0, "slot": 2, "channel": 1}, "component": "lit", "port": "coil"},
+      {"channel": {"rack": 0, "slot": 2, "channel": 2}, "component": "running", "port": "run"}
+    ]},
+  "referenceStation": {"name": "PLC_1", "cpu": "cpu.compact", "modules": [
+      {"position": {"rack": 0, "slot": 2}, "module": "do8.24vdc", "startAddress": 0}
+    ], "ioMap": [
+      {"channel": {"rack": 0, "slot": 2, "channel": 0}, "tag": "Lamp"},
+      {"channel": {"rack": 0, "slot": 2, "channel": 1}, "tag": "Coil"},
+      {"channel": {"rack": 0, "slot": 2, "channel": 2}, "tag": "Run"}
+    ]},
+  "interface": [],
+  "layout": []
+}"#;
+
+#[test]
+fn applied_layer_follows_port_metadata_not_names() {
+    let mut s = session(MISLEADING);
+    s.download(
+        "PROGRAM Main VAR_OUTPUT Lamp : BOOL; Coil : BOOL; Run : BOOL; END_VAR Lamp := TRUE; Coil := TRUE; Run := TRUE; END_PROGRAM",
+        1,
+        None,
+    )
+    .unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    let o = s.step_cycle().unwrap();
+    let applied: Vec<String> = o
+        .applied
+        .iter()
+        .filter_map(|(id, _)| s.signals().get(*id).map(|d| d.path.clone()))
+        .filter(|p| p.starts_with("process."))
+        .collect();
+    // One commanded quantity per wired sink, chosen by component kind.
+    assert_eq!(
+        applied,
+        [
+            "process.command.lit",
+            "process.lit.command",
+            "process.running.command"
+        ]
+    );
+    for (path, expected) in [
+        ("process.command.lit", true),
+        ("process.lit.command", true),
+        ("process.running.command", true),
+    ] {
+        assert_eq!(
+            value(&o.applied, signal(&s, path)),
+            SignalValue::Bool(expected),
+            "{path}"
+        );
+    }
+}

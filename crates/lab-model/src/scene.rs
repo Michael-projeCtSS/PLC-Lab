@@ -215,6 +215,40 @@ impl ComponentKind {
             Self::LevelTransmitter { .. } => vec![("signal", PortKind::AnalogSource)],
         }
     }
+    /// For a digital sink port, the quantity that shows the command the device received
+    /// (what it was told to do, as opposed to what it then did). `None` for other ports.
+    pub fn command_quantity(&self, port: &str) -> Option<&'static str> {
+        let sink = self
+            .ports()
+            .into_iter()
+            .any(|(name, kind)| name == port && kind == PortKind::DigitalSink);
+        if !sink {
+            return None;
+        }
+        Some(match self {
+            Self::PilotLamp { .. } => "lit",
+            Self::MotorStarter { .. }
+            | Self::OnOffValve { .. }
+            | Self::Pump { .. }
+            | Self::VariableFrequencyDrive { .. } => "command",
+            Self::PushButton { .. }
+            | Self::SelectorSwitch { .. }
+            | Self::Tank { .. }
+            | Self::LevelSwitch { .. }
+            | Self::LevelTransmitter { .. }
+            | Self::PresenceSensor { .. } => return None,
+        })
+    }
+    /// Quantities that show received commands, one per digital sink port.
+    pub fn commanded_quantities(&self) -> Vec<&'static str> {
+        let mut out: Vec<&'static str> = self
+            .ports()
+            .into_iter()
+            .filter_map(|(port, _)| self.command_quantity(port))
+            .collect();
+        out.dedup();
+        out
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

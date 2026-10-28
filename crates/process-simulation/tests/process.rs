@@ -282,3 +282,65 @@ fn drive_ramps_on_its_run_terminal_and_ignores_it_in_local_control() {
     s.set_coil(drive, "run", false).unwrap();
     assert_eq!(q(&s, "drive", "running"), Quantity::Bool(false));
 }
+
+#[test]
+fn commanded_quantities_come_from_sink_port_direction() {
+    // Every component kind of this scene plus a tank for the level devices.
+    let scene: SceneDefinition = serde_json::from_str(
+        r#"{
+      "format": "plclab-scene", "schemaVersion": 1, "id": "test.kinds", "revision": 1,
+      "title": "Kinds", "summary": "One of each",
+      "components": [
+        {"id": "pb", "label": "PB", "kind": {"type": "pushButton", "contact": "normallyOpen"}},
+        {"id": "sel", "label": "Sel", "kind": {"type": "selectorSwitch", "positions": ["A", "B"]}},
+        {"id": "lamp", "label": "Lamp", "kind": {"type": "pilotLamp", "color": "green"}},
+        {"id": "starter", "label": "Starter", "kind": {"type": "motorStarter", "pickupMs": 30, "runUpMs": 500, "ratedCurrentMa": 2000}},
+        {"id": "valve", "label": "Valve", "kind": {"type": "onOffValve", "travelMs": 500, "flowMlPerS": 100}},
+        {"id": "pump", "label": "Pump", "kind": {"type": "pump", "flowMlPerS": 50}},
+        {"id": "tank", "label": "Tank", "kind": {"type": "tank", "capacityMl": 1000, "initialMl": 100}},
+        {"id": "ls", "label": "LS", "kind": {"type": "levelSwitch", "tank": "tank", "switchLevelMl": 500, "contact": "normallyOpen", "output": "pnp"}},
+        {"id": "lt", "label": "LT", "kind": {"type": "levelTransmitter", "tank": "tank", "rangeMinMl": 0, "rangeMaxMl": 1000, "signal": "current4To20mA"}},
+        {"id": "prox", "label": "Prox", "kind": {"type": "presenceSensor", "output": "pnp", "contact": "normallyOpen"}},
+        {"id": "drive", "label": "Drive", "kind": {"type": "variableFrequencyDrive", "rampMs": 1000, "ratedCurrentMa": 3000}}
+      ],
+      "installation": {"cpu": "cpu.compact", "modules": [], "wiring": []},
+      "referenceStation": {"name": "PLC_1", "cpu": "cpu.compact", "modules": [], "ioMap": []}
+    }"#,
+    )
+    .unwrap();
+    let runtime = SceneRuntime::new(&scene, 1).unwrap();
+    for (index, component) in scene.components.iter().enumerate() {
+        let quantities: Vec<&str> = runtime
+            .quantities(index)
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect();
+        for (port, kind) in component.kind.ports() {
+            let sink = kind == lab_model::scene::PortKind::DigitalSink;
+            let commanded = component.kind.command_quantity(port);
+            assert_eq!(commanded.is_some(), sink, "{}.{port}", component.id);
+            if let Some(q) = commanded {
+                assert!(
+                    quantities.contains(&q),
+                    "{}: {q} is not a runtime quantity",
+                    component.id
+                );
+                assert!(runtime.is_commanded_quantity(index, q));
+            }
+        }
+        // Quantities that are not the command of a sink never count as commands.
+        for q in &quantities {
+            let declared = component.kind.commanded_quantities().contains(q);
+            assert_eq!(
+                runtime.is_commanded_quantity(index, q),
+                declared,
+                "{}.{q}",
+                component.id
+            );
+        }
+    }
+    let drive = 10;
+    assert!(!runtime.is_commanded_quantity(drive, "running"));
+    assert!(!runtime.is_commanded_quantity(drive, "remote"));
+    assert!(runtime.is_commanded_quantity(drive, "command"));
+}

@@ -228,6 +228,7 @@ pub struct SceneRuntime {
     ids: Vec<Identifier>,
     labels: Vec<String>,
     sinks: Vec<Vec<&'static str>>,
+    commanded: Vec<Vec<&'static str>>,
     index: BTreeMap<Identifier, usize>,
     states: Vec<State>,
     faults: Vec<Faults>,
@@ -383,6 +384,11 @@ impl SceneRuntime {
                         .collect()
                 })
                 .collect(),
+            commanded: scene
+                .components
+                .iter()
+                .map(|c| c.kind.commanded_quantities())
+                .collect(),
             index,
             faults: vec![Faults::default(); states.len()],
             states,
@@ -404,6 +410,13 @@ impl SceneRuntime {
     }
     pub fn component_label(&self, index: usize) -> Option<&str> {
         self.labels.get(index).map(String::as_str)
+    }
+    /// Whether `quantity` of the component shows a command it received (from its kind's
+    /// port metadata, never from names chosen in a scene).
+    pub fn is_commanded_quantity(&self, index: usize, quantity: &str) -> bool {
+        self.commanded
+            .get(index)
+            .is_some_and(|names| names.contains(&quantity))
     }
     /// Whether `port` of the component is a digital sink (coil, solenoid, run terminal).
     pub fn is_digital_sink(&self, index: usize, port: &str) -> bool {
