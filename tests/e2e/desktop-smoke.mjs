@@ -18,6 +18,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright-core";
+import { taskListContainsApplication } from "../../scripts/human-test.mjs";
 import { root } from "../../scripts/toolchain.mjs";
 
 const { values } = parseArgs({
@@ -473,6 +474,43 @@ try {
 
   assert.deepEqual(pageErrors, [], "the web view reported script errors");
   await page.screenshot({ path: path.join(directory, "final.png") });
+
+  await step("application exits on a close request", async () => {
+    await browser.close().catch(() => undefined);
+    browser = undefined;
+    const image = detached ? "PLC Lab Desktop.exe" : path.basename(target);
+    const tasklist = path.join(
+      process.env.SystemRoot ?? "C:/Windows",
+      "System32",
+      "tasklist.exe",
+    );
+    const running = () =>
+      taskListContainsApplication(
+        spawnSync(
+          tasklist,
+          ["/FO", "CSV", "/NH", "/FI", `IMAGENAME eq ${image}`],
+          {
+            encoding: "utf8",
+          },
+        ).stdout ?? "",
+        image,
+      );
+    assert.ok(running(), `${image} is not running before the close request`);
+    // Without /F, taskkill posts WM_CLOSE to the window: the same request as its close button.
+    spawnSync("taskkill", ["/IM", image], { stdio: "ignore" });
+    const deadline = Date.now() + 30_000;
+    while (running()) {
+      if (Date.now() > deadline)
+        throw new Error(`${image} did not exit after a close request`);
+      await delay(250);
+    }
+    if (!detached) {
+      while (application.exitCode === null && Date.now() < deadline)
+        await delay(50);
+      assert.equal(application.exitCode, 0, `${image} exit code`);
+    }
+  });
+
   await result("PASS");
   console.log(
     `Native smoke PASS (${path.relative(root, target) || target}, ${steps.length} steps)`,

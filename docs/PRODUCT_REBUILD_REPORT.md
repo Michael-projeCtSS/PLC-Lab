@@ -338,10 +338,12 @@ native smoke, release build, release staging, release native smoke, root `PLC La
 smoke, `RUN_PLC_LAB.bat` smoke, and smoke runs of `PLC Lab.exe` and `RUN_PLC_LAB.bat`
 copied with `releases/current/` into `%TEMP%\PLC Lab Test <random>\`. The validated release
 is published as the artifact `plc-lab-windows-release-<attempt>`. Every native smoke run
-executes 13 steps against the real WebView2 application: shell navigation, contract and
+executes 14 steps against the real WebView2 application: shell navigation, contract and
 knowledge discovery, Monaco editing, Build & Load, operator input, cause & effect,
 isolated grading, a complete troubleshooting lab with debrief, a project round trip, the
-Free Lab workspace at three resolutions and knowledge search. Linux lane (`npm run
+Free Lab workspace at three resolutions, knowledge search, and a close request (the
+same WM_CLOSE as the window's close button) after which the application must exit, with
+exit code 0 when the smoke started it directly. Linux lane (`npm run
 ci:core`): format, clippy, debug and release tests for every crate except the WebView
 host, frontend tests, architecture tests, knowledge verification, installed knowledge pack
 check, npm production audit and cargo-deny. Actions are pinned by SHA, permissions are
@@ -367,7 +369,8 @@ The executables are not code-signed; the Microsoft Edge WebView2 runtime is requ
 The root launcher resolves `releases/current/PLC Lab Desktop.exe` from its own location and
 does not depend on the working directory (the smoke starts it from `%TEMP%`). The smoke
 runs use the release build only: no npm, cargo, Vite or development server is involved,
-and in the relocated runs the knowledge pack is asserted to load from the copy.
+in the relocated runs the knowledge pack is asserted to load from the copy, and every run
+ends by closing the application and waiting for its process to exit.
 
 Local result on the development machine: **BLOCKED**. A release build attempted on
 2026-10-28 failed because Smart App Control refused the freshly compiled proc-macro DLLs
