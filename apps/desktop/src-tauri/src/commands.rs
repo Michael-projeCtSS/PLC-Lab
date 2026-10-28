@@ -65,6 +65,7 @@ commands! {
     diagnose(DiagnosisRequest) -> DiagnosisResultDto => diagnose;
     repair(RepairRequest) -> RepairResultDto => repair;
     check(CheckRequest) -> GradeReportDto => check;
+    take_open_request(VersionedRequest) -> Option<OpenRequestDto> => take_open_request;
 }
 
 /// Build & Load; starts the paced simulation when the use case asks for it.

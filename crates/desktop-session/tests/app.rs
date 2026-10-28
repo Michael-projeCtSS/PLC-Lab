@@ -32,6 +32,7 @@ fn fixture(name: &str) -> Fixture {
             knowledge_roots: vec![pack],
             projects_dir: dir.join("projects"),
             progress_file: dir.join("progress.json"),
+            recent_file: dir.join("recent.json"),
         },
         AppInfo {
             app_version: "test".into(),

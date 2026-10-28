@@ -1,6 +1,6 @@
 {
   "name": "plc-lab",
-  "version": "0.1.0",
+  "version": "0.2.0-dev",
   "private": true,
   "type": "module",
   "engines": {
@@ -39,6 +39,7 @@
     "stage:release": "node scripts/rust.mjs build --release --locked -p plc-lab-launcher && node scripts/stage-release.mjs",
     "test:desktop:release": "node tests/e2e/desktop-smoke.mjs --exe \"releases/current/PLC Lab Desktop.exe\" --build release --out release-smoke",
     "test:launcher": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --build release --out launcher-smoke --launcher",
+    "test:launcher:gui": "node tests/e2e/launcher-smoke.mjs",
     "test:launcher:bat": "node tests/e2e/desktop-smoke.mjs --bat --build release --out launcher-bat-smoke",
     "test:launcher:relocated": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --launcher --relocate --build release --out launcher-relocated-smoke",
     "test:bat:relocated": "node tests/e2e/desktop-smoke.mjs --bat --relocate --build release --out bat-relocated-smoke",

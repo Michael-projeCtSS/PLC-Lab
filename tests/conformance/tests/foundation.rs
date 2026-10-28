@@ -11,6 +11,7 @@ fn adapter_reports_the_engine_version_and_rejects_other_contract_versions() {
             knowledge_roots: Vec::new(),
             projects_dir: dir.join("projects"),
             progress_file: dir.join("progress.json"),
+            recent_file: dir.join("recent.json"),
         },
         AppInfo {
             app_version: "0.1.0".into(),

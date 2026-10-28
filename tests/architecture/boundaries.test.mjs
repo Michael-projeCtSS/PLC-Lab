@@ -117,8 +117,20 @@ test("the host uses only the reviewed single-instance plugin and the web view ge
   const host = read("apps/desktop/src-tauri/src/lib.rs");
   assert.match(
     host,
-    /tauri_plugin_single_instance::init\(\|app, _args, _cwd\|/,
-    "the second launch's arguments and working directory are ignored",
+    /tauri_plugin_single_instance::init\(\|app, args, cwd\| \{\s*open_requested\(app, &args, std::path::Path::new\(&cwd\)\);\s*focus_main_window\(app\);\s*\}\)/,
+    "a second launch may only hand over a project file and focus the window",
+  );
+  assert.match(
+    host,
+    /fn open_requested[^{]*\{\s*let Some\(path\) = startup::open_request\(args, cwd\)/,
+    "launch arguments pass only through the typed open-project parser",
+  );
+  const startup = read("apps/desktop/src-tauri/src/startup.rs");
+  assert.match(startup, /pub const OPEN_PROJECT: &str = "--open-project";/);
+  assert.doesNotMatch(
+    startup,
+    /Command|process::|spawn|shell|fs::/,
+    "a launch request is parsed, never executed or read here",
   );
   assert.ok(
     host.indexOf(".plugin(tauri_plugin_single_instance") <

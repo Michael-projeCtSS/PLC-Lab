@@ -336,6 +336,54 @@ pub fn duplicate(store: &ProjectStore, source: &Project, name: &str) -> AppResul
 }
 
 /// Import a `.plclab` document (migrating older formats) as a new project.
+/// Resolve a `.plclab` file chosen outside the application (the root launcher or a
+/// second launch with `--open-project`). A file that belongs to this store opens in
+/// place; any other file is validated and imported as a copy, so the original is never
+/// written. Only regular `.plclab` files up to the project size limit are read.
+pub fn open_file(
+    store: &ProjectStore,
+    library: &KnowledgeLibrary,
+    path: &std::path::Path,
+) -> AppResult<Project> {
+    let shown = path.display().to_string();
+    if !path
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case(project_model::EXTENSION))
+    {
+        return Err(AppError::InvalidRequest(format!(
+            "{shown} is not a PLC Lab project (.plclab) file."
+        )));
+    }
+    let meta = std::fs::metadata(path).map_err(|_| AppError::NotFound {
+        what: "project file",
+        id: shown.clone(),
+    })?;
+    if !meta.is_file() {
+        return Err(AppError::InvalidRequest(format!("{shown} is not a file.")));
+    }
+    if meta.len() > project_model::MAX_PROJECT_BYTES {
+        return Err(AppError::InvalidRequest(
+            "The project file is too large.".into(),
+        ));
+    }
+    let canonical = std::fs::canonicalize(path).map_err(|_| AppError::NotFound {
+        what: "project file",
+        id: shown.clone(),
+    })?;
+    if let Ok(dir) = std::fs::canonicalize(store.directory())
+        && canonical.parent() == Some(dir.as_path())
+        && let Some(id) = canonical
+            .file_stem()
+            .and_then(|s| Identifier::new(s.to_string_lossy().into_owned()).ok())
+        && let Ok(project) = store.load(&id)
+    {
+        return Ok(project);
+    }
+    let text = std::fs::read_to_string(&canonical)
+        .map_err(|e| AppError::InvalidRequest(format!("{shown} could not be read: {e}")))?;
+    import(store, library, &text)
+}
+
 pub fn import(store: &ProjectStore, library: &KnowledgeLibrary, text: &str) -> AppResult<Project> {
     if text.len() as u64 > project_model::MAX_PROJECT_BYTES {
         return Err(AppError::InvalidRequest(

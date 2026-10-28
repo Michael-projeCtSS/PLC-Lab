@@ -2,6 +2,7 @@
 
 export const CONTRACT_VERSION = 8 as const;
 export const EXECUTION_WAKE_EVENT = "lab-cycle-advanced" as const;
+export const OPEN_REQUEST_EVENT = "lab-open-request" as const;
 
 export type ExactU64 = string;
 
@@ -186,6 +187,10 @@ export type ProjectImportRequest = { contractVersion: number,
 text: string, };
 
 export type ProjectExportDto = { fileName: string, text: string, };
+
+export type OpenRequestDto = { projectId: string | null, name: string | null, problem: string | null, };
+
+export type OpenRequestEventDto = { contractVersion: number, };
 
 export type WorkspaceRequest = { contractVersion: number, workspaceId: ExactU64, };
 

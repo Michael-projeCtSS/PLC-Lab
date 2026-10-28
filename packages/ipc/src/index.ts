@@ -2,6 +2,7 @@ export * from "./generated";
 export {
   api,
   onCycleAdvanced,
+  onOpenRequest,
   COMMANDS,
   type Api,
   type Command,

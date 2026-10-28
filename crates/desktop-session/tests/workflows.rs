@@ -30,6 +30,7 @@ fn paths(dir: &std::path::Path) -> AppPaths {
         knowledge_roots: vec![PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../knowledge")],
         projects_dir: dir.join("projects"),
         progress_file: dir.join("progress.json"),
+        recent_file: dir.join("recent.json"),
     }
 }
 fn info() -> AppInfo {
@@ -744,4 +745,90 @@ fn every_troubleshooting_lab_hides_its_cause_until_verified() {
             })
             .unwrap();
     }
+}
+
+#[test]
+fn launch_open_requests_open_store_projects_in_place_and_import_others() {
+    let f = fixture("open-request");
+    let v = VersionedRequest {
+        contract_version: V,
+    };
+    assert_eq!(f.app.take_open_request(v.clone()).unwrap(), None);
+    let (project, w) = open(
+        &f.app,
+        ProjectCreateRequest {
+            contract_version: V,
+            name: "Bench".into(),
+            exercise: None,
+            scene: Some("scene.io-basics".into()),
+            platform: None,
+        },
+    );
+    // Opening a workspace records the project in the launcher's recent list.
+    let recent = project_model::RecentProjects::load(&f.dir.join("recent.json"));
+    assert_eq!(recent.projects[0].id.as_str(), project.id);
+    assert_eq!(recent.projects[0].name, "Bench");
+    f.app
+        .close_workspace(WorkspaceRequest {
+            contract_version: V,
+            workspace_id: w.workspace_id,
+        })
+        .unwrap();
+
+    // A file of the projects folder opens in place.
+    let stored = f
+        .dir
+        .join("projects")
+        .join(format!("{}.plclab", project.id));
+    let r = f.app.request_open(&stored);
+    assert_eq!(r.project_id.as_deref(), Some(project.id.as_str()));
+    assert_eq!(f.app.take_open_request(v.clone()).unwrap(), Some(r));
+    assert_eq!(
+        f.app.take_open_request(v.clone()).unwrap(),
+        None,
+        "taken once"
+    );
+
+    // A file elsewhere is validated and imported as a copy; the original is untouched.
+    let outside = f.dir.join("elsewhere with spaces");
+    std::fs::create_dir_all(&outside).unwrap();
+    let exported = f
+        .app
+        .export_project(IdRequest {
+            contract_version: V,
+            id: project.id.clone(),
+        })
+        .unwrap();
+    let copy = outside.join("Shared bench.plclab");
+    std::fs::write(&copy, &exported.text).unwrap();
+    let r = f.app.request_open(&copy);
+    let imported = r.project_id.clone().expect("imported");
+    assert_ne!(imported, project.id);
+    assert_eq!(r.name.as_deref(), Some("Bench"));
+    assert_eq!(std::fs::read_to_string(&copy).unwrap(), exported.text);
+
+    // Everything else is refused with an explanation and opens nothing.
+    std::fs::write(outside.join("notes.txt"), "{}").unwrap();
+    std::fs::write(outside.join("broken.plclab"), "{ not json").unwrap();
+    for (path, expected) in [
+        (outside.join("notes.txt"), "not a PLC Lab project"),
+        (outside.join("missing.plclab"), "not found"),
+        (outside.join("broken.plclab"), ""),
+        (outside.clone(), "not a PLC Lab project"),
+    ] {
+        let r = f.app.request_open(&path);
+        assert_eq!(r.project_id, None, "{}", path.display());
+        let problem = r.problem.expect("a reason");
+        assert!(
+            problem.to_lowercase().contains(&expected.to_lowercase()),
+            "{}: {problem}",
+            path.display()
+        );
+    }
+    let projects = f.app.projects(v).unwrap();
+    assert_eq!(
+        projects.projects.len(),
+        2,
+        "only the valid copy was imported"
+    );
 }

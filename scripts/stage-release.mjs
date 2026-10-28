@@ -24,6 +24,11 @@ import {
 } from "./knowledge-pack.mjs";
 
 export const APPLICATION = "PLC Lab Desktop.exe";
+/** Root entry points: the primary launcher window and the compatibility alias. */
+export const ROOT_LAUNCHERS = [
+  { source: "Launcher.exe", target: "Launcher.exe" },
+  { source: "plc-lab-launcher.exe", target: "PLC Lab.exe" },
+];
 
 function within(parent, target) {
   const relative = path.relative(parent, path.resolve(target));
@@ -124,7 +129,7 @@ export async function stageArtifactSet(
       path.join(staging, "RUNTIME_REQUIREMENTS.txt"),
       [
         "PLC Lab portable release (not an installer).",
-        "Start it with PLC Lab.exe or RUN_PLC_LAB.bat in the repository root, or with PLC Lab Desktop.exe in this folder.",
+        "Start it with Launcher.exe (or PLC Lab.exe / RUN_PLC_LAB.bat) in the repository root, or with PLC Lab Desktop.exe in this folder.",
         "Requires Windows 10/11 x64 and the Microsoft Edge WebView2 Runtime (preinstalled on current Windows; not bundled).",
         "Knowledge packs are read from knowledge-packs\\ in this folder and from %APPDATA%\\dev.plclab.desktop\\knowledge-packs.",
         "Keep every file listed in release-manifest.json together.",
@@ -253,8 +258,13 @@ async function main() {
     throw new Error(
       `The knowledge pack archive does not verify: ${pack.problems.join("; ")}. Run npm run knowledge:zip.`,
     );
-  const launcher = path.join(sourceDir, "plc-lab-launcher.exe");
-  await stat(launcher);
+  const launchers = [];
+  for (const { source, target } of ROOT_LAUNCHERS) {
+    const file = path.join(sourceDir, source);
+    if (!(await stat(file)).isFile())
+      throw new Error(`Root launcher build is missing: ${file}`);
+    launchers.push({ file, name: target, sha256: await hash(file) });
+  }
   await stageArtifactSet(
     sourceDir,
     destination,
@@ -271,7 +281,7 @@ async function main() {
         archive: path.relative(root, DEFAULT_ZIP).split(path.sep).join("/"),
         sha256: await hash(DEFAULT_ZIP),
       },
-      rootLauncher: { name: "PLC Lab.exe", sha256: await hash(launcher) },
+      rootLaunchers: launchers.map(({ name, sha256 }) => ({ name, sha256 })),
     },
     [{ source: DEFAULT_PACK, target: `knowledge-packs/${PACK_NAME}` }],
   );
@@ -283,9 +293,10 @@ async function main() {
   ])
     if (!(await stat(path.join(destination, required))).isFile())
       throw new Error(`Release staging is incomplete: ${required} is missing.`);
-  await installLauncher(launcher, path.join(root, "PLC Lab.exe"));
+  for (const { file, name } of launchers)
+    await installLauncher(file, path.join(root, name));
   console.log(`Release ready: ${path.join(destination, APPLICATION)}`);
-  console.log(`Root launcher: ${path.join(root, "PLC Lab.exe")}`);
+  console.log(`Start PLC Lab with: ${path.join(root, "Launcher.exe")}`);
   console.log(
     "The staged executable is byte-identical to the successful Tauri release build.",
   );
@@ -305,7 +316,7 @@ async function installLauncher(source, target) {
   } catch (error) {
     await rm(temporary, { force: true });
     throw new Error(
-      `The root launcher could not be replaced (${error.message}). Close PLC Lab and try again.`,
+      `The root launcher ${path.basename(target)} could not be replaced (${error.message}). Close PLC Lab and its launcher and try again.`,
       { cause: error },
     );
   }

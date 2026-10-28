@@ -20,9 +20,9 @@ use error::AppResult;
 use knowledge_core::KnowledgeLibrary;
 use lab_engine::AssessmentOutcome;
 use lab_model::exercise::ExerciseKind;
-use project_model::{ExerciseState, Progress, ProjectKind, ProjectStore};
+use project_model::{ExerciseState, Progress, ProjectKind, ProjectStore, RecentProjects};
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{Mutex, MutexGuard},
 };
 use workspace::Workspace;
@@ -36,6 +36,8 @@ pub struct AppPaths {
     pub knowledge_roots: Vec<PathBuf>,
     pub projects_dir: PathBuf,
     pub progress_file: PathBuf,
+    /// Recently opened projects (trusted metadata read by the root launcher).
+    pub recent_file: PathBuf,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,6 +54,9 @@ struct AppState {
     progress_writable: bool,
     /// Non-fatal startup problems shown to the learner.
     notices: Vec<String>,
+    recent: RecentProjects,
+    /// A project another launch asked to open, until the view takes it.
+    pending_open: Option<OpenRequestDto>,
     workspace: Option<Workspace>,
     next_workspace: u64,
     next_run: u64,
@@ -98,6 +103,7 @@ impl DesktopApp {
     pub fn new(paths: AppPaths, info: AppInfo) -> Self {
         let library = KnowledgeLibrary::load(&paths.knowledge_roots);
         let loaded = Progress::load(&paths.progress_file);
+        let recent = RecentProjects::load(&paths.recent_file);
         let store = ProjectStore::new(paths.projects_dir.clone());
         Self {
             paths,
@@ -108,6 +114,8 @@ impl DesktopApp {
                 progress: loaded.progress,
                 progress_writable: loaded.writable,
                 notices: loaded.notice.into_iter().collect(),
+                recent,
+                pending_open: None,
                 workspace: None,
                 next_workspace: 0,
                 next_run: 0,
@@ -359,11 +367,51 @@ impl DesktopApp {
                     state.workspace = None;
                 }
                 state.store.delete(&id)?;
+                state.recent.forget(&id);
+                // Advisory list, see open_workspace.
+                let _ = state.recent.save(&self.paths.recent_file);
             }
             self.projects(VersionedRequest {
                 contract_version: CONTRACT_VERSION,
             })
             .map_err(|e| AppError::InvalidRequest(e.message))
+        })())
+    }
+
+    // ---- projects requested by other launches ------------------------------------------
+
+    /// Resolve a project file that a launch asked to open (`--open-project`) and keep the
+    /// outcome until the view takes it. Called by the trusted host only.
+    pub fn request_open(&self, path: &Path) -> OpenRequestDto {
+        let outcome = self.lock().map_err(IpcError::from).and_then(|state| {
+            projects::open_file(&state.store, &state.library, path).map_err(IpcError::from)
+        });
+        let request = match outcome {
+            Ok(project) => OpenRequestDto {
+                project_id: Some(project.id.to_string()),
+                name: Some(project.name),
+                problem: None,
+            },
+            Err(e) => OpenRequestDto {
+                project_id: None,
+                name: None,
+                problem: Some(e.message),
+            },
+        };
+        if let Ok(mut state) = self.lock() {
+            state.pending_open = Some(request.clone());
+        }
+        request
+    }
+
+    /// The pending open request, once.
+    pub fn take_open_request(
+        &self,
+        request: VersionedRequest,
+    ) -> Result<Option<OpenRequestDto>, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            Ok(self.lock()?.pending_open.take())
         })())
     }
 
@@ -455,6 +503,12 @@ impl DesktopApp {
                 .as_ref()
                 .map(|e| library::exercise_view(&state.library, e, workspace.diagnosed()));
             let dto = workspace.workspace_dto(&request.project_id, exercise_dto);
+            state
+                .recent
+                .record(&id, &workspace.project.name, &projects::timestamp());
+            // The recent list only offers a shortcut in the launcher; a failed write must
+            // not prevent opening the project, and the next open rewrites the list.
+            let _ = state.recent.save(&self.paths.recent_file);
             state.workspace = Some(workspace);
             Ok(dto)
         })())

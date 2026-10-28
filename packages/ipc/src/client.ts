@@ -4,7 +4,11 @@
  * process, network or grading logic.
  */
 import { listen } from "@tauri-apps/api/event";
-import { CONTRACT_VERSION, EXECUTION_WAKE_EVENT } from "./generated";
+import {
+  CONTRACT_VERSION,
+  EXECUTION_WAKE_EVENT,
+  OPEN_REQUEST_EVENT,
+} from "./generated";
 import type * as G from "./generated";
 import { invokeNative, nativeAvailable } from "./transport";
 import { unit, type Validator } from "./validate";
@@ -53,6 +57,7 @@ export const COMMANDS = [
   "diagnose",
   "repair",
   "check",
+  "take_open_request",
 ] as const;
 export type Command = (typeof COMMANDS)[number];
 
@@ -197,9 +202,21 @@ export const api = {
   repair: (w: Ws, repair: string) => call("repair", { ...w, repair }, V.repair),
   check: (w: Ws, source: string, station: G.StationDto | null) =>
     call("check", { ...w, source, station }, V.gradeReport),
+
+  /** The project another launch asked to open, once (resolved by the host). */
+  takeOpenRequest: () => call("take_open_request", {}, V.openRequest),
 };
 
 export type Api = typeof api;
+
+/** Subscribe to "another launch asked to open a project" notifications. */
+export async function onOpenRequest(handler: () => void): Promise<() => void> {
+  if (!nativeAvailable()) return () => undefined;
+  return listen<unknown>(OPEN_REQUEST_EVENT, (event) => {
+    V.openRequestEvent(event.payload, OPEN_REQUEST_EVENT);
+    handler();
+  });
+}
 
 /** Subscribe to simulation wake notifications; the payload is validated. */
 export async function onCycleAdvanced(

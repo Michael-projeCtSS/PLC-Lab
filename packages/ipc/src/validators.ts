@@ -744,6 +744,16 @@ export const gradeReport = obj<G.GradeReportDto>({
     }),
   ),
 });
+export const openRequest = nullable(
+  obj<G.OpenRequestDto>({
+    projectId: nullable(str),
+    name: nullable(str),
+    problem: nullable(str),
+  }),
+);
+export const openRequestEvent = obj<G.OpenRequestEventDto>({
+  contractVersion: int(8, 8),
+});
 export const executionWake = obj<G.ExecutionWakeDto>({
   contractVersion: int(8, 8),
   workspaceId: u64,

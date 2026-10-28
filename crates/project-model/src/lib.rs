@@ -254,6 +254,10 @@ impl ProjectStore {
     fn path(&self, id: &Identifier) -> PathBuf {
         self.dir.join(format!("{id}.{EXTENSION}"))
     }
+    /// The file that stores project `id` in this store.
+    pub fn file_of(&self, id: &Identifier) -> PathBuf {
+        self.path(id)
+    }
     pub fn save(&self, project: &Project) -> Result<(), ProjectError> {
         project.validate()?;
         write_atomic(&self.path(&project.id), &to_json(project)?)
@@ -343,6 +347,73 @@ pub struct Progress {
     pub lessons: BTreeMap<String, LessonProgress>,
     #[serde(default)]
     pub exercises: BTreeMap<String, ExerciseProgress>,
+}
+
+/// Number of entries kept in [`RecentProjects`].
+pub const MAX_RECENT: usize = 8;
+
+/// Projects opened recently, newest first. Trusted application metadata (identifier, name,
+/// time) that the root launcher reads to offer the last project; it holds no project
+/// content. It is a convenience list: an unreadable file starts a new, empty list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RecentProjects {
+    pub format_version: u32,
+    #[serde(default)]
+    pub projects: Vec<RecentProject>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RecentProject {
+    pub id: Identifier,
+    pub name: String,
+    pub opened_at: String,
+}
+
+impl Default for RecentProjects {
+    fn default() -> Self {
+        Self {
+            format_version: FORMAT_VERSION,
+            projects: Vec::new(),
+        }
+    }
+}
+
+impl RecentProjects {
+    pub fn load(path: &Path) -> Self {
+        fs::read_to_string(path)
+            .ok()
+            .and_then(|t| serde_json::from_str::<RecentProjects>(&t).ok())
+            .filter(|r| r.format_version == FORMAT_VERSION)
+            .map(|mut r| {
+                r.projects.truncate(MAX_RECENT);
+                r
+            })
+            .unwrap_or_default()
+    }
+    /// Put `id` first, replacing an older entry for it, and keep at most [`MAX_RECENT`].
+    pub fn record(&mut self, id: &Identifier, name: &str, opened_at: &str) {
+        self.projects.retain(|p| &p.id != id);
+        self.projects.insert(
+            0,
+            RecentProject {
+                id: id.clone(),
+                name: name.to_owned(),
+                opened_at: opened_at.to_owned(),
+            },
+        );
+        self.projects.truncate(MAX_RECENT);
+    }
+    /// Forget projects that no longer exist.
+    pub fn forget(&mut self, id: &Identifier) {
+        self.projects.retain(|p| &p.id != id);
+    }
+    pub fn save(&self, path: &Path) -> Result<(), ProjectError> {
+        let text =
+            serde_json::to_string_pretty(self).map_err(|e| ProjectError::Io(e.to_string()))?;
+        write_atomic(path, &text)
+    }
 }
 
 /// Result of loading the progress file.
@@ -579,6 +650,28 @@ mod tests {
         let loaded = Progress::load(&path);
         assert!(loaded.notice.unwrap().contains("format version 99"));
         assert_eq!(fs::read_to_string(&kept_files(&dir)[0]).unwrap(), newer);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn recent_projects_keep_the_newest_first_without_duplicates() {
+        let dir = progress_dir("recent");
+        let path = dir.join("recent.json");
+        assert!(RecentProjects::load(&path).projects.is_empty());
+        let mut recent = RecentProjects::default();
+        for n in 0..10 {
+            let id = Identifier::new(format!("p-{n}")).unwrap();
+            recent.record(&id, &format!("Project {n}"), "2026-10-28T00:00:00Z");
+        }
+        let again = Identifier::new("p-3").unwrap();
+        recent.record(&again, "Project 3", "2026-10-29T00:00:00Z");
+        recent.save(&path).unwrap();
+        let loaded = RecentProjects::load(&path);
+        assert_eq!(loaded.projects.len(), MAX_RECENT);
+        assert_eq!(loaded.projects[0].id, again);
+        assert_eq!(loaded.projects.iter().filter(|p| p.id == again).count(), 1);
+        fs::write(&path, "{ broken").unwrap();
+        assert!(RecentProjects::load(&path).projects.is_empty());
         let _ = fs::remove_dir_all(&dir);
     }
 

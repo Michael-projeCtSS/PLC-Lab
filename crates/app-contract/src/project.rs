@@ -194,6 +194,20 @@ pub struct ProjectImportRequest {
     /// Contents of a `.plclab` file chosen by the user.
     pub text: String,
 }
+/// A project another launch asked to open (`--open-project <file>`), resolved by the
+/// trusted host: the project to open, or why the file could not be opened.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OpenRequestDto {
+    pub project_id: Option<String>,
+    pub name: Option<String>,
+    pub problem: Option<String>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OpenRequestEventDto {
+    pub contract_version: u32,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ProjectExportDto {
@@ -206,6 +220,6 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SlotRefDto, ChannelRefDto, ChannelConfigDto, ConfiguredModuleDto, IoMappingDto, InterfaceDto, ModbusDataTypeDto,
         ModbusValueDto, ModbusScanDto, StationNetworkDto, StationDto, ProgramDocumentDto, SimulationSettingsDto,
         ProjectDto, ProjectSummaryDto, ProjectListDto, ProjectCreateRequest, ProjectSaveRequest, SourceUpdateRequest,
-        ProjectSaveAsRequest, ProjectImportRequest, ProjectExportDto
+        ProjectSaveAsRequest, ProjectImportRequest, ProjectExportDto, OpenRequestDto, OpenRequestEventDto
     )
 }

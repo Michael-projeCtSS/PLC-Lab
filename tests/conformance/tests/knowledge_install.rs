@@ -24,6 +24,7 @@ fn app(data: &std::path::Path) -> DesktopApp {
             knowledge_roots: vec![knowledge_root()],
             projects_dir: data.join("projects"),
             progress_file: data.join("progress.json"),
+            recent_file: data.join("recent.json"),
         },
         AppInfo {
             app_version: "test".into(),

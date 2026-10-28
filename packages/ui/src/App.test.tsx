@@ -35,12 +35,14 @@ const fake = vi.hoisted(() => ({
   updateSource: vi.fn(),
   catalog: vi.fn(),
   search: vi.fn(),
+  takeOpenRequest: vi.fn(),
 }));
 
 vi.mock("@plc-lab/ipc", async (original) => ({
   ...(await original<typeof import("@plc-lab/ipc")>()),
   api: fake,
   onCycleAdvanced: async () => () => undefined,
+  onOpenRequest: async () => () => undefined,
 }));
 
 import { App } from "./App";
@@ -87,6 +89,7 @@ beforeEach(() => {
     troubleshooting: [],
   });
   fake.search.mockResolvedValue([]);
+  fake.takeOpenRequest.mockResolvedValue(null);
   // Like the real backend, every frame read after a successful load reports the loaded,
   // running simulation; the UI re-reads the frame after each use case.
   fake.buildAndLoad.mockImplementation(() => {
@@ -446,4 +449,31 @@ it("the debrief names the cause and links its guide only after verification", as
   expect(
     within(debrief).getByRole("button", { name: GUIDE }),
   ).toBeInTheDocument();
+});
+
+// ---- projects requested by a launch -----------------------------------------------------
+
+it("a project requested by the launcher opens its workspace", async () => {
+  fake.takeOpenRequest.mockResolvedValueOnce({
+    projectId: "p-1",
+    name: "Motor start/stop",
+    problem: null,
+  });
+  render(<App />);
+  expect(
+    await screen.findByRole("button", { name: "Build & Load to PLC" }),
+  ).toBeInTheDocument();
+  expect(fake.openWorkspace).toHaveBeenCalledWith("p-1");
+});
+
+it("a project file that cannot be opened is explained", async () => {
+  fake.takeOpenRequest.mockResolvedValueOnce({
+    projectId: null,
+    name: null,
+    problem: "notes.txt is not a PLC Lab project (.plclab) file.",
+  });
+  render(<App />);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "is not a PLC Lab project",
+  );
 });

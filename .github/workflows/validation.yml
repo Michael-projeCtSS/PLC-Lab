@@ -49,6 +49,9 @@ jobs:
             artifacts/launcher-smoke/native.log
             artifacts/launcher-smoke/result.json
             artifacts/launcher-smoke/*.png
+            artifacts/launcher-window-smoke/native.log
+            artifacts/launcher-window-smoke/result.json
+            artifacts/launcher-window-smoke/*.png
       - name: Publish the validated Windows release
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -56,6 +59,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: |
+            Launcher.exe
             PLC Lab.exe
             RUN_PLC_LAB.bat
             releases/current/**

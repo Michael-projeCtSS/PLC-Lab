@@ -19,3 +19,5 @@ apps/desktop/src-tauri/icons/*
 !releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip.sha256
 /PLC Lab.exe
 /PLC Lab.exe.*.tmp
+/Launcher.exe
+/Launcher.exe.*.tmp

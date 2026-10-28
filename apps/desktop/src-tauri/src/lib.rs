@@ -2,10 +2,11 @@
 //! and command adapters. Semantics live in the Rust core crates.
 mod commands;
 mod execution_driver;
+mod startup;
 
 use desktop_session::{AppInfo, AppPaths, DesktopApp};
-use std::path::PathBuf;
-use tauri::Manager;
+use std::{path::PathBuf, sync::Arc};
+use tauri::{Emitter, Manager};
 
 /// Knowledge pack roots, in priority order: packs shipped next to the executable, packs
 /// the user installed into the application data folder, and (development builds only)
@@ -33,13 +34,30 @@ fn focus_main_window(app: &tauri::AppHandle) {
     }
 }
 
+/// Resolve a launch's typed open request and tell the view that one is waiting.
+fn open_requested(app: &tauri::AppHandle, args: &[String], cwd: &std::path::Path) {
+    let Some(path) = startup::open_request(args, cwd) else {
+        return;
+    };
+    if let Some(service) = app.try_state::<Arc<DesktopApp>>() {
+        service.request_open(&path);
+        let _ = app.emit(
+            app_contract::OPEN_REQUEST_EVENT,
+            app_contract::OpenRequestEventDto {
+                contract_version: app_contract::CONTRACT_VERSION,
+            },
+        );
+    }
+}
+
 pub fn run() {
     tauri::Builder::default()
         // One application state per user: a second launch (double-click, root launcher or
         // BAT) must not load its own copy of progress and projects and later overwrite the
         // first. It hands over to the running instance, which comes to the front, and exits.
-        // The second launch's arguments and working directory are untrusted and ignored.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        // Its arguments pass only through the typed `startup::open_request` parser.
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            open_requested(app, &args, std::path::Path::new(&cwd));
             focus_main_window(app);
         }))
         .setup(|app| {
@@ -55,6 +73,7 @@ pub fn run() {
                 knowledge_roots: knowledge_roots(&app_data),
                 projects_dir: app_data.join("projects"),
                 progress_file: app_data.join("progress.json"),
+                recent_file: app_data.join("recent.json"),
             };
             let info = AppInfo {
                 app_version: env!("CARGO_PKG_VERSION").into(),
@@ -65,7 +84,16 @@ pub fn run() {
                 }
                 .into(),
             };
-            app.manage(std::sync::Arc::new(DesktopApp::new(paths, info)));
+            app.manage(Arc::new(DesktopApp::new(paths, info)));
+            // Lossy: an argument that is not valid Unicode is not a project path we can open.
+            let args: Vec<String> = std::env::args_os()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            let cwd = std::env::current_dir().unwrap_or_default();
+            if let Some(path) = startup::open_request(&args, &cwd) {
+                // The view takes the request when it starts; no event is needed yet.
+                app.state::<Arc<DesktopApp>>().request_open(&path);
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -109,7 +137,8 @@ pub fn run() {
             commands::note_evidence,
             commands::diagnose,
             commands::repair,
-            commands::check
+            commands::check,
+            commands::take_open_request
         ])
         .run(tauri::generate_context!())
         .expect("PLC Lab desktop host failed to start");

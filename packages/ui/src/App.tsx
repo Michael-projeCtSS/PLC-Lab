@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { api } from "@plc-lab/ipc";
+import { useCallback, useEffect, useState } from "react";
+import { api, onOpenRequest } from "@plc-lab/ipc";
 import { HomePage } from "./pages/HomePage";
 import { LearnPage } from "./pages/LearnPage";
 import { ExercisesPage } from "./pages/ExercisesPage";
@@ -36,6 +36,38 @@ function initial(page: Route["page"]): Route {
 export function App() {
   const [route, setRoute] = useState<Route>({ page: "home" });
   const navigate: Navigate = useCallback((next) => setRoute(next), []);
+  const [openProblem, setOpenProblem] = useState<string | null>(null);
+  // A project requested by a launch (root launcher, second instance) opens here; the host
+  // resolved and validated the file, the view only takes the result.
+  useEffect(() => {
+    let active = true;
+    const take = () =>
+      api.takeOpenRequest().then(
+        (r) => {
+          if (!active || !r) return;
+          if (r.projectId) {
+            setOpenProblem(null);
+            setRoute({
+              page: "workspace",
+              projectId: r.projectId,
+              section: "freelab",
+            });
+          } else if (r.problem) setOpenProblem(r.problem);
+        },
+        (e: unknown) =>
+          active && setOpenProblem(e instanceof Error ? e.message : String(e)),
+      );
+    void take();
+    let unlisten: (() => void) | null = null;
+    onOpenRequest(() => void take()).then(
+      (u) => (active ? (unlisten = u) : u()),
+      () => undefined,
+    );
+    return () => {
+      active = false;
+      unlisten?.();
+    };
+  }, []);
   const active = route.page === "workspace" ? route.section : route.page;
   return (
     <div className="app">
@@ -70,6 +102,17 @@ export function App() {
         </div>
       </header>
       <main className="page" id="main">
+        {openProblem && (
+          <div className="notice error" role="alert" style={{ margin: 16 }}>
+            The project could not be opened: {openProblem}{" "}
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setOpenProblem(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {route.page === "home" && <HomePage navigate={navigate} />}
         {route.page === "learn" && (
           <LearnPage lessonId={route.lesson} navigate={navigate} />
