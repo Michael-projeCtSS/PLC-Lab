@@ -14,7 +14,8 @@ use lab_model::{
     Identifier,
     fault::StuckPosition,
     scene::{
-        AnalogSignal, ComponentKind, ContactType, Coupling, LampColor, OutputStyle, SceneDefinition,
+        AnalogSignal, ComponentKind, ContactType, Coupling, LampColor, OutputStyle, PortKind,
+        SceneDefinition,
     },
 };
 use simulation_core::{WorldTime, deterministic_hash};
@@ -119,6 +120,8 @@ pub enum ComponentFault {
     ValveStuck(StuckPosition),
     FeedbackMissing(String),
     MotorOverload,
+    /// The drive is in local (keypad) control and ignores its run terminal.
+    DriveLocalControl,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -209,6 +212,13 @@ enum State {
         style: OutputStyle,
         present: bool,
     },
+    Drive {
+        ramp: u64,
+        rated_ma: u32,
+        run: bool,
+        local: bool,
+        started: Option<u64>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -218,6 +228,7 @@ pub struct SceneRuntime {
     ids: Vec<Identifier>,
     labels: Vec<String>,
     kinds: Vec<&'static str>,
+    sinks: Vec<Vec<&'static str>>,
     index: BTreeMap<Identifier, usize>,
     states: Vec<State>,
     faults: Vec<Faults>,
@@ -332,6 +343,16 @@ impl SceneRuntime {
                     style: *output,
                     present: false,
                 },
+                ComponentKind::VariableFrequencyDrive {
+                    ramp_ms,
+                    rated_current_ma,
+                } => State::Drive {
+                    ramp: ms(*ramp_ms).max(1),
+                    rated_ma: *rated_current_ma,
+                    run: false,
+                    local: false,
+                    started: None,
+                },
             });
         }
         let mut fills = Vec::new();
@@ -355,6 +376,18 @@ impl SceneRuntime {
                 .components
                 .iter()
                 .map(|c| c.kind.type_name())
+                .collect(),
+            sinks: scene
+                .components
+                .iter()
+                .map(|c| {
+                    c.kind
+                        .ports()
+                        .into_iter()
+                        .filter(|(_, kind)| *kind == PortKind::DigitalSink)
+                        .map(|(name, _)| name)
+                        .collect()
+                })
                 .collect(),
             index,
             faults: vec![Faults::default(); states.len()],
@@ -380,6 +413,12 @@ impl SceneRuntime {
     }
     pub fn component_kind(&self, index: usize) -> Option<&'static str> {
         self.kinds.get(index).copied()
+    }
+    /// Whether `port` of the component is a digital sink (coil, solenoid, run terminal).
+    pub fn is_digital_sink(&self, index: usize, port: &str) -> bool {
+        self.sinks
+            .get(index)
+            .is_some_and(|ports| ports.contains(&port))
     }
     pub fn index_of(&self, id: &Identifier) -> Result<usize, SceneError> {
         self.index
@@ -672,6 +711,22 @@ impl SceneRuntime {
                 }
             }
             (State::Pump { command, .. }, "motor") => *command = energized,
+            (
+                State::Drive {
+                    run,
+                    local,
+                    started,
+                    ..
+                },
+                "run",
+            ) => {
+                *run = energized;
+                if !energized || *local {
+                    *started = None;
+                } else if started.is_none() {
+                    *started = Some(now);
+                }
+            }
             _ => {
                 return Err(SceneError::UnknownPort {
                     component: id.to_string(),
@@ -743,6 +798,14 @@ impl SceneRuntime {
             ComponentFault::FeedbackMissing(port) => {
                 f.feedback_missing.insert(port);
             }
+            ComponentFault::DriveLocalControl => {
+                if let State::Drive { local, started, .. } = &mut self.states[component] {
+                    *local = true;
+                    *started = None;
+                } else {
+                    return Err(SceneError::NotOperable(id.to_string()));
+                }
+            }
             ComponentFault::MotorOverload => {
                 if let State::Starter {
                     tripped, contactor, ..
@@ -808,6 +871,20 @@ impl SceneRuntime {
             }
             ComponentFault::FeedbackMissing(port) => {
                 f.feedback_missing.remove(port);
+            }
+            ComponentFault::DriveLocalControl => {
+                if let State::Drive {
+                    run,
+                    local,
+                    started,
+                    ..
+                } = &mut self.states[component]
+                {
+                    *local = false;
+                    if *run && started.is_none() {
+                        *started = Some(now);
+                    }
+                }
             }
             ComponentFault::MotorOverload => {
                 if let State::Starter {
@@ -920,6 +997,11 @@ impl SceneRuntime {
                 },
                 "output",
             ) => (contact(*c, *present), *style),
+            (State::Drive { .. }, "ready") => (true, OutputStyle::DryContact),
+            (State::Drive { started, .. }, "running") => {
+                (started.is_some(), OutputStyle::DryContact)
+            }
+            (State::Drive { local, .. }, "remote") => (!*local, OutputStyle::DryContact),
             _ => return Err(unknown()),
         };
         let conducting = if f.feedback_missing.contains(port) {
@@ -1125,6 +1207,29 @@ impl SceneRuntime {
                 vec![
                     ("present", Quantity::Bool(*present)),
                     ("conducting", Quantity::Bool(conducting)),
+                ]
+            }
+            State::Drive {
+                ramp,
+                rated_ma,
+                run,
+                local,
+                started,
+            } => {
+                let speed = started.map_or(0, |since| ((now - since) * 1000 / ramp).min(1000));
+                vec![
+                    ("command", Quantity::Bool(*run)),
+                    ("running", Quantity::Bool(started.is_some())),
+                    ("speedPermille", Quantity::Integer(speed as i64)),
+                    (
+                        "currentMa",
+                        Quantity::Integer(if started.is_some() {
+                            i64::from(*rated_ma) * (200 + speed as i64 * 8 / 10) / 1000
+                        } else {
+                            0
+                        }),
+                    ),
+                    ("remote", Quantity::Bool(!*local)),
                 ]
             }
         }

@@ -19,7 +19,8 @@ fn scene() -> SceneDefinition {
           {"id": "tank", "label": "Tank", "kind": {"type": "tank", "capacityMl": 10000, "initialMl": 0, "highHighMl": 9500, "lowLowMl": 500}},
           {"id": "high", "label": "High", "kind": {"type": "levelSwitch", "tank": "tank", "switchLevelMl": 8000, "contact": "normallyOpen", "output": "pnp"}},
           {"id": "lt", "label": "LT", "kind": {"type": "levelTransmitter", "tank": "tank", "rangeMinMl": 0, "rangeMaxMl": 10000, "signal": "current4To20mA"}},
-          {"id": "motor", "label": "Motor", "kind": {"type": "motorStarter", "pickupMs": 30, "runUpMs": 2000, "ratedCurrentMa": 4200}}
+          {"id": "motor", "label": "Motor", "kind": {"type": "motorStarter", "pickupMs": 30, "runUpMs": 2000, "ratedCurrentMa": 4200}},
+          {"id": "drive", "label": "Drive", "kind": {"type": "variableFrequencyDrive", "rampMs": 2000, "ratedCurrentMa": 5000}}
         ],
         "couplings": [
           {"type": "valveFillsTank", "valve": "inlet", "tank": "tank"},
@@ -250,4 +251,34 @@ fn stuck_valve_ignores_commands_and_resumes_after_repair() {
     s.advance_to(at(8_000)).unwrap();
     assert_eq!(q(&s, "tank", "levelMl"), Quantity::Integer(2000));
     assert!(s.advance_to(at(1)).is_err());
+}
+
+#[test]
+fn drive_ramps_on_its_run_terminal_and_ignores_it_in_local_control() {
+    let mut s = SceneRuntime::new(&scene(), 1).unwrap();
+    let drive = s.index_of_str("drive").unwrap();
+    let relay = |s: &SceneRuntime, port: &str| s.digital_output(drive, port).unwrap().conducting;
+    assert!(relay(&s, "ready") && relay(&s, "remote") && !relay(&s, "running"));
+    s.set_coil(drive, "run", true).unwrap();
+    s.advance_to(at(1000)).unwrap();
+    assert!(relay(&s, "running"));
+    assert_eq!(q(&s, "drive", "speedPermille"), Quantity::Integer(500));
+    s.advance_to(at(3000)).unwrap();
+    assert_eq!(q(&s, "drive", "speedPermille"), Quantity::Integer(1000));
+    // Switching to local control stops the drive although the run command stays on.
+    s.apply_fault(drive, ComponentFault::DriveLocalControl)
+        .unwrap();
+    assert!(!relay(&s, "running") && !relay(&s, "remote") && relay(&s, "ready"));
+    assert_eq!(q(&s, "drive", "command"), Quantity::Bool(true));
+    s.set_coil(drive, "run", false).unwrap();
+    s.set_coil(drive, "run", true).unwrap();
+    s.advance_to(at(4000)).unwrap();
+    assert_eq!(q(&s, "drive", "running"), Quantity::Bool(false));
+    // Back to remote: the pending run command starts the drive again.
+    s.clear_fault(drive, &ComponentFault::DriveLocalControl)
+        .unwrap();
+    s.advance_to(at(5000)).unwrap();
+    assert_eq!(q(&s, "drive", "speedPermille"), Quantity::Integer(500));
+    s.set_coil(drive, "run", false).unwrap();
+    assert_eq!(q(&s, "drive", "running"), Quantity::Bool(false));
 }

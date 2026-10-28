@@ -78,6 +78,10 @@ pub enum FaultSpec {
     MotorOverloadTrip {
         component: Identifier,
     },
+    /// A drive left in local (keypad) control: it ignores the run command terminal.
+    DriveLocalControl {
+        component: Identifier,
+    },
     OpenCircuit {
         channel: ChannelRef,
     },
@@ -127,7 +131,9 @@ impl FaultSpec {
             | Self::AnalogNoise { .. }
             | Self::LoopBreak { .. } => FaultCategory::AnalogIo,
             Self::ValveStuck { .. } | Self::FeedbackMissing { .. } => FaultCategory::Process,
-            Self::MotorOverloadTrip { .. } => FaultCategory::Drives,
+            Self::MotorOverloadTrip { .. } | Self::DriveLocalControl { .. } => {
+                FaultCategory::Drives
+            }
             Self::OpenCircuit { .. } | Self::ShortToSupply { .. } | Self::SwappedWires { .. } => {
                 FaultCategory::Wiring
             }

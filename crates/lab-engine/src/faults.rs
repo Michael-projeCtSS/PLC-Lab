@@ -61,6 +61,9 @@ pub(crate) fn apply(
         FaultSpec::FeedbackMissing { component: c, port } => {
             on_component(session, c, ComponentFault::FeedbackMissing(port.clone()))
         }
+        FaultSpec::DriveLocalControl { component: c } => {
+            on_component(session, c, ComponentFault::DriveLocalControl)
+        }
         FaultSpec::MotorOverloadTrip { component: c } => {
             on_component(session, c, ComponentFault::MotorOverload)
         }

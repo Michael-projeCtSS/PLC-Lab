@@ -707,10 +707,7 @@ impl StationRuntime {
             let Ok(index) = scene.index_of_str(wire.component.as_str()) else {
                 continue;
             };
-            let is_sink = scene.component_kind(index).is_some()
-                && !wire.port.is_empty()
-                && matches!(wire.port.as_str(), "coil" | "solenoid" | "motor");
-            if is_sink {
+            if scene.is_digital_sink(index, &wire.port) {
                 energize.insert((wire.component.to_string(), wire.port.clone()), false);
             }
         }

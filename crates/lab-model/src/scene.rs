@@ -153,6 +153,13 @@ pub enum ComponentKind {
         output: OutputStyle,
         contact: ContactType,
     },
+    /// Variable frequency drive with motor. Ports: `run` (run command terminal), `ready`,
+    /// `running` and `remote` (relay outputs). In local control the drive ignores the
+    /// run terminal. Speed ramps linearly; deceleration is immediate (approximation).
+    VariableFrequencyDrive {
+        ramp_ms: u32,
+        rated_current_ma: u32,
+    },
 }
 
 impl ComponentKind {
@@ -168,6 +175,7 @@ impl ComponentKind {
             Self::LevelSwitch { .. } => "levelSwitch",
             Self::LevelTransmitter { .. } => "levelTransmitter",
             Self::PresenceSensor { .. } => "presenceSensor",
+            Self::VariableFrequencyDrive { .. } => "variableFrequencyDrive",
         }
     }
     /// Electrical ports exposed by the component.
@@ -177,6 +185,12 @@ impl ComponentKind {
                 vec![("contact", PortKind::DigitalSource)]
             }
             Self::PresenceSensor { .. } => vec![("output", PortKind::DigitalSource)],
+            Self::VariableFrequencyDrive { .. } => vec![
+                ("run", PortKind::DigitalSink),
+                ("ready", PortKind::DigitalSource),
+                ("running", PortKind::DigitalSource),
+                ("remote", PortKind::DigitalSource),
+            ],
             Self::SelectorSwitch { positions, .. } => {
                 const NAMES: [&str; 4] = ["position0", "position1", "position2", "position3"];
                 NAMES

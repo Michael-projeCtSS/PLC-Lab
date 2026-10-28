@@ -406,7 +406,8 @@ fn fault_component(fault: &FaultSpec) -> Option<&Identifier> {
         | FaultSpec::LoopBreak { component }
         | FaultSpec::ValveStuck { component, .. }
         | FaultSpec::FeedbackMissing { component, .. }
-        | FaultSpec::MotorOverloadTrip { component } => Some(component),
+        | FaultSpec::MotorOverloadTrip { component }
+        | FaultSpec::DriveLocalControl { component } => Some(component),
         _ => None,
     }
 }

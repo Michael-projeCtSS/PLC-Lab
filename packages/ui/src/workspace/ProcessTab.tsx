@@ -619,6 +619,91 @@ function Symbol({
         </g>
       );
     }
+    case "variableFrequencyDrive": {
+      const running = b(q, "running");
+      const remote = b(q, "remote");
+      const w = l.width ?? 240;
+      const h = l.height ?? 160;
+      const speed = n(q, "speedPermille");
+      return (
+        <g
+          aria-label={`${c.label}: ${running ? "running" : "stopped"}, ${remote ? "remote" : "local"} control`}
+        >
+          <rect
+            x={l.x}
+            y={l.y}
+            width={w * 0.42}
+            height={h}
+            rx={4}
+            className="symbol"
+          />
+          <rect
+            x={l.x + 10}
+            y={l.y + 12}
+            width={w * 0.42 - 20}
+            height={44}
+            rx={2}
+            fill="#0d1a14"
+            stroke="#2a3540"
+          />
+          <text
+            x={l.x + 16}
+            y={l.y + 30}
+            className="value-text"
+            style={{ fontSize: 11, fill: "#8fe0b8" }}
+          >
+            {remote ? "REM" : "LOC"} {running ? "RUN" : "RDY"}
+          </text>
+          <text
+            x={l.x + 16}
+            y={l.y + 48}
+            className="value-text"
+            style={{ fontSize: 11, fill: "#8fe0b8" }}
+          >
+            {((speed * 50) / 1000).toFixed(1)} Hz
+          </text>
+          <text
+            x={l.x + 10}
+            y={l.y + 74}
+            className="label"
+            style={{ fontSize: 10 }}
+          >
+            {b(q, "command") ? "run terminal ON" : "run terminal OFF"}
+          </text>
+          <text
+            x={l.x + 10}
+            y={l.y + 90}
+            className="label"
+            style={{ fontSize: 10 }}
+          >
+            {formatQuantity(n(q, "currentMa"), "mA")}
+          </text>
+          <line
+            x1={l.x + w * 0.42}
+            y1={l.y + h / 2}
+            x2={l.x + w * 0.62}
+            y2={l.y + h / 2}
+            className="pipe"
+            style={{ strokeWidth: 3 }}
+          />
+          <circle
+            cx={l.x + w * 0.8}
+            cy={l.y + h / 2}
+            r={Math.min(34, w * 0.17)}
+            className={`symbol${running ? " on" : ""}`}
+          />
+          <text
+            x={l.x + w * 0.8}
+            y={l.y + h / 2 + 6}
+            textAnchor="middle"
+            style={{ fontSize: 18, fontWeight: 700 }}
+          >
+            M
+          </text>
+          {label(h + 16, l.x + w / 2)}
+        </g>
+      );
+    }
     default:
       return (
         <g>
