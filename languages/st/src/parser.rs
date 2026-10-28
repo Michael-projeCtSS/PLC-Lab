@@ -66,7 +66,7 @@ impl Parser<'_> {
         match &self.peek().kind {
             TokenKind::Unsupported(name) => error(
                 codes::UNSUPPORTED,
-                format!("'{name}' is unsupported in Alpha Structured Text."),
+                format!("'{name}' is not supported in PLC Lab Structured Text."),
                 Some(self.peek().span),
             ),
             _ => error(codes::SYNTAX, message, Some(self.peek().span)),
@@ -579,7 +579,7 @@ impl Parser<'_> {
             TokenKind::Unsupported(name) => {
                 return Err(error(
                     codes::UNSUPPORTED,
-                    format!("'{name}' is unsupported in Alpha Structured Text."),
+                    format!("'{name}' is not supported in PLC Lab Structured Text."),
                     Some(token.span),
                 ));
             }

@@ -327,7 +327,7 @@ impl Compiler {
                     self.report(
                         codes::TYPE,
                         format!(
-                            "Cannot assign {} to {} '{}'; Alpha has no implicit conversions. Use INT_TO_REAL, REAL_TO_INT or TRUNC.",
+                            "Cannot assign {} to {} '{}'; PLC Lab Structured Text has no implicit conversions. Use INT_TO_REAL, REAL_TO_INT or TRUNC.",
                             type_name(value.result_type()),
                             type_name(target_type),
                             name.text
@@ -390,7 +390,7 @@ impl Compiler {
         if probe.result_type() != PlcType::Int {
             self.report(
                 codes::TYPE,
-                "CASE selector must be INT in Alpha Structured Text.",
+                "The CASE selector must be an INT expression.",
                 selector.span,
             );
             return None;
@@ -511,7 +511,7 @@ impl Compiler {
                     self.report(
                         codes::TYPE,
                         format!(
-                            "{} does not accept {} and {}; operand types must follow the Alpha type rules.",
+                            "{} does not accept {} and {}; both operands need compatible types (convert explicitly with INT_TO_REAL, REAL_TO_INT or TRUNC).",
                             operator_name(*operator),
                             type_name(left_value.result_type()),
                             type_name(right_value.result_type())
@@ -608,7 +608,7 @@ impl Compiler {
                 let Some(conversion) = ConversionFunction::from_name(&function.text) else {
                     self.report(
                         codes::UNSUPPORTED,
-                        format!("Function '{}' is not available; Alpha provides INT_TO_REAL, REAL_TO_INT and TRUNC.", function.text),
+                        format!("Function '{}' is not available; PLC Lab Structured Text provides INT_TO_REAL, REAL_TO_INT and TRUNC.", function.text),
                         function.span,
                     );
                     return None;

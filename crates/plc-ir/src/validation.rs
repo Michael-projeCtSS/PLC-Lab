@@ -146,7 +146,7 @@ impl Validator<'_> {
         if !matches!(definition.kind(), FunctionBlockKind::Standard(_)) {
             self.emit(
                 codes::UNSUPPORTED_FB_KIND,
-                "This function-block kind is not executable in Alpha.",
+                "This function-block kind cannot be executed by the PLC Lab runtime.",
                 Some(source),
                 related,
             );
@@ -483,7 +483,7 @@ impl Validator<'_> {
         }) {
             self.emit(
                 codes::INVALID_WRITE_TARGET,
-                "An Alpha entry-program input is read-only during execution.",
+                "Inputs of the main program are read-only during execution.",
                 Some(source),
                 Some(RelatedIdentity::Symbol(id)),
             );
@@ -504,7 +504,7 @@ impl Validator<'_> {
                         && compatibility::assignment(target_type, value_type)
                             != AssignmentCompatibility::Identity
                     {
-                        self.emit(codes::ASSIGNMENT_TYPE, format!("Cannot assign {value_type:?} to {target_type:?}; Alpha assignments require identical types."),
+                        self.emit(codes::ASSIGNMENT_TYPE, format!("Cannot assign {value_type:?} to {target_type:?}; assignments require identical types."),
                                 Some(statement.source()), Some(RelatedIdentity::Symbol(*target)));
                     }
                 }

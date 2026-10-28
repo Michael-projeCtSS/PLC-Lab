@@ -302,7 +302,7 @@ impl Scanner {
                     }
                     '>' => TokenKind::Greater,
                     _ => {
-                        self.errors.push(error(codes::LEXICAL, format!("Invalid character '{ch}'; Alpha names use ASCII letters, digits and underscore."), Some(self.span(start))));
+                        self.errors.push(error(codes::LEXICAL, format!("Invalid character '{ch}'; names in PLC Lab Structured Text use ASCII letters, digits and underscore."), Some(self.span(start))));
                         continue;
                     }
                 }

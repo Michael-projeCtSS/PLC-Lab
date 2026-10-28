@@ -41,7 +41,7 @@ pub enum SymbolError {
 impl std::fmt::Display for SymbolError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidName(name) => write!(f, "'{name}' is not an Alpha identifier."),
+            Self::InvalidName(name) => write!(f, "'{name}' is not a valid PLC Lab identifier."),
             Self::UnknownSymbol(id) => write!(f, "Symbol {} is not declared.", id.get()),
             Self::UnknownName(name) => write!(f, "'{name}' is not declared in this scope."),
             Self::InvalidScope(_) => {

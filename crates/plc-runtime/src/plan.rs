@@ -94,7 +94,7 @@ pub fn lower(validated: &ValidatedProgram<'_>) -> Result<ExecutionPlan, Lowering
                     diagnostic(
                         codes::UNSUPPORTED_DECLARATION,
                         DiagnosticCategory::CompilerDiagnostic,
-                        "Alpha entry-program InOut declarations are not executable.",
+                        "VAR_IN_OUT declarations of the main program cannot be executed by the PLC Lab runtime.",
                     )
                     .with_source(
                         symbol

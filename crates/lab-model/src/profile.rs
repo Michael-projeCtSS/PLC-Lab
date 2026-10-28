@@ -130,7 +130,7 @@ impl PlatformProfile {
                 modeled: vec![
                     "Cyclic scan with an input image, transactional execution and output update"
                         .into(),
-                    "Alpha Structured Text with BOOL, INT, REAL and TIME".into(),
+                    "PLC Lab Structured Text with BOOL, INT, REAL and TIME".into(),
                 ],
                 approximated: vec!["Analog raw values use the PLC Lab 0..10000 convention".into()],
                 omitted: vec!["Retentive memory".into(), "Multiple tasks".into()],

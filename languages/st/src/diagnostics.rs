@@ -49,7 +49,7 @@ impl CompilerConfig {
         {
             return Err(error(
                 codes::LIMIT,
-                "Compiler limits must be nonzero and within the documented Alpha ceilings.",
+                "Compiler limits must be nonzero and within the documented PLC Lab limits.",
                 None,
             ));
         }
