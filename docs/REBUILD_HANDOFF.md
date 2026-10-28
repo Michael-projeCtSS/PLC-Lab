@@ -1,20 +1,21 @@
 # Rebuild handoff
 
 The product rebuild on branch `claude/product-rebuild-v1` is complete and in release
-freeze: only bug fixes, tests, cleanup, documentation and release corrections are in
+freeze after one corrective pass that followed a release-candidate audit (see the report's
+Release candidate audit section): only bug fixes, tests, cleanup, documentation and release corrections are in
 scope. The authoritative description and evidence is the
 [product rebuild report](PRODUCT_REBUILD_REPORT.md); the history is `git log` (pushed to
 `origin`, never force-pushed).
 
 ## State
 
-| Area                      | State                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------- |
-| Workspace build           | All crates build; clippy clean with `-D warnings`                                       |
-| Tests                     | Rust, frontend, architecture, conformance and knowledge checks pass in CI on both lanes |
-| Native Windows validation | Hosted Windows CI: debug, release, root launcher, BAT and relocated-folder smoke runs   |
-| Local native validation   | BLOCKED on the development machine by Smart App Control (see below)                     |
-| Knowledge pack            | Committed pack and verified deterministic ZIP; installed-pack check passes              |
+| Area                      | State                                                                                                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace build           | All crates build; clippy clean with `-D warnings`                                                                                                                                |
+| Tests                     | Rust, frontend, architecture, conformance and knowledge checks pass in CI on both lanes                                                                                          |
+| Native Windows validation | Hosted Windows CI: debug, release, root launcher, BAT and relocated-folder smoke runs (16 steps each, including troubleshooting secrecy, second-launch handover and clean close) |
+| Local native validation   | BLOCKED on the development machine by Smart App Control (see below)                                                                                                              |
+| Knowledge pack            | Committed pack and verified deterministic ZIP; installed-pack check passes                                                                                                       |
 
 ## Local environment limitation
 
