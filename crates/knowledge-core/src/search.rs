@@ -340,4 +340,80 @@ mod tests {
         );
         assert!(index.search(&q("zzzz")).is_empty());
     }
+
+    fn query(text: &str) -> SearchQuery {
+        SearchQuery {
+            text: text.into(),
+            limit: 10,
+            ..Default::default()
+        }
+    }
+    fn ids(index: &SearchIndex, text: &str) -> Vec<String> {
+        index
+            .search(&query(text))
+            .into_iter()
+            .map(|h| h.id)
+            .collect()
+    }
+
+    #[test]
+    fn the_page_about_a_topic_outranks_pages_that_repeat_its_words() {
+        let index = SearchIndex::build(vec![
+            doc(
+                "guide",
+                "Valve feedback missing after a pump overhaul on line 3",
+                "Valve valve valve: the valve limit switch, the valve solenoid and the valve body.",
+            ),
+            doc(
+                "topic",
+                "Solenoid valves",
+                "How a solenoid moves the valve.",
+            ),
+            doc("other", "Pumps", "Centrifugal pumps move liquid."),
+        ]);
+        assert_eq!(ids(&index, "valve")[0], "topic");
+        assert_eq!(ids(&index, "solenoid valve")[0], "topic");
+        // A specific multi-word query still finds the specific page.
+        assert_eq!(ids(&index, "valve feedback pump overhaul")[0], "guide");
+    }
+
+    #[test]
+    fn title_bonus_never_adds_pages_without_a_matching_term() {
+        let index = SearchIndex::build(vec![
+            doc("a", "Timers", "TON delays a signal."),
+            doc("b", "The", "Nothing relevant here."),
+        ]);
+        assert_eq!(ids(&index, "timers"), ["a"]);
+        // A query of stop words only is an empty query: it lists every page in identifier
+        // order, and no title bonus reorders it (the page titled "The" gains nothing).
+        assert_eq!(ids(&index, "the"), ["a", "b"]);
+        assert_eq!(ids(&index, "the of and"), ["a", "b"]);
+        assert!(index.search(&query("the")).iter().all(|h| h.score == 0.0));
+    }
+
+    #[test]
+    fn stop_words_and_repeated_title_words_do_not_dilute_the_title_share() {
+        let index = SearchIndex::build(vec![
+            doc(
+                "long",
+                "The basics of the scan cycle",
+                "Inputs, program, outputs.",
+            ),
+            doc(
+                "repeat",
+                "Scan scan scan and more scan words in a title",
+                "Inputs, program, outputs.",
+            ),
+        ]);
+        assert_eq!(ids(&index, "scan cycle")[0], "long");
+    }
+
+    #[test]
+    fn equal_scores_break_ties_by_identifier() {
+        let index = SearchIndex::build(vec![
+            doc("b", "Counters", "CTU counts."),
+            doc("a", "Counters", "CTU counts."),
+        ]);
+        assert_eq!(ids(&index, "counters"), ["a", "b"]);
+    }
 }

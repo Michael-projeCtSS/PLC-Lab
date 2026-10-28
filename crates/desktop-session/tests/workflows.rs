@@ -382,6 +382,29 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
         .unwrap();
     assert_eq!(w.platform.id, "siemens.s7-1500");
 
+    // Save As after the restart copies the complete state under a new identity.
+    let copy = restarted
+        .save_project_as(ProjectSaveAsRequest {
+            contract_version: V,
+            project_id: project.id.clone(),
+            name: "Drive bench copy".into(),
+        })
+        .unwrap();
+    assert_ne!(copy.id, project.id);
+    assert_eq!(copy.name, "Drive bench copy");
+    assert_eq!(copy.programs[0].source, source);
+    assert_eq!(copy.watch, edited.watch);
+    assert_eq!(copy.station, edited.station);
+    assert_eq!(copy.platform, "siemens.s7-1500");
+    assert_eq!(copy.scene, "scene.conveyor-drive");
+    let original = restarted
+        .project(IdRequest {
+            contract_version: V,
+            id: project.id.clone(),
+        })
+        .unwrap();
+    assert_eq!(original.name, "Drive bench", "the original is unchanged");
+
     // Corrupt and future-version files in the projects folder are reported, not fatal.
     let dir = f.dir.join("projects");
     std::fs::write(dir.join("broken.plclab"), "{ this is not json").unwrap();

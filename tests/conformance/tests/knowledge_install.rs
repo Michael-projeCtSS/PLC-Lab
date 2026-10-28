@@ -192,5 +192,49 @@ fn installed_pack_is_discovered_indexed_searchable_and_resolvable() {
     }
     println!("catalog pages opened: {opened}");
     assert!(opened >= 60, "{opened}");
+
+    // Every lesson and exercise opens, and their references resolve to installed content.
+    let library = app
+        .library(VersionedRequest {
+            contract_version: V,
+        })
+        .unwrap();
+    assert!(library.lessons.len() >= 20 && library.exercises.len() >= 17);
+    let id = |id: &str| IdRequest {
+        contract_version: V,
+        id: id.into(),
+    };
+    for summary in &library.lessons {
+        let lesson = app.lesson(id(&summary.id)).unwrap();
+        assert!(!lesson.sections.is_empty() && !lesson.checkpoint.is_empty());
+        for r in &lesson.knowledge_refs {
+            assert!(!r.title.is_empty(), "{} -> {}", lesson.id, r.id);
+        }
+        for s in &lesson.sections {
+            if let Some(e) = &s.exercise {
+                app.exercise(id(e))
+                    .unwrap_or_else(|e2| panic!("{} -> {e}: {e2:?}", lesson.id));
+            }
+            if let Some(scene) = &s.scene {
+                assert!(
+                    library.scenes.iter().any(|x| &x.id == scene),
+                    "{} -> {scene}",
+                    lesson.id
+                );
+            }
+        }
+    }
+    for summary in &library.exercises {
+        let exercise = app.exercise(id(&summary.id)).unwrap();
+        assert!(library.scenes.iter().any(|x| x.id == exercise.scene));
+        for r in &exercise.knowledge_refs {
+            assert!(!r.title.is_empty(), "{} -> {}", exercise.id, r.id);
+        }
+    }
+    println!(
+        "lessons opened: {}, exercises opened: {}",
+        library.lessons.len(),
+        library.exercises.len()
+    );
     let _ = std::fs::remove_dir_all(&data);
 }
