@@ -41,7 +41,12 @@ Completing a lesson requires answering its checkpoint; the score is stored in pr
 
 Data-driven (`exercises/*.json`): starter program, optional starter station, required
 interface, instructions, hints (revealed one at a time), knowledge references, evidence
-bindings, scenarios and behavioral criteria. The UI never hard-codes exercise ids.
+bindings, scenarios, behavioral criteria and `curriculumOrder`. The UI never hard-codes
+exercise ids. Lists follow `curriculumOrder` (not difficulty or duration): pushbutton and
+lamp, motor jog, seal-in start/stop, TON delayed start, edge counter, tank filling, part
+counting, analog scaling, batch sequence, Modbus level; the troubleshooting labs follow
+the same progression from contacts and field supply to analog configuration and
+networks.
 
 Minimum practice set (required by the conformance suite): `ex.lamp-pushbutton`,
 `ex.motor-jog` (non-latched start/stop), `ex.motor-start-stop` (seal-in),
@@ -55,6 +60,16 @@ Further exercises: `ex.part-counter`, `ex.tank-analog-scaling`, `ex.tank-batch-s
 Basic mode offers one **Build & Load to PLC** button (compile, link, download, PLC RUN,
 simulation run). Advanced mode separates compile and download, exposes the PLC mode
 switch, memory reset and forcing, and enables hardware and network configuration editing.
+
+The toolbar keeps two control groups apart, and each button explains itself (tooltip and
+accessible description): **PLC RUN/STOP** is the PLC's mode switch (STOP: the program
+does not execute, outputs go to their stop state, the machine keeps running);
+**Simulation Run/Pause/Step/Stop** lets simulated time pass, freezes it, advances one PLC
+cycle, or restores the machine and power-cycles the PLC. Lesson 2 explains the same
+distinction before the first exercise. Only one command runs at a time: the controls
+are disabled while a command is pending, a second click is ignored, and the frame is
+re-read from the backend afterwards; a slower, older response never replaces a newer
+frame.
 
 ## Feedback design
 

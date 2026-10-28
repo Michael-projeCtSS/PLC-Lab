@@ -30,7 +30,12 @@ inline code, code blocks, tables, links shown as text).
 packs). It never follows symbolic links and limits nesting depth (6), file count (5 000)
 and file size (1 MiB). Every file is parsed with strict deserializers (unknown fields are
 errors). Cross-validation checks that exercises reference existing scenes and profiles
-and pass `lab-model` validation, and that articles cite known sources. A malformed file
+and pass `lab-model` validation, and that articles cite known sources. Troubleshooting
+labs keep their references in `troubleshooting.learningRefs` (shown before the
+diagnosis: general articles or lessons only, which must not relate to a guide about the
+lab's fault) and `troubleshooting.debriefRefs` (shown with the debrief); a violation
+rejects the lab. Exercises carry `curriculumOrder`, the position in the curriculum of
+their kind, which orders the Practice and Troubleshoot lists. A malformed file
 or pack is reported with path and reason in About > Knowledge packs and never prevents
 other content from loading. Duplicate identifiers across packs are rejected.
 

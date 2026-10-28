@@ -23,7 +23,7 @@ React user interface only displays authoritative state and sends operator action
 `PLC Lab.exe` is a small launcher that starts the staged release in `releases/current/`.
 It is created by the release build and is not stored in Git. It finds the release next to
 itself, so the folder may be moved or copied anywhere, including paths with spaces, as
-long as `PLC Lab.exe` and `releases/current/` stay together. Requirements: Windows 10/11
+long as `PLC Lab.exe` and `releases/current/` stay together. Only one PLC Lab window runs at a time: starting it again brings the open window to the front. Requirements: Windows 10/11
 x64 with the Microsoft Edge WebView2 Runtime (preinstalled on current Windows). The
 executables are not code-signed; Windows Smart App Control or SmartScreen may refuse to
 start a locally built copy. See [build and run](docs/BUILD_AND_RUN.md).

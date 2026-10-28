@@ -58,6 +58,16 @@ Projects live in `<application data>/projects/` (`%APPDATA%\dev.plclab.desktop` 
 or `PLC_LAB_DATA_DIR`). Writes are atomic (temporary file + rename). Unreadable files are
 listed with a reason and never break the project list.
 
+Progress (`progress.json`) is never silently replaced: a file that cannot be read,
+parsed or that has another format version is renamed to
+`progress.json.unreadable-<seconds>` next to it, progress starts empty and Home and
+Progress show a notice naming the kept file. If even the rename fails, progress is not
+saved for that session so the damaged copy is not overwritten.
+
+Only one PLC Lab instance runs per user: a second launch brings the running window to the
+front and exits (`tauri-plugin-single-instance`), so two application states can never
+overwrite each other's progress or projects.
+
 ## Use cases
 
 New project (free lab: scene + platform; exercise: created on first start), Open, Save

@@ -20,8 +20,30 @@ symptom. Symptoms emerge from the same simulation that runs every other exercise
 
 `troubleshooting` in an exercise defines the symptom text, who reported it, hidden
 faults, diagnosis options with the root causes, repair options (each repair clears listed
-faults), the criteria that verify the repaired system and a **debrief**. The PLC is in
-RUN with the plant's original program when the lab opens.
+faults), the criteria that verify the repaired system, a **debrief** and two reference
+lists. The PLC is in RUN with the plant's original program when the lab opens.
+
+## What is visible when
+
+| Item                                         | Visible                                                   |
+| -------------------------------------------- | --------------------------------------------------------- |
+| Symptom, reporter, method, diagnosis options | from the start                                            |
+| `learningRefs` ("Helpful concepts")          | from the start; general articles only                     |
+| Repair options                               | after a correct diagnosis (sent by the backend only then) |
+| Debrief and `debriefRefs`                    | after a passed verification                               |
+
+The backend enforces this, not the UI: the exercise DTO carries no repair options until
+the workspace's investigation contains a correct diagnosis, the repair use case refuses
+repairs before one, and the debrief with its references is part of a passed check
+result only. Exercise-level `knowledgeRefs` must be empty for troubleshooting labs.
+Pack loading rejects a lab whose learning references are troubleshooting guides or link
+(through `related`) to a guide about the lab's own fault. Tests:
+`every_troubleshooting_lab_hides_its_cause_until_verified` (all seven labs, against the
+guide titles, debrief text, correct repair labels and internal fault types), the
+conformance pack test and the architecture test
+`troubleshooting labs show only general references before the diagnosis`. A release
+candidate audit found that the previous model showed each lab's own troubleshooting
+guide, whose title names the cause, before the diagnosis; this layout replaced it.
 
 ## Debrief
 

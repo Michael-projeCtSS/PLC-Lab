@@ -13,7 +13,9 @@
 `PLC Lab.exe` is a small native launcher (`apps/launcher`). It resolves the release
 relative to its own location (the folder can be moved), opens no console, needs no
 administrator rights and no network, and shows a message if the release has not been
-built. It never starts a development server.
+built. It never starts a development server. If PLC Lab is already running, starting it
+again (through `PLC Lab.exe`, the BAT file or the application itself) brings the open
+window to the front instead of starting a second instance.
 
 Requirements to run: Windows 10/11 x64 and the Microsoft Edge WebView2 Runtime
 (preinstalled on current Windows, not bundled). Data (projects, progress, additional
