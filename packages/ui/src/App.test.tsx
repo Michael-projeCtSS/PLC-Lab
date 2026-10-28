@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -28,6 +29,8 @@ const fake = vi.hoisted(() => ({
   variables: vi.fn(),
   events: vi.fn(),
   check: vi.fn(),
+  diagnose: vi.fn(),
+  repair: vi.fn(),
   createProject: vi.fn(),
   updateSource: vi.fn(),
   catalog: vi.fn(),
@@ -178,4 +181,269 @@ it("shows the causal chain of one cycle from backend data", async () => {
   expect(within(ce).getByText(/Next PLC input/)).toBeInTheDocument();
   expect(within(ce).getByText("StartPB")).toBeInTheDocument();
   expect(within(ce).getByText("FALSE → TRUE")).toBeInTheDocument();
+});
+
+// ---- execution controls: one request at a time, newest frame wins -----------------------
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+const running = () =>
+  frame({
+    simulation: {
+      state: "RUNNING",
+      speedPercent: 100,
+      runId: "1",
+      cycleUs: "100000",
+      failure: null,
+    },
+  });
+
+async function openMotor() {
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  return screen.findByRole("button", { name: "Run" });
+}
+
+it("Run then Pause: the second command waits for the first to finish", async () => {
+  const run = deferred<ReturnType<typeof frame>>();
+  fake.simulation.mockReturnValueOnce(run.promise);
+  const runButton = await openMotor();
+  act(() => {
+    runButton.click();
+    runButton.click();
+  });
+  expect(fake.simulation).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Step" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Stop" })).toBeDisabled();
+  const readsBefore = fake.frame.mock.calls.length;
+  fake.frame.mockResolvedValue(running());
+  await act(async () => run.resolve(running()));
+  const pause = await screen.findByRole("button", { name: "Pause" });
+  await waitFor(() => expect(pause).toBeEnabled());
+  expect(fake.frame.mock.calls.length).toBeGreaterThan(readsBefore);
+  fake.simulation.mockResolvedValueOnce(frame());
+  fake.frame.mockResolvedValue(frame());
+  fireEvent.click(pause);
+  await waitFor(() => expect(fake.simulation).toHaveBeenCalledTimes(2));
+  expect(fake.simulation.mock.calls.map((c) => c[1])).toEqual(["RUN", "PAUSE"]);
+});
+
+it("Run then Stop: Stop is unavailable until Run has settled", async () => {
+  const run = deferred<ReturnType<typeof frame>>();
+  fake.simulation.mockReturnValueOnce(run.promise);
+  fireEvent.click(await openMotor());
+  const stop = screen.getByRole("button", { name: "Stop" });
+  expect(stop).toBeDisabled();
+  fireEvent.click(stop);
+  expect(fake.simulation).toHaveBeenCalledTimes(1);
+  fake.frame.mockResolvedValue(running());
+  await act(async () => run.resolve(running()));
+  await waitFor(() => expect(stop).toBeEnabled());
+  fake.simulation.mockResolvedValueOnce(frame());
+  fireEvent.click(stop);
+  await waitFor(() =>
+    expect(fake.simulation.mock.calls.map((c) => c[1])).toEqual([
+      "RUN",
+      "STOP",
+    ]),
+  );
+});
+
+it("a double-clicked Step advances exactly one cycle", async () => {
+  const step = deferred<ReturnType<typeof frame>>();
+  fake.simulation.mockReturnValueOnce(step.promise);
+  await openMotor();
+  const stepButton = screen.getByRole("button", { name: "Step" });
+  // Both clicks arrive before React re-renders the disabled button.
+  act(() => {
+    stepButton.click();
+    stepButton.click();
+  });
+  expect(fake.simulation).toHaveBeenCalledTimes(1);
+  await act(async () => step.resolve(frame()));
+  await waitFor(() => expect(stepButton).toBeEnabled());
+  expect(fake.simulation).toHaveBeenCalledTimes(1);
+});
+
+it("PLC RUN then PLC STOP: the mode switch sends one request at a time", async () => {
+  const mode = deferred<ReturnType<typeof frame>>();
+  fake.plcMode.mockReturnValueOnce(mode.promise);
+  await openMotor();
+  const group = screen.getByRole("group", { name: "PLC mode switch" });
+  const plcRun = within(group).getByRole("button", { name: "RUN" });
+  const plcStop = within(group).getByRole("button", { name: "STOP" });
+  act(() => {
+    plcStop.click();
+    plcRun.click();
+  });
+  expect(fake.plcMode).toHaveBeenCalledTimes(1);
+  expect(plcRun).toBeDisabled();
+  await act(async () => mode.resolve(frame()));
+  await waitFor(() => expect(plcRun).toBeEnabled());
+  expect(fake.plcMode.mock.calls.map((c) => c[1])).toEqual(["STOP"]);
+});
+
+it("a failed command re-enables the controls and re-reads the backend", async () => {
+  fake.simulation.mockRejectedValueOnce(new Error("Simulation refused"));
+  const runButton = await openMotor();
+  const readsBefore = fake.frame.mock.calls.length;
+  fireEvent.click(runButton);
+  await waitFor(() => expect(runButton).toBeEnabled());
+  await waitFor(() =>
+    expect(fake.frame.mock.calls.length).toBeGreaterThan(readsBefore),
+  );
+  fireEvent.click(screen.getByRole("tab", { name: /Messages/ }));
+  expect(await screen.findByText(/Simulation refused/)).toBeInTheDocument();
+});
+
+it("a slow frame read never overwrites the newer frame of a command", async () => {
+  const firstRead = deferred<ReturnType<typeof frame>>();
+  fake.frame.mockReturnValueOnce(firstRead.promise);
+  const runButton = await openMotor();
+  await waitFor(() => expect(fake.frame).toHaveBeenCalled());
+  // Reads after Run stay pending: only the two responses below can change the frame.
+  fake.frame.mockImplementation(() => new Promise(() => undefined));
+  fake.simulation.mockResolvedValueOnce(running());
+  fireEvent.click(runButton);
+  expect(await screen.findByText("Sim running")).toBeInTheDocument();
+  // The read sent before Run answers late with the old paused state.
+  await act(async () => firstRead.resolve(frame()));
+  await waitFor(() => expect(fake.frame.mock.calls.length).toBeGreaterThan(1));
+  expect(screen.getByText("Sim running")).toBeInTheDocument();
+  expect(screen.queryByText("Sim paused")).not.toBeInTheDocument();
+});
+
+it("PLC and simulation controls explain what they do", async () => {
+  await openMotor();
+  const group = screen.getByRole("group", { name: "PLC mode switch" });
+  expect(
+    within(group).getByRole("button", { name: "RUN" }),
+  ).toHaveAccessibleDescription(/PLC mode switch RUN/);
+  expect(
+    within(group).getByRole("button", { name: "STOP" }),
+  ).toHaveAccessibleDescription(/simulated machine keeps running/);
+  expect(
+    screen.getByRole("button", { name: "Run" }),
+  ).toHaveAccessibleDescription(/Does not change the PLC mode switch/);
+  expect(
+    screen.getByRole("button", { name: "Step" }),
+  ).toHaveAccessibleDescription(/exactly one PLC cycle/);
+  expect(
+    screen.getByRole("button", { name: "Stop" }),
+  ).toHaveAccessibleDescription(/not the PLC STOP switch/);
+});
+
+// ---- troubleshooting: nothing names the cause before the diagnosis ----------------------
+
+const GUIDE = "Stop button contact replaced by a normally open block";
+const REPAIR = "Fit a normally closed contact block to the Stop button";
+const ROOT_CAUSE_TEXT = "received a normally open contact block";
+
+function troubleshootingWorkspace() {
+  const w = workspace();
+  if (!w.exercise) throw new Error("fixture has no exercise");
+  return workspace({
+    exercise: {
+      ...w.exercise,
+      id: "ts.motor-wont-start",
+      title: "Conveyor will not start after panel maintenance",
+      kind: "troubleshooting",
+      knowledgeRefs: [
+        {
+          id: "fundamentals.no-nc-contacts",
+          title: "Normally open and normally closed contacts",
+        },
+      ],
+      troubleshooting: {
+        symptom: "Pressing Start does nothing.",
+        reportedBy: "Shift operator",
+        diagnosisOptions: [
+          {
+            id: "start-contact-broken",
+            label: "The Start contact does not close",
+          },
+          {
+            id: "stop-contact-no",
+            label: "The Stop contact block was replaced",
+          },
+        ],
+        diagnosed: false,
+        repairs: [],
+      },
+    },
+  });
+}
+
+it("an open troubleshooting lab shows only general concepts and no repair", async () => {
+  fake.openWorkspace.mockResolvedValue(troubleshootingWorkspace());
+  fake.diagnose.mockResolvedValue({
+    correct: true,
+    message: "Your diagnosis is consistent with the evidence.",
+    attempts: 1,
+    repairs: [{ id: "replace-stop-contact", label: REPAIR }],
+  });
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  expect(await screen.findByText("Helpful concepts")).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", {
+      name: "Normally open and normally closed contacts",
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/unlock the repair step/)).toBeInTheDocument();
+  const body = document.body.textContent ?? "";
+  expect(body).not.toContain(GUIDE);
+  expect(body).not.toContain(REPAIR);
+  expect(body).not.toContain(ROOT_CAUSE_TEXT);
+
+  fireEvent.change(screen.getByLabelText("Root cause"), {
+    target: { value: "stop-contact-no" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Submit diagnosis" }));
+  expect(await screen.findByRole("button", { name: REPAIR })).toBeEnabled();
+  expect(document.body.textContent).not.toContain(GUIDE);
+});
+
+it("the debrief names the cause and links its guide only after verification", async () => {
+  fake.openWorkspace.mockResolvedValue(troubleshootingWorkspace());
+  fake.check.mockResolvedValue({
+    outcome: "GRADED",
+    score: 100,
+    maxScore: 100,
+    passed: true,
+    criteria: [],
+    diagnostics: [],
+    problems: [],
+    debrief: {
+      rootCause: `The Stop button ${ROOT_CAUSE_TEXT} during the service.`,
+      evidence: ["StopPB was FALSE at rest."],
+      repair: REPAIR,
+      reasoning: "Compare every input with its documentation.",
+      references: [
+        { id: "troubleshooting.nc-contact-replaced-by-no", title: GUIDE },
+      ],
+    },
+  });
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  expect(document.body.textContent).not.toContain(GUIDE);
+  fireEvent.click(await screen.findByRole("button", { name: "Verify repair" }));
+  const debrief = await screen.findByLabelText("Debrief");
+  expect(
+    within(debrief).getByText(/received a normally open/),
+  ).toBeInTheDocument();
+  expect(
+    within(debrief).getByRole("button", { name: GUIDE }),
+  ).toBeInTheDocument();
 });

@@ -3,6 +3,22 @@ import { seconds } from "../format";
 import { Badge, PlcModeBadge, SimulationBadge } from "../ui";
 import type { Lab } from "./useLab";
 
+/** Explanations of the two separate control groups (also the buttons' accessible descriptions). */
+const HELP = {
+  plcRun:
+    "PLC mode switch RUN: the PLC executes its program once in every PLC cycle while simulated time passes.",
+  plcStop:
+    "PLC mode switch STOP: the program is not executed and the outputs go to their configured stop state (normally off). The simulated machine keeps running.",
+  simRun:
+    "Simulation Run: let simulated time pass. The machine moves and, with the PLC in RUN, the PLC scans every cycle. Does not change the PLC mode switch.",
+  simPause:
+    "Simulation Pause: freeze the simulated world. Nothing changes until Run or Step.",
+  simStep:
+    "Simulation Step: advance the simulated world by exactly one PLC cycle, then stay paused.",
+  simStop:
+    "Simulation Stop: return the machine to its initial state and power-cycle the PLC (program, hardware configuration and mode switch are kept; PLC variables restart). This is not the PLC STOP switch.",
+} as const;
+
 const SPEEDS = [25, 50, 100, 200, 500, 1000];
 
 export function Toolbar({
@@ -102,13 +118,18 @@ export function Toolbar({
           </>
         )}
       </div>
-      <div className="group" aria-label="PLC">
+      <div
+        className="group"
+        aria-label="PLC"
+        title="The PLC's own mode switch. It decides whether the program runs; the simulation controls decide whether time passes."
+      >
         <span className="label">PLC</span>
         <PlcModeBadge mode={frame.plc.mode} />
         <div className="segmented" role="group" aria-label="PLC mode switch">
           <button
             aria-pressed={frame.plc.switch === "RUN"}
             disabled={busy}
+            title={HELP.plcRun}
             onClick={() =>
               void lab.act(
                 "mode",
@@ -122,6 +143,7 @@ export function Toolbar({
           <button
             aria-pressed={frame.plc.switch === "STOP"}
             disabled={busy}
+            title={HELP.plcStop}
             onClick={() =>
               void lab.act(
                 "mode",
@@ -153,12 +175,18 @@ export function Toolbar({
           <Badge kind="forced">{frame.plc.forces} forced</Badge>
         )}
       </div>
-      <div className="group" aria-label="Simulation">
+      <div
+        className="group"
+        aria-label="Simulation"
+        title="The simulated world: whether time passes for the machine and the PLC. Separate from the PLC mode switch."
+      >
         <span className="label">Simulation</span>
         <SimulationBadge state={frame.simulation.state} />
         {running ? (
           <button
             className="btn btn-sm"
+            disabled={busy}
+            title={HELP.simPause}
             onClick={() =>
               void lab.act(
                 "sim",
@@ -172,6 +200,8 @@ export function Toolbar({
         ) : (
           <button
             className="btn btn-sm"
+            disabled={busy}
+            title={HELP.simRun}
             onClick={() =>
               void lab.act(
                 "sim",
@@ -185,7 +215,7 @@ export function Toolbar({
         )}
         <button
           className="btn btn-sm"
-          disabled={running}
+          disabled={busy || running}
           onClick={() =>
             void lab.act(
               "sim",
@@ -193,12 +223,13 @@ export function Toolbar({
               (f) => f,
             )
           }
-          title="Advance exactly one PLC cycle"
+          title={HELP.simStep}
         >
           Step
         </button>
         <button
           className="btn btn-sm"
+          disabled={busy}
           onClick={() =>
             void lab.act(
               "sim",
@@ -206,7 +237,7 @@ export function Toolbar({
               (f) => f,
             )
           }
-          title="Stop and restore the machine's initial state. The PLC keeps its program."
+          title={HELP.simStop}
         >
           Stop
         </button>

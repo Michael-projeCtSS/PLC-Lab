@@ -41,6 +41,19 @@ export function useLab(projectId: string) {
   const [busy, setBusy] = useState<string | null>(null);
   const [fatal, setFatal] = useState<unknown>(null);
   const revision = useRef(0);
+  // Frames come from reads and from use cases. Each request takes a number when it is
+  // sent; a response older than the newest applied one is dropped, so a slow read can
+  // never overwrite the frame a later use case returned.
+  const frameRequests = useRef(0);
+  const frameApplied = useRef(0);
+  const nextFrameRequest = useCallback(() => ++frameRequests.current, []);
+  const applyFrame = useCallback((request: number, f: LiveFrameDto) => {
+    if (request < frameApplied.current) return;
+    frameApplied.current = request;
+    setFrame(f);
+  }, []);
+  // One use case at a time: a second request while one is pending is ignored.
+  const pending = useRef(false);
   const ws = useMemo(
     () => (workspace ? { workspaceId: workspace.workspaceId } : null),
     [workspace],
@@ -87,7 +100,7 @@ export function useLab(projectId: string) {
       }
       setProject(p);
       setWorkspace(w);
-      setFrame(w.frame);
+      applyFrame(nextFrameRequest(), w.frame);
       setSignals(w.signals);
       setSourceState(p.programs[0]?.source ?? "");
       setWatchState(p.watch);
@@ -99,14 +112,15 @@ export function useLab(projectId: string) {
           .closeWorkspace({ workspaceId: opened.workspaceId })
           .catch(() => undefined);
     };
-  }, [projectId]);
+  }, [projectId, applyFrame, nextFrameRequest]);
 
   // Frame refresh: one read in flight, coalesced; driven by wake events and actions.
   const refreshFrame = useCallback(() => setWakes((n) => n + 1), []);
   useCoalescedRead(async () => {
     if (!ws) return;
+    const request = nextFrameRequest();
     try {
-      setFrame(await api.frame(ws, watchIds));
+      applyFrame(request, await api.frame(ws, watchIds));
     } catch (e) {
       log("error", e instanceof Error ? e.message : String(e));
     }
@@ -127,28 +141,36 @@ export function useLab(projectId: string) {
     };
   }, [wsId, refreshFrame]);
 
-  /** Run a use case that returns a new frame; report errors as messages. */
+  /**
+   * Run a use case that may return a new frame; report errors as messages. Only one use
+   * case runs at a time (further requests are ignored until it settles), and the
+   * authoritative frame is always re-read afterwards, also after a failure.
+   */
   const act = useCallback(
     async <T>(
       label: string,
       work: () => Promise<T>,
       toFrame?: (r: T) => LiveFrameDto | null,
     ): Promise<T | null> => {
+      if (pending.current) return null;
+      pending.current = true;
       setBusy(label);
+      const request = nextFrameRequest();
       try {
         const result = await work();
         const f = toFrame ? toFrame(result) : null;
-        if (f) setFrame(f);
-        refreshFrame();
+        if (f) applyFrame(request, f);
         return result;
       } catch (e) {
         log("error", e instanceof Error ? e.message : String(e));
         return null;
       } finally {
+        pending.current = false;
         setBusy(null);
+        refreshFrame();
       }
     },
-    [log, refreshFrame],
+    [log, refreshFrame, nextFrameRequest, applyFrame],
   );
 
   // Program draft: live compile diagnostics and autosave, both debounced.
