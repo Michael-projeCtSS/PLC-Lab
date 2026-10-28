@@ -34,11 +34,15 @@ export function validationPlan(lane, platform = process.platform) {
         "--workspace",
       ]),
       npm("knowledge-pack", ["run", "knowledge:verify"], platform),
+      npm("knowledge-install", ["run", "knowledge:install-check"], platform),
       npm("native-desktop", ["run", "test:desktop"], platform),
       npm("release-build", ["run", "build:release:native"], platform),
       npm("release-stage", ["run", "stage:release"], platform),
       npm("release-native", ["run", "test:desktop:release"], platform),
       npm("launcher-native", ["run", "test:launcher"], platform),
+      npm("launcher-bat", ["run", "test:launcher:bat"], platform),
+      npm("launcher-relocated", ["run", "test:launcher:relocated"], platform),
+      npm("bat-relocated", ["run", "test:bat:relocated"], platform),
     ];
   if (lane === "core")
     return [
@@ -62,6 +66,7 @@ export function validationPlan(lane, platform = process.platform) {
       npm("frontend", ["run", "test:frontend"], platform),
       npm("architecture", ["run", "test:architecture"], platform),
       npm("knowledge-pack", ["run", "knowledge:verify"], platform),
+      npm("knowledge-install", ["run", "knowledge:install-check"], platform),
       npm("npm-audit", ["audit", "--omit=dev", "--audit-level=high"], platform),
       {
         id: "cargo-deny",

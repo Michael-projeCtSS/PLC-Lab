@@ -211,3 +211,22 @@ test(
     assert.doesNotMatch(result.stdout, /ALL CHECKS PASSED/);
   },
 );
+
+test("root BAT helpers resolve every path from their own folder", async () => {
+  for (const name of [
+    "RUN_PLC_LAB.bat",
+    "RUN_PLC_LAB_DEV.bat",
+    "RUN_ALL_CHECKS.bat",
+    "BUILD_PLC_LAB_RELEASE.bat",
+  ]) {
+    const text = await readFile(path.join(root, name), "utf8");
+    assert.match(text, /%~dp0/, `${name} must locate files from %~dp0`);
+    assert.doesNotMatch(
+      text,
+      /\b[A-Za-z]:[\\/]/,
+      `${name} must not contain an absolute drive path`,
+    );
+    for (const line of text.split(/\r?\n/).filter((l) => l.includes("%~dp0")))
+      assert.match(line, /"[^"]*%~dp0/, `${name}: unquoted %~dp0 in ${line}`);
+  }
+});

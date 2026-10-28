@@ -98,11 +98,15 @@ test("Windows plan runs checks, release tests, native, release and launcher smok
       "canonical-check",
       "rust-release-tests",
       "knowledge-pack",
+      "knowledge-install",
       "native-desktop",
       "release-build",
       "release-stage",
       "release-native",
       "launcher-native",
+      "launcher-bat",
+      "launcher-relocated",
+      "bat-relocated",
     ],
   );
   assert.equal(plan[0].args.at(-1), "npm.cmd run check");
@@ -112,9 +116,13 @@ test("Windows plan runs checks, release tests, native, release and launcher smok
     "--locked",
     "--workspace",
   ]);
-  assert.equal(plan[3].args.at(-1), "npm.cmd run test:desktop");
-  assert.equal(plan[6].args.at(-1), "npm.cmd run test:desktop:release");
-  assert.equal(plan[7].args.at(-1), "npm.cmd run test:launcher");
+  assert.equal(plan[3].args.at(-1), "npm.cmd run knowledge:install-check");
+  assert.equal(plan[4].args.at(-1), "npm.cmd run test:desktop");
+  assert.equal(plan[7].args.at(-1), "npm.cmd run test:desktop:release");
+  assert.equal(plan[8].args.at(-1), "npm.cmd run test:launcher");
+  assert.equal(plan[9].args.at(-1), "npm.cmd run test:launcher:bat");
+  assert.equal(plan[10].args.at(-1), "npm.cmd run test:launcher:relocated");
+  assert.equal(plan[11].args.at(-1), "npm.cmd run test:bat:relocated");
   const core = validationPlan("core", "linux");
   assert.deepEqual(
     core.map((item) => item.id),
@@ -126,6 +134,7 @@ test("Windows plan runs checks, release tests, native, release and launcher smok
       "frontend",
       "architecture",
       "knowledge-pack",
+      "knowledge-install",
       "npm-audit",
       "cargo-deny",
     ],
@@ -139,7 +148,7 @@ test("Windows plan runs checks, release tests, native, release and launcher smok
       "only the WebView host is excluded on Linux",
     );
   }
-  assert.deepEqual(core[7].args, ["audit", "--omit=dev", "--audit-level=high"]);
+  assert.deepEqual(core[8].args, ["audit", "--omit=dev", "--audit-level=high"]);
   assert.ok(
     core.every((item) => !item.args.join(" ").includes("test:desktop")),
   );

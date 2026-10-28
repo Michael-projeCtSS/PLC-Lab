@@ -3,10 +3,17 @@
 //
 // Usage: node tests/e2e/desktop-smoke.mjs [--exe <path>] [--build development|release]
 //                                         [--out <artifacts subfolder>] [--launcher]
+//                                         [--bat] [--relocate]
+//
+// --launcher  the executable is the root launcher: it starts the staged app and exits.
+// --bat       start through RUN_PLC_LAB.bat (the release fallback) instead of --exe.
+// --relocate  first copy PLC Lab.exe, RUN_PLC_LAB.bat and releases/current into a fresh
+//             folder whose path contains spaces and start from that copy.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
@@ -18,10 +25,13 @@ const { values } = parseArgs({
     exe: { type: "string", default: "target/debug/plc-lab-desktop.exe" },
     build: { type: "string", default: "development" },
     out: { type: "string", default: "desktop-smoke" },
-    // The executable is the root launcher: it starts the staged app and exits.
     launcher: { type: "boolean", default: false },
+    bat: { type: "boolean", default: false },
+    relocate: { type: "boolean", default: false },
   },
 });
+// Both the root launcher and the batch file start the staged app and exit.
+const detached = values.launcher || values.bat;
 if (process.platform !== "win32")
   throw new Error("The native smoke test requires Windows and WebView2.");
 
@@ -47,7 +57,7 @@ const steps = [];
 const result = (state, extra = {}) =>
   writeFile(
     path.join(directory, "result.json"),
-    `${JSON.stringify({ result: state, executable: values.exe, build: values.build, steps, ...extra }, null, 2)}\n`,
+    `${JSON.stringify({ result: state, executable: values.exe, build: values.build, bat: values.bat, relocate: values.relocate, steps, ...extra }, null, 2)}\n`,
   );
 await result("RUNNING");
 
@@ -66,17 +76,49 @@ const port = await freePort();
 const stamp = Date.now();
 let output = "";
 let launchError = null;
-const application = spawn(path.resolve(root, values.exe), [], {
-  cwd: path.dirname(path.resolve(root, values.exe)),
-  env: {
-    ...process.env,
-    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
-    WEBVIEW2_USER_DATA_FOLDER: path.join(directory, `webview-${stamp}`),
-    PLC_LAB_DATA_DIR: path.join(directory, `data-${stamp}`),
-  },
-  windowsHide: true,
-  stdio: ["ignore", "pipe", "pipe"],
-});
+// The folder the application is started from: the repository or a relocated copy.
+let installation = root;
+if (values.relocate) {
+  installation = await mkdtemp(path.join(os.tmpdir(), "PLC Lab Test "));
+  for (const item of [
+    "PLC Lab.exe",
+    "RUN_PLC_LAB.bat",
+    path.join("releases", "current"),
+  ])
+    await cp(path.join(root, item), path.join(installation, item), {
+      recursive: true,
+      errorOnExist: true,
+    });
+}
+const target = values.bat
+  ? path.join(installation, "RUN_PLC_LAB.bat")
+  : path.resolve(installation, values.exe);
+const environment = {
+  ...process.env,
+  WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
+  WEBVIEW2_USER_DATA_FOLDER: path.join(directory, `webview-${stamp}`),
+  PLC_LAB_DATA_DIR: path.join(directory, `data-${stamp}`),
+  PLC_LAB_NO_PAUSE: "1",
+};
+const application = values.bat
+  ? spawn(
+      process.env.ComSpec ?? "cmd.exe",
+      ["/d", "/s", "/c", `""${target}""`],
+      {
+        cwd: os.tmpdir(),
+        env: environment,
+        windowsHide: true,
+        windowsVerbatimArguments: true,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    )
+  : spawn(target, [], {
+      // The launcher must not depend on the working directory.
+      cwd: values.launcher ? os.tmpdir() : path.dirname(target),
+      env: environment,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
 application.on("error", (error) => (launchError = error));
 application.stdout.on("data", (c) => (output += c));
 application.stderr.on("data", (c) => (output += c));
@@ -96,7 +138,7 @@ try {
       if (launchError) throw launchError;
       if (
         application.exitCode !== null &&
-        !(values.launcher && application.exitCode === 0)
+        !(detached && application.exitCode === 0)
       )
         throw new Error(
           `Native host exited ${application.exitCode}: ${output}`,
@@ -182,8 +224,13 @@ try {
       pack,
       `knowledge pack not discovered: ${JSON.stringify(status.ok.searchPaths)}`,
     );
-    assert.notEqual(pack.status, "INVALID", pack.errors.join("; "));
-    assert.ok(pack.exercises >= 2);
+    assert.equal(pack.status, "LOADED", pack.errors.join("; "));
+    assert.ok(pack.exercises >= 17, `${pack.exercises} exercises`);
+    if (values.relocate)
+      assert.ok(
+        pack.path.includes(path.basename(installation)),
+        `the relocated app loaded ${pack.path}`,
+      );
   });
 
   await step("practice exercise opens a workspace", async () => {
@@ -259,7 +306,7 @@ try {
   });
 
   await step(
-    "troubleshooting lab opens without revealing the cause",
+    "troubleshooting lab: symptom, diagnosis, repair, verification and debrief",
     async () => {
       await page.getByRole("button", { name: "Back", exact: true }).click();
       await page
@@ -269,10 +316,150 @@ try {
         .getByRole("button", { name: /Start Conveyor will not start/ })
         .click();
       await page.getByText("Fault report").waitFor({ timeout: 30_000 });
-      assert.doesNotMatch(
-        await page.locator("body").innerText(),
-        /contactTypeMismatch/,
-      );
+      const before = await page.locator("body").innerText();
+      assert.doesNotMatch(before, /contactTypeMismatch/);
+      assert.doesNotMatch(before, /What was wrong/);
+      // Symptom: Start does nothing.
+      await page.getByRole("button", { name: "Run", exact: true }).click();
+      await page.getByRole("tab", { name: "Process" }).click();
+      const start = page.getByRole("button", {
+        name: "Start S1 (hold to press)",
+      });
+      await start.dispatchEvent("pointerdown", { pointerId: 1 });
+      await delay(600);
+      await start.dispatchEvent("pointerup", { pointerId: 1 });
+      await delay(1500);
+      await page
+        .locator('[aria-label="Conveyor motor M1: stopped"]')
+        .waitFor({ timeout: 10_000 });
+      await page.getByRole("button", { name: "Pause" }).click();
+      // Diagnosis, repair and verification.
+      await page.getByRole("tab", { name: "Investigation" }).click();
+      await page.getByLabel("Root cause").selectOption("stop-contact-no");
+      await page.getByRole("button", { name: "Submit diagnosis" }).click();
+      await page.locator(".notice.success").waitFor({ timeout: 10_000 });
+      await page
+        .getByRole("button", {
+          name: "Fit a normally closed contact block to the Stop button",
+        })
+        .click();
+      await page
+        .getByRole("button", { name: /^✓ Fit a normally closed contact block/ })
+        .waitFor({ timeout: 10_000 });
+      await page.getByRole("button", { name: "Verify repair" }).click();
+      await page
+        .getByLabel("Check result")
+        .getByText("Passed", { exact: true })
+        .waitFor({ timeout: 30_000 });
+      const debrief = page.getByLabel("Debrief");
+      for (const heading of [
+        "What was wrong",
+        "Evidence that pointed to it",
+        "Correct repair",
+        "How to reason about it",
+      ])
+        await debrief.getByText(heading, { exact: true }).waitFor();
+      await page.screenshot({
+        path: path.join(directory, "troubleshooting-debrief.png"),
+      });
+    },
+  );
+
+  await step("project round trip through the real backend", async () => {
+    const created = await invoke("create_project", {
+      contractVersion: 8,
+      name: "Smoke round trip",
+      exercise: null,
+      scene: "scene.conveyor-drive",
+      platform: "generic.iec",
+    });
+    assert.ok(created.ok, JSON.stringify(created.error));
+    const exported = await invoke("export_project", {
+      contractVersion: 8,
+      id: created.ok.id,
+    });
+    assert.ok(exported.ok, JSON.stringify(exported.error));
+    assert.match(exported.ok.fileName, /\.plclab$/);
+    const imported = await invoke("import_project", {
+      contractVersion: 8,
+      text: exported.ok.text,
+    });
+    assert.ok(imported.ok, JSON.stringify(imported.error));
+    assert.notEqual(imported.ok.id, created.ok.id);
+    assert.equal(imported.ok.scene, "scene.conveyor-drive");
+    assert.deepEqual(imported.ok.programs, created.ok.programs);
+    assert.deepEqual(imported.ok.station, created.ok.station);
+    const corrupt = await invoke("import_project", {
+      contractVersion: 8,
+      text: "{ not a project",
+    });
+    assert.ok(corrupt.error, "a corrupt file must be rejected");
+    const list = await invoke("projects", { contractVersion: 8 });
+    const ids = list.ok.projects.map((p) => p.id);
+    assert.ok(ids.includes(created.ok.id) && ids.includes(imported.ok.id));
+  });
+
+  await step(
+    "free lab workspace fits 1366x768, 1920x1080 and 2560x1440",
+    async () => {
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+      await page.getByRole("button", { name: "FREE LAB", exact: true }).click();
+      await page.getByRole("button", { name: "New project" }).click();
+      await page
+        .getByLabel("Machine (scene)")
+        .selectOption("scene.conveyor-drive");
+      await page.getByRole("button", { name: "Create and open" }).click();
+      await page
+        .getByRole("button", { name: "Build & Load to PLC" })
+        .waitFor({ timeout: 30_000 });
+      const cdp = await page.context().newCDPSession(page);
+      for (const [width, height] of [
+        [1366, 768],
+        [1920, 1080],
+        [2560, 1440],
+      ]) {
+        await cdp.send("Emulation.setDeviceMetricsOverride", {
+          width,
+          height,
+          deviceScaleFactor: 1,
+          mobile: false,
+        });
+        await delay(300);
+        const layout = await page.evaluate(() => {
+          const box = (selector) => {
+            const r = document.querySelector(selector)?.getBoundingClientRect();
+            return r && { w: r.width, h: r.height, right: r.right };
+          };
+          return {
+            scrollWidth: document.documentElement.scrollWidth,
+            clientWidth: document.documentElement.clientWidth,
+            toolbar: box('[role="toolbar"][aria-label="Workspace controls"]'),
+            editor: box('[data-testid="st-editor"]'),
+            inspector: box('[role="tablist"][aria-label="Inspector"]'),
+          };
+        });
+        assert.ok(
+          layout.scrollWidth <= layout.clientWidth,
+          `${width}x${height}: horizontal overflow ${JSON.stringify(layout)}`,
+        );
+        for (const part of ["toolbar", "editor", "inspector"]) {
+          const b = layout[part];
+          assert.ok(
+            b && b.w > 0 && b.h > 0 && b.right <= width + 1,
+            `${width}x${height}: ${part} not fully visible ${JSON.stringify(layout)}`,
+          );
+        }
+        await page.screenshot({
+          path: path.join(directory, `free-lab-${width}x${height}.png`),
+        });
+      }
+      await cdp.send("Emulation.clearDeviceMetricsOverride");
+      await cdp.detach();
+      await page.getByRole("tab", { name: "Process" }).click();
+      await page
+        .locator('[aria-label^="Conveyor drive U1 / motor M1:"]')
+        .waitFor({ timeout: 10_000 });
+      await page.getByRole("button", { name: "Back", exact: true }).click();
     },
   );
 
@@ -285,7 +472,9 @@ try {
   assert.deepEqual(pageErrors, [], "the web view reported script errors");
   await page.screenshot({ path: path.join(directory, "final.png") });
   await result("PASS");
-  console.log(`Native smoke PASS (${values.exe}, ${steps.length} steps)`);
+  console.log(
+    `Native smoke PASS (${path.relative(root, target) || target}, ${steps.length} steps)`,
+  );
 } catch (error) {
   await result("FAIL", {
     error: error instanceof Error ? error.stack : String(error),
@@ -295,9 +484,20 @@ try {
 } finally {
   await browser?.close().catch(() => undefined);
   if (application.exitCode === null) application.kill();
-  if (values.launcher)
+  if (detached)
     spawnSync("taskkill", ["/IM", "PLC Lab Desktop.exe", "/T", "/F"], {
       stdio: "ignore",
     });
   await writeFile(path.join(directory, "native.log"), output);
+  if (values.relocate) {
+    // The terminated process may hold its files for a moment.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        await rm(installation, { recursive: true, force: true });
+        break;
+      } catch {
+        await delay(250);
+      }
+    }
+  }
 }
