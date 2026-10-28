@@ -337,7 +337,9 @@ try {
       await page.getByRole("tab", { name: "Investigation" }).click();
       await page.getByLabel("Root cause").selectOption("stop-contact-no");
       await page.getByRole("button", { name: "Submit diagnosis" }).click();
-      await page.locator(".notice.success").waitFor({ timeout: 10_000 });
+      await page
+        .locator(".notice.success", { hasText: "(attempt 1)" })
+        .waitFor({ timeout: 10_000 });
       await page
         .getByRole("button", {
           name: "Fit a normally closed contact block to the Stop button",
