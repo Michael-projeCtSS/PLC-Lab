@@ -61,12 +61,16 @@ PLC Lab simulation, troubleshooting), vendor and document type. No database is u
 npm run knowledge:validate   # schema validation and identifier uniqueness
 npm run knowledge:zip        # deterministic archive (sorted entries, fixed timestamps)
 npm run knowledge:verify     # archive = pack byte for byte, schemas pass, no drift
+npm run knowledge:install-check  # extract the archive to a folder with spaces and load it as the app does
 ```
 
 `tests/conformance/tests/knowledge_pack.rs` loads the real pack with the Rust loader and
 requires zero errors and warnings, resolvable references, expected search ranking, every
 practice exercise solvable by its reference solution (and not by its starter), and every
 troubleshooting exercise failing with the fault present and passing after the repair.
+`tests/conformance/tests/knowledge_install.rs` drives the application adapter against the
+`PLC_LAB_KNOWLEDGE_ROOT` folder (set by `knowledge:install-check`): discovery, indexing,
+typical searches, vendor and troubleshooting pages and every catalog entry with its links.
 
 ## Contents of v1.0.0
 

@@ -43,6 +43,13 @@ Data-driven (`exercises/*.json`): starter program, optional starter station, req
 interface, instructions, hints (revealed one at a time), knowledge references, evidence
 bindings, scenarios and behavioral criteria. The UI never hard-codes exercise ids.
 
+Minimum practice set (required by the conformance suite): `ex.lamp-pushbutton`,
+`ex.motor-jog` (non-latched start/stop), `ex.motor-start-stop` (seal-in),
+`ex.delayed-start` (TON), `ex.button-counter` (edge and counter), `ex.tank-filling`.
+Further exercises: `ex.part-counter`, `ex.tank-analog-scaling`, `ex.tank-batch-sequence`,
+`ex.modbus-level`. Every practice exercise passes with its reference solution in
+`tests/conformance/solutions/` and fails with its starter program.
+
 ## Basic and Advanced modes
 
 Basic mode offers one **Build & Load to PLC** button (compile, link, download, PLC RUN,
@@ -51,6 +58,9 @@ switch, memory reset and forcing, and enables hardware and network configuration
 
 ## Feedback design
 
-Feedback explains _what happened_: the cause-and-effect panel shows the PLC read, logic
-result, process change and next input for each cycle; check results name the failing
-criterion with concrete timing; troubleshooting feedback never reveals the root cause.
+Feedback explains _what happened_: the cause-and-effect panel shows, for each cycle, the
+input the scan read, the logic result, the output command as the field devices received
+it, the process change and the input staged for the next scan; the Variables table shows
+the same layers as Scan input, Committed and Next input. Check results name the failing
+criterion with concrete timing; troubleshooting feedback never reveals the root cause
+before a passed verification, which then shows the lab's debrief.

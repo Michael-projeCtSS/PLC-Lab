@@ -29,10 +29,18 @@ knowledge pack (`fidelity` field).
 
 Components: push button, selector switch, pilot lamp, motor starter (contactor,
 auxiliary contact, thermal overload), on/off valve with travel time and limit switches,
-pump, tank, level switch, level transmitter, presence sensor. Volumes and flows use exact
-fixed-point integers (mL, mL/s), so results do not depend on the cycle length. Process
-events: overflow, dry run, high-high, low-low, motor overload. Real fluid dynamics,
-valve characteristics and motor torque are not modeled.
+pump, tank, level switch, level transmitter, presence sensor, variable frequency drive.
+Volumes and flows use exact fixed-point integers (mL, mL/s), so results do not depend on
+the cycle length. Process events: overflow, dry run, high-high, low-low, motor overload.
+Real fluid dynamics, valve characteristics and motor torque are not modeled.
+
+The **variable frequency drive** is `APPROXIMATED_BEHAVIORAL`: a run terminal, relay
+outputs ready (always TRUE: drive trips are not simulated), running and remote, a local
+(keypad) control state that ignores the run terminal (fault `driveLocalControl`), a
+linear ramp to full speed, an output frequency shown on a 50 Hz basis and an approximate
+motor current (20 % of rated current at standstill rising linearly to 100 %). Speed
+references, parameters, fieldbus control words, braking and safety functions such as
+Safe Torque Off are not modeled.
 
 ## I/O hardware
 

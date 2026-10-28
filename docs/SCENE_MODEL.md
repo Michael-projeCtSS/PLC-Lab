@@ -17,18 +17,19 @@ the complete physical side of a lab:
 
 ## Components
 
-| Type               | Ports                              | Quantities                                                                                  |
-| ------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `pushButton`       | contact (NO/NC)                    | pressed                                                                                     |
-| `selectorSwitch`   | position0..3                       | position                                                                                    |
-| `pilotLamp`        | coil                               | lit, color                                                                                  |
-| `motorStarter`     | coil, aux, overload                | command, running, speedPermille, currentMa, tripped                                         |
-| `onOffValve`       | solenoid, openSwitch, closedSwitch | command, positionPermille, flowing                                                          |
-| `pump`             | motor                              | command, running, dry, flowMlPerS                                                           |
-| `tank`             | none                               | levelMl, levelPermille, capacityMl, spilledMl, overflowing, highHigh, lowLow, netFlowMlPerS |
-| `levelSwitch`      | contact (NO/NC, PNP/NPN/dry)       | wet, conducting                                                                             |
-| `levelTransmitter` | signal (4-20 mA, 0-20 mA, 0-10 V)  | signal (µA or mV)                                                                           |
-| `presenceSensor`   | output (NO/NC, PNP/NPN)            | present, conducting                                                                         |
+| Type                     | Ports                               | Quantities                                                                                  |
+| ------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `pushButton`             | contact (NO/NC)                     | pressed                                                                                     |
+| `selectorSwitch`         | position0..3                        | position                                                                                    |
+| `pilotLamp`              | coil                                | lit, color                                                                                  |
+| `motorStarter`           | coil, aux, overload                 | command, running, speedPermille, currentMa, tripped                                         |
+| `onOffValve`             | solenoid, openSwitch, closedSwitch  | command, positionPermille, flowing                                                          |
+| `pump`                   | motor                               | command, running, dry, flowMlPerS                                                           |
+| `tank`                   | none                                | levelMl, levelPermille, capacityMl, spilledMl, overflowing, highHigh, lowLow, netFlowMlPerS |
+| `levelSwitch`            | contact (NO/NC, PNP/NPN/dry)        | wet, conducting                                                                             |
+| `levelTransmitter`       | signal (4-20 mA, 0-20 mA, 0-10 V)   | signal (µA or mV)                                                                           |
+| `presenceSensor`         | output (NO/NC, PNP/NPN)             | present, conducting                                                                         |
+| `variableFrequencyDrive` | run; ready, running, remote (relay) | command, running, speedPermille, currentMa, remote                                          |
 
 Operator actions: press/release buttons, set selector position, set presence target.
 
@@ -41,6 +42,12 @@ knowledge pack that fail validation are rejected with a reason.
 ## v1 scenes
 
 `scene.io-basics` (buttons, selector, proximity sensor, lamps), `scene.motor-start-stop`
-(start/stop, contactor with feedback and overload, run lamp), `scene.tank-filling` (inlet
-valve, drain pump, tank, two level switches, 4-20 mA transmitter), `scene.tank-modbus`
-(tank with a Modbus TCP level transmitter and a high-high switch).
+(start/stop, contactor with feedback and overload, run lamp), `scene.conveyor-drive`
+(start/stop, conveyor drive with run terminal and ready/running/remote relay outputs, run
+lamp), `scene.tank-filling` (inlet valve, drain pump, tank, two level switches, 4-20 mA
+transmitter), `scene.tank-modbus` (tank with a Modbus TCP level transmitter and a
+high-high switch).
+
+Digital sink ports (coil, solenoid, motor, run) are derived from the component kind; the
+hardware model de-energizes every wired sink and energizes those whose output channel is
+ON on a powered, correctly configured module.

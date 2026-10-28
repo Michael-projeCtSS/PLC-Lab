@@ -3,9 +3,9 @@
 PLC Lab is a desktop application for learning industrial automation by doing. You write
 PLC programs in Structured Text, load them into a simulated PLC, operate a simulated
 machine and watch every cause and effect: what the PLC read, what it decided, what the
-machine did and what the PLC will read next. Troubleshooting labs train fault finding
-with LEDs, a multimeter, diagnostic buffers and network status, the way commissioning
-engineers work.
+devices received, what the machine did and what the PLC will read next. Troubleshooting
+labs train fault finding with LEDs, a multimeter, diagnostic buffers, drive displays and
+network status, the way commissioning engineers work.
 
 Everything that decides behavior runs in a deterministic Rust core: one PLC runtime, a
 process simulation, I/O hardware, a virtual Modbus TCP network, traces and grading. The
@@ -21,39 +21,71 @@ React user interface only displays authoritative state and sends operator action
 | Run every check                     | `RUN_ALL_CHECKS.bat` or `npm run validate`                           |
 
 `PLC Lab.exe` is a small launcher that starts the staged release in `releases/current/`.
-It is created by the release build and is not stored in Git. Requirements: Windows 10/11
-x64 with the Microsoft Edge WebView2 Runtime (preinstalled on current Windows). See
-[build and run](docs/BUILD_AND_RUN.md).
+It is created by the release build and is not stored in Git. It finds the release next to
+itself, so the folder may be moved or copied anywhere, including paths with spaces, as
+long as `PLC Lab.exe` and `releases/current/` stay together. Requirements: Windows 10/11
+x64 with the Microsoft Edge WebView2 Runtime (preinstalled on current Windows). The
+executables are not code-signed; Windows Smart App Control or SmartScreen may refuse to
+start a locally built copy. See [build and run](docs/BUILD_AND_RUN.md).
 
-## What is inside
+## How to learn with it
 
-- **Learn**: 20 lessons from "What is a PLC?" to troubleshooting methodology, each with
-  explanation, diagram, example, common mistake, question, exercise link and checkpoint.
-- **Practice**: data-driven exercises (pushbutton, motor seal-in, TON delays, counters,
-  part counting, tank filling, analog scaling, a CASE batch sequence, Modbus TCP level).
-  Programs are graded by running scripted scenarios in an isolated simulation and judging
-  behavior over time.
-- **Troubleshoot**: labs with hidden physical faults or commissioning errors (NC contact
-  replaced by NO, missing field power, inverted sensor, wrong 4-20 mA range, device in
-  the wrong subnet, Modbus register offset). The diagnostic path, repairs and the final
-  verification are scored.
-- **Free Lab**: an engineering workspace with program editor, hardware rack, HMI process
-  view, network view, diagnostics, variables, watch, waveforms, events and cause & effect.
-- **Knowledge**: a searchable, versioned knowledge pack with fundamentals, PLC platforms
-  of eight vendors, nine industrial protocols and troubleshooting guides, with
-  provenance records and explicit simulation-fidelity statements.
-- **Progress**: completed lessons and exercise scores, stored locally.
+1. **HOME** offers the next step: continue the course, practice, troubleshoot or open
+   the Free Lab.
+2. **LEARN** has 20 short lessons from "What is a PLC?" to troubleshooting methodology.
+   Each lesson explains one idea, shows an example and a common mistake, asks a question
+   and links an exercise.
+3. **PRACTICE** exercises give you a machine and a task. Write the program, press
+   **Build & Load to PLC**, operate the machine in the Process view and watch the
+   Cause & effect panel. **Check solution** runs hidden test scenarios in an isolated
+   simulation and grades behavior over time. The minimum path: pushbutton and lamp,
+   motor jog, motor start/stop with seal-in, TON delayed start, button counter, tank
+   filling; then analog scaling, part counting, a batch sequence and a Modbus level.
+4. **TROUBLESHOOT** labs start from a fault report. Reproduce the symptom, collect
+   evidence (inputs, outputs, LEDs, measurements, diagnostics, ping, drive display),
+   submit a diagnosis, repair and verify. Labs: Stop contact replaced by NO, inverted
+   presence sensor, 4-20 mA channel set to 0-20 mA, missing output field supply, drive
+   left in local control, Modbus register offset, transmitter in the wrong subnet. After
+   a passed verification a debrief explains the root cause, the evidence that pointed to
+   it, the correct repair and the reasoning.
+5. **KNOWLEDGE** is the reference: fundamentals, instructions, eight PLC vendors and
+   their families, nine industrial protocols and troubleshooting guides, all searchable.
+6. **PROGRESS** shows completed lessons and best scores.
 
-The knowledge pack is also distributed as
-[`releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip`](releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip).
+## Free Lab
 
-## Honest scope
+**FREE LAB → New project** creates an engineering project on one of the machines
+(I/O board, motor starter, conveyor with drive, tank, tank with Modbus transmitter) and a
+PLC platform profile. The workspace has the program editor, hardware rack, process view,
+network view, diagnostics, variables (scan input, committed value, next input), watch,
+waveforms, events and cause & effect. In Advanced mode the hardware and network
+configuration can be edited and downloaded. Projects can be saved, copied, exported and
+imported as `.plclab` files.
+
+## Where things are stored
+
+| What                                 | Location                                                                                               |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Projects (`.plclab`)                 | `%APPDATA%\dev.plclab.desktop\projects\`                                                               |
+| Progress                             | `%APPDATA%\dev.plclab.desktop\progress.json`                                                           |
+| Knowledge packs shipped with the app | `releases\current\knowledge-packs\`                                                                    |
+| Additional knowledge packs you add   | `%APPDATA%\dev.plclab.desktop\knowledge-packs\` (one folder per pack)                                  |
+| Knowledge pack archive               | [`releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip`](releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip) |
+
+To install a pack, extract its ZIP into one of the knowledge-pack folders so that
+`<folder>\<pack name>\pack.json` exists, then restart PLC Lab. The Knowledge section shows
+each discovered pack with its status. See [knowledge pack](docs/KNOWLEDGE_PACK.md).
+
+## Simulation fidelity
 
 PLC Lab is an educational simulator. It does not emulate vendor firmware, does not
 implement PROFINET, EtherCAT or EtherNet/IP stacks, does not connect to real devices and
-claims no protocol conformance. Platform profiles present addresses, analog raw values
-and product names in a vendor's style and declare their fidelity. See
-[simulation fidelity](docs/SIMULATION_FIDELITY.md).
+claims no protocol or vendor conformance. The PLC runtime follows IEC 61131-3 semantics
+for the implemented Structured Text subset; devices such as the motor starter, valve,
+tank and drive are simplified, deterministic models. Platform profiles present addresses,
+analog raw values and product names in a vendor's style and declare their fidelity
+(exact, approximated, conceptual or not implemented). Knowledge pages mark facts that
+could not be verified against a source. See [simulation fidelity](docs/SIMULATION_FIDELITY.md).
 
 ## Documentation
 
