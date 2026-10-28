@@ -227,7 +227,6 @@ pub struct SceneRuntime {
     seed: u64,
     ids: Vec<Identifier>,
     labels: Vec<String>,
-    kinds: Vec<&'static str>,
     sinks: Vec<Vec<&'static str>>,
     index: BTreeMap<Identifier, usize>,
     states: Vec<State>,
@@ -372,11 +371,6 @@ impl SceneRuntime {
             seed,
             ids: scene.components.iter().map(|c| c.id.clone()).collect(),
             labels: scene.components.iter().map(|c| c.label.clone()).collect(),
-            kinds: scene
-                .components
-                .iter()
-                .map(|c| c.kind.type_name())
-                .collect(),
             sinks: scene
                 .components
                 .iter()
@@ -410,9 +404,6 @@ impl SceneRuntime {
     }
     pub fn component_label(&self, index: usize) -> Option<&str> {
         self.labels.get(index).map(String::as_str)
-    }
-    pub fn component_kind(&self, index: usize) -> Option<&'static str> {
-        self.kinds.get(index).copied()
     }
     /// Whether `port` of the component is a digital sink (coil, solenoid, run terminal).
     pub fn is_digital_sink(&self, index: usize, port: &str) -> bool {

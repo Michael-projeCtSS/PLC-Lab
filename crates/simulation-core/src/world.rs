@@ -123,9 +123,6 @@ impl<E> Scheduler<E> {
         self.queue.insert(key, event);
         Ok(key)
     }
-    pub fn cancel(&mut self, key: EventKey) -> Option<E> {
-        self.queue.remove(&key)
-    }
     /// Remove every event whose payload matches the predicate. Returns the number removed.
     pub fn cancel_where(&mut self, mut predicate: impl FnMut(&E) -> bool) -> usize {
         let keys: Vec<EventKey> = self

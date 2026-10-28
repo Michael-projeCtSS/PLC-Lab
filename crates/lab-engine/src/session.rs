@@ -273,9 +273,6 @@ impl LabSession {
     pub fn config(&self) -> SessionConfig {
         self.config
     }
-    pub fn scene_definition(&self) -> &SceneDefinition {
-        &self.scene_def
-    }
     pub fn profile(&self) -> &PlatformProfile {
         &self.profile
     }

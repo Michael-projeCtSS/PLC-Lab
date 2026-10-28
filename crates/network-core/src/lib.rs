@@ -607,9 +607,6 @@ impl NetworkRuntime {
     pub fn plc_link_up(&self) -> bool {
         self.plc_link_up
     }
-    pub fn plc_last_activity(&self) -> Option<WorldTime> {
-        self.plc_activity.map(WorldTime::from_micros)
-    }
 
     /// ICMP-style reachability check from the PLC, answered synchronously from topology.
     pub fn ping(&self, target: Ipv4) -> PingResult {

@@ -76,10 +76,6 @@ export function valueClass(value: SignalValueDto | null | undefined): string {
   return "value";
 }
 
-export function isTrue(value: SignalValueDto | null | undefined): boolean {
-  return value?.type === "BOOL" && value.value;
-}
-
 /** Number for plotting; TIME in milliseconds. */
 export function numeric(value: SignalValueDto): number {
   switch (value.type) {

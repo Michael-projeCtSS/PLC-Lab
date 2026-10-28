@@ -213,9 +213,6 @@ impl StationRuntime {
     pub fn diagnostics(&self) -> &DiagnosticBuffer {
         &self.buffer
     }
-    pub fn diagnostics_mut(&mut self) -> &mut DiagnosticBuffer {
-        &mut self.buffer
-    }
 
     /// Replace the configuration (hardware download). The CPU type must match.
     pub fn reconfigure(
@@ -236,10 +233,6 @@ impl StationRuntime {
         self.last_run_outputs.clear();
         self.refresh_status(now);
         Ok(())
-    }
-
-    pub fn set_profile(&mut self, profile: PlatformProfile) {
-        self.profile = profile;
     }
 
     pub fn apply_fault(&mut self, fault: HardwareFault, now: WorldTime) {
