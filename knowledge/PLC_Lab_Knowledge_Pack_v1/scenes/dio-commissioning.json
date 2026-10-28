@@ -1,0 +1,417 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.dio-commissioning",
+  "revision": 1,
+  "title": "Digital I/O commissioning bench",
+  "summary": "A newly installed conveyor cell before handover: start and stop buttons, a guard door switch, a part sensor, a motor contactor with auxiliary feedback and overload relay, a cooling valve with open and closed limit switches and a run lamp, wired to a compact PLC with a 16-channel input module and an 8-channel output module.",
+  "components": [
+    {
+      "id": "start",
+      "label": "Start S1",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyOpen",
+        "color": "green"
+      }
+    },
+    {
+      "id": "stop",
+      "label": "Stop S2",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyClosed",
+        "color": "red"
+      }
+    },
+    {
+      "id": "guard",
+      "label": "Guard door B2",
+      "kind": {
+        "type": "presenceSensor",
+        "output": "pnp",
+        "contact": "normallyOpen"
+      }
+    },
+    {
+      "id": "part",
+      "label": "Part sensor B1",
+      "kind": {
+        "type": "presenceSensor",
+        "output": "pnp",
+        "contact": "normallyOpen"
+      }
+    },
+    {
+      "id": "motor",
+      "label": "Conveyor motor M1 (K1, F1)",
+      "kind": {
+        "type": "motorStarter",
+        "pickupMs": 30,
+        "runUpMs": 1500,
+        "ratedCurrentMa": 4200
+      }
+    },
+    {
+      "id": "valve",
+      "label": "Cooling valve Y1",
+      "kind": {
+        "type": "onOffValve",
+        "travelMs": 800,
+        "flowMlPerS": 0
+      }
+    },
+    {
+      "id": "lamp",
+      "label": "Run lamp H1",
+      "kind": {
+        "type": "pilotLamp",
+        "color": "green"
+      }
+    }
+  ],
+  "installation": {
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di16.24vdc.sink"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc"
+      }
+    ],
+    "wiring": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "component": "start",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "component": "stop",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "component": "guard",
+        "port": "output"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "component": "part",
+        "port": "output"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 4
+        },
+        "component": "motor",
+        "port": "aux"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 5
+        },
+        "component": "motor",
+        "port": "overload"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 6
+        },
+        "component": "valve",
+        "port": "openSwitch"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 7
+        },
+        "component": "valve",
+        "port": "closedSwitch"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "component": "motor",
+        "port": "coil"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "component": "valve",
+        "port": "solenoid"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 2
+        },
+        "component": "lamp",
+        "port": "coil"
+      }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di16.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "GuardClosed"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "tag": "PartAtEnd"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 4
+        },
+        "tag": "MotorFeedback"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 5
+        },
+        "tag": "OverloadOK"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 6
+        },
+        "tag": "ValveOpen"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 7
+        },
+        "tag": "ValveClosed"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "MotorContactor"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "CoolingValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 2
+        },
+        "tag": "RunLamp"
+      }
+    ]
+  },
+  "interface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Start button S1, normally open: TRUE while pressed."
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe)."
+    },
+    {
+      "tag": "GuardClosed",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Guard door switch B2 (PNP, normally open): TRUE while the guard door is closed."
+    },
+    {
+      "tag": "PartAtEnd",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Part sensor B1 at the conveyor end (PNP, normally open): TRUE while a part is there."
+    },
+    {
+      "tag": "MotorFeedback",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Contactor K1 auxiliary contact: TRUE when the contactor has pulled in."
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Overload relay F1, normally closed: TRUE while the motor is not overloaded."
+    },
+    {
+      "tag": "ValveOpen",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Cooling valve Y1 open limit switch: TRUE when fully open."
+    },
+    {
+      "tag": "ValveClosed",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Cooling valve Y1 closed limit switch: TRUE when fully closed."
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Contactor coil K1: TRUE runs the conveyor motor M1."
+    },
+    {
+      "tag": "CoolingValve",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Cooling valve solenoid Y1: TRUE opens the valve."
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Green lamp H1: the machine runs (motor feedback and valve open)."
+    }
+  ],
+  "layout": [
+    {
+      "component": "start",
+      "x": 100,
+      "y": 440
+    },
+    {
+      "component": "stop",
+      "x": 210,
+      "y": 440
+    },
+    {
+      "component": "lamp",
+      "x": 320,
+      "y": 440
+    },
+    {
+      "component": "guard",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "component": "part",
+      "x": 860,
+      "y": 300
+    },
+    {
+      "component": "motor",
+      "x": 420,
+      "y": 240,
+      "width": 220,
+      "height": 160
+    },
+    {
+      "component": "valve",
+      "x": 700,
+      "y": 420
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.commissioning",
+    "fundamentals.digital-io",
+    "fundamentals.no-nc-contacts"
+  ]
+}

@@ -36,6 +36,8 @@ const fake = vi.hoisted(() => ({
   catalog: vi.fn(),
   search: vi.fn(),
   takeOpenRequest: vi.fn(),
+  commissioning: vi.fn(),
+  noteEvidence: vi.fn(),
 }));
 
 vi.mock("@plc-lab/ipc", async (original) => ({
@@ -90,6 +92,7 @@ beforeEach(() => {
   });
   fake.search.mockResolvedValue([]);
   fake.takeOpenRequest.mockResolvedValue(null);
+  fake.noteEvidence.mockResolvedValue(null);
   // Like the real backend, every frame read after a successful load reports the loaded,
   // running simulation; the UI re-reads the frame after each use case.
   fake.buildAndLoad.mockImplementation(() => {
@@ -121,6 +124,7 @@ it("home offers the primary learning paths without internal jargon", async () =>
     "HOME",
     "LEARN",
     "PRACTICE",
+    "COMMISSION",
     "TROUBLESHOOT",
     "FREE LAB",
     "KNOWLEDGE",
@@ -148,6 +152,71 @@ it("practice lists data-driven exercises by kind", async () => {
   expect(
     await screen.findByText("Conveyor will not start"),
   ).toBeInTheDocument();
+});
+
+it("commissioning labs have their own section", async () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "COMMISSION" }));
+  expect(
+    await screen.findByRole("heading", { name: "Commissioning labs" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /Start Commissioning: no input/ }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Conveyor will not start")).toBeNull();
+});
+
+it("the commissioning tab shows the checklist the backend evaluated", async () => {
+  fake.commissioning.mockResolvedValue({
+    feedbackWaitS: 3,
+    categories: [
+      {
+        id: "power",
+        title: "Power",
+        state: "FAULT",
+        items: [
+          {
+            id: "io-supply",
+            title: "I/O field supply",
+            state: "FAULT",
+            findings: ["DI 16 at rack 0 slot 1: no 24 V field (load) supply"],
+            how: "Hardware view: module status.",
+          },
+        ],
+      },
+      {
+        id: "drives",
+        title: "Drives",
+        state: "NOT_APPLICABLE",
+        items: [
+          {
+            id: "ready",
+            title: "Ready",
+            state: "NOT_APPLICABLE",
+            findings: ["This machine has no drive."],
+            how: "",
+          },
+        ],
+      },
+    ],
+  });
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  fireEvent.click(await screen.findByRole("tab", { name: "Commissioning" }));
+  const item = await screen.findByLabelText("I/O field supply: FAULT");
+  expect(within(item).getByText(/no 24 V field/)).toBeInTheDocument();
+  expect(
+    within(item).getByText("Hardware view: module status."),
+  ).toBeInTheDocument();
+  expect(fake.commissioning).toHaveBeenCalled();
+  // A category with nothing to check starts collapsed and opens on request.
+  const drives = screen.getByRole("button", { name: /DRIVES/ });
+  expect(drives).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByText("This machine has no drive.")).toBeNull();
+  fireEvent.click(drives);
+  expect(screen.getByText("This machine has no drive.")).toBeInTheDocument();
 });
 
 it("opens a workspace and builds in basic mode through one backend use case", async () => {

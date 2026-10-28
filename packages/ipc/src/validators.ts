@@ -202,7 +202,7 @@ export const lesson = obj<G.LessonDto>({
   knowledgeRefs: arr(related),
 });
 const difficulty = literal("beginner", "intermediate", "advanced");
-const exerciseKind = literal("practice", "troubleshooting");
+const exerciseKind = literal("practice", "troubleshooting", "commissioning");
 const option = obj<G.OptionDto>({ id: str, label: str });
 export const exercise = obj<G.ExerciseDto>({
   id: str,
@@ -661,6 +661,39 @@ export const hardware = obj<G.HardwareDto>({
     }),
   ),
 });
+const checkState = literal(
+  "OK",
+  "ATTENTION",
+  "FAULT",
+  "UNTESTED",
+  "NOT_APPLICABLE",
+);
+const checkItem = obj<G.CheckItemDto>({
+  id: str,
+  title: str,
+  state: checkState,
+  findings: arr(str),
+  how: str,
+});
+const checkCategory = obj<G.CheckCategoryDto>({
+  id: literal(
+    "power",
+    "hardware",
+    "network",
+    "inputs",
+    "outputs",
+    "drives",
+    "process",
+  ),
+  title: str,
+  state: checkState,
+  items: arr(checkItem),
+});
+export const commissioning = obj<G.CommissioningDto>({
+  categories: arr(checkCategory),
+  feedbackWaitS: u32,
+});
+
 export const network = obj<G.NetworkDto>({
   plcInterface: nullable(interfaceDto),
   plcLinkUp: bool,

@@ -14,6 +14,7 @@ const NAV: { page: Route["page"]; label: string }[] = [
   { page: "home", label: "HOME" },
   { page: "learn", label: "LEARN" },
   { page: "practice", label: "PRACTICE" },
+  { page: "commission", label: "COMMISSION" },
   { page: "troubleshoot", label: "TROUBLESHOOT" },
   { page: "freelab", label: "FREE LAB" },
   { page: "knowledge", label: "KNOWLEDGE" },
@@ -119,6 +120,9 @@ export function App() {
         )}
         {route.page === "practice" && (
           <ExercisesPage kind="practice" navigate={navigate} />
+        )}
+        {route.page === "commission" && (
+          <ExercisesPage kind="commissioning" navigate={navigate} />
         )}
         {route.page === "troubleshoot" && (
           <ExercisesPage kind="troubleshooting" navigate={navigate} />

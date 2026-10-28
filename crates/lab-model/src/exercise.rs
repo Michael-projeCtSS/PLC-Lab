@@ -28,6 +28,16 @@ pub enum Difficulty {
 pub enum ExerciseKind {
     Practice,
     Troubleshooting,
+    /// Commissioning a newly installed machine: the same diagnose, repair and verify flow
+    /// as troubleshooting, worked through the commissioning checklist.
+    Commissioning,
+}
+
+impl ExerciseKind {
+    /// Labs with a hidden installation fault that the student diagnoses and repairs.
+    pub fn is_fault_finding(self) -> bool {
+        matches!(self, Self::Troubleshooting | Self::Commissioning)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

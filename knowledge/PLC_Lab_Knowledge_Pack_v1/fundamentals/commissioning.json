@@ -18,6 +18,14 @@
     {
       "heading": "Forcing with care",
       "body": "Forcing overrides inputs or outputs regardless of the program. It is indispensable for loop checks and dangerous when forgotten: a forced output stays on even when the program says off. PLC Lab shows active forces in the toolbar and the CPU FORCE LED."
+    },
+    {
+      "heading": "The commissioning checklist in PLC Lab",
+      "body": "The **Commissioning** tab of every workspace follows the same order an engineer works in: **Power**, **Hardware**, **Network**, **Inputs**, **Outputs**, **Drives** and **Process**. Each check shows what the installation reports right now and what your tests have shown:\n\n- **OK**: checked and as documented.\n- **To test**: needs a test you have not done yet, for example pressing a button or switching an output.\n- **Check**: deviates from the drawing, for example a contact that reads TRUE at rest although the drawing shows a normally open contact.\n- **Fault**: prevents correct operation, for example an output that is commanded ON while its terminal stays at 0 V.\n\nOperate every button and sensor in the Process view and switch every output (from the program or with a force). A device passes its input test when exactly its own input follows it. An actuator passes when its output switches 24 V, the device responds and its feedback changes."
+    },
+    {
+      "heading": "What the simulation shows",
+      "body": "The checklist uses only what you could also observe with the other tools: module status and LEDs, input values and their quality, output states, terminal voltages, device indications and the network status. It compares them with the machine's drawing, which in PLC Lab is the scene's documented wiring. It never reads the fault a lab has injected. The simulation is educational: field devices switch ideally, a terminal is either at 24 V or at 0 V, and missing feedback is reported after an actuator has been energized for 3 seconds. Real commissioning also includes safety-function tests, insulation and protective-earth checks and documented sign-off, which this checklist does not replace."
     }
   ],
   "facts": [],

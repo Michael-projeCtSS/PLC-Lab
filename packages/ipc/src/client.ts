@@ -50,6 +50,7 @@ export const COMMANDS = [
   "trend",
   "events",
   "hardware",
+  "commissioning",
   "network",
   "measure",
   "ping",
@@ -191,6 +192,7 @@ export const api = {
   events: (w: Ws, after: string | null, limit: number) =>
     call("events", { ...w, after, limit }, V.eventsPage),
   hardware: (w: Ws) => call("hardware", w, V.hardware),
+  commissioning: (w: Ws) => call("commissioning", w, V.commissioning),
   network: (w: Ws) => call("network", w, V.network),
   measure: (w: Ws, channel: G.ChannelRefDto) =>
     call("measure", { ...w, channel }, V.measurement),

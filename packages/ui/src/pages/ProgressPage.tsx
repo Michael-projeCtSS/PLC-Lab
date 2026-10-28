@@ -1,13 +1,15 @@
 import { api } from "@plc-lab/ipc";
 import { Badge, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
-import { openExercise, type Navigate } from "../route";
+import { openExercise, sectionOf, type Navigate } from "../route";
 
 export function ProgressPage({ navigate }: { navigate: Navigate }) {
   const library = useLoad(() => api.library(), []);
   const l = library.data;
   const lessonsDone = l?.lessons.filter((x) => x.completed).length ?? 0;
   const practice = l?.exercises.filter((e) => e.kind === "practice") ?? [];
+  const commissioning =
+    l?.exercises.filter((e) => e.kind === "commissioning") ?? [];
   const troubleshooting =
     l?.exercises.filter((e) => e.kind === "troubleshooting") ?? [];
   const summary = (items: typeof practice) =>
@@ -45,6 +47,10 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
             <div className="tile" style={{ cursor: "default" }}>
               <h4>Practice</h4>
               <span className="score">{summary(practice)}</span>
+            </div>
+            <div className="tile" style={{ cursor: "default" }}>
+              <h4>Commissioning</h4>
+              <span className="score">{summary(commissioning)}</span>
             </div>
             <div className="tile" style={{ cursor: "default" }}>
               <h4>Troubleshooting</h4>
@@ -107,11 +113,7 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
                 <tr
                   key={e.id}
                   onClick={() =>
-                    void openExercise(
-                      e.id,
-                      navigate,
-                      e.kind === "practice" ? "practice" : "troubleshoot",
-                    )
+                    void openExercise(e.id, navigate, sectionOf(e.kind))
                   }
                   style={{ cursor: "pointer" }}
                 >

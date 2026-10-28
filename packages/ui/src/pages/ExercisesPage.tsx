@@ -2,22 +2,42 @@ import { useState } from "react";
 import { api, type ExerciseSummaryDto } from "@plc-lab/ipc";
 import { Badge, Empty, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
-import { openExercise, type Navigate } from "../route";
+import {
+  openExercise,
+  sectionOf,
+  type ExerciseKind,
+  type Navigate,
+} from "../route";
 
 const LEVELS = ["beginner", "intermediate", "advanced"] as const;
+
+const INTRO: Record<ExerciseKind, { title: string; text: string }> = {
+  practice: {
+    title: "Practice",
+    text: "Write a PLC program for a real machine. Your program is checked by running it against scripted scenarios in an isolated simulation.",
+  },
+  commissioning: {
+    title: "Commissioning labs",
+    text: "A newly installed machine does not work yet. Work through the commissioning checklist: power, hardware, network, inputs, outputs, drives and process. Test every device, find the installation fault, repair it and prove the machine works.",
+  },
+  troubleshooting: {
+    title: "Troubleshooting labs",
+    text: "Something is wrong with a working machine. Reproduce the symptom, collect evidence, name the root cause, repair it and prove the repair.",
+  },
+};
 
 export function ExercisesPage({
   kind,
   navigate,
 }: {
-  kind: "practice" | "troubleshooting";
+  kind: ExerciseKind;
   navigate: Navigate;
 }) {
   const library = useLoad(() => api.library(), []);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const items = (library.data?.exercises ?? []).filter((e) => e.kind === kind);
-  const section = kind === "practice" ? "practice" : "troubleshoot";
+  const section = sectionOf(kind);
   const start = (e: ExerciseSummaryDto) => {
     setBusy(e.id);
     openExercise(e.id, navigate, section).catch((err: unknown) => {
@@ -29,12 +49,8 @@ export function ExercisesPage({
     <div className="page-inner">
       <div className="page-header">
         <div>
-          <h1>{kind === "practice" ? "Practice" : "Troubleshooting labs"}</h1>
-          <p>
-            {kind === "practice"
-              ? "Write a PLC program for a real machine. Your program is checked by running it against scripted scenarios in an isolated simulation."
-              : "Something is wrong with a working machine. Reproduce the symptom, collect evidence, name the root cause, repair it and prove the repair."}
-          </p>
+          <h1>{INTRO[kind].title}</h1>
+          <p>{INTRO[kind].text}</p>
         </div>
       </div>
       <ErrorNotice

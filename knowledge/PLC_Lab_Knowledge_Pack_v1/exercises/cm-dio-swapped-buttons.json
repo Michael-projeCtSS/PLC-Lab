@@ -1,0 +1,332 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "cm.dio-swapped-buttons",
+  "revision": 1,
+  "title": "Commissioning: Start only jogs the conveyor",
+  "kind": "commissioning",
+  "difficulty": "beginner",
+  "summary": "The machine runs only while Start is held and stops as soon as it is released. The program passed its factory test. Check the operator devices against the drawing.",
+  "objectives": [
+    "Prove each device drives its own input",
+    "Use input tests to find swapped wiring"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.dio-commissioning",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open: TRUE while pressed. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while NOT pressed. *)\n    GuardClosed : BOOL; (* Guard door switch B2: TRUE while the door is closed. *)\n    PartAtEnd : BOOL; (* Part sensor B1: TRUE while a part waits at the conveyor end. *)\n    MotorFeedback : BOOL; (* Contactor K1 auxiliary contact. *)\n    OverloadOK : BOOL; (* Overload relay F1, normally closed. *)\n    ValveOpen : BOOL; (* Cooling valve Y1 open limit switch. *)\n    ValveClosed : BOOL; (* Cooling valve Y1 closed limit switch. *)\nEND_VAR\nVAR_OUTPUT\n    MotorContactor : BOOL; (* Contactor coil K1. *)\n    CoolingValve : BOOL; (* Cooling valve solenoid Y1. *)\n    RunLamp : BOOL; (* Run lamp H1. *)\nEND_VAR\nVAR\n    Running : BOOL; (* Start/stop latch. *)\nEND_VAR\n(* The program was accepted at the factory test; this lab is about the installation. *)\nRunning := (StartPB OR Running) AND StopPB AND OverloadOK AND GuardClosed AND NOT PartAtEnd;\nMotorContactor := Running;\nCoolingValve := Running AND MotorFeedback;\nRunLamp := MotorFeedback AND ValveOpen;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "GuardClosed",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "PartAtEnd",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorFeedback",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "ValveOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "ValveClosed",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "CoolingValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Build & Load the program and switch the PLC to RUN; close the guard door and press Start to see the symptom.",
+    "Open the Commissioning tab and work through it from POWER to PROCESS.",
+    "Operate every button and sensor, and switch every output, until no check is left untested.",
+    "Diagnose, repair, then verify."
+  ],
+  "hints": [
+    "Press each button alone and note which input changes.",
+    "A latch that drops out at once suggests the Stop condition, not the Start."
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "stop",
+      "source": {
+        "type": "plcTag",
+        "tag": "StopPB"
+      }
+    },
+    {
+      "name": "contactor",
+      "source": {
+        "type": "plcTag",
+        "tag": "MotorContactor"
+      }
+    },
+    {
+      "name": "running",
+      "source": {
+        "type": "component",
+        "component": "motor",
+        "quantity": "running"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "component",
+        "component": "lamp",
+        "quantity": "lit"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "verify",
+      "title": "Close the guard, start and stop the machine",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 100,
+          "action": {
+            "type": "setPresence",
+            "component": "guard",
+            "present": true
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 4500,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 4800,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "runs",
+      "title": "The conveyor motor runs after Start",
+      "points": 40,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 2500
+      },
+      "onFail": "The motor does not run after Start with the guard closed."
+    },
+    {
+      "id": "ready",
+      "title": "The run lamp reports the machine running",
+      "points": 40,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 4000
+      },
+      "onFail": "The run lamp never lit: motor feedback and an open cooling valve are both needed."
+    },
+    {
+      "id": "stops",
+      "title": "Stop stops the motor",
+      "points": 20,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": false
+        },
+        "byMs": 5800
+      },
+      "onFail": "The motor kept running after Stop."
+    }
+  ],
+  "curriculumOrder": 32,
+  "troubleshooting": {
+    "symptom": "Machine does not start properly: the conveyor runs only while Start is held down.",
+    "reportedBy": "Operator, conveyor cell 3",
+    "faults": [
+      {
+        "id": "buttons-swapped",
+        "fault": {
+          "type": "swappedWires",
+          "first": {
+            "rack": 0,
+            "slot": 1,
+            "channel": 0
+          },
+          "second": {
+            "rack": 0,
+            "slot": 1,
+            "channel": 1
+          }
+        }
+      }
+    ],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program is wrong"
+      },
+      {
+        "id": "di-supply",
+        "label": "The input module has no 24 V field supply"
+      },
+      {
+        "id": "guard-contact",
+        "label": "The guard door switch has the wrong contact type (NC instead of NO)"
+      },
+      {
+        "id": "buttons-swapped",
+        "label": "The Start and Stop buttons are wired to each other's inputs"
+      },
+      {
+        "id": "outputs-swapped",
+        "label": "The contactor and the cooling valve are wired to each other's outputs"
+      },
+      {
+        "id": "aux-wire-open",
+        "label": "The contactor's auxiliary feedback does not reach its input"
+      },
+      {
+        "id": "di-slot",
+        "label": "The input module sits in the wrong slot"
+      },
+      {
+        "id": "overload",
+        "label": "The overload relay has tripped"
+      }
+    ],
+    "rootCauses": [
+      "buttons-swapped"
+    ],
+    "repairs": [
+      {
+        "id": "fix-buttons-swapped",
+        "label": "Swap the Start and Stop wires back to the terminals in the drawing",
+        "clears": [
+          "buttons-swapped"
+        ]
+      },
+      {
+        "id": "fix-overload",
+        "label": "Reset the overload relay",
+        "clears": []
+      },
+      {
+        "id": "fix-contactor",
+        "label": "Replace the contactor",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "runs",
+      "ready",
+      "stops"
+    ],
+    "learningRefs": [
+      "fundamentals.digital-io",
+      "fundamentals.start-stop-latch"
+    ],
+    "debriefRefs": [
+      "troubleshooting.commissioning-io-check"
+    ],
+    "debrief": {
+      "rootCause": "The Start and Stop wires were landed on each other's input terminals. The Stop input therefore saw the normally open Start button (FALSE at rest) and the Start input saw the normally closed Stop button. Holding Start made the Stop condition TRUE only while it was pressed.",
+      "evidence": [
+        "Pressing Start changed the Stop input, and pressing Stop changed the Start input.",
+        "The Stop input read FALSE at rest, which breaks the start latch immediately.",
+        "The program and the hardware configuration were correct."
+      ],
+      "repair": "Land each wire on the terminal shown in the drawing, then repeat the button tests.",
+      "reasoning": "Test one device at a time and confirm that exactly its own input changes. Swapped wires make two devices look faulty at once."
+    }
+  }
+}

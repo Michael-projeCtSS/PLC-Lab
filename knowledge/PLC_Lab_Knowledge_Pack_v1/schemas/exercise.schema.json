@@ -24,7 +24,8 @@
     "kind": {
       "enum": [
         "practice",
-        "troubleshooting"
+        "troubleshooting",
+        "commissioning"
       ]
     },
     "difficulty": {

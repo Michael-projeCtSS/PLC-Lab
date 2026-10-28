@@ -19,7 +19,6 @@ use app_contract::*;
 use error::AppResult;
 use knowledge_core::KnowledgeLibrary;
 use lab_engine::AssessmentOutcome;
-use lab_model::exercise::ExerciseKind;
 use project_model::{ExerciseState, Progress, ProjectKind, ProjectStore, RecentProjects};
 use std::{
     path::{Path, PathBuf},
@@ -759,6 +758,15 @@ impl DesktopApp {
         })())
     }
 
+    /// The commissioning checklist of a workspace, evaluated from the simulated installation.
+    pub fn commissioning(&self, request: WorkspaceRequest) -> Result<CommissioningDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            Ok(state.workspace(request.workspace_id)?.commissioning())
+        })())
+    }
+
     pub fn network(&self, request: WorkspaceRequest) -> Result<NetworkDto, IpcError> {
         boundary((|| {
             version(request.contract_version)?;
@@ -886,7 +894,7 @@ impl DesktopApp {
             let report = match outcome {
                 AssessmentOutcome::Graded(report) => {
                     let report = match (&exercise.kind, &exercise.troubleshooting) {
-                        (ExerciseKind::Troubleshooting, Some(t)) => {
+                        (kind, Some(t)) if kind.is_fault_finding() => {
                             grading_core::grade_troubleshooting(
                                 &t.root_causes
                                     .iter()

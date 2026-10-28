@@ -15,7 +15,7 @@ use lab_engine::{
     CycleOutcome, EngineError, LabSession, OperatorAction, SessionConfig, SignalId, TrendLayer,
 };
 use lab_model::{
-    exercise::{ExerciseDefinition, ExerciseKind, PlcModeRequest},
+    exercise::{ExerciseDefinition, PlcModeRequest},
     fault::FaultInjection,
     hardware::{ChannelRef, StationConfig},
     network::Ipv4,
@@ -168,10 +168,10 @@ impl Workspace {
         })
     }
 
-    pub fn is_troubleshooting(&self) -> bool {
+    pub fn is_fault_finding(&self) -> bool {
         self.exercise
             .as_ref()
-            .is_some_and(|e| e.kind == ExerciseKind::Troubleshooting)
+            .is_some_and(|e| e.kind.is_fault_finding())
     }
 
     pub fn ensure_healthy(&self) -> AppResult<()> {
@@ -409,7 +409,7 @@ impl Workspace {
                 "Evidence names have 1 to 80 characters.".into(),
             ));
         }
-        if self.is_troubleshooting()
+        if self.is_fault_finding()
             && !self.investigation.evidence.iter().any(|e| e == evidence)
             && self.investigation.evidence.len() < MAX_EVIDENCE
         {
@@ -884,6 +884,45 @@ impl Workspace {
             severity: severity.into(),
             text,
             source,
+        }
+    }
+
+    pub fn commissioning(&self) -> CommissioningDto {
+        let state = |s: lab_engine::CheckState| {
+            match s {
+                lab_engine::CheckState::Ok => "OK",
+                lab_engine::CheckState::Attention => "ATTENTION",
+                lab_engine::CheckState::Fault => "FAULT",
+                lab_engine::CheckState::Untested => "UNTESTED",
+                lab_engine::CheckState::NotApplicable => "NOT_APPLICABLE",
+            }
+            .to_owned()
+        };
+        CommissioningDto {
+            categories: self
+                .session
+                .commissioning()
+                .categories
+                .into_iter()
+                .map(|c| CheckCategoryDto {
+                    id: c.id.into(),
+                    title: c.title.into(),
+                    state: state(c.state()),
+                    items: c
+                        .items
+                        .into_iter()
+                        .map(|i| CheckItemDto {
+                            id: i.id.into(),
+                            title: i.title.into(),
+                            state: state(i.state),
+                            findings: i.findings,
+                            how: i.how.into(),
+                        })
+                        .collect(),
+                })
+                .collect(),
+            feedback_wait_s: u32::try_from(lab_engine::FEEDBACK_WAIT_US / 1_000_000)
+                .unwrap_or(u32::MAX),
         }
     }
 

@@ -1,0 +1,330 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "cm.dio-wrong-slot",
+  "revision": 1,
+  "title": "Commissioning: inputs dead after the module swap",
+  "kind": "commissioning",
+  "difficulty": "beginner",
+  "summary": "The cabinet was rebuilt before handover. Now Start does nothing. Compare the installed hardware with the project.",
+  "objectives": [
+    "Compare the installed hardware with the configuration",
+    "Recognize a module in the wrong slot"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.dio-commissioning",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open: TRUE while pressed. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while NOT pressed. *)\n    GuardClosed : BOOL; (* Guard door switch B2: TRUE while the door is closed. *)\n    PartAtEnd : BOOL; (* Part sensor B1: TRUE while a part waits at the conveyor end. *)\n    MotorFeedback : BOOL; (* Contactor K1 auxiliary contact. *)\n    OverloadOK : BOOL; (* Overload relay F1, normally closed. *)\n    ValveOpen : BOOL; (* Cooling valve Y1 open limit switch. *)\n    ValveClosed : BOOL; (* Cooling valve Y1 closed limit switch. *)\nEND_VAR\nVAR_OUTPUT\n    MotorContactor : BOOL; (* Contactor coil K1. *)\n    CoolingValve : BOOL; (* Cooling valve solenoid Y1. *)\n    RunLamp : BOOL; (* Run lamp H1. *)\nEND_VAR\nVAR\n    Running : BOOL; (* Start/stop latch. *)\nEND_VAR\n(* The program was accepted at the factory test; this lab is about the installation. *)\nRunning := (StartPB OR Running) AND StopPB AND OverloadOK AND GuardClosed AND NOT PartAtEnd;\nMotorContactor := Running;\nCoolingValve := Running AND MotorFeedback;\nRunLamp := MotorFeedback AND ValveOpen;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "GuardClosed",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "PartAtEnd",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorFeedback",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "ValveOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "ValveClosed",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "CoolingValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Build & Load the program and switch the PLC to RUN; close the guard door and press Start to see the symptom.",
+    "Open the Commissioning tab and work through it from POWER to PROCESS.",
+    "Operate every button and sensor, and switch every output, until no check is left untested.",
+    "Diagnose, repair, then verify."
+  ],
+  "hints": [
+    "Compare the configured slots with what is installed.",
+    "Look at the hardware checks before testing devices."
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "stop",
+      "source": {
+        "type": "plcTag",
+        "tag": "StopPB"
+      }
+    },
+    {
+      "name": "contactor",
+      "source": {
+        "type": "plcTag",
+        "tag": "MotorContactor"
+      }
+    },
+    {
+      "name": "running",
+      "source": {
+        "type": "component",
+        "component": "motor",
+        "quantity": "running"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "component",
+        "component": "lamp",
+        "quantity": "lit"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "verify",
+      "title": "Close the guard, start and stop the machine",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 100,
+          "action": {
+            "type": "setPresence",
+            "component": "guard",
+            "present": true
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 4500,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 4800,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "runs",
+      "title": "The conveyor motor runs after Start",
+      "points": 40,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 2500
+      },
+      "onFail": "The motor does not run after Start with the guard closed."
+    },
+    {
+      "id": "ready",
+      "title": "The run lamp reports the machine running",
+      "points": 40,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 4000
+      },
+      "onFail": "The run lamp never lit: motor feedback and an open cooling valve are both needed."
+    },
+    {
+      "id": "stops",
+      "title": "Stop stops the motor",
+      "points": 20,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": false
+        },
+        "byMs": 5800
+      },
+      "onFail": "The motor kept running after Stop."
+    }
+  ],
+  "curriculumOrder": 35,
+  "troubleshooting": {
+    "symptom": "Machine does not start after the cabinet was rebuilt.",
+    "reportedBy": "Panel builder, conveyor cell 3",
+    "faults": [
+      {
+        "id": "di-slot",
+        "fault": {
+          "type": "moduleInWrongSlot",
+          "from": {
+            "rack": 0,
+            "slot": 1
+          },
+          "to": {
+            "rack": 0,
+            "slot": 3
+          }
+        }
+      }
+    ],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program is wrong"
+      },
+      {
+        "id": "di-supply",
+        "label": "The input module has no 24 V field supply"
+      },
+      {
+        "id": "guard-contact",
+        "label": "The guard door switch has the wrong contact type (NC instead of NO)"
+      },
+      {
+        "id": "buttons-swapped",
+        "label": "The Start and Stop buttons are wired to each other's inputs"
+      },
+      {
+        "id": "outputs-swapped",
+        "label": "The contactor and the cooling valve are wired to each other's outputs"
+      },
+      {
+        "id": "aux-wire-open",
+        "label": "The contactor's auxiliary feedback does not reach its input"
+      },
+      {
+        "id": "di-slot",
+        "label": "The input module sits in the wrong slot"
+      },
+      {
+        "id": "overload",
+        "label": "The overload relay has tripped"
+      }
+    ],
+    "rootCauses": [
+      "di-slot"
+    ],
+    "repairs": [
+      {
+        "id": "fix-di-slot",
+        "label": "Move the input module back to slot 1",
+        "clears": [
+          "di-slot"
+        ]
+      },
+      {
+        "id": "fix-overload",
+        "label": "Reset the overload relay",
+        "clears": []
+      },
+      {
+        "id": "fix-contactor",
+        "label": "Replace the contactor",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "runs",
+      "ready",
+      "stops"
+    ],
+    "learningRefs": [
+      "fundamentals.commissioning",
+      "fundamentals.diagnostics"
+    ],
+    "debriefRefs": [
+      "troubleshooting.wrong-module-slot"
+    ],
+    "debrief": {
+      "rootCause": "The input module had been mounted in slot 3 instead of slot 1. The PLC found no module where the project expects its inputs and an unconfigured module elsewhere, so no input reached the program.",
+      "evidence": [
+        "The Hardware checks reported the configured input module as missing in slot 1 and an unconfigured module in slot 3.",
+        "Every input of the module showed bad quality.",
+        "Power and the outputs were in order."
+      ],
+      "repair": "Mount the input module in slot 1 as configured, then repeat the input checks.",
+      "reasoning": "Before testing signals, make sure the installed hardware matches the configuration: type, slot and order. One misplaced module disables all of its channels."
+    }
+  }
+}

@@ -86,9 +86,9 @@ export type LessonCompleteRequest = { contractVersion: number, id: string, corre
 
 export type ExerciseSummaryDto = { id: string, title: string, 
 /**
- * "practice" | "troubleshooting"
+ * "practice" | "troubleshooting" | "commissioning"
  */
-kind: "practice" | "troubleshooting", difficulty: "beginner" | "intermediate" | "advanced", summary: string, minutes: number, scene: string, platform: string, attempts: number, bestScore: number, maxScore: number, passed: boolean, };
+kind: "practice" | "troubleshooting" | "commissioning", difficulty: "beginner" | "intermediate" | "advanced", summary: string, minutes: number, scene: string, platform: string, attempts: number, bestScore: number, maxScore: number, passed: boolean, };
 
 export type RequiredTagDto = { tag: string, dataType: string, direction: string, };
 
@@ -107,7 +107,7 @@ diagnosed: boolean,
  */
 repairs: Array<OptionDto>, };
 
-export type ExerciseDto = { id: string, revision: number, title: string, kind: "practice" | "troubleshooting", difficulty: "beginner" | "intermediate" | "advanced", summary: string, objectives: Array<string>, minutes: number, scene: string, platform: string, requiredInterface: Array<RequiredTagDto>, instructions: Array<string>, hints: Array<string>, knowledgeRefs: Array<RelatedDto>, criteria: Array<CriterionDto>, troubleshooting: TroubleshootingBriefDto | null, };
+export type ExerciseDto = { id: string, revision: number, title: string, kind: "practice" | "troubleshooting" | "commissioning", difficulty: "beginner" | "intermediate" | "advanced", summary: string, objectives: Array<string>, minutes: number, scene: string, platform: string, requiredInterface: Array<RequiredTagDto>, instructions: Array<string>, hints: Array<string>, knowledgeRefs: Array<RelatedDto>, criteria: Array<CriterionDto>, troubleshooting: TroubleshootingBriefDto | null, };
 
 export type PlatformDto = { id: string, displayName: string, vendor: string, family: string, tier: string, fidelity: FidelityDto, addressing: string, analog: string, };
 
@@ -367,6 +367,32 @@ export type DiagnosticEntryDto = { timeUs: ExactU64, source: string, kind: strin
 event: "INCOMING" | "OUTGOING", text: string, };
 
 export type ModuleTypeDto = { id: string, name: string, product: string | null, channels: number, class: string, };
+
+export type CheckItemDto = { id: string, title: string, 
+/**
+ * "OK" | "ATTENTION" | "FAULT" | "UNTESTED" | "NOT_APPLICABLE"
+ */
+state: string, findings: Array<string>, 
+/**
+ * What to do or which tool shows it; empty when nothing applies.
+ */
+how: string, };
+
+export type CheckCategoryDto = { 
+/**
+ * "power" | "hardware" | "network" | "inputs" | "outputs" | "drives" | "process"
+ */
+id: string, title: string, 
+/**
+ * The most severe item state.
+ */
+state: string, items: Array<CheckItemDto>, };
+
+export type CommissioningDto = { categories: Array<CheckCategoryDto>, 
+/**
+ * Seconds an actuator must stay energized before missing feedback is reported.
+ */
+feedbackWaitS: number, };
 
 export type HardwareDto = { station: StationDto, cpu: string, cpuName: string, cpuProduct: string | null, cpuLeds: Array<LedDto>, modules: Array<ModuleViewDto>, diagnostics: Array<DiagnosticEntryDto>, catalog: Array<ModuleTypeDto>, };
 

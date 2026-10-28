@@ -8,7 +8,7 @@ import {
 } from "@plc-lab/ipc";
 import { formatValue, humanize, quantityUnit, valueClass } from "../format";
 import { Badge, Tabs } from "../ui";
-import type { Navigate } from "../route";
+import { isFaultFinding, type Navigate } from "../route";
 import { CauseEffect } from "./CauseEffect";
 import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
@@ -37,10 +37,9 @@ export function Inspector({
             ? [
                 {
                   id: "task" as const,
-                  label:
-                    exercise.kind === "troubleshooting"
-                      ? "Investigation"
-                      : "Task",
+                  label: isFaultFinding(exercise.kind)
+                    ? "Investigation"
+                    : "Task",
                 },
               ]
             : []),
@@ -51,7 +50,7 @@ export function Inspector({
       <div style={{ flex: 1, overflow: "auto" }}>
         {tab === "task" &&
           exercise &&
-          (exercise.kind === "troubleshooting" ? (
+          (isFaultFinding(exercise.kind) ? (
             <Investigation lab={lab} exercise={exercise} navigate={navigate} />
           ) : (
             <TaskBrief

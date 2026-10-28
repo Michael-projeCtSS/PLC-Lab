@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@plc-lab/ipc";
 import { useCoalescedRead } from "../useCoalescedRead";
+import { isFaultFinding } from "../route";
 import type { Lab } from "./useLab";
 
 /** Re-read a backend projection whenever the authoritative frame changes (coalesced). */
@@ -25,7 +26,7 @@ export function useFrameQuery<T>(
 /** Record that the student opened an evidence source (troubleshooting exercises only). */
 export function useEvidence(lab: Lab, evidence: string) {
   const ws = lab.ws;
-  const troubleshooting = lab.workspace?.exercise?.kind === "troubleshooting";
+  const troubleshooting = isFaultFinding(lab.workspace?.exercise?.kind);
   useEffect(() => {
     if (ws && troubleshooting)
       void api.noteEvidence(ws, evidence).catch(() => undefined);

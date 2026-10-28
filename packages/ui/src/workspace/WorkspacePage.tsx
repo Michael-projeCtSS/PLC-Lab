@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ErrorNotice, Empty, Splitter, Tabs, Badge } from "../ui";
-import type { Navigate, Section } from "../route";
+import { isFaultFinding, type Navigate, type Section } from "../route";
 import { useLab } from "./useLab";
 import { Toolbar } from "./Toolbar";
 import { ProjectTree, type Selection } from "./ProjectTree";
@@ -9,11 +9,17 @@ import { ProcessTab } from "./ProcessTab";
 import { HardwareTab } from "./HardwareTab";
 import { NetworkTab } from "./NetworkTab";
 import { DiagnosticsTab } from "./DiagnosticsTab";
+import { CommissioningTab } from "./CommissioningTab";
 import { Inspector } from "./Inspector";
 import { Dock } from "./Dock";
 
 export type CenterTab =
-  "program" | "hardware" | "process" | "network" | "diagnostics";
+  | "program"
+  | "hardware"
+  | "process"
+  | "network"
+  | "diagnostics"
+  | "commissioning";
 
 export function WorkspacePage({
   projectId,
@@ -30,7 +36,7 @@ export function WorkspacePage({
   const [rightWidth, setRightWidth] = useState(340);
   const [dockHeight, setDockHeight] = useState(240);
   const [mode, setMode] = useState<"basic" | "advanced">("basic");
-  const troubleshooting = lab.workspace?.exercise?.kind === "troubleshooting";
+  const troubleshooting = isFaultFinding(lab.workspace?.exercise?.kind);
   if (lab.fatal)
     return (
       <div className="page-inner">
@@ -110,6 +116,7 @@ export function WorkspacePage({
                       ? { badge: <Badge kind="warning">{alarms}</Badge> }
                       : {}),
                   },
+                  { id: "commissioning", label: "Commissioning" },
                 ]}
               />
               <div className="ws-center-body">
@@ -134,6 +141,7 @@ export function WorkspacePage({
                   <NetworkTab lab={lab} advanced={mode === "advanced"} />
                 )}
                 {tab === "diagnostics" && <DiagnosticsTab lab={lab} />}
+                {tab === "commissioning" && <CommissioningTab lab={lab} />}
               </div>
             </section>
             <Splitter

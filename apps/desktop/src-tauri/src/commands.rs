@@ -58,6 +58,7 @@ commands! {
     trend(TrendRequest) -> TrendDto => trend;
     events(EventsRequest) -> EventsPageDto => events;
     hardware(WorkspaceRequest) -> HardwareDto => hardware;
+    commissioning(WorkspaceRequest) -> CommissioningDto => commissioning;
     network(WorkspaceRequest) -> NetworkDto => network;
     measure(MeasureRequest) -> MeasurementDto => measure;
     ping(PingRequest) -> PingDto => ping;

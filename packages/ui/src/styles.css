@@ -1232,3 +1232,39 @@ textarea.input {
     display: none;
   }
 }
+
+/* Commissioning checklist */
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.check-head {
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.check-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.check-items {
+  list-style: none;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.check-findings {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.check-item p {
+  margin: 4px 0 0;
+}

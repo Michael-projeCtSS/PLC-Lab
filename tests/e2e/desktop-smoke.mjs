@@ -407,6 +407,39 @@ try {
     },
   );
 
+  await step(
+    "commissioning lab: the checklist reports what the installation shows",
+    async () => {
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+      await page
+        .getByRole("button", { name: "COMMISSION", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: /Start Commissioning: no input responds/ })
+        .click();
+      await page
+        .getByRole("tab", { name: "Commissioning" })
+        .click({ timeout: 30_000 });
+      await page
+        .getByLabel("I/O field supply: FAULT")
+        .waitFor({ timeout: 15_000 });
+      await page.getByLabel("Sensor and button operation: UNTESTED").waitFor();
+      const body = await page.locator("body").innerText();
+      for (const secret of [
+        "Replace the blown fuse in the input module",
+        "fieldPowerMissing",
+        "What was wrong",
+      ])
+        assert.ok(
+          !body.includes(secret),
+          `visible before diagnosis: ${secret}`,
+        );
+      await page.screenshot({
+        path: path.join(directory, "commissioning-checklist.png"),
+      });
+    },
+  );
+
   await step("project round trip through the real backend", async () => {
     const created = await invoke("create_project", {
       contractVersion: 8,

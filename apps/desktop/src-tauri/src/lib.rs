@@ -131,6 +131,7 @@ pub fn run() {
             commands::trend,
             commands::events,
             commands::hardware,
+            commands::commissioning,
             commands::network,
             commands::measure,
             commands::ping,

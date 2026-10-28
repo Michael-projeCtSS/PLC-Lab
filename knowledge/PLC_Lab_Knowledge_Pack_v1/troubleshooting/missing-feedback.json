@@ -1,0 +1,60 @@
+{
+  "id": "troubleshooting.missing-feedback",
+  "kind": "troubleshooting",
+  "title": "Actuator works, but its feedback never arrives",
+  "summary": "A contactor pulls in or a valve moves, yet the confirmation input stays unchanged, and every step that waits for it stalls.",
+  "tags": [
+    "feedback",
+    "auxiliary contact",
+    "limit switch",
+    "sequence",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "Why feedback matters",
+      "body": "Programs rarely trust a command alone. A contactor's auxiliary contact, a valve's limit switch or a drive's running relay confirms that the actuator really did what it was told. The next step of a sequence, a lamp or an alarm is built on that confirmation."
+    },
+    {
+      "heading": "Recognizing it",
+      "body": "The output is ON, the terminal carries 24 V and the device visibly responds, but the feedback input does not change. Everything that depends on the confirmation stays off, and a well-designed program raises a feedback timeout alarm."
+    },
+    {
+      "heading": "Typical causes",
+      "body": "An auxiliary contact block not fitted or not wired, a broken or loose feedback wire, a limit switch that is misadjusted, or a feedback wired to another input than the drawing shows."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.commissioning",
+    "fundamentals.interlocks"
+  ],
+  "troubleshooting": {
+    "faultId": "missing-feedback",
+    "area": "Commissioning",
+    "target": "Feedback inputs",
+    "effect": "Steps that wait for the confirmation never continue",
+    "symptoms": [
+      "The actuator works, but the machine never reports it",
+      "Lamps or follow-up steps that depend on the confirmation stay off"
+    ],
+    "evidence": [
+      "Output ON and device responding while the feedback input stays unchanged",
+      "The program waits for the feedback signal"
+    ],
+    "diagnosticMethod": [
+      "Energize the actuator and watch its feedback input",
+      "Measure the feedback contact and follow its wire to the input terminal"
+    ],
+    "repair": [
+      "Restore the feedback contact and its wiring, then repeat the test"
+    ],
+    "explanation": "A confirmation that never arrives stops everything built on it, although the actuator itself works. Test every feedback during commissioning, not only the command.",
+    "simulatedIn": [
+      "cm.dio-feedback"
+    ]
+  }
+}

@@ -249,8 +249,8 @@ pub struct LessonCompleteRequest {
 pub struct ExerciseSummaryDto {
     pub id: String,
     pub title: String,
-    /// "practice" | "troubleshooting"
-    #[ts(type = "\"practice\" | \"troubleshooting\"")]
+    /// "practice" | "troubleshooting" | "commissioning"
+    #[ts(type = "\"practice\" | \"troubleshooting\" | \"commissioning\"")]
     pub kind: String,
     #[ts(type = "\"beginner\" | \"intermediate\" | \"advanced\"")]
     pub difficulty: String,
@@ -301,7 +301,7 @@ pub struct ExerciseDto {
     pub id: String,
     pub revision: u32,
     pub title: String,
-    #[ts(type = "\"practice\" | \"troubleshooting\"")]
+    #[ts(type = "\"practice\" | \"troubleshooting\" | \"commissioning\"")]
     pub kind: String,
     #[ts(type = "\"beginner\" | \"intermediate\" | \"advanced\"")]
     pub difficulty: String,

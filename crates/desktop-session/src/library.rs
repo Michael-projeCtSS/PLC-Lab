@@ -315,6 +315,7 @@ fn exercise_kind(k: ExerciseKind) -> &'static str {
     match k {
         ExerciseKind::Practice => "practice",
         ExerciseKind::Troubleshooting => "troubleshooting",
+        ExerciseKind::Commissioning => "commissioning",
     }
 }
 
@@ -325,7 +326,7 @@ pub fn platform_of(e: &ExerciseDefinition) -> String {
 }
 
 fn max_score(e: &ExerciseDefinition) -> u32 {
-    if e.kind == ExerciseKind::Troubleshooting {
+    if e.kind.is_fault_finding() {
         100
     } else {
         e.criteria.iter().map(|c| c.points).sum()
@@ -490,7 +491,7 @@ pub fn exercise_view(
         instructions: e.instructions.clone(),
         hints: e.hints.clone(),
         knowledge_refs: related(library, refs),
-        criteria: if e.kind == ExerciseKind::Troubleshooting {
+        criteria: if e.kind.is_fault_finding() {
             vec![
                 CriterionDto {
                     id: "diagnosis".into(),

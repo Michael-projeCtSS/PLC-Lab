@@ -42,6 +42,9 @@
       "Correct wiring or mapping before the function test"
     ],
     "explanation": "A systematic loop check proves that each tag reaches the right terminal and device.",
-    "simulatedIn": []
+    "simulatedIn": [
+      "cm.dio-swapped-buttons",
+      "cm.dio-swapped-outputs"
+    ]
   }
 }

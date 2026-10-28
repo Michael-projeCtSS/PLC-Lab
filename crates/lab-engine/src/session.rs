@@ -205,6 +205,8 @@ pub struct LabSession {
     pub(crate) diagnostics_seen: u64,
     pub(crate) last: Option<CycleObservation>,
     pub(crate) previous: Option<CycleObservation>,
+    /// I/O tests performed in this session, for the commissioning checklist.
+    pub(crate) tests: crate::commissioning::IoTests,
 }
 
 fn quantity_value(q: Quantity) -> SignalValue {
@@ -256,6 +258,7 @@ impl LabSession {
             diagnostics_seen: 0,
             last: None,
             previous: None,
+            tests: Default::default(),
         };
         session.register_physical();
         session.register_channels();
@@ -720,6 +723,9 @@ impl LabSession {
         }
         self.drain_world_events();
         self.sample()?;
+        let mut tests = std::mem::take(&mut self.tests);
+        tests.observe(self);
+        self.tests = tests;
         let observation = CycleObservation {
             header: CycleHeader {
                 cycle: self.cycle,
@@ -1081,6 +1087,8 @@ impl LabSession {
 
     /// Apply a physical repair visible to the student (logged without revealing the fault).
     pub fn repair(&mut self, label: &str, clears: &[Identifier]) -> Result<usize, EngineError> {
+        // The installation changed: earlier I/O tests no longer describe it.
+        self.tests = Default::default();
         let mut cleared = 0;
         for id in clears {
             if self.clear_fault(id)? {

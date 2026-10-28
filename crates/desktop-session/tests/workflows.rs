@@ -588,7 +588,13 @@ fn long_runs_of_large_programs_keep_every_response_bounded() {
     assert!(events.events.len() <= 200 && event_bytes < 128 * 1024);
 }
 
-const LABS: [&str; 7] = [
+const LABS: [&str; 13] = [
+    "cm.dio-input-supply",
+    "cm.dio-guard-contact",
+    "cm.dio-swapped-buttons",
+    "cm.dio-swapped-outputs",
+    "cm.dio-feedback",
+    "cm.dio-wrong-slot",
     "ts.motor-wont-start",
     "ts.outputs-dead",
     "ts.part-sensor-inverted",
@@ -614,7 +620,7 @@ fn visible_before_diagnosis(app: &DesktopApp, w: &WorkspaceDto, id: &str) -> Str
 }
 
 #[test]
-fn every_troubleshooting_lab_hides_its_cause_until_verified() {
+fn every_fault_finding_lab_hides_its_cause_until_verified() {
     let library =
         knowledge_core::KnowledgeLibrary::load(&[
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../knowledge")

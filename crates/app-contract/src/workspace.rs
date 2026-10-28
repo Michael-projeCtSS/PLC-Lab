@@ -483,6 +483,37 @@ pub struct ModuleTypeDto {
     pub channels: u8,
     pub class: String,
 }
+/// One commissioning check, evaluated by the engine from the installation's observable
+/// state and the I/O tests performed in this session.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CheckItemDto {
+    pub id: String,
+    pub title: String,
+    /// "OK" | "ATTENTION" | "FAULT" | "UNTESTED" | "NOT_APPLICABLE"
+    pub state: String,
+    pub findings: Vec<String>,
+    /// What to do or which tool shows it; empty when nothing applies.
+    pub how: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CheckCategoryDto {
+    /// "power" | "hardware" | "network" | "inputs" | "outputs" | "drives" | "process"
+    pub id: String,
+    pub title: String,
+    /// The most severe item state.
+    pub state: String,
+    pub items: Vec<CheckItemDto>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CommissioningDto {
+    pub categories: Vec<CheckCategoryDto>,
+    /// Seconds an actuator must stay energized before missing feedback is reported.
+    pub feedback_wait_s: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct HardwareDto {
@@ -661,7 +692,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticEntryDto, ModuleTypeDto,
-        HardwareDto, ScanViewDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
+        CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareDto, ScanViewDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,
         CriterionResultDto, DebriefDto, GradeReportDto, ExecutionWakeDto
     )

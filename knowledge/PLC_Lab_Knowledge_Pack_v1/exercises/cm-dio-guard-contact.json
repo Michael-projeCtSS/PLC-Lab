@@ -1,0 +1,324 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "cm.dio-guard-contact",
+  "revision": 1,
+  "title": "Commissioning: guard door blocks the start",
+  "kind": "commissioning",
+  "difficulty": "beginner",
+  "summary": "The conveyor cell is wired and powered. With the guard door closed, Start does nothing. Test the inputs against the drawing.",
+  "objectives": [
+    "Test each sensor against the drawing",
+    "Recognize an NO/NC mismatch from the rest state"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.dio-commissioning",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open: TRUE while pressed. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while NOT pressed. *)\n    GuardClosed : BOOL; (* Guard door switch B2: TRUE while the door is closed. *)\n    PartAtEnd : BOOL; (* Part sensor B1: TRUE while a part waits at the conveyor end. *)\n    MotorFeedback : BOOL; (* Contactor K1 auxiliary contact. *)\n    OverloadOK : BOOL; (* Overload relay F1, normally closed. *)\n    ValveOpen : BOOL; (* Cooling valve Y1 open limit switch. *)\n    ValveClosed : BOOL; (* Cooling valve Y1 closed limit switch. *)\nEND_VAR\nVAR_OUTPUT\n    MotorContactor : BOOL; (* Contactor coil K1. *)\n    CoolingValve : BOOL; (* Cooling valve solenoid Y1. *)\n    RunLamp : BOOL; (* Run lamp H1. *)\nEND_VAR\nVAR\n    Running : BOOL; (* Start/stop latch. *)\nEND_VAR\n(* The program was accepted at the factory test; this lab is about the installation. *)\nRunning := (StartPB OR Running) AND StopPB AND OverloadOK AND GuardClosed AND NOT PartAtEnd;\nMotorContactor := Running;\nCoolingValve := Running AND MotorFeedback;\nRunLamp := MotorFeedback AND ValveOpen;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "GuardClosed",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "PartAtEnd",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorFeedback",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "ValveOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "ValveClosed",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "CoolingValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Build & Load the program and switch the PLC to RUN; close the guard door and press Start to see the symptom.",
+    "Open the Commissioning tab and work through it from POWER to PROCESS.",
+    "Operate every button and sensor, and switch every output, until no check is left untested.",
+    "Diagnose, repair, then verify."
+  ],
+  "hints": [
+    "Open and close the guard door and watch its input.",
+    "Compare each input at rest with what the drawing promises."
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "stop",
+      "source": {
+        "type": "plcTag",
+        "tag": "StopPB"
+      }
+    },
+    {
+      "name": "contactor",
+      "source": {
+        "type": "plcTag",
+        "tag": "MotorContactor"
+      }
+    },
+    {
+      "name": "running",
+      "source": {
+        "type": "component",
+        "component": "motor",
+        "quantity": "running"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "component",
+        "component": "lamp",
+        "quantity": "lit"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "verify",
+      "title": "Close the guard, start and stop the machine",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 100,
+          "action": {
+            "type": "setPresence",
+            "component": "guard",
+            "present": true
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 4500,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 4800,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "runs",
+      "title": "The conveyor motor runs after Start",
+      "points": 40,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 2500
+      },
+      "onFail": "The motor does not run after Start with the guard closed."
+    },
+    {
+      "id": "ready",
+      "title": "The run lamp reports the machine running",
+      "points": 40,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 4000
+      },
+      "onFail": "The run lamp never lit: motor feedback and an open cooling valve are both needed."
+    },
+    {
+      "id": "stops",
+      "title": "Stop stops the motor",
+      "points": 20,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": false
+        },
+        "byMs": 5800
+      },
+      "onFail": "The motor kept running after Stop."
+    }
+  ],
+  "curriculumOrder": 31,
+  "troubleshooting": {
+    "symptom": "Machine does not start although the guard door is closed.",
+    "reportedBy": "Commissioning engineer, conveyor cell 3",
+    "faults": [
+      {
+        "id": "guard-contact",
+        "fault": {
+          "type": "contactTypeMismatch",
+          "component": "guard",
+          "installed": "normallyClosed"
+        }
+      }
+    ],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program is wrong"
+      },
+      {
+        "id": "di-supply",
+        "label": "The input module has no 24 V field supply"
+      },
+      {
+        "id": "guard-contact",
+        "label": "The guard door switch has the wrong contact type (NC instead of NO)"
+      },
+      {
+        "id": "buttons-swapped",
+        "label": "The Start and Stop buttons are wired to each other's inputs"
+      },
+      {
+        "id": "outputs-swapped",
+        "label": "The contactor and the cooling valve are wired to each other's outputs"
+      },
+      {
+        "id": "aux-wire-open",
+        "label": "The contactor's auxiliary feedback does not reach its input"
+      },
+      {
+        "id": "di-slot",
+        "label": "The input module sits in the wrong slot"
+      },
+      {
+        "id": "overload",
+        "label": "The overload relay has tripped"
+      }
+    ],
+    "rootCauses": [
+      "guard-contact"
+    ],
+    "repairs": [
+      {
+        "id": "fix-guard-contact",
+        "label": "Replace the guard door switch with the normally open type from the drawing",
+        "clears": [
+          "guard-contact"
+        ]
+      },
+      {
+        "id": "fix-overload",
+        "label": "Reset the overload relay",
+        "clears": []
+      },
+      {
+        "id": "fix-contactor",
+        "label": "Replace the contactor",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "runs",
+      "ready",
+      "stops"
+    ],
+    "learningRefs": [
+      "fundamentals.commissioning",
+      "fundamentals.no-nc-contacts"
+    ],
+    "debriefRefs": [
+      "troubleshooting.sensor-no-nc-assumption"
+    ],
+    "debrief": {
+      "rootCause": "A normally closed guard switch had been fitted where the drawing specifies a normally open one. The input therefore read FALSE with the door closed and TRUE with the door open: exactly inverted, so the program saw an open guard whenever the door was closed.",
+      "evidence": [
+        "Operating the guard door changed its input, so the wiring and the channel were correct.",
+        "The input read TRUE at rest (door open), although the drawing shows a normally open switch, which reads FALSE at rest.",
+        "Power, modules and the other inputs checked out."
+      ],
+      "repair": "Fit the normally open switch from the drawing (or change the drawing and the program together, if the design is changed deliberately), then repeat the guard test.",
+      "reasoning": "An input that follows its device but with the opposite level points to the contact type, not to wiring or the program. Always check the rest state against the drawing during the I/O check."
+    }
+  }
+}

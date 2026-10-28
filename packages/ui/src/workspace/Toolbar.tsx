@@ -1,6 +1,7 @@
 import { api } from "@plc-lab/ipc";
 import { seconds } from "../format";
 import { Badge, PlcModeBadge, SimulationBadge } from "../ui";
+import { isFaultFinding } from "../route";
 import type { Lab } from "./useLab";
 
 /** Explanations of the two separate control groups (also the buttons' accessible descriptions). */
@@ -277,7 +278,7 @@ export function Toolbar({
           >
             {lab.busy === "check"
               ? "Checking…"
-              : exercise.kind === "troubleshooting"
+              : isFaultFinding(exercise.kind)
                 ? "Verify repair"
                 : "Check solution"}
           </button>
