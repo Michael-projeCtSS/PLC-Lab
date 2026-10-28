@@ -300,3 +300,136 @@ fn cpu_mismatch_is_rejected() {
         StationRuntime::new(config, s.installation.clone(), PlatformProfile::generic()).is_err()
     );
 }
+
+const ACTUATORS: &str = r#"{
+  "format": "plclab-scene", "schemaVersion": 1, "id": "test.actuators", "revision": 1,
+  "title": "Actuators", "summary": "Every digital sink type on one output module",
+  "components": [
+    {"id": "valve", "label": "Valve", "kind": {"type": "onOffValve", "travelMs": 500, "flowMlPerS": 100}},
+    {"id": "starter", "label": "Starter", "kind": {"type": "motorStarter", "pickupMs": 30, "runUpMs": 500, "ratedCurrentMa": 2000}},
+    {"id": "drive", "label": "Drive", "kind": {"type": "variableFrequencyDrive", "rampMs": 1000, "ratedCurrentMa": 3000}},
+    {"id": "pump", "label": "Pump", "kind": {"type": "pump", "flowMlPerS": 50}},
+    {"id": "prox", "label": "Prox", "kind": {"type": "presenceSensor", "output": "pnp", "contact": "normallyOpen"}}
+  ],
+  "installation": {"cpu": "cpu.modular", "modules": [
+      {"position": {"rack": 0, "slot": 2}, "module": "di8.24vdc.sink"},
+      {"position": {"rack": 0, "slot": 3}, "module": "do8.24vdc"}
+    ], "wiring": [
+      {"channel": {"rack": 0, "slot": 3, "channel": 0}, "component": "valve", "port": "solenoid"},
+      {"channel": {"rack": 0, "slot": 3, "channel": 1}, "component": "starter", "port": "coil"},
+      {"channel": {"rack": 0, "slot": 3, "channel": 2}, "component": "drive", "port": "run"},
+      {"channel": {"rack": 0, "slot": 3, "channel": 3}, "component": "pump", "port": "motor"},
+      {"channel": {"rack": 0, "slot": 2, "channel": 0}, "component": "starter", "port": "aux"},
+      {"channel": {"rack": 0, "slot": 2, "channel": 1}, "component": "drive", "port": "running"},
+      {"channel": {"rack": 0, "slot": 2, "channel": 2}, "component": "prox", "port": "output"}
+    ]},
+  "referenceStation": {"name": "PLC_1", "cpu": "cpu.modular", "modules": [
+      {"position": {"rack": 0, "slot": 2}, "module": "di8.24vdc.sink", "startAddress": 0},
+      {"position": {"rack": 0, "slot": 3}, "module": "do8.24vdc", "startAddress": 0}
+    ], "ioMap": []}
+}"#;
+
+fn command(scene: &SceneRuntime, component: &str) -> bool {
+    let index = scene.index_of_str(component).unwrap();
+    scene.quantity(index, "command") == Some(process_simulation::Quantity::Bool(true))
+}
+
+#[test]
+fn output_energization_follows_port_direction_not_port_names() {
+    let definition: SceneDefinition = serde_json::from_str(ACTUATORS).unwrap();
+    validate_scene(&definition).unwrap();
+    let mut scene = SceneRuntime::new(&definition, 1).unwrap();
+    let mut station = StationRuntime::new(
+        definition.reference_station.clone(),
+        definition.installation.clone(),
+        PlatformProfile::generic(),
+    )
+    .unwrap();
+    // Each kind declares its sinks; names such as "output" or "running" do not make a
+    // port an output.
+    for (component, port, sink) in [
+        ("valve", "solenoid", true),
+        ("valve", "openSwitch", false),
+        ("starter", "coil", true),
+        ("starter", "aux", false),
+        ("starter", "overload", false),
+        ("drive", "run", true),
+        ("drive", "running", false),
+        ("drive", "remote", false),
+        ("pump", "motor", true),
+        ("prox", "output", false),
+    ] {
+        let index = scene.index_of_str(component).unwrap();
+        assert_eq!(
+            scene.is_digital_sink(index, port),
+            sink,
+            "{component}.{port}"
+        );
+    }
+    let all = ["valve", "starter", "drive", "pump"];
+    let mut commands = BTreeMap::new();
+    for channel in 0..4 {
+        commands.insert(ch(3, channel), true);
+    }
+    station.drive_outputs(&commands, true, &mut scene).unwrap();
+    for c in all {
+        assert!(command(&scene, c), "{c} is energized by its output channel");
+    }
+    // Commands on input channels never energize anything.
+    let mut inputs = BTreeMap::new();
+    for channel in 0..3 {
+        inputs.insert(ch(2, channel), true);
+    }
+    station.drive_outputs(&inputs, true, &mut scene).unwrap();
+    for c in all {
+        assert!(
+            !command(&scene, c),
+            "{c} is de-energized without its output"
+        );
+    }
+    // One channel switches exactly its own device.
+    station
+        .drive_outputs(&BTreeMap::from([(ch(3, 2), true)]), true, &mut scene)
+        .unwrap();
+    assert!(command(&scene, "drive"));
+    for c in ["valve", "starter", "pump"] {
+        assert!(!command(&scene, c), "{c}");
+    }
+}
+
+#[test]
+fn wiring_against_port_direction_or_to_unknown_ports_is_rejected() {
+    let base: serde_json::Value = serde_json::from_str(ACTUATORS).unwrap();
+    let rewire = |channel: serde_json::Value, component: &str, port: &str| {
+        let mut scene = base.clone();
+        scene["installation"]["wiring"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({"channel": channel, "component": component, "port": port}));
+        serde_json::from_value::<SceneDefinition>(scene).unwrap()
+    };
+    let output = serde_json::json!({"rack": 0, "slot": 3, "channel": 7});
+    let input = serde_json::json!({"rack": 0, "slot": 2, "channel": 7});
+    for (channel, component, port) in [
+        (output.clone(), "prox", "output"),
+        (output.clone(), "drive", "ready"),
+        (output.clone(), "starter", "aux"),
+        (input.clone(), "drive", "run"),
+        (input.clone(), "valve", "solenoid"),
+        (output.clone(), "drive", "speed"),
+        (output.clone(), "nothing", "coil"),
+    ] {
+        let scene = rewire(channel, component, port);
+        assert!(
+            validate_scene(&scene).is_err(),
+            "{component}.{port} must be rejected"
+        );
+    }
+    // Unknown component types and unknown parameters are rejected while parsing.
+    let mut unknown = base.clone();
+    unknown["components"][2]["kind"]["type"] = serde_json::json!("frequencyDrive");
+    assert!(serde_json::from_value::<SceneDefinition>(unknown).is_err());
+    let mut extra = base.clone();
+    extra["components"][2]["kind"]["direction"] = serde_json::json!("output");
+    assert!(serde_json::from_value::<SceneDefinition>(extra).is_err());
+}
