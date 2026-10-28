@@ -1,7 +1,9 @@
 //! Deterministic in-memory full-text index (derived data, rebuilt at startup).
 //!
-//! BM25-style scoring over weighted fields with prefix matching for longer terms and a
-//! bonus when consecutive query terms appear consecutively. Ties break by identifier.
+//! BM25-style scoring over weighted fields with prefix matching for longer terms, a
+//! bonus when consecutive query terms appear consecutively and a bonus for titles that
+//! consist mostly of query terms (the page *about* the topic before pages that mention it).
+//! Ties break by identifier.
 
 use crate::model::Category;
 use std::collections::{BTreeMap, BTreeSet};
@@ -48,6 +50,8 @@ pub struct SearchIndex {
     postings: BTreeMap<String, Vec<(usize, u32)>>,
     /// token sequences per document for phrase matching (title + summary + tags only).
     sequences: Vec<Vec<String>>,
+    /// distinct title tokens (without stop words) per document for the title bonus.
+    titles: Vec<BTreeSet<String>>,
     lengths: Vec<u32>,
     average_length: f64,
 }
@@ -110,6 +114,15 @@ impl SearchIndex {
             lengths.push(length.max(1));
             sequences.push(seq);
         }
+        let titles = documents
+            .iter()
+            .map(|d| {
+                tokenize(&d.title)
+                    .into_iter()
+                    .filter(|t| !STOP_WORDS.contains(&t.as_str()))
+                    .collect()
+            })
+            .collect();
         let average_length = if lengths.is_empty() {
             1.0
         } else {
@@ -122,6 +135,7 @@ impl SearchIndex {
                 .collect(),
             documents,
             sequences,
+            titles,
             lengths,
             average_length,
         }
@@ -200,6 +214,16 @@ impl SearchIndex {
                     .filter(|w| seq.windows(2).any(|s| s[0] == w[0] && s[1] == w[1]))
                     .count();
                 *score += bonus as f64 * 1.5;
+            }
+        }
+        // Title specificity: the share of the distinct title words that are query terms.
+        if !terms.is_empty() {
+            for (doc, score) in scores.iter_mut() {
+                let title = &self.titles[*doc];
+                if !title.is_empty() {
+                    let covered = title.iter().filter(|t| terms.contains(t)).count();
+                    *score += 5.0 * covered as f64 / title.len() as f64;
+                }
             }
         }
         let mut hits: Vec<(usize, f64)> = scores
