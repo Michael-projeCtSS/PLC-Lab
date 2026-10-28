@@ -17,7 +17,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "Covered as background knowledge only. **CONCEPTUAL**: no simulation profile."
+      "body": "No simulation profile. The S7-1200 and S7-1500 profiles show byte.bit addressing; S7-300/400 hardware, MPI/PROFIBUS networks and STEP 7 Classic projects are not modeled. **CONCEPTUAL**."
     }
   ],
   "facts": [],

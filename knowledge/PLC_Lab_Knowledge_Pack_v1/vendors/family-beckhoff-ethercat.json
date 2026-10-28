@@ -15,7 +15,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "See the EtherCAT protocol article. **CONCEPTUAL** only."
+      "body": "EtherCAT is not simulated (see the EtherCAT protocol article). The `beckhoff.twincat3` profile presents the generic rack's channels as linked terminal channels. **CONCEPTUAL** only."
     }
   ],
   "facts": [],

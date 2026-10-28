@@ -14,7 +14,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "Background knowledge only. **CONCEPTUAL**."
+      "body": "No simulation profile. The multi-CPU base unit and CC-Link IE networks are not modeled. **CONCEPTUAL**."
     }
   ],
   "facts": [],

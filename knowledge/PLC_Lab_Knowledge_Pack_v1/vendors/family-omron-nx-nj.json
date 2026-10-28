@@ -15,7 +15,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "Tier B knowledge profile presenting unit I/O ports. **CONCEPTUAL**."
+      "body": "Tier B knowledge profile `omron.nx-nj`: I/O channels are shown as unit ports such as `Unit2_Ch1_In` and analog raw values as 0..10000. **CONCEPTUAL**."
     }
   ],
   "facts": [],

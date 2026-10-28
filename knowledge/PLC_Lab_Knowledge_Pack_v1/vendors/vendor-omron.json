@@ -14,6 +14,10 @@
     {
       "heading": "Conventions worth knowing",
       "body": "Variables are mapped to I/O ports of NX units; programming follows IEC 61131-3."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "The `omron.nx-nj` knowledge profile presents the generic rack's channels as unit ports such as `Unit2_Ch1_In`. Sysmac Studio projects, EtherCAT and motion control are not modeled. **CONCEPTUAL**."
     }
   ],
   "facts": [],

@@ -11,11 +11,11 @@
   "sections": [
     {
       "heading": "Behavior",
-      "body": "- **LD** (load) copies **PV** into **CV**.\n- Each rising edge of **CD** decrements CV by one.\n- **Q** is TRUE while CV <= 0."
+      "body": "- **LD** (load) copies **PV** into **CV**; it has priority over CD.\n- Each FALSE-to-TRUE change of **CD** decrements CV by one (CTD detects the edge itself).\n- **Q** is TRUE while CV <= 0.\n- CV does not decrease below the minimum INT value."
     },
     {
-      "heading": "Typical use",
-      "body": "Counting down remaining parts in a batch or remaining attempts before a lockout."
+      "heading": "Example",
+      "body": "```\nVAR Left : CTD; END_VAR\nLeft(CD := PartRemoved, LD := NewBatch, PV := 10);\nBatchEmpty := Left.Q;\n```\nCounting down remaining parts in a batch or remaining attempts before a lockout works this way. Load the preset first: a CTD that was never loaded starts at CV = 0, so Q is already TRUE."
     }
   ],
   "facts": [],

@@ -224,9 +224,9 @@
       "rootCause": "The digital output module had lost its 24 V load (field) supply. The program and the CPU set the output correctly, but the module had no power to switch to its terminals, so the contactor coil never received voltage.",
       "evidence": [
         "MotorContactor was TRUE in the PLC, so the program did its job and the fault lies after the output image.",
-        "The run lamp on the same output module stayed dark as well: two outputs failing together point to something they share.",
-        "The module status and the diagnostic buffer reported a missing field supply for the output module.",
-        "Measuring the output channel gave no voltage while the output was commanded ON."
+        "The module status and the diagnostic buffer reported a missing field (load) supply for the output module.",
+        "Measuring the contactor's output channel gave 0 V while the output was commanded ON.",
+        "MotorFeedback stayed FALSE because the contactor never pulled in, which also kept the run lamp (driven by MotorFeedback) dark."
       ],
       "repair": "Restore the output module's 24 V load supply (replace the blown fuse), then verify that Start runs the conveyor.",
       "reasoning": "Follow the signal in order: program value, output image, module, terminal, field device. When the PLC says ON but nothing switches, check the module's own supply and diagnostics before replacing field devices or changing the program."

@@ -352,7 +352,7 @@
       "evidence": [
         "The communication status was OK, so addressing, unit identifier and the link were working.",
         "LevelPermille showed a value far above 1000 while the sight glass showed about 10 %.",
-        "The raw registers showed the plausible level in register 0, one position before the configured start address.",
+        "The first raw word received was about 16 700: the high word of a float, matching registers 1-2 of the transmitter's map, not the permille value documented for register 0.",
         "The value did not follow the level linearly, which a pure scaling error would have done."
       ],
       "repair": "Set the Modbus read start address to 0 in the network configuration and download the station.",

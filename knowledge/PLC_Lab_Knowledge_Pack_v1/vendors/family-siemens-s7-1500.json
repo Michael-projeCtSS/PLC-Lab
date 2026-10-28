@@ -19,7 +19,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product."
+      "body": "Choose the profile `siemens.s7-1500` for a Free Lab project to see digital I/O as byte.bit addresses such as `%I0.0` and `%Q0.1` and analog channels as words such as `%IW64`, and analog raw values in the nominal range 0..27648 with overrange up to 32511 and overflow 32767. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product."
     }
   ],
   "facts": [

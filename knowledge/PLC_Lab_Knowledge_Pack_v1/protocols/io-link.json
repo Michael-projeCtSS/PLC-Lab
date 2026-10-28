@@ -20,7 +20,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+      "body": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. Port modes, IODD files and parameter servers are not modeled. PLC Lab's sensors are plain switching devices, as an IO-Link device behaves in digital input mode; an inverted switching function is practiced in `ts.part-sensor-inverted`."
     }
   ],
   "facts": [],

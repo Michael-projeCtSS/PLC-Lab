@@ -15,7 +15,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "Background knowledge only. **CONCEPTUAL**."
+      "body": "No simulation profile; use the `generic.iec` profile. Modules with their own field supply appear in the Hardware tab, and a missing load supply is practiced in the lab `ts.outputs-dead`. **CONCEPTUAL**."
     }
   ],
   "facts": [],

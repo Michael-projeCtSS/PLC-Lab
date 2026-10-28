@@ -15,7 +15,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "Background knowledge only. **CONCEPTUAL**: EtherNet/IP is not simulated."
+      "body": "No simulation profile, and EtherNet/IP is not simulated. Distributed I/O with configured versus installed modules is practiced on the generic rack in the Hardware tab. **CONCEPTUAL**."
     }
   ],
   "facts": [],

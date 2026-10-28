@@ -15,7 +15,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product.\n\nAnalog values use the full-scale presentation 0..32767 for the nominal range."
+      "body": "Choose the profile `beckhoff.twincat3` for a Free Lab project to see I/O as linked terminal channels such as `Term 2 (<terminal>).Channel 1.Input`, and analog raw values 0..32767 for the nominal range. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product."
     }
   ],
   "facts": [

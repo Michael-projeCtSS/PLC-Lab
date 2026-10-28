@@ -16,7 +16,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product.\n\nThe profile presents analog values in engineering units (REAL), as configured scaling on Logix analog modules typically does."
+      "body": "Choose the profile `rockwell.compactlogix` for a Free Lab project to see I/O as module-defined tags such as `Local:1:I.Data.0` and `Local:3:I.Ch0Data`, and analog channels as REAL engineering values. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product. Engineering values reflect the scaling that Logix analog modules are typically configured with."
     }
   ],
   "facts": [],

@@ -17,7 +17,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "PLC Lab uses this profile to present addresses, analog raw values and product names in the style of the platform. The PLC itself is always PLC Lab's single generic IEC 61131-3 runtime; programs are written in PLC Lab Structured Text, not in the vendor's dialect. **SIMULATION APPROXIMATION**: details such as exact diagnostic texts, timing and module parameters differ from the real product."
+      "body": "Choose the profile `schneider.m200` for a Free Lab project to see digital I/O as IEC direct addresses such as `%IX0.0` and `%QX0.1` and analog channels as `%IW` words, and analog raw values 0..10000 for the nominal range. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product."
     }
   ],
   "facts": [],

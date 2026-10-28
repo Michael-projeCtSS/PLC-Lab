@@ -14,7 +14,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "Background knowledge only. **CONCEPTUAL**."
+      "body": "No simulation profile. The Global Data Space and high-level-language programs have no counterpart in PLC Lab, which runs Structured Text in its generic IEC 61131-3 runtime. **CONCEPTUAL**."
     }
   ],
   "facts": [],

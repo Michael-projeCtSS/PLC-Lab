@@ -20,7 +20,7 @@
     },
     {
       "heading": "In PLC Lab",
-      "body": "PLC Lab does not simulate this protocol. This article is background knowledge; no conformance or interoperability is claimed."
+      "body": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. PLC Lab has no OPC UA server or client; information models, certificates and subscriptions are not modeled."
     }
   ],
   "facts": [],
