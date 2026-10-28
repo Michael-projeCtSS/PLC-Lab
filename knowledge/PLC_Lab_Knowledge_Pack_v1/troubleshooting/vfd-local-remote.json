@@ -6,8 +6,11 @@
   "tags": [
     "VFD",
     "drive",
+    "frequency converter",
     "local",
-    "remote"
+    "remote",
+    "remote mode",
+    "control source"
   ],
   "sections": [
     {
@@ -19,32 +22,37 @@
   "sources": [
     "src.plclab-simulation"
   ],
-  "related": [],
+  "related": [
+    "fundamentals.drives-basics"
+  ],
   "troubleshooting": {
     "faultId": "vfd-local-remote",
     "area": "Drives",
     "target": "Drive control source parameter",
     "effect": "PLC commands have no effect; the drive runs from its keypad only",
     "symptoms": [
-      "PLC sends run command and speed setpoint, drive stays stopped",
+      "PLC sends the run command, drive stays stopped",
       "Drive display shows LOC or keypad control",
-      "No drive fault active"
+      "Drive ready, no drive fault active",
+      "Remote-active feedback FALSE"
     ],
     "evidence": [
       "Drive display and status word",
-      "Run command and ready feedback in the PLC",
-      "Drive parameter for control source"
+      "Run command, ready, running and remote feedback in the PLC",
+      "Drive parameter or key for the control source"
     ],
     "diagnosticMethod": [
       "Check that the PLC command reaches the drive (terminal or fieldbus)",
-      "Read the drive's control source",
+      "Read the drive's control source (local/remote)",
       "Compare with the commissioning record"
     ],
     "repair": [
       "Switch the drive back to remote/terminal or fieldbus control",
-      "Verify start, stop and speed from the PLC"
+      "Verify start and stop from the PLC"
     ],
-    "explanation": "Drives can be controlled locally for maintenance. A forgotten local mode is not a fault for the drive, so it raises no alarm. PLC Lab does not simulate drives yet; this guide is background knowledge.",
-    "simulatedIn": []
+    "explanation": "Drives can be controlled locally for maintenance. A forgotten local mode is not a fault for the drive, so it raises no alarm. PLC Lab simulates this case with a terminal-controlled drive (run terminal, ready, running and remote relay outputs); speed references and drive parameters are not simulated.",
+    "simulatedIn": [
+      "ts.vfd-local"
+    ]
   }
 }

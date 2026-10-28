@@ -451,6 +451,17 @@
     ],
     "knowledgeRefs": [
       "troubleshooting.sensor-no-nc-assumption"
-    ]
+    ],
+    "debrief": {
+      "rootCause": "The replacement presence sensor has a normally closed (NC) output function. Its output is ON when nothing is in front of it, so the program saw a part on the empty belt and the inverse of every real part.",
+      "evidence": [
+        "PartPresent was TRUE with the belt empty and turned FALSE when a part reached the sensor.",
+        "The batch counter counted as soon as AUTO was selected, without any part, because the inverted signal produced a rising edge.",
+        "The jam lamp lit on an empty belt because the jam timer saw a permanently TRUE presence signal.",
+        "The program was unchanged since before the sensor exchange, and the input channel followed the sensor faithfully."
+      ],
+      "repair": "Install a normally open sensor of the original type, then verify the batch count and the jam detection.",
+      "reasoning": "After a device exchange, check the new device against the old data sheet first. An input that is permanently TRUE at rest and goes FALSE when the target appears is inverted, not defective."
+    }
   }
 }

@@ -1,0 +1,278 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ts.vfd-local",
+  "revision": 1,
+  "title": "Conveyor drive ignores the PLC",
+  "kind": "troubleshooting",
+  "difficulty": "intermediate",
+  "summary": "After a drive inspection the conveyor no longer starts. The PLC sends the run command, the drive shows no fault, and the motor does not turn.",
+  "objectives": [
+    "Check whether a command really reaches a device and whether the device accepts it",
+    "Use drive status feedback as evidence"
+  ],
+  "estimatedMinutes": 15,
+  "scene": "scene.conveyor-drive",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open: TRUE while pressed. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe). *)\n    DriveReady : BOOL; (* Drive relay output 'ready': TRUE while the drive is powered and not tripped. *)\n    DriveRunning : BOOL; (* Drive relay output 'running': TRUE while the drive is turning the motor. *)\n    DriveRemote : BOOL; (* Drive relay output 'remote': TRUE while the drive accepts its run terminal (remote/terminal control). *)\nEND_VAR\nVAR_OUTPUT\n    DriveRun : BOOL; (* Drive run terminal: TRUE requests the drive to run. *)\n    RunLamp : BOOL; (* Green run lamp H1. *)\nEND_VAR\nVAR\n    Request : BOOL;\nEND_VAR\n\nRequest := (StartPB OR Request) AND StopPB AND DriveReady;\nDriveRun := Request;\nRunLamp := DriveRunning;\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "DriveReady",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "DriveRunning",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "DriveRun",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Run the simulation and press Start; confirm the symptom.",
+    "Compare the PLC run command with what the drive reports on its display.",
+    "Check the drive's feedback signals DriveReady, DriveRunning and DriveRemote.",
+    "Diagnose, repair, then verify."
+  ],
+  "hints": [
+    "The PLC can only request the drive to run; the drive decides whether it accepts the request.",
+    "Which drive signal tells you whether the drive listens to its terminals?"
+  ],
+  "knowledgeRefs": [
+    "troubleshooting.vfd-local-remote",
+    "fundamentals.drives-basics"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "run",
+      "source": {
+        "type": "plcTag",
+        "tag": "DriveRun"
+      }
+    },
+    {
+      "name": "remote",
+      "source": {
+        "type": "plcTag",
+        "tag": "DriveRemote"
+      }
+    },
+    {
+      "name": "running",
+      "source": {
+        "type": "component",
+        "component": "drive",
+        "quantity": "running"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "verify",
+      "title": "Start and stop the repaired conveyor",
+      "durationMs": 8000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 5000,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 5300,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "command",
+      "title": "The PLC commands the drive",
+      "points": 30,
+      "scenario": "verify",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "run",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "withinMs": 300
+      },
+      "onFail": "The run command did not follow Start."
+    },
+    {
+      "id": "runs",
+      "title": "The drive runs the conveyor after Start",
+      "points": 50,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 2500
+      },
+      "onFail": "The drive still does not run after Start."
+    },
+    {
+      "id": "stops",
+      "title": "Stop stops the drive",
+      "points": 20,
+      "scenario": "verify",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 6500,
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "The drive kept running after Stop."
+    }
+  ],
+  "troubleshooting": {
+    "symptom": "Since the drive was inspected this morning, pressing Start does nothing: the conveyor stays still and the run lamp stays dark. No drive fault is shown and the PLC shows DriveRun TRUE.",
+    "reportedBy": "Line operator, conveyor line 3",
+    "faults": [
+      {
+        "id": "drive-local",
+        "fault": {
+          "type": "driveLocalControl",
+          "component": "drive"
+        }
+      }
+    ],
+    "diagnosisOptions": [
+      {
+        "id": "program-error",
+        "label": "The PLC program does not set the run command"
+      },
+      {
+        "id": "do-power",
+        "label": "The digital output module has no load supply"
+      },
+      {
+        "id": "drive-local",
+        "label": "The drive is in Local (keypad) control and ignores its run terminal"
+      },
+      {
+        "id": "drive-trip",
+        "label": "The drive has tripped on a fault"
+      },
+      {
+        "id": "motor-cable",
+        "label": "The motor cable is interrupted"
+      }
+    ],
+    "rootCauses": [
+      "drive-local"
+    ],
+    "repairs": [
+      {
+        "id": "set-remote",
+        "label": "Switch the drive's control source back to Remote (terminal control)",
+        "clears": [
+          "drive-local"
+        ]
+      },
+      {
+        "id": "ack-drive",
+        "label": "Acknowledge (reset) the drive fault memory",
+        "clears": []
+      },
+      {
+        "id": "replace-do",
+        "label": "Replace the digital output module",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "command",
+      "runs",
+      "stops"
+    ],
+    "knowledgeRefs": [
+      "troubleshooting.vfd-local-remote",
+      "fundamentals.drives-basics"
+    ],
+    "debrief": {
+      "rootCause": "The conveyor drive was left in Local (keypad) control after maintenance. In Local the drive ignores its run terminal, so the PLC's run command arrived but was not accepted.",
+      "evidence": [
+        "DriveRun was TRUE in the PLC and the drive's display showed the run terminal ON: the command reached the drive.",
+        "DriveReady stayed TRUE, so the drive was powered and not tripped.",
+        "DriveRemote was FALSE and the drive's display showed LOC instead of REM.",
+        "DriveRunning stayed FALSE and the motor speed stayed at 0 Hz although the command was present."
+      ],
+      "repair": "Switch the drive's control source back to Remote (terminal control), then verify that Start runs the conveyor and Stop stops it.",
+      "reasoning": "When a command reaches a device but the device does not act, check the device's own state before the wiring or the program. Drives, valves with manual overrides and local panels all have a local/remote selection that overrides the PLC."
+    }
+  }
+}

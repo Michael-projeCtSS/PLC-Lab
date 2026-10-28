@@ -369,6 +369,17 @@
     ],
     "knowledgeRefs": [
       "troubleshooting.analog-wrong-range"
-    ]
+    ],
+    "debrief": {
+      "rootCause": "The analog input channel was configured for 0-20 mA while the level transmitter delivers 4-20 mA. The channel turned the live-zero 4 mA into 20 % instead of 0 %, so every level read too high and filling stopped early.",
+      "evidence": [
+        "At about 10 % real level the loop current measured 5.6 mA, which is exactly 10 % on a 4-20 mA scale.",
+        "On a 0-20 mA scale 5.6 mA becomes 28 %, the value the HMI showed.",
+        "The error was largest near empty and shrank toward full: a zero offset, not a gain or wiring problem.",
+        "The current was well above 0 mA and stable, which rules out a broken loop."
+      ],
+      "repair": "Set the analog channel to 4-20 mA in the hardware configuration and download the station. No program change was needed.",
+      "reasoning": "Measure the signal and calculate what the engineering value should be. When the measured current is right but the value is wrong, the fault is in the configuration or scaling between the terminal and the program, not in the transmitter."
+    }
   }
 }

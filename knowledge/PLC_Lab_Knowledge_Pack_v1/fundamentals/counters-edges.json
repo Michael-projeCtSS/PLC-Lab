@@ -1,0 +1,46 @@
+{
+  "id": "fundamentals.counters-edges",
+  "kind": "topic",
+  "title": "Edges and counters",
+  "summary": "An edge is the moment a signal changes. Counting events, reacting once per button press and detecting a part that arrives all depend on edges rather than on signal levels.",
+  "tags": [
+    "edge",
+    "rising edge",
+    "falling edge",
+    "R_TRIG",
+    "F_TRIG",
+    "counter",
+    "CTU",
+    "CTD",
+    "CTUD"
+  ],
+  "sections": [
+    {
+      "heading": "Level versus edge",
+      "body": "A **level** is the current value of a signal: the button is pressed. An **edge** is a change: the button has just been pressed (rising edge, FALSE to TRUE) or just released (falling edge, TRUE to FALSE). A rising edge is TRUE for exactly one scan."
+    },
+    {
+      "heading": "Edge detection",
+      "body": "IEC 61131-3 provides **R_TRIG** (rising edge) and **F_TRIG** (falling edge). Each instance remembers the previous value of its input and compares it with the current one. Without edge detection, a held button would trigger an action in every scan, which is why a counter fed by a raw level counts once per scan instead of once per press."
+    },
+    {
+      "heading": "Counters",
+      "body": "- **CTU** counts up on each rising edge of CU and sets Q when the count reaches the preset PV. R resets the count.\n- **CTD** counts down on each rising edge of CD; LD loads the preset and Q signals that zero was reached.\n- **CTUD** combines both directions.\n\nThe standard counters detect the edge of their count input themselves, so a held button is counted once."
+    },
+    {
+      "heading": "Signals faster than the scan",
+      "body": "A PLC sees inputs only once per scan. A pulse shorter than one scan can be missed completely, and two pulses within one scan count as one. Real controllers use hardware counter modules for fast signals; PLC Lab's fixed scan makes the effect visible in the timeline."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "instruction.r-trig",
+    "instruction.f-trig",
+    "instruction.ctu",
+    "instruction.ctd"
+  ]
+}

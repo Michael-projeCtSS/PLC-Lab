@@ -1,0 +1,44 @@
+{
+  "id": "fundamentals.timers",
+  "kind": "topic",
+  "title": "Timers: on-delay, off-delay and pulse",
+  "summary": "Timers turn a signal into time-dependent behavior: start after a delay, keep running after a signal ends, or produce a pulse of fixed length. IEC 61131-3 defines TON, TOF and TP for this.",
+  "tags": [
+    "timer",
+    "TON",
+    "TOF",
+    "TP",
+    "delay",
+    "pulse",
+    "preset time"
+  ],
+  "sections": [
+    {
+      "heading": "Why timers",
+      "body": "Machines need time: a warning horn before a conveyor starts, a fan that keeps running after a heater switches off, a valve that may only stay open for a fixed time. Timers measure time in the PLC independently of the scan rate."
+    },
+    {
+      "heading": "The three standard timers",
+      "body": "- **TON (on-delay)**: Q becomes TRUE when IN has been TRUE continuously for the preset time PT. If IN drops early, the timer resets and Q stays FALSE.\n- **TOF (off-delay)**: Q follows IN to TRUE at once and stays TRUE for PT after IN goes FALSE.\n- **TP (pulse)**: a rising edge on IN produces a pulse of exactly PT; further changes of IN during the pulse are ignored.\n\nAll three expose the elapsed time ET, which is useful for monitoring and HMI display."
+    },
+    {
+      "heading": "Using timers correctly",
+      "body": "A timer is a **function block instance**: it has memory and must be called every scan, for example `Delay(IN := Request, PT := T#3s);`. Calling it only inside an IF branch freezes its elapsed time while the branch is not executed, a common beginner error. Read the result through the instance: `Motor := Delay.Q;`."
+    },
+    {
+      "heading": "Time in PLC Lab",
+      "body": "PLC Lab advances timers with deterministic simulation time, never with the wall clock of your computer. The same program and inputs therefore always give the same timing, even when the simulation runs faster than real time or is stepped scan by scan."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "instruction.ton",
+    "instruction.tof",
+    "instruction.tp",
+    "fundamentals.scan-cycle"
+  ]
+}

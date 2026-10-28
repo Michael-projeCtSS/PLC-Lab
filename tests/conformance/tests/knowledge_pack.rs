@@ -37,9 +37,9 @@ fn pack_loads_without_errors_or_dangling_references() {
     let pack = &packs[0];
     assert_eq!(pack.status, PackStatus::Loaded, "{:#?}", pack.errors);
     assert!(pack.warnings.is_empty(), "{:#?}", pack.warnings);
-    assert!(pack.counts.articles >= 60, "{:?}", pack.counts);
+    assert!(pack.counts.articles >= 74, "{:?}", pack.counts);
     assert!(pack.counts.lessons >= 20, "{:?}", pack.counts);
-    assert!(pack.counts.exercises >= 14, "{:?}", pack.counts);
+    assert!(pack.counts.exercises >= 17, "{:?}", pack.counts);
     assert!(pack.counts.profiles >= 9, "{:?}", pack.counts);
     for vendor in [
         "vendor.siemens",
@@ -165,7 +165,18 @@ fn every_practice_exercise_is_solvable_and_the_starter_is_not() {
         );
         checked += 1;
     }
-    assert!(checked >= 9, "{checked} practice exercises");
+    assert!(checked >= 10, "{checked} practice exercises");
+    // The minimum practice set.
+    for id in [
+        "ex.lamp-pushbutton",
+        "ex.motor-jog",
+        "ex.motor-start-stop",
+        "ex.delayed-start",
+        "ex.button-counter",
+        "ex.tank-filling",
+    ] {
+        assert!(lib.exercise(id).is_some(), "{id}");
+    }
 }
 
 #[test]
@@ -228,7 +239,33 @@ fn troubleshooting_exercises_fail_until_repaired_and_pass_afterwards() {
                 fault.id
             );
         }
+        let debrief = t
+            .debrief
+            .as_ref()
+            .unwrap_or_else(|| panic!("{}: no completion debrief", e.id));
+        assert!(
+            !debrief.root_cause.trim().is_empty()
+                && !debrief.evidence.is_empty()
+                && debrief.evidence.iter().all(|x| !x.trim().is_empty())
+                && !debrief.repair.trim().is_empty()
+                && !debrief.reasoning.trim().is_empty(),
+            "{}: incomplete debrief",
+            e.id
+        );
         checked += 1;
     }
-    assert!(checked >= 6, "{checked} troubleshooting exercises");
+    assert!(checked >= 7, "{checked} troubleshooting exercises");
+    // The minimum troubleshooting curriculum: NO/NC, analog range, field supply, drive
+    // local/remote, Modbus register map and network addressing.
+    for id in [
+        "ts.motor-wont-start",
+        "ts.part-sensor-inverted",
+        "ts.tank-level-reads-high",
+        "ts.outputs-dead",
+        "ts.vfd-local",
+        "ts.remote-level-wrong",
+        "ts.remote-level-lost",
+    ] {
+        assert!(lib.exercise(id).is_some(), "{id}");
+    }
 }

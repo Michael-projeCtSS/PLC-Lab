@@ -105,6 +105,17 @@
       { "id": "replace-di-module", "label": "Replace the digital input module", "clears": [] }
     ],
     "verification": ["starts", "runs", "stops"],
-    "knowledgeRefs": ["troubleshooting.nc-contact-replaced-by-no"]
+    "knowledgeRefs": ["troubleshooting.nc-contact-replaced-by-no"],
+    "debrief": {
+      "rootCause": "During the panel service the Stop button received a normally open contact block instead of a normally closed one. The program expects StopPB to be TRUE while Stop is not pressed, so it saw a permanent stop command.",
+      "evidence": [
+        "StopPB was FALSE with nobody touching the Stop button, and became TRUE only while Stop was pressed: the opposite of the documented behavior.",
+        "StartPB did become TRUE when Start was pressed, so the start circuit and the input module were working.",
+        "MotorContactor never went TRUE, so the signal was blocked inside the logic by the stop condition, not lost on the way to the contactor.",
+        "No alarm and no module diagnostic were present, which points away from hardware failures and toward a wrong field device."
+      ],
+      "repair": "Fit a normally closed contact block to the Stop button, then verify that Start, run and Stop behave as before the service.",
+      "reasoning": "Compare every input with what its documentation says it should be at rest. A stop circuit is normally closed so that a broken wire stops the machine; an input that is FALSE at rest and TRUE when operated has the wrong contact type."
+    }
   }
 }

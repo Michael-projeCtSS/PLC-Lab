@@ -1,0 +1,56 @@
+{
+  "id": "fundamentals.drives-basics",
+  "kind": "topic",
+  "title": "Variable frequency drives",
+  "summary": "A variable frequency drive (VFD) feeds an AC motor with adjustable frequency and voltage so that its speed can be controlled. The PLC commands the drive; the drive decides whether it accepts the command.",
+  "tags": [
+    "VFD",
+    "drive",
+    "frequency converter",
+    "inverter",
+    "local",
+    "remote",
+    "ramp",
+    "ready",
+    "running"
+  ],
+  "sections": [
+    {
+      "heading": "What a drive does",
+      "body": "A three-phase induction motor connected directly to the mains runs at a speed set by the mains frequency. A **variable frequency drive** rectifies the supply and generates a new output with adjustable frequency and voltage, so the motor speed can be changed and the motor can be started and stopped smoothly along **ramps** instead of with a current surge."
+    },
+    {
+      "heading": "Control interfaces",
+      "body": "A drive can be commanded in several ways:\n- **Terminals**: digital inputs such as run/stop and direction, often with an analog speed reference (0-10 V or 4-20 mA).\n- **Fieldbus**: a control word and a speed setpoint sent over PROFINET, EtherNet/IP, EtherCAT, Modbus or similar.\n- **Keypad** (local control): buttons on the drive itself, used for commissioning and maintenance.\n\nA parameter or a local/remote key selects which source the drive obeys. In **local** control the drive ignores the PLC's commands; this is intended behavior, not a drive fault, so normally no alarm is raised."
+    },
+    {
+      "heading": "Feedback to the PLC",
+      "body": "Drives report their state through relay outputs or a status word: typically **ready** (powered and not tripped), **running**, **fault** and often **remote control active**. A good program checks this feedback instead of assuming that a command was executed."
+    },
+    {
+      "heading": "Safety note",
+      "body": "Stopping a drive through its run command is a functional stop, not a safety function. Many drives offer an integrated safety function such as Safe Torque Off that must be wired and validated according to the drive's safety documentation. PLC Lab does not simulate drive safety functions."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "The simulated drive has a run terminal and three relay outputs (ready, running, remote). It ramps linearly to full speed, shows LOC or REM, the output frequency based on a 50 Hz rated frequency and an approximate motor current on its display. Speed references, drive trips and parameters are not simulated. This is a **simulation approximation** intended for control and troubleshooting practice."
+    }
+  ],
+  "facts": [
+    {
+      "label": "Simulated drive interface",
+      "value": "Run terminal; relay outputs ready, running and remote; linear ramp; no speed reference",
+      "sources": [
+        "src.plclab-simulation"
+      ]
+    }
+  ],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "troubleshooting.vfd-local-remote",
+    "fundamentals.start-stop-latch",
+    "fundamentals.industrial-networks"
+  ]
+}

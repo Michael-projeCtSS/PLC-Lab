@@ -1,0 +1,49 @@
+{
+  "id": "fundamentals.industrial-networks",
+  "kind": "topic",
+  "title": "Industrial network fundamentals",
+  "summary": "How controllers exchange data with remote I/O, drives, transmitters and HMIs: addresses, subnets, cyclic and acyclic data, and how a communication fault shows up in a PLC.",
+  "tags": [
+    "network",
+    "Ethernet",
+    "IP address",
+    "subnet mask",
+    "gateway",
+    "timeout",
+    "cyclic data",
+    "fieldbus"
+  ],
+  "sections": [
+    {
+      "heading": "Why networks",
+      "body": "Instead of wiring every signal to the controller cabinet, modern machines connect remote I/O stations, drives and intelligent sensors over a network. Fewer wires are needed, devices can report diagnostics, and parameters can be changed from the engineering station."
+    },
+    {
+      "heading": "Addresses on Ethernet-based networks",
+      "body": "Each Ethernet interface has a fixed hardware (MAC) address and a configured **IPv4 address** such as 192.168.0.20. The **subnet mask** (for example 255.255.255.0) decides which addresses are local: with that mask, 192.168.0.1 and 192.168.0.20 share a subnet, while 192.168.1.20 is in another one and can only be reached through a **gateway** (router). Two devices with the same IP address disturb each other. PROFINET additionally identifies IO devices by a **device name**; EtherNet/IP and Modbus TCP use the IP address directly."
+    },
+    {
+      "heading": "Roles and data exchange",
+      "body": "Industrial protocols use roles such as client/server (Modbus TCP: the client sends requests, the server answers), controller/device (PROFINET IO, EtherNet/IP) or a master that drives a frame through all slaves (EtherCAT). **Cyclic** data such as I/O values is exchanged at a fixed update time; **acyclic** data such as parameters or diagnostics is requested when needed."
+    },
+    {
+      "heading": "How communication faults appear",
+      "body": "The typical classes are: **no link** (cable, port), **no route** (address in another subnet, missing gateway), **timeout** (nobody answers at that address, or the device is offline), **refused** (device reachable but the service is not available) and **protocol exception** (device answers but rejects the request, for example an invalid register address). A value can also be transferred perfectly and still be wrong, for example when the wrong register is read. The program should always check a communication status before trusting remote values."
+    },
+    {
+      "heading": "In PLC Lab",
+      "body": "PLC Lab simulates Modbus TCP behavior with deterministic latency, timeouts, device offline and address faults, and offers ping and connection diagnostics. The other protocols in this knowledge pack are described conceptually and are not simulated."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.modbus-tcp-guide",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "protocol.modbus-tcp",
+    "protocol.profinet",
+    "troubleshooting.ip-subnet-mismatch",
+    "troubleshooting.modbus-wrong-register"
+  ]
+}

@@ -273,6 +273,17 @@
     ],
     "knowledgeRefs": [
       "troubleshooting.ip-subnet-mismatch"
-    ]
+    ],
+    "debrief": {
+      "rootCause": "The replacement level transmitter kept an IP address in another subnet (192.168.1.20) instead of the documented 192.168.0.20. The PLC's Modbus client kept asking an address that no device answered.",
+      "evidence": [
+        "LevelCommOK was FALSE and the client connection reported repeated timeouts.",
+        "A ping to the documented address 192.168.0.20 timed out: nothing on the network used that address.",
+        "A ping to 192.168.1.20 reported no route: the device existed, but in a subnet the PLC cannot reach without a gateway.",
+        "The fault started with the device exchange; the PLC program and its network settings were unchanged."
+      ],
+      "repair": "Set the transmitter's IP address to the documented 192.168.0.20, then verify that the tank fills and the communication status stays OK.",
+      "reasoning": "Classify the communication error first: a timeout, a refusal, an exception and no route each point to a different layer. A replacement device with a factory or old address is a frequent cause of timeouts after an exchange."
+    }
   }
 }

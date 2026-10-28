@@ -5,6 +5,7 @@
   "summary": "Fine-granular distributed I/O system: an interface module plus BaseUnits with plugged I/O modules, usually connected over PROFINET.",
   "tags": [
     "ET 200SP",
+    "ET200SP",
     "distributed I/O",
     "BaseUnit",
     "PROFINET"

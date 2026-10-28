@@ -1,0 +1,43 @@
+{
+  "id": "fundamentals.bool-logic",
+  "kind": "topic",
+  "title": "Boolean logic in PLC programs",
+  "summary": "AND, OR, NOT and XOR combine on/off signals. Almost every control function, from a lamp test to a safety interlock, is built from these four operations.",
+  "tags": [
+    "BOOL",
+    "AND",
+    "OR",
+    "NOT",
+    "XOR",
+    "truth table",
+    "logic"
+  ],
+  "sections": [
+    {
+      "heading": "Signals as TRUE and FALSE",
+      "body": "A BOOL variable has exactly two values: **TRUE** (1, on) and **FALSE** (0, off). A pressed normally open button, a lit lamp and an energized coil are all TRUE. What a value *means* depends on the wiring: a normally closed stop button is TRUE while it is **not** pressed."
+    },
+    {
+      "heading": "The four basic operations",
+      "body": "| Operation | Structured Text | TRUE when |\n| --- | --- | --- |\n| AND | `A AND B` | both A and B are TRUE |\n| OR | `A OR B` | at least one is TRUE |\n| NOT | `NOT A` | A is FALSE |\n| XOR | `A XOR B` | exactly one is TRUE |\n\nIn Ladder Diagram, contacts in series form an AND, contacts in parallel form an OR and a normally closed contact symbol forms a NOT."
+    },
+    {
+      "heading": "Reading a logic line",
+      "body": "`Motor := (Start OR Motor) AND Stop AND NOT Fault;` reads: the motor runs if Start is pressed **or** it is already running, **and** the stop circuit is healthy, **and** there is no fault. Brackets matter: without them AND binds stronger than OR, so `Start OR Motor AND Stop` would let Start bypass the stop circuit."
+    },
+    {
+      "heading": "Truth tables and testing",
+      "body": "Write down every input combination and the expected output before testing. Two inputs give four combinations, three give eight. PLC Lab's practice exercises check such combinations automatically and report which case failed."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.start-stop-latch",
+    "fundamentals.no-nc-contacts",
+    "fundamentals.scan-cycle"
+  ]
+}
