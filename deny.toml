@@ -7,6 +7,13 @@ all-features = false
 # vulnerabilities always fail.
 unmaintained = "workspace"
 yanked = "deny"
+ignore = [
+  # glib 0.18 is pulled in only by Tauri 2's Linux GTK/WebKitGTK stack (gtk-rs 0.18);
+  # the fix requires glib >= 0.20, which Tauri 2 does not support. PLC Lab never calls
+  # glib::VariantStrIter, and the Windows product does not compile glib at all.
+  # Re-evaluate when Tauri moves to gtk-rs >= 0.20.
+  { id = "RUSTSEC-2024-0429", reason = "transitive Linux-only Tauri dependency; affected API unused; no compatible fix" },
+]
 
 [licenses]
 confidence-threshold = 0.9
