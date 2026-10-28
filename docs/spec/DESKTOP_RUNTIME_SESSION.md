@@ -1,5 +1,7 @@
 # Desktop runtime session
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md). Kept for engineering history.
+
 M2B separates editor source, pure compile metadata, loaded executable, backend runtime session, immutable snapshot and UI presentation. This is manual educational execution, without process/network/trace/grading services.
 
 ## Commands and ownership

@@ -1,61 +1,44 @@
 # PLC feature matrix
 
-## M4B application capability
+Current implementation after the product rebuild. Milestone history is in the M-reports
+and ADRs.
 
-Alpha application control supports deterministic 1× Run, Pause, Resume and Stop above the same accepted ST runtime/process/trace; STOPPED supports manual Single Scan. No PLC type/operator/instruction/TON behavior or language support is added. Speed controls, instruction stepping, replay, grading, exercises, protocols and M5 remain unavailable. See [CONTINUOUS_EXECUTION.md](CONTINUOUS_EXECUTION.md). Earlier milestone tables below describe their original scope.
+## Languages
 
-## M4A delivery scope
+| Language               | Status                                                   |
+| ---------------------- | -------------------------------------------------------- |
+| Structured Text        | Implemented (subset below), compiled to the canonical IR |
+| Ladder Diagram         | Planned; IR prepared (ADR-0021)                          |
+| Function Block Diagram | Planned; IR prepared (ADR-0021)                          |
+| Statement List (edu)   | Planned; control-flow design in ADR-0021                 |
 
-Manual bounded session/cycle-boundary trace and read-only Timeline are implemented for existing ST/TON/Tank observations. No new PLC instruction, type, language, timer or process semantics. Trace is not replay, grading, streaming, persistence or continuous execution. See [TRACE_MODEL.md](TRACE_MODEL.md).
+## Structured Text
 
-## M3A manual physical process
+| Feature                                                        | Status      |
+| -------------------------------------------------------------- | ----------- |
+| One PROGRAM, VAR_INPUT / VAR_OUTPUT / VAR sections             | Implemented |
+| BOOL, INT (16-bit), REAL (finite f32), TIME (µs)               | Implemented |
+| Assignments, IF / ELSIF / ELSE                                 | Implemented |
+| CASE with values, ranges, lists, ELSE                          | Implemented |
+| NOT, AND, OR, XOR, arithmetic, MOD, comparisons                | Implemented |
+| INT_TO_REAL, REAL_TO_INT (round half to even, overflow faults) | Implemented |
+| TIME literals (`T#1s500ms`)                                    | Implemented |
+| Standard FB instances: TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD  | Implemented |
+| FB calls with named inputs, `=>` outputs, member reads (`T.Q`) | Implemented |
+| Comments `(* *)` and `//`                                      | Implemented |
+| DINT and other wide types, ARRAY, STRUCT                       | Planned     |
+| User functions and function blocks, FOR/WHILE/REPEAT           | Planned     |
+| CTUD, retentive memory, multiple tasks                         | Planned     |
 
-M2B final gate and its required Load intent correction are accepted. M3A adds an explicitly attached Tank Filling process above the unchanged runtime: integer level, committed output actuation, deterministic cycle stepping, sensor feedback staged for the next scan, input ownership and authoritative 2D visualization. Compile/Load/Attach/Single Scan remain separate. Runtime and Process reset have distinct effects. IPC advances to v5; source/IR/types/TON/clock/budget semantics do not change. Run/Pause/Stop, trace, network, grading, other languages and arbitrary process editing remain unavailable. See [PROCESS_SIMULATION.md](PROCESS_SIMULATION.md). Validation and source-review evidence belong to the M3A report; earlier sections preserve milestone history.
+## Runtime
 
-## M2B manual desktop execution
+Transactional scans (a faulting scan commits nothing), operation budget per scan,
+runtime faults with source locations (division by zero, overflow), PLC modes RUN / STOP /
+FAULT with warm restart and memory reset, forcing of inputs and outputs, simulation-time
+timers. See [runtime semantics](PLC_RUNTIME_SEMANTICS.md) and
+[simulation fidelity](../SIMULATION_FIDELITY.md).
 
-M2A validation and source review are accepted. M2B adds explicit Load Program, backend-owned generation-checked session, typed staged Input editing, manual Single Scan, committed scalar/TON snapshots, source-backed runtime fault display, explicit reset and unload. Compile remains pure. Run/Pause/Stop, pacing, processes, networking, trace/timeline recording and grading remain unavailable. No Alpha ST or M1 semantics change. See [DESKTOP_RUNTIME_SESSION.md](DESKTOP_RUNTIME_SESSION.md).
+## Hardware, process, network
 
-## M2A implemented source frontend
-
-M1C independent validation is accepted. M2A adds real Alpha ST source lexing, a distinct AST, semantic compilation and mandatory existing IR validation; headless tests lower and execute that source through the frozen runtime, including TON. Desktop support is Monaco editing and pure typed compile IPC v3 with diagnostics/declaration metadata. Run/Pause/Stop/Single Scan and runtime values remain unavailable. See [STRUCTURED_TEXT_ALPHA.md](STRUCTURED_TEXT_ALPHA.md) for IMPLEMENTED/PLANNED/UNSUPPORTED features. Earlier milestone descriptions below remain historical; no additional PLC semantics or other language/process/network/trace/grading feature is added.
-
-This is a support plan, not a claim of implemented semantics. Sprint 0 provides a shell and contracts only. Alpha 0.1 is the first minimal ST vertical-slice target; MVP follows DEMO-001 and separately approved increments. Future entries are uncommitted and require scoped tasks.
-
-M1A/M1B are accepted. M1C adds a declared standard-FB catalog, typed normalized calls, transactional private instance state and headless TON code. TON acceptance remains pending until all validation/runtime tests pass; see [M1C report](../M1C_REPORT.md) for actual evidence. See [TYPE_SYSTEM.md](TYPE_SYSTEM.md), [CANONICAL_PLC_IR.md](CANONICAL_PLC_IR.md), [PLC_RUNTIME_SEMANTICS.md](PLC_RUNTIME_SEMANTICS.md), and [TON_SEMANTICS.md](TON_SEMANTICS.md). This does not implement ST execution, a language frontend, process/network simulation, trace recording, or a completed educational vertical slice.
-
-| Current implementation                                                           | Status                                                |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Alpha values / conservative typing / symbols / source anchors                    | M1A accepted                                          |
-| Direct IR assignment, expressions, IF execution                                  | M1B accepted by technical-lead review                 |
-| Entry memory images and transactional commit/rollback                            | M1B accepted by technical-lead review                 |
-| Checked INT / finite canonical REAL / TIME comparisons                           | M1B accepted by technical-lead review                 |
-| One explicit cyclic task, positive period, operation budget, deterministic clock | M1B accepted by technical-lead review                 |
-| ST frontend or user-facing execution                                             | Not implemented                                       |
-| Typed standard-FB definitions/instances/bindings and validation                  | M1C code and validation tests present; review pending |
-| Headless standard TON, transactional state and Q/ET snapshots                    | M1C code present; runtime validation pending          |
-| User FB/function execution, TOF/TP/counters/edge blocks                          | Not implemented                                       |
-| Process/network simulation, protocol, trace recorder, grading                    | Not implemented                                       |
-
-| Area           | Alpha 0.1 target                                                                                       | MVP target                                                   | Future support                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------------------- |
-| Languages      | ST only                                                                                                | ST; LAD after DEMO-001 and M6 approval                       | FBD (M7), educational STL/IL (M8)                              |
-| Scalar types   | BOOL, INT, REAL, TIME                                                                                  | Add integer widths and LREAL when required by exercises      | BYTE, WORD, DWORD, SINT, DINT, USINT, UINT, UDINT and profiles |
-| Compound types | None                                                                                                   | Selected ARRAY/STRUCT support after explicit semantic design | Nested composites and additional type facilities               |
-| POU            | One entry Program                                                                                      | Functions, Function Blocks, explicit instances               | Multiple programs/tasks and richer organization                |
-| Variables      | Explicit declarations; named input, output and internal variables for the single program               | Globals, POU locals, FB instance state                       | Retained state and explicit address/profile adapters           |
-| Assignment     | Typed scalar assignment                                                                                | Composite assignment after semantics are specified           | Profile-specific extensions through adapters                   |
-| Expressions    | Literals, variable reads, parentheses; BOOL AND/OR/NOT; numeric +, -, *, /; =, <>, <, <=, >, >=        | Broader numeric/bitwise operators and explicit conversions   | Additional validated standard functions                        |
-| Type rules     | No implicit BOOL/numeric conversion; numeric bounds and REAL precision specified before implementation | Documented conversion/overflow rules                         | Explicit vendor profiles; no changes to generic semantics      |
-| Control flow   | IF / THEN / ELSE / END_IF                                                                              | ELSIF, CASE and bounded FOR/WHILE/REPEAT only when approved  | Additional flow facilities under VM budgets                    |
-| Timers         | TON only, one explicit instance model designed with virtual time                                       | TOF and TP when exercises need them                          | More standard blocks/profiles                                  |
-| Counters       | None                                                                                                   | CTU, CTD, CTUD when requested                                | Profile extensions                                             |
-| Edge blocks    | None                                                                                                   | R_TRIG, F_TRIG when requested                                | Additional validated blocks                                    |
-| Diagnostics    | Typed compiler/runtime fault vocabulary with source mapping                                            | Rich explanations and related locations                      | Localization and profile guidance                              |
-| Runtime        | One deterministic bounded VM for ST-lowered IR                                                         | Same VM for every approved language                          | Additional scheduling profiles via explicit adapters           |
-
-## Scope interpretation
-
-Alpha declarations, one Program, and named variables are the minimum support needed to exercise the requested assignments and TON. This does not authorize implementation during Sprint 0. TIME literal syntax, integer width/range, REAL representation, division errors, output commit on fault, IF evaluation, and TON boundaries must be specified and tested before the respective M1/M2 work ships. Do not infer vendor behavior.
-
-No ST parser, VM, timers/counters, language editors, process/network simulation, or protocols exist in Sprint 0. Do not implement LAD/FBD/STL production editors before DEMO-001 proves the architecture. New features must preserve source mappings, deterministic trace behavior, resource limits, and cross-language equivalence.
+See [hardware model](../HARDWARE_MODEL.md), [scene model](../SCENE_MODEL.md) and
+[network model](../NETWORK_MODEL.md). Modbus TCP is the only simulated protocol.

@@ -1,5 +1,7 @@
 # UI principles
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [PRODUCT_VISION.md](../PRODUCT_VISION.md). Kept for engineering history.
+
 These principles are mandatory for PLC Lab and follow [AGENTS.md](../../AGENTS.md), the [architecture](../architecture/ARCHITECTURE.md), [process/renderer separation](../adr/0005-process-renderer-separation.md), and [trace-first architecture](../adr/0006-trace-first.md). This specification adds no runtime functionality and does not require a redesign of the accepted M0 workspace shell.
 
 ## Results are a core product requirement

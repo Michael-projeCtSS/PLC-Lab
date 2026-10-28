@@ -1,5 +1,7 @@
 # M0 closeout and human-test tooling report
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [HUMAN_TESTING.md](HUMAN_TESTING.md). Kept for engineering history.
+
 Date: 2026-10-14 (Europe/Warsaw). Scope: HT-001 through HT-008 and M0 architectural closeout. M1 was not started.
 
 ## Files changed

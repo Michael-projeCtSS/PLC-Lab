@@ -1,5 +1,7 @@
 # ADR-0014: Manual PLC/process orchestration and snapshot rendering
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [ADR-0020](0020-headless-engine-boundary.md). Kept for engineering history.
+
 - Status: Authorized by M3A; technical-lead source review required after validation
 - Date: 2026-10-14
 

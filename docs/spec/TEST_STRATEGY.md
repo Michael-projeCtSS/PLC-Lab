@@ -1,5 +1,7 @@
 # Test strategy
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [DEVELOPMENT.md](../DEVELOPMENT.md). Kept for engineering history.
+
 ## M4B continuous execution
 
 Headless real-ST tests compare N manual cycles with N authorized leased cycles, including private core snapshots, staged/attempted/committed images, TON, virtual clock, Tank/sensors and cycle observations. Ignore control rows, their sequence displacement and controller metadata only; no PLC/process differences are normalized. Test exact control-row count/time, old leases after Pause/Stop/Resume/replacement/unload, Load prepare/Run/commit ordering, input ownership, fault auto-stop, checked epoch exhaustion, small-capacity eviction and near-MAX sequence saturation. Domain tests use no sleeps. Host tests assert wait-before-first/every-tick and one attempt per wake without exact real-time deadlines. Frontend tests cover confirmed modes, stale signals/replies, bounded coalescing and pinned/evicted history. Actual WebView2 smoke executes automatic Tank scans 8/9, Pause/Stop quiescence across several periods, Resume continuity, historical inspection during Run, TON preservation and exactly one manual cycle after Stop. Existing Windows canonical/debug/release/native and Linux portable/debug/release/REAL assertions remain mandatory.

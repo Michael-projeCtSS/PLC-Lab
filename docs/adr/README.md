@@ -1,33 +1,33 @@
 # Architecture decision records
 
-## M4B
+A superseding ADR and explicit approval are required to change a fundamental decision
+(AGENTS.md section 15). Records 0013-0016 describe the pre-rebuild prototype and are kept
+as history; their session, process and controller details are superseded as noted.
 
-[ADR-0016: Deterministic continuous execution controller](0016-continuous-execution-controller.md) authorizes application modes, private leases, host-only pacing and authoritative live refresh. M0–M4A are accepted; earlier manual-only restrictions below are historical. M4B requires technical-lead review after independent validation.
-
-## M4A
-
-[ADR-0015: Deterministic session boundary trace](0015-deterministic-session-trace.md).
-
-[ADR-0014](0014-process-simulation-boundary.md) records the authorized M3A headless Tank model, application cycle/ownership/reset boundary and snapshot-only renderer. M2B and its Load intent correction are accepted. M3A requires technical-lead source review before any continuous execution; earlier milestone paragraphs remain historical.
-
-M1C is independently validated. [ADR-0012](0012-alpha-st-compiler.md) records M2A's bounded ST frontend, owned validation wrapper, compilation-only IPC v3 and Monaco presentation boundary. M2A requires technical-lead source review before M2B. Earlier milestone descriptions below are preserved as historical context; core runtime/TON/IR/type decisions remain unchanged.
-
-These records implement the supplied engineering contract and assigned milestones. A superseding ADR and explicit architectural approval are required to change a fundamental decision. M1A/M1B are accepted. M1C authorizes the provisional FB migration and standard TON extension in ADR-0011; M1B behavior remains unchanged.
-
-| ADR                                           | Decision                                                                            |
-| --------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [0001](0001-desktop-stack.md)                 | Tauri 2, React, TypeScript, Rust                                                    |
-| [0002](0002-canonical-plc-ir.md)              | One canonical PLC IR and runtime                                                    |
-| [0003](0003-deterministic-clock.md)           | Deterministic SimulationClock                                                       |
-| [0004](0004-student-code-sandbox.md)          | Bounded student-code VM                                                             |
-| [0005](0005-process-renderer-separation.md)   | Process model independent of rendering                                              |
-| [0006](0006-trace-first.md)                   | Trace-first architecture                                                            |
-| [0007](0007-virtual-network.md)               | Virtual industrial network and protocol adapters                                    |
-| [0008](0008-local-project-persistence.md)     | Versioned local project persistence                                                 |
-| [0009](0009-semantic-foundation.md)           | Accepted M1A semantic foundation; provisional FB call shape                         |
-| [0010](0010-transactional-alpha-runtime.md)   | Accepted M1B owned execution, transactional scans and leaf clock dependency         |
-| [0011](0011-function-block-instance-model.md) | M1C declared instances, typed bindings, transactional standard TON (review pending) |
-
-ADRs 0001–0008 are dated 2026-10-13; ADRs 0009–0011 are dated 2026-10-14. M1C requires technical-lead code review before M2. TON code and tests are present; validation outcomes are recorded separately. Languages, other standard blocks, user FB execution, process/network simulation, trace recording and persistence remain unimplemented.
-
-[ADR-0013](0013-desktop-runtime-session.md) records the authorized M2B application session, exact snapshots and manual Single Scan. M2A source review is accepted; M2B source review is required before M2C/M3.
+| ADR                                                  | Decision                                                             | Status                             |
+| ---------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------- |
+| [0001](0001-desktop-stack.md)                        | Tauri 2, React, TypeScript, Rust                                     | Accepted (re-confirmed in rebuild) |
+| [0002](0002-canonical-plc-ir.md)                     | One canonical PLC IR and one runtime                                 | Accepted                           |
+| [0003](0003-deterministic-clock.md)                  | Deterministic SimulationClock                                        | Accepted (extended by 0018)        |
+| [0004](0004-student-code-sandbox.md)                 | Bounded student-code VM                                              | Accepted                           |
+| [0005](0005-process-renderer-separation.md)          | Process model independent of rendering                               | Accepted                           |
+| [0006](0006-trace-first.md)                          | Trace-first architecture                                             | Accepted (refined by 0019)         |
+| [0007](0007-virtual-network.md)                      | Virtual industrial network and protocol adapters                     | Accepted                           |
+| [0008](0008-local-project-persistence.md)            | Versioned local project persistence                                  | Accepted (refined by 0023)         |
+| [0009](0009-semantic-foundation.md)                  | Semantic foundation                                                  | Accepted                           |
+| [0010](0010-transactional-alpha-runtime.md)          | Transactional runtime, leaf clock dependency                         | Accepted                           |
+| [0011](0011-function-block-instance-model.md)        | Function block instances, transactional standard TON                 | Accepted                           |
+| [0012](0012-alpha-st-compiler.md)                    | Bounded Structured Text frontend                                     | Accepted (language extended)       |
+| [0013](0013-desktop-runtime-session.md)              | Prototype desktop runtime session                                    | Superseded by 0020, 0024           |
+| [0014](0014-process-simulation-boundary.md)          | Prototype Tank process boundary                                      | Superseded by 0020                 |
+| [0015](0015-deterministic-session-trace.md)          | Prototype session trace                                              | Superseded by 0019                 |
+| [0016](0016-continuous-execution-controller.md)      | Prototype continuous execution controller                            | Superseded by 0018, 0024           |
+| 0017                                                 | Not used (reserved for unmerged M5 work; grading is covered by 0020) | -                                  |
+| [0018](0018-world-time-and-plc-modes.md)             | World time, scheduler phases, PLC RUN/STOP/FAULT, simulation control | Accepted                           |
+| [0019](0019-causal-observation-and-compact-trace.md) | Causal cycle observations and byte-bounded compact trace             | Accepted                           |
+| [0020](0020-headless-engine-boundary.md)             | Headless lab engine and data-driven industrial model                 | Accepted                           |
+| [0021](0021-ir-readiness-and-stl-control-flow.md)    | IR readiness for LAD/FBD/STL, STL control flow                       | Accepted                           |
+| [0022](0022-knowledge-pack-and-search.md)            | Versioned knowledge packs, in-memory search, no database             | Accepted                           |
+| [0023](0023-project-format-and-persistence.md)       | `.plclab` format v1 and local persistence                            | Accepted                           |
+| [0024](0024-desktop-adapter-and-ipc-v8.md)           | Desktop application adapter, typed errors, IPC v8                    | Accepted                           |
+| [0025](0025-distribution-and-root-launcher.md)       | Release staging and root launcher                                    | Accepted                           |

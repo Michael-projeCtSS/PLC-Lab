@@ -1,5 +1,7 @@
 # Deterministic continuous execution
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md). Kept for engineering history.
+
 M4B adds application control above the accepted runtime. Host time paces. SimulationClock determines simulated time. Pause != Stop. Stop != Reset.
 
 ```text

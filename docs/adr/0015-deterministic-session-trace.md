@@ -1,5 +1,7 @@
 # ADR-0015: Deterministic session boundary trace
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [ADR-0019](0019-causal-observation-and-compact-trace.md). Kept for engineering history.
+
 - Status: Authorized by M4A; technical-lead source review required after validation
 - Date: 2026-10-14
 

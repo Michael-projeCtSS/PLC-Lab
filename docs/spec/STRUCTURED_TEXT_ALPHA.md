@@ -1,5 +1,7 @@
 # PLC Lab Alpha Structured Text
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [PLC_FEATURE_MATRIX.md](PLC_FEATURE_MATRIX.md). Kept for engineering history.
+
 M2A implements a deliberately small language. This is not a claim of full IEC 61131-3 or vendor compatibility. [ADR-0012](../adr/0012-alpha-st-compiler.md) records the compiler boundary; accepted M1 types, IR, runtime and TON semantics remain authoritative.
 
 ## IMPLEMENTED

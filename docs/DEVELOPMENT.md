@@ -1,113 +1,69 @@
 # Development
 
-## M4B validation
-
-Run `npm run check`, `npm run test:desktop`, `npm run ci:windows` and `npm run ci:core` as applicable. The native harness now includes actual automatic execution; it never invokes continuous_tick. `node scripts/rust.mjs test --locked -p desktop-session` covers deterministic controller/trace integration; `node scripts/rust.mjs test --locked -p plc-lab-desktop --lib` covers host pacing order. CI Windows canonical workspace tests execute the latter. Linux selects portable crates and requires no Tauri system libraries. The default-off trace-core test-support feature only supplies a near-exhaustion test seam. Native timing waits are observation windows, not authoritative simulation time. Evidence is scoped under ignored artifacts and uploaded by the existing pinned workflow. Product documentation/report must distinguish executed PASS from compilation/BLOCKED/NOT_RUN.
-
-## M4A trace development
-
-Run `node scripts/rust.mjs test --locked -p trace-core -p desktop-session -p app-contract`, `npm run test:frontend`, `npm run test:architecture`, then `npm run validate`. Existing `npm run ci:windows` and `npm run ci:core` execute trace-core/session regressions in debug/release and actual Windows trace smoke. Regenerate v6 contract with `npm run ipc:generate`. Trace history is bounded/in-memory and uses SimulationClock observations, independent of wall time. Timeline selection is historical inspection only.
-
-## M3A Tank process development
-
-Open the Process panel's Tank Filling Demo, choose Use Example and confirm replacement. Compile -> Load Program -> Attach Tank Scene -> Single Scan. Each successful cycle advances the physical plant using committed PLC outputs and the fixed Rust cycle duration; resulting sensors are read by the next scan. Initial Low=true/High=false/level0; eight scans reach 80%, and scan nine closes the inlet while preserving 80%. PROCESS sensor rows are read-only; ordinary Inputs remain manual.
-
-Reset Runtime preserves the plant, resets PLC memory/fault/count/time and restages current sensors. Reset Process empties the tank/restages initial sensors without clearing PLC outputs/locals/TON/fault/count/time; applied actuator labels retain their last interval. Detach removes the plant and restores manual sensor input authority without resetting the PLC. Editing source leaves the old plant visibly STALE and disables process execution; new successful Load starts without a scene.
-
-Focused Rust: `node scripts/rust.mjs test --locked -p process-simulation -p desktop-session -p app-contract`; add `--release` for optimized coverage. Frontend/architecture: existing commands below. `npm run validate` retains full canonical/native acceptance; both independent CI selections add process-simulation without removing prior core/ST/session requirements. Native evidence also captures tank-filling.png. IPC is now v5; regenerate declarations with ipc:generate. Model/configuration is Rust-owned; frontend geometry and static binding compatibility do not simulate anything. See [ADR-0014](adr/0014-process-simulation-boundary.md) and [process spec](spec/PROCESS_SIMULATION.md).
-
-## M2B session development
-
-Compile != Load != Execute. Compile edits/validates source only. After current successful Compile, use Load Program, stage Input values (numeric fields use Apply/Enter; TIME is integer microseconds) and press Single Scan. Each successful click advances the Rust SimulationClock by exactly 100 ms without waiting; click speed never defines elapsed PLC time. Reset Runtime clears staged inputs, all memory/TON state, fault/count/time. Editing marks the loaded association stale and requires Compile + Load again. Unload preserves source/compile metadata. Run/Pause/Stop remain disabled.
-
-Focused application checks: node scripts/rust.mjs test --locked -p app-contract -p desktop-session. Release: add --release. Existing npm run validate covers the full local canonical/native path; ci:windows and ci:core retain prior checks and now select the portable contract/session packages in both profiles. Complete snapshots are returned once per mutation; no polling loop exists.
-
-## M2A compiler/editor development
-
-The UI package bundles pinned Monaco 0.57.0 and its editor worker locally; no CDN, parsing dependency or ST evaluator is used. IPC is now v3; regenerate declarations with npm run ipc:generate after Rust DTO edits. Compile runs bounded ST compilation only; controls remain disabled. No persistence or hidden runtime is created by compilation.
-
-Focused command: `node scripts/rust.mjs test --locked -p plc-types -p plc-ir -p plc-runtime -p simulation-core -p st-frontend -p app-contract`. Optimized source/runtime proof: `node scripts/rust.mjs test --release --locked -p plc-runtime -p simulation-core -p st-frontend`. Existing npm run validate remains canonical, including actual Windows Tauri/WebView2 compilation/IPC/Monaco smoke. CI runs source tests on both OS lanes and retains every M1 regression requirement. See [Alpha ST](spec/STRUCTURED_TEXT_ALPHA.md), [ADR-0012](adr/0012-alpha-st-compiler.md) and the extended human checklist. M1 validation documents retain their original exact code SHA.
-
 ## Prerequisites
 
-Use Node.js 24+, npm, and the pinned Rust 1.99.0 toolchain with rustfmt and clippy. Windows requires MSVC C++ build tools, a Windows SDK, and WebView2. macOS and Linux need their native Tauri prerequisites. See [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for the platform-specific installation steps. Sprint 0 native validation targets Windows x86_64; other platforms are not yet validated.
+- Node.js 24 (CI pins 24.15.0) with npm.
+- Rust 1.99.0 with rustfmt and clippy (`rust-toolchain.toml`). An optional
+  workspace-local installation in `.tools/` is used automatically by `scripts/rust.mjs`.
+- Windows: Visual Studio Build Tools with "Desktop development with C++" and the Windows
+  SDK, and the WebView2 Runtime. Linux: the core, frontend and architecture checks run
+  without the Tauri host.
 
-The initial machine had Node, MSVC, and WebView2, but no Rust. Rust was installed locally under ignored .tools/cargo and .tools/rustup, without modifying system PATH. Repository scripts use that local toolchain if present, otherwise Rust on PATH. A normal developer can install Rust through rustup and run `rustup show` in the repository to obtain the pinned toolchain. No .tools files are committed or required on another machine.
+## Repository layout
 
-## Setup
-
-```powershell
-npm ci
-npm run ipc:generate
+```
+apps/desktop/            Vite entry and Tauri host (src-tauri)
+apps/launcher/           root PLC Lab.exe launcher
+crates/                  Rust core (see docs/PRODUCT_ARCHITECTURE.md)
+languages/st/            Structured Text frontend
+packages/ipc/            generated contract, strict validators, typed client
+packages/ui/             application shell, pages, engineering workspace, design system
+knowledge/               canonical knowledge pack source
+releases/                knowledge archive (committed) and staged release (generated)
+scripts/                 toolchain, CI, release staging, knowledge pack tooling
+tests/architecture/      dependency graph, security posture, CI and tooling tests
+tests/conformance/       cross-crate tests incl. knowledge pack solvability
+tests/e2e/               native WebView2 smoke test
+tests/frontend/          frontend test setup and contract-valid fixtures
+docs/                    product and engineering documentation, ADRs, history
 ```
 
-If Node reports UNABLE_TO_VERIFY_LEAF_SIGNATURE on a machine with a trusted enterprise CA installed in Windows, Node 24 supports the system CA store:
+## Everyday commands
 
-```powershell
-$env:NODE_OPTIONS = '--use-system-ca'
-npm ci
+```
+npm run dev                      # Tauri development app
+npm run typecheck
+npm run lint                     # ESLint + clippy -D warnings
+npm run format / format:check    # Prettier + rustfmt
+npm run test:frontend            # Vitest
+npm run test:architecture        # node --test tests/architecture
+npm run test:rust                # cargo test --workspace --locked
+npm run test:desktop             # native smoke of the debug app
+npm run ipc:generate             # regenerate packages/ipc/src/generated.ts
+npm run knowledge:validate|zip|verify
 ```
 
-This session used that setting; certificate verification remains enabled. No npm registry or machine trust settings were changed.
+## Changing the IPC contract
 
-## Repository commands
+1. Edit DTOs in `crates/app-contract` (every request carries `contract_version`; use
+   `deny_unknown_fields`; 64-bit values as `ExactU64`; narrow enumerated strings with
+   `#[ts(type = "...")]`).
+2. `npm run ipc:generate`.
+3. Update validators in `packages/ipc/src/validators.ts` (TypeScript fails if a validator
+   no longer matches the generated type).
+4. `app-contract`'s drift test and `packages/ipc` tests must pass.
 
-The project owner's maintained double-click workflow is documented in [human testing](HUMAN_TESTING.md). Its four root BAT launchers share scripts/human-launcher.bat and scripts/human-test.mjs, call canonical commands below, and preserve exit codes. Future milestones must maintain the launchers and extend the checklist.
+## Adding content
 
-The Tauri beforeDevCommand starts the installed Vite CLI directly in apps/desktop with the same vite.config.ts used by dev:web. This avoids nested npm lifecycle failure messages when Tauri stops the development server after normal application closure; genuine startup failures remain visible and nonzero.
+Add JSON under `knowledge/PLC_Lab_Knowledge_Pack_v1/` following the schemas, then run
+`npm run knowledge:validate`, the conformance tests (`cargo test -p plc-conformance`) and
+`npm run knowledge:zip` to refresh the archive. New exercises need a reference solution in
+`tests/conformance/solutions/<exercise-id>.st`.
 
-Run these from the repository root. They work through npm on Windows; use npm.cmd if PowerShell execution policy blocks npm.ps1.
+## Windows Smart App Control
 
-| Command                     | Purpose                                                                     |
-| --------------------------- | --------------------------------------------------------------------------- |
-| `npm run dev`               | Start Vite and the native Tauri desktop shell                               |
-| `npm run dev:web`           | Browser-only shell preview; reports native core unavailable                 |
-| `npm run build`             | Typecheck and build frontend assets                                         |
-| `npm run build:desktop`     | Build a native debug executable with embedded frontend assets, no installer |
-| `npm run format`            | Format source/docs and Rust                                                 |
-| `npm run format:check`      | Check Prettier and cargo fmt                                                |
-| `npm run typecheck`         | Strict TypeScript checks                                                    |
-| `npm run lint`              | ESLint and workspace clippy with warnings denied                            |
-| `npm run test:frontend`     | React and IPC adapter unit tests                                            |
-| `npm run test:rust`         | All Rust workspace tests, including integration and DTO drift checks        |
-| `npm run test:architecture` | Cargo dependency boundaries and Sprint 0 host/renderer constraints          |
-| `npm test`                  | Architecture, frontend, and Rust tests                                      |
-| `npm run test:desktop`      | Build and exercise the actual Windows Tauri/WebView2 application and IPC    |
-| `npm run ipc:generate`      | Regenerate checked-in TypeScript DTOs from Rust                             |
-| `npm run check`             | Formatting, typechecking, lint/clippy, all non-native tests, frontend build |
-
-For direct Rust commands with the optional local toolchain, use `node scripts/rust.mjs <cargo arguments>`. Lockfiles are committed; use npm ci and --locked Cargo commands for repeatability. The core contract generator may need a first `cargo run` without --locked when intentionally changing dependencies.
-
-The build embeds apps/desktop/dist. If running cargo directly before a frontend build, the desktop compile can fail because embedded assets are absent. Use `npm run build:desktop` for the supported native build path. Installer packaging is disabled for this foundation sprint.
-
-`npm run validate` runs check and the native smoke test. `npm run build:release` runs validate, builds real Tauri release assets/executable with the locked Cargo dependencies, then stages a verified runtime artifact set to releases/current. Release staging reads Cargo metadata and MSVC dumpbin imports and does not modify the executable. RUN_PLC_LAB_RELEASE.bat launches that existing artifact without requiring development tools or performing a build.
-
-getCoreInfo now uses IPC contract version 2 because buildContext is a required response field. Rust derives development/release from its actual debug_assertions configuration. The same generated contract and existing Diagnostics detail line carry this information; application versions still come from Cargo package metadata. Update callers together and regenerate DTOs when changing this contract.
-
-## Contract changes
-
-Edit Rust DTOs in crates/app-contract, run ipc:generate, and commit both sources and packages/ipc/src/generated.ts. The Rust drift test compares exact generated text. Generated.ts is excluded from Prettier because it belongs to the Rust generator. AGENTS.md is also excluded to preserve the supplied engineering contract verbatim. Do not hand-edit generated declarations.
-
-IPC requests and responses are runtime validated. A browser preview has no substitute Rust service or fake successful response. Unit tests isolate transport with mocks; native acceptance uses the actual executable and no mocked backend.
-
-## Native smoke test
-
-The Windows smoke harness launches target/debug/plc-lab-desktop.exe with a fresh WebView2 data folder and a dynamically assigned debugging port, connects playwright-core to that WebView2 instance, verifies panels and disabled controls, checks real successful and rejected IPC requests, and closes its own application process. Remote debugging is enabled only in the spawned test environment, not application configuration. No separately downloaded browser is required.
-
-Ignored artifacts are written to artifacts/desktop-smoke: desktop.png, result.json, and native.log. The debug executable remains in target/debug for manual review. The smoke harness currently assumes the default Cargo target directory; a custom CARGO_TARGET_DIR must be unset for this test.
-
-## Contribution boundaries
-
-Read AGENTS.md, the [ADRs](adr/README.md), [architecture](architecture/ARCHITECTURE.md), and [test strategy](spec/TEST_STRATEGY.md) before extending the product. M1A semantics are accepted; M1B adds headless owned execution and a deterministic clock. Trace/network/grading/language crates remain reservations. Introduce features only in approved milestones. Keep production code and technical documentation in English.
-
-For focused M1A checks, run `node scripts/rust.mjs test --locked -p plc-types -p plc-ir` and `node scripts/rust.mjs clippy --locked -p plc-types -p plc-ir --all-targets -- -D warnings`. These include type/value, identity, compatibility, symbol, diagnostic, source, IR golden, and validator tests. The normal workspace test commands include them automatically. `npm run validate` remains the full regression gate, including actual native IPC; no fake UI or runtime command is needed for headless semantic work.
-
-For M1B/M1C, use `node scripts/rust.mjs test --locked -p plc-types -p plc-ir -p plc-runtime -p simulation-core` and the equivalent clippy command with `--all-targets -- -D warnings`. Direct-IR execution tests are in plc-runtime/tests and reuse the test-only semantic assembler. No dev server, OS clock, or sleeps are required for semantic tests. Runtime APIs remain headless and are not exposed through desktop IPC. M1C implementation review is accepted; validation remains blocked by the owner's Windows host policy. Review [runtime semantics](spec/PLC_RUNTIME_SEMANTICS.md) before adding executable features. M2 is not authorized.
-
-## Independent CI validation
-
-See [CI_VALIDATION.md](validation/CI_VALIDATION.md) for the prepared Windows canonical and Linux core lanes, exact commands, artifacts and gate policy. `.github/workflows/validation.yml` owns automatic push/PR validation and manual dispatch; the older quality workflow delegates manually to the same lane definition.
-
-`npm run test:ci` checks workflow YAML/configuration and CI command failure/logging behavior without running blocked PLC test binaries. It is also included by `npm run test:architecture`. `npm run ci:status` prints the documented local-host limitation without changing the application. `npm run ci:windows` runs the existing canonical check and native test commands plus required focused debug/optimized core tests; `npm run ci:core` is Linux-only. Neither is a compile-only substitute for acceptance. Hosted Windows prerequisite installation is guarded against local use.
-
-Preparation alone performs no remote, push or hosted execution. The later owner-authorized M1C-CI-RUN published private PLC-Lab and passed both lanes/native Windows acceptance in run 38533787674 for code SHA a4a22f19c7bcdbd1c1d78a38804c29e15da32828. See the [gate record](validation/M1C_INDEPENDENT_VALIDATION.md) and [remote report](validation/M1C_REMOTE_VALIDATION_REPORT.md). Local Smart App Control remains unchanged. Technical-lead review and explicit M2A authorization are still required; gate recording starts no frontend work.
+Smart App Control may block freshly built, unsigned executables (os error 4551), including
+test binaries and build scripts. Never disable it. Re-run the affected suite in the other
+profile (`cargo test --release -p <crate>`) where that works, and rely on hosted CI for
+binaries the local policy blocks. Report blocked suites explicitly; do not count them as
+passed.

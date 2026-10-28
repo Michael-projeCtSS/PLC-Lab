@@ -1,5 +1,7 @@
 # ADR-0013: Explicit desktop runtime sessions and manual scans
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [ADR-0024](0024-desktop-adapter-and-ipc-v8.md). Kept for engineering history.
+
 - Status: Authorized by M2B; source review required before M2C/M3
 - Date: 2026-10-14
 

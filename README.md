@@ -1,36 +1,71 @@
 # PLC Lab
 
-M3A adds the manual Tank Filling process slice: Use Example (confirm) -> Compile -> Load -> Attach -> Single Scan. Rust owns the integer plant and sensors; React/SVG renders combined snapshots. Eight successful 100 ms scans reach 80%, and the next scan closes the inlet through PLC feedback. Runtime/Process reset are distinct; Run/Pause/Stop remain disabled. See [process specification](docs/spec/PROCESS_SIMULATION.md) and the updated human checklist. M3A stops for technical-lead source review.
+PLC Lab is a desktop application for learning industrial automation by doing. You write
+PLC programs in Structured Text, load them into a simulated PLC, operate a simulated
+machine and watch every cause and effect: what the PLC read, what it decided, what the
+machine did and what the PLC will read next. Troubleshooting labs train fault finding
+with LEDs, a multimeter, diagnostic buffers and network status, the way commissioning
+engineers work.
 
-Educational desktop workspace for PLC programming and industrial automation. **M1C/M2A accepted; M2B adds manual desktop runtime sessions.** Real ST source compiles through a Rust lexer, dedicated AST, semantic compiler and existing canonical IR validator. Explicit Load independently compiles and lowers it into the accepted transactional runtime. Manual Single Scan exposes real committed variables, TON state and source-backed faults without process/network simulation, trace recording or grading.
+Everything that decides behavior runs in a deterministic Rust core: one PLC runtime, a
+process simulation, I/O hardware, a virtual Modbus TCP network, traces and grading. The
+React user interface only displays authoritative state and sends operator actions.
 
-The working application uses Tauri 2, React, TypeScript, Rust and a locally bundled Monaco ST editor. It retains Project, Program, Variables, Process, Network, Timeline and Diagnostics. Compile remains pure; IPC v4 adds explicit Load, staged input editing, Single Scan, Reset Runtime and Unload. Run/Pause/Stop remain disabled. Values, count and simulation time come from Rust snapshots; click speed never controls PLC time. See [Alpha ST](docs/spec/STRUCTURED_TEXT_ALPHA.md), [session rules](docs/spec/DESKTOP_RUNTIME_SESSION.md) and [M2B report](docs/M2B_REPORT.md).
+## Start PLC Lab
 
-```powershell
-npm ci
-npm run dev
-```
+| What you want                       | Do this                                                              |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| Use the application                 | Double-click **`PLC Lab.exe`** (or `RUN_PLC_LAB.bat`) in this folder |
+| Build the release from source first | Double-click `BUILD_PLC_LAB_RELEASE.bat`, then start `PLC Lab.exe`   |
+| Develop with hot reload             | `RUN_PLC_LAB_DEV.bat` or `npm run dev`                               |
+| Run every check                     | `RUN_ALL_CHECKS.bat` or `npm run validate`                           |
 
-See [development](docs/DEVELOPMENT.md) for native prerequisites, build/test commands, the optional workspace-local Rust setup, and browser preview limitations.
+`PLC Lab.exe` is a small launcher that starts the staged release in `releases/current/`.
+It is created by the release build and is not stored in Git. Requirements: Windows 10/11
+x64 with the Microsoft Edge WebView2 Runtime (preinstalled on current Windows). See
+[build and run](docs/BUILD_AND_RUN.md).
 
-For one-click Windows testing, use the four root BAT launchers described in [human testing](docs/HUMAN_TESTING.md) and its [checklist](docs/HUMAN_TEST_CHECKLIST.md).
+## What is inside
 
-See the [Sprint 0 completion report](docs/SPRINT_0_REPORT.md) for task acceptance and validation evidence.
+- **Learn**: 20 lessons from "What is a PLC?" to troubleshooting methodology, each with
+  explanation, diagram, example, common mistake, question, exercise link and checkpoint.
+- **Practice**: data-driven exercises (pushbutton, motor seal-in, TON delays, counters,
+  part counting, tank filling, analog scaling, a CASE batch sequence, Modbus TCP level).
+  Programs are graded by running scripted scenarios in an isolated simulation and judging
+  behavior over time.
+- **Troubleshoot**: labs with hidden physical faults or commissioning errors (NC contact
+  replaced by NO, missing field power, inverted sensor, wrong 4-20 mA range, device in
+  the wrong subnet, Modbus register offset). The diagnostic path, repairs and the final
+  verification are scored.
+- **Free Lab**: an engineering workspace with program editor, hardware rack, HMI process
+  view, network view, diagnostics, variables, watch, waveforms, events and cause & effect.
+- **Knowledge**: a searchable, versioned knowledge pack with fundamentals, PLC platforms
+  of eight vendors, nine industrial protocols and troubleshooting guides, with
+  provenance records and explicit simulation-fidelity statements.
+- **Progress**: completed lessons and exercise scores, stored locally.
 
-## Engineering references
+The knowledge pack is also distributed as
+[`releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip`](releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip).
 
-- [Persistent contract](AGENTS.md)
-- [Architecture decision records](docs/adr/README.md)
-- [PLC feature matrix](docs/spec/PLC_FEATURE_MATRIX.md)
-- [Architecture and boundaries](docs/architecture/ARCHITECTURE.md)
-- [Frontend/backend IPC](docs/architecture/FRONTEND_BACKEND_BOUNDARY.md)
-- [Diagnostics](docs/spec/DIAGNOSTICS.md)
-- [PLC type system](docs/spec/TYPE_SYSTEM.md)
-- [Symbol model](docs/spec/SYMBOL_MODEL.md)
-- [Source mapping](docs/spec/SOURCE_MAPPING.md)
-- [Canonical semantic IR](docs/spec/CANONICAL_PLC_IR.md)
-- [Runtime semantics](docs/spec/PLC_RUNTIME_SEMANTICS.md)
-- [Test strategy](docs/spec/TEST_STRATEGY.md)
-- [Roadmap](docs/ROADMAP.md)
+## Honest scope
 
-M1B requires technical-lead code review before M1C. Desktop execution controls remain unavailable.
+PLC Lab is an educational simulator. It does not emulate vendor firmware, does not
+implement PROFINET, EtherCAT or EtherNet/IP stacks, does not connect to real devices and
+claims no protocol conformance. Platform profiles present addresses, analog raw values
+and product names in a vendor's style and declare their fidelity. See
+[simulation fidelity](docs/SIMULATION_FIDELITY.md).
+
+## Documentation
+
+- [Product vision](docs/PRODUCT_VISION.md) and [product architecture](docs/PRODUCT_ARCHITECTURE.md)
+- [Simulation fidelity](docs/SIMULATION_FIDELITY.md), [scene model](docs/SCENE_MODEL.md),
+  [hardware model](docs/HARDWARE_MODEL.md), [network model](docs/NETWORK_MODEL.md)
+- [Vendor profiles](docs/VENDOR_PROFILES.md), [knowledge pack](docs/KNOWLEDGE_PACK.md)
+- [Learning model](docs/LEARNING_MODEL.md), [grading model](docs/GRADING_MODEL.md),
+  [troubleshooting model](docs/TROUBLESHOOTING_MODEL.md)
+- [Project format](docs/PROJECT_FORMAT.md)
+- [Build and run](docs/BUILD_AND_RUN.md), [development](docs/DEVELOPMENT.md),
+  [human testing](docs/HUMAN_TESTING.md)
+- [Architecture decision records](docs/adr/README.md) and the
+  [product rebuild report](docs/PRODUCT_REBUILD_REPORT.md)
+- Engineering contract: [AGENTS.md](AGENTS.md)

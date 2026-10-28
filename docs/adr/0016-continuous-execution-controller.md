@@ -1,5 +1,7 @@
 # ADR-0016: Deterministic continuous execution controller
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [ADR-0018 and ADR-0024](0024-desktop-adapter-and-ipc-v8.md). Kept for engineering history.
+
 - Status: Authorized by M4B; technical-lead source review required after validation
 - Date: 2026-10-14
 

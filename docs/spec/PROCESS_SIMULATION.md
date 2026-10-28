@@ -1,5 +1,7 @@
 # Manual Tank Filling process
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [SCENE_MODEL.md](../SCENE_MODEL.md). Kept for engineering history.
+
 M3A provides one explicit educational scene, independent of PLC memory, UI and runtime semantics. The process-simulation crate owns the private level and applied actuator state; it depends only on plc-types. It contains no SymbolId bindings, clocks, Tauri, React, protocol or runtime calls.
 
 ## Model and arithmetic

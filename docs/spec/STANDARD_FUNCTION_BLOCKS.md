@@ -1,5 +1,7 @@
 # Standard function-block semantic foundation
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [PLC_FEATURE_MATRIX.md](PLC_FEATURE_MATRIX.md). Kept for engineering history.
+
 Status: M1C authorized implementation; review required before M2. [ADR-0011](../adr/0011-function-block-instance-model.md) changes the explicitly provisional M1A API. M1B foundations remain accepted.
 
 ## Distinct concepts

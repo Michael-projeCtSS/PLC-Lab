@@ -1,5 +1,7 @@
 # Independent canonical validation lanes
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [BUILD_AND_RUN.md and the CI workflow](../BUILD_AND_RUN.md). Kept for engineering history.
+
 Status: both independent lanes actually executed and passed for code SHA a4a22f19c7bcdbd1c1d78a38804c29e15da32828 in run 38533787674 on 2026-10-14, including native Windows smoke and cross-platform REAL assertions. M1C implementation review, independent validation and gate are PASS; see the authoritative [gate record](M1C_INDEPENDENT_VALIDATION.md). Owner-host validation remains historically HOST POLICY BLOCKED; policy is unchanged. M2A requires technical-lead review and explicit authorization. No PLC, TON, clock, budget, memory or REAL semantics changed.
 
 ## Validation model
