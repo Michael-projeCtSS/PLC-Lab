@@ -306,6 +306,7 @@ async function installLauncher(source, target) {
     await rm(temporary, { force: true });
     throw new Error(
       `The root launcher could not be replaced (${error.message}). Close PLC Lab and try again.`,
+      { cause: error },
     );
   }
 }

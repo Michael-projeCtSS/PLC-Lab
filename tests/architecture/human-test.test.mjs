@@ -13,6 +13,7 @@ import test from "node:test";
 import { root } from "../../scripts/toolchain.mjs";
 import {
   lockfileMatchesInstalled,
+  onlyOverriddenProblems,
   taskListContainsApplication,
 } from "../../scripts/human-test.mjs";
 import { stageArtifactSet } from "../../scripts/stage-release.mjs";
@@ -38,6 +39,29 @@ test("dependency preflight accepts installed platform subset and rejects version
   ]) {
     assert.equal(lockfileMatchesInstalled(expected, installed), false);
   }
+});
+
+test("dependency preflight accepts only exact root overrides reported by npm ls", () => {
+  const overrides = { dompurify: "3.4.17" };
+  assert.equal(
+    onlyOverriddenProblems(
+      ["invalid: dompurify@3.4.17 /repo/node_modules/dompurify"],
+      overrides,
+    ),
+    true,
+  );
+  assert.equal(
+    onlyOverriddenProblems(
+      ["invalid: dompurify@3.4.15 /repo/node_modules/dompurify"],
+      overrides,
+    ),
+    false,
+  );
+  assert.equal(
+    onlyOverriddenProblems(["missing: react@19.3.0, required by x"], overrides),
+    false,
+  );
+  assert.equal(onlyOverriddenProblems([], overrides), false);
 });
 
 test("running application preflight recognizes exact names and ignores localized no-task output", () => {

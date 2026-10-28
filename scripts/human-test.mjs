@@ -34,6 +34,18 @@ function runNode(args, options = {}) {
   return result;
 }
 
+/** npm ls reports exact root overrides inside workspaces as "invalid"; they are intended. */
+export function onlyOverriddenProblems(problems, overrides) {
+  return (
+    Array.isArray(problems) &&
+    problems.length > 0 &&
+    problems.every((problem) => {
+      const match = /^invalid: (@?[^@\s]+)@(\S+) /.exec(problem);
+      return match !== null && overrides?.[match[1]] === match[2];
+    })
+  );
+}
+
 export function taskListContainsApplication(output, name) {
   return output
     .split(/\r?\n/)
@@ -113,10 +125,15 @@ function prepare(mode) {
         throw new Error(
           tree.stderr || tree.stdout || "npm could not inspect dependencies.",
         );
-      console.log(
-        "The installed dependency tree has missing or incompatible packages.",
+      const manifest = JSON.parse(
+        readFileSync(path.join(root, "package.json"), "utf8"),
       );
-      matches = false;
+      if (!onlyOverriddenProblems(diagnostics.problems, manifest.overrides)) {
+        console.log(
+          "The installed dependency tree has missing or incompatible packages.",
+        );
+        matches = false;
+      }
     }
   }
   if (!matches) {
