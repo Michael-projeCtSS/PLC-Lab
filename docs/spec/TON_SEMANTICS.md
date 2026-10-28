@@ -1,5 +1,7 @@
 # PLC Lab Alpha TON semantics
 
+> **Prototype-era specification (milestones M1-M4B).** The semantic rules below remain implemented and tested in the current product; status lines and statements about missing features, milestones or the user interface are historical. Current overview: [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md) and [PLC_FEATURE_MATRIX.md](PLC_FEATURE_MATRIX.md).
+
 Status: M1C authoritative assignment implemented for review. The typed signature is defined in [STANDARD_FUNCTION_BLOCKS.md](STANDARD_FUNCTION_BLOCKS.md). This is the specified educational Alpha behavior; it does not claim every vendor's timer policy.
 
 ## Private state and scan-start time

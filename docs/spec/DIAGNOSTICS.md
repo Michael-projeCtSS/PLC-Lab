@@ -1,5 +1,7 @@
 # Diagnostics model
 
+> **Historical document.** It describes the pre-rebuild prototype (milestones M1-M4B). The current product is described in [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md). Kept for engineering history.
+
 ## M4B execution controller
 
 Application execution errors are distinct from student RuntimeFault. APP-EXECUTION-ACTIVE rejects mutations until Stop; APP-EXECUTION-FAULTED requires explicit runtime reset; APP-EXECUTION-EPOCH-EXHAUSTED preserves state when a new lease cannot be issued. APP-EXECUTION-WORKER/APP-EXECUTION-NOTIFICATION stop their exact lease and surface an application failure. Internal core diagnostics retain internalApplicationError. APP-PROCESS-INTERNAL and impossible observation failures fail closed without fabricated trace events. Genuine runtime faults retain their existing code/severity/message/source/related-variable provenance and have one coherent ScanFaulted with STOPPED mode. No automatic reset/retry or new student fault semantics exist.

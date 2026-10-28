@@ -40,7 +40,9 @@ outputs ready (always TRUE: drive trips are not simulated), running and remote, 
 linear ramp to full speed, an output frequency shown on a 50 Hz basis and an approximate
 motor current (20 % of rated current at standstill rising linearly to 100 %). Speed
 references, parameters, fieldbus control words, braking and safety functions such as
-Safe Torque Off are not modeled.
+Safe Torque Off are not modeled. Switching from Local back to Remote while the run terminal
+is ON starts the drive at once (real drives may require a new run edge, depending on their
+parameters); deceleration is immediate.
 
 ## I/O hardware
 

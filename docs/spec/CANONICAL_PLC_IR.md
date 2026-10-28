@@ -1,5 +1,7 @@
 # Canonical PLC semantic IR
 
+> **Prototype-era specification (milestones M1-M4B).** The semantic rules below remain implemented and tested in the current product; status lines and statements about missing features, milestones or the user interface are historical. Current overview: [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md) and [PLC_FEATURE_MATRIX.md](PLC_FEATURE_MATRIX.md).
+
 Status: M1A and M1B accepted by technical-lead review. M1C replaces the provisional FB call under [ADR-0011](../adr/0011-function-block-instance-model.md). plc-ir remains execution-independent; validated candidates lower to a separate owned plan in plc-runtime. No parser, bytecode, or trace producer exists. See [PLC_RUNTIME_SEMANTICS.md](PLC_RUNTIME_SEMANTICS.md), [ADR-0002](../adr/0002-canonical-plc-ir.md), and [ADR-0009](../adr/0009-semantic-foundation.md).
 
 ## Representation choice

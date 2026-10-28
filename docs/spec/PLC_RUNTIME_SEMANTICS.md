@@ -1,5 +1,7 @@
 # Alpha deterministic PLC runtime semantics
 
+> **Prototype-era specification (milestones M1-M4B).** The semantic rules below remain implemented and tested in the current product; status lines and statements about missing features, milestones or the user interface are historical. Current overview: [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md) and [PLC_FEATURE_MATRIX.md](PLC_FEATURE_MATRIX.md).
+
 Status: M1B accepted by technical-lead review. M1C extends state and execution only for standard TON under [ADR-0011](../adr/0011-function-block-instance-model.md); review is required before M2. This specification preserves [ADR-0010](../adr/0010-transactional-alpha-runtime.md). It defines PLC Lab's generic educational Alpha policy, not a vendor/full IEC profile.
 
 ## Boundary and ownership

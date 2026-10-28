@@ -1,5 +1,7 @@
 # Source identity and mapping
 
+> **Prototype-era specification (milestones M1-M4B).** The semantic rules below remain implemented and tested in the current product; status lines and statements about missing features, milestones or the user interface are historical. Current overview: [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md) and [PLC_FEATURE_MATRIX.md](PLC_FEATURE_MATRIX.md).
+
 Status: M1A language-neutral anchors and a checked registry implemented in `plc-types::source`. There are no language frontends, editor adapters, runtime highlights, or trace recording yet.
 
 ## Model

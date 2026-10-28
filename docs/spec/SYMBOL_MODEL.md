@@ -1,5 +1,7 @@
 # Language-independent symbol model
 
+> **Prototype-era specification (milestones M1-M4B).** The semantic rules below remain implemented and tested in the current product; status lines and statements about missing features, milestones or the user interface are historical. Current overview: [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md) and [PLC_FEATURE_MATRIX.md](PLC_FEATURE_MATRIX.md).
+
 Status: M1A declarations and resolution implemented in `plc-types::symbols`. There is no parser, storage allocation, memory/process image, or POU execution.
 
 ## Identity and names

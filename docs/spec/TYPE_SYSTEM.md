@@ -1,5 +1,7 @@
 # Alpha PLC type system
 
+> **Prototype-era specification (milestones M1-M4B).** The semantic rules below remain implemented and tested in the current product; status lines and statements about missing features, milestones or the user interface are historical. Current overview: [PRODUCT_ARCHITECTURE.md](../PRODUCT_ARCHITECTURE.md) and [PLC_FEATURE_MATRIX.md](PLC_FEATURE_MATRIX.md).
+
 Status: M1A value/type foundations accepted by technical-lead review. M1B implements the separate headless execution rules in [PLC_RUNTIME_SEMANTICS.md](PLC_RUNTIME_SEMANTICS.md), pending review. This is PLC Lab's minimal generic profile, not full IEC or vendor conformance. [ADR-0009](../adr/0009-semantic-foundation.md) records the accepted representations.
 
 ## Representations and construction
