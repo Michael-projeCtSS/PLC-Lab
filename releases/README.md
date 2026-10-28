@@ -1,5 +1,10 @@
-# Local human-test releases
+# Releases
 
-BUILD_PLC_LAB_RELEASE.bat creates the real optimized Tauri executable and its verified local runtime artifact set in current/. RUN_PLC_LAB_RELEASE.bat opens that release without building anything.
+- `knowledge/PLC_Lab_Knowledge_Pack_v1.zip` (+ `.sha256`): the knowledge pack release
+  archive, committed and verified by `npm run knowledge:verify`.
+- `current/`: the staged portable release created by `BUILD_PLC_LAB_RELEASE.bat`
+  (`PLC Lab Desktop.exe`, `knowledge-packs/`, `release-manifest.json`,
+  `RUNTIME_REQUIREMENTS.txt`). Generated, not stored in Git. Start it with `PLC Lab.exe` or
+  `RUN_PLC_LAB.bat` in the repository root.
 
-Generated binaries and manifests in this directory are ignored by Git. Keep this README and the root launchers as maintained source. See [human testing](../docs/HUMAN_TESTING.md) for prerequisites and the current checklist. This location is local output, not a distribution installer.
+See [build and run](../docs/BUILD_AND_RUN.md).

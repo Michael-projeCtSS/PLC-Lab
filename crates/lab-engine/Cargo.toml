@@ -17,8 +17,6 @@ trace-core.workspace = true
 grading-core.workspace = true
 st-frontend.workspace = true
 
-[dev-dependencies]
-serde_json.workspace = true
 
 [lints]
 workspace = true

@@ -9,4 +9,4 @@ artifacts/
 apps/desktop/src-tauri/gen/
 packages/ipc/src/generated.ts
 knowledge/
-feedback.md
+docs/audit/feedback.md
