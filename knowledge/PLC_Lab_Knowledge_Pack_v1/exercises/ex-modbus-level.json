@@ -207,5 +207,6 @@
       },
       "onFail": "The valve was open while the transmitter was not communicating."
     }
-  ]
+  ],
+  "curriculumOrder": 10
 }

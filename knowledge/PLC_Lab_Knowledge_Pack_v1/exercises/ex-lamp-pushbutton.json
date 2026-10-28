@@ -179,5 +179,6 @@
       },
       "onFail": "Lamp2 was off with the selector in AUTO."
     }
-  ]
+  ],
+  "curriculumOrder": 1
 }

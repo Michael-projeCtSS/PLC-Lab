@@ -119,6 +119,11 @@
         "$ref": "#/$defs/id"
       }
     },
+    "curriculumOrder": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9999
+    },
     "evidence": {
       "type": "array",
       "items": {
@@ -358,7 +363,13 @@
             "$ref": "#/$defs/id"
           }
         },
-        "knowledgeRefs": {
+        "learningRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "debriefRefs": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/id"

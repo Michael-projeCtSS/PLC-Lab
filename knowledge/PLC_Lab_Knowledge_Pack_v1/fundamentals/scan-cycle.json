@@ -17,7 +17,7 @@
     },
     {
       "heading": "Why the image matters",
-      "body": "Because inputs are frozen during a scan, a button pressed in the middle of the program is only seen in the **next** scan. An output written twice in one scan only reaches the field with its **last** value. Both effects are visible in PLC Lab's cause-and-effect view: *PLC read* shows the input image used by the scan, *PLC logic result* shows the committed values, and *Next PLC input* shows what was sampled for the following scan."
+      "body": "Because inputs are frozen during a scan, a button pressed in the middle of the program is only seen in the **next** scan. An output written twice in one scan only reaches the field with its **last** value. Both effects are visible in PLC Lab's five-step cause-and-effect view: *PLC read* shows the input image used by the scan, *PLC logic result* the committed values, *Output command* what the field devices received, *Process* the physical change, and *Next PLC input* what was sampled for the following scan."
     },
     {
       "heading": "Cycle time",
@@ -25,7 +25,7 @@
     },
     {
       "heading": "STOP and RUN",
-      "body": "In **STOP** the program is not executed and outputs go to their configured safe state (normally off). In **RUN** the cycle above repeats. A runtime error (for example division by zero) moves the CPU to **FAULT**/STOP until the cause is corrected and the CPU is reset. In PLC Lab the machine keeps running while the PLC is stopped: a motor coasts, a tank keeps draining."
+      "body": "In **STOP** the program is not executed and outputs go to their configured safe state (normally off). In **RUN** the cycle above repeats. A runtime error (for example division by zero) moves the CPU to **FAULT**/STOP until the cause is corrected and the CPU is reset. In PLC Lab the machine keeps running while the PLC is stopped: a motor coasts, a tank keeps draining. The simulation controls (Run, Pause, Step, Stop) are separate from the PLC's mode switch: they let simulated time pass, freeze it, advance one cycle or restore the machine's initial state."
     }
   ],
   "facts": [

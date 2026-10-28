@@ -216,5 +216,6 @@
       },
       "onFail": "The tank was filled above 70 %."
     }
-  ]
+  ],
+  "curriculumOrder": 8
 }

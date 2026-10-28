@@ -325,4 +325,5 @@ export const library: LibraryDto = {
       summary: "Motor.",
     },
   ],
+  notices: [],
 };

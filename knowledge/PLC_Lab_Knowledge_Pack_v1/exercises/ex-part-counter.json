@@ -387,5 +387,6 @@
       },
       "onFail": "Lamp3 did not light when a part blocked the sensor for more than 2 s."
     }
-  ]
+  ],
+  "curriculumOrder": 7
 }

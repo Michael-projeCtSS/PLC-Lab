@@ -24,7 +24,7 @@
     {
       "type": "example",
       "heading": "Loop check with forcing",
-      "body": "Force an output to confirm the actuator, then remove the force. Forces are shown in the toolbar and on the FORCE LED."
+      "body": "Force an output to confirm the actuator, then remove the force. **Safety:** on a real machine a forced output energizes the actuator regardless of the program and its interlocks, so a motor can start or a valve can open unexpectedly. Force outputs only when the machine and the process have been made safe for exactly that action and nobody is in the danger zone, follow the site's procedures, and remove every force after the test. Forcing in PLC Lab is a simulation and says nothing about whether the same action is safe on real equipment. Active forces are shown in the toolbar and on the FORCE LED."
     },
     {
       "type": "mistake",

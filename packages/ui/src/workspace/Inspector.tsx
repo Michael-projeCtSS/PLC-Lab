@@ -4,6 +4,7 @@ import {
   type DiagnosisResultDto,
   type ExerciseDto,
   type GradeReportDto,
+  type OptionDto,
 } from "@plc-lab/ipc";
 import { formatValue, humanize, quantityUnit, valueClass } from "../format";
 import { Badge, Tabs } from "../ui";
@@ -73,7 +74,13 @@ export function Inspector({
   );
 }
 
-function Report({ report }: { report: GradeReportDto | null }) {
+function Report({
+  report,
+  navigate,
+}: {
+  report: GradeReportDto | null;
+  navigate: Navigate;
+}) {
   if (!report) return null;
   return (
     <div className="inspector-section" aria-label="Check result">
@@ -133,6 +140,27 @@ function Report({ report }: { report: GradeReportDto | null }) {
               <p>{report.debrief.repair}</p>
               <h4>How to reason about it</h4>
               <p style={{ margin: 0 }}>{report.debrief.reasoning}</p>
+              {report.debrief.references.length > 0 && (
+                <>
+                  <h4 style={{ marginTop: 8 }}>Read more about this fault</h4>
+                  {report.debrief.references.map((r) => (
+                    <button
+                      key={r.id}
+                      className="btn btn-ghost btn-sm"
+                      style={{ justifyContent: "flex-start", width: "100%" }}
+                      onClick={() =>
+                        navigate({
+                          page: "knowledge",
+                          article: r.id,
+                          query: "",
+                        })
+                      }
+                    >
+                      {r.title}
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </>
@@ -158,14 +186,16 @@ function Report({ report }: { report: GradeReportDto | null }) {
 function References({
   exercise,
   navigate,
+  heading = "Knowledge",
 }: {
   exercise: ExerciseDto;
   navigate: Navigate;
+  heading?: string;
 }) {
   if (exercise.knowledgeRefs.length === 0) return null;
   return (
     <div className="inspector-section">
-      <h4>Knowledge</h4>
+      <h4>{heading}</h4>
       {exercise.knowledgeRefs.map((r) => (
         <button
           key={r.id}
@@ -251,7 +281,7 @@ function TaskBrief({
           )}
         </div>
       )}
-      <Report report={report} />
+      <Report report={report} navigate={navigate} />
       <References exercise={exercise} navigate={navigate} />
     </>
   );
@@ -270,8 +300,12 @@ function Investigation({
   const [choice, setChoice] = useState("");
   const [result, setResult] = useState<DiagnosisResultDto | null>(null);
   const [repairs, setRepairs] = useState<string[]>([]);
+  // The backend sends the repair options only once a correct diagnosis is on record.
+  const [unlocked, setUnlocked] = useState<OptionDto[] | null>(null);
   const ws = lab.ws;
   if (!brief || !ws) return null;
+  const diagnosed = brief.diagnosed || unlocked !== null;
+  const repairOptions = unlocked ?? brief.repairs;
   return (
     <>
       <div className="inspector-section">
@@ -318,7 +352,11 @@ function Investigation({
           onClick={() =>
             void lab
               .act("diagnose", () => api.diagnose(ws, choice))
-              .then((r) => r && setResult(r))
+              .then((r) => {
+                if (!r) return;
+                setResult(r);
+                if (r.correct) setUnlocked(r.repairs);
+              })
           }
         >
           Submit diagnosis
@@ -333,42 +371,45 @@ function Investigation({
           </div>
         )}
       </div>
-      <div className="inspector-section">
+      <div className="inspector-section" aria-label="Repair">
         <h4>2 · Repair</h4>
         <p className="muted">
-          {brief.repairs.length > 0
-            ? "A repair changes the installation. Only the right one fixes the machine."
-            : "No physical part is broken here. Correct the configuration in the Hardware or Network tab (Advanced mode) and download it."}
+          {!diagnosed
+            ? "Submit a diagnosis that explains the evidence to unlock the repair step."
+            : repairOptions.length > 0
+              ? "A repair changes the installation. Only the right one fixes the machine."
+              : "No physical part is broken here. Correct the configuration in the Hardware or Network tab (Advanced mode) and download it."}
         </p>
-        {brief.repairs.map((r) => (
-          <button
-            key={r.id}
-            className="btn btn-sm"
-            style={{
-              width: "100%",
-              justifyContent: "flex-start",
-              marginBottom: 4,
-            }}
-            disabled={repairs.includes(r.id)}
-            onClick={() =>
-              void lab
-                .act(
-                  "repair",
-                  () => api.repair(ws, r.id),
-                  (x) => x.frame,
-                )
-                .then((x) => {
-                  if (x) {
-                    setRepairs((list) => [...list, r.id]);
-                    lab.log("info", x.message);
-                  }
-                })
-            }
-          >
-            {repairs.includes(r.id) ? "✓ " : ""}
-            {r.label}
-          </button>
-        ))}
+        {diagnosed &&
+          repairOptions.map((r) => (
+            <button
+              key={r.id}
+              className="btn btn-sm"
+              style={{
+                width: "100%",
+                justifyContent: "flex-start",
+                marginBottom: 4,
+              }}
+              disabled={repairs.includes(r.id)}
+              onClick={() =>
+                void lab
+                  .act(
+                    "repair",
+                    () => api.repair(ws, r.id),
+                    (x) => x.frame,
+                  )
+                  .then((x) => {
+                    if (x) {
+                      setRepairs((list) => [...list, r.id]);
+                      lab.log("info", x.message);
+                    }
+                  })
+              }
+            >
+              {repairs.includes(r.id) ? "✓ " : ""}
+              {r.label}
+            </button>
+          ))}
       </div>
       <div className="inspector-section">
         <h4>3 · Verify</h4>
@@ -377,8 +418,12 @@ function Investigation({
           Verification runs the original acceptance test.
         </p>
       </div>
-      <Report report={lab.report} />
-      <References exercise={exercise} navigate={navigate} />
+      <Report report={lab.report} navigate={navigate} />
+      <References
+        exercise={exercise}
+        navigate={navigate}
+        heading="Helpful concepts"
+      />
     </>
   );
 }

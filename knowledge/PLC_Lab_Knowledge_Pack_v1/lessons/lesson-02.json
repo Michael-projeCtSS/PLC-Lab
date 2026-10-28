@@ -52,7 +52,7 @@
     {
       "type": "task",
       "heading": "Practice: pushbutton and lamp",
-      "body": "Write and load the program, press S1 in the Process view and watch the cause-and-effect panel.",
+      "body": "Write the program, then press **Build & Load to PLC**: it compiles the program, loads it into the simulated PLC, sets the PLC mode switch to RUN and starts the simulation. The toolbar has two separate controls. **PLC RUN / STOP** is the PLC's mode switch: in RUN the program executes once in every PLC cycle; in STOP it does not execute and the outputs go to their stop state (normally off), while the machine itself keeps running. **Simulation Run / Pause / Step / Stop** controls the simulated world: Run lets time pass (the machine moves and, in RUN, the PLC scans every cycle), Pause freezes everything, Step advances exactly one PLC cycle, and Stop restores the machine's initial state while the PLC keeps its program. Then press S1 in the Process view and watch the cause-and-effect panel.",
       "exercise": "ex.lamp-pushbutton"
     },
     {

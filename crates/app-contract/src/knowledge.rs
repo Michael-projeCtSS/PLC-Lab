@@ -289,6 +289,10 @@ pub struct TroubleshootingBriefDto {
     pub symptom: String,
     pub reported_by: String,
     pub diagnosis_options: Vec<OptionDto>,
+    /// Whether the workspace's investigation already contains a correct diagnosis.
+    pub diagnosed: bool,
+    /// Repair options. Empty until the workspace's investigation has a correct diagnosis,
+    /// because the right repair would reveal the root cause.
     pub repairs: Vec<OptionDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -342,6 +346,9 @@ pub struct LibraryDto {
     pub exercises: Vec<ExerciseSummaryDto>,
     pub platforms: Vec<PlatformDto>,
     pub scenes: Vec<SceneSummaryDto>,
+    /// Non-fatal problems found at startup, for example a progress file that could not be
+    /// read and was kept aside.
+    pub notices: Vec<String>,
 }
 
 pub(crate) fn typescript(config: &ts_rs::Config) -> String {

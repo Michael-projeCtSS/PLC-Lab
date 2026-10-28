@@ -78,3 +78,45 @@ test("tampered archives are detected", () => {
   zip[dataStart + 8] ^= 0xff;
   assert.throws(() => readZip(zip));
 });
+
+test("troubleshooting labs show only general references before the diagnosis", () => {
+  const files = listFiles(DEFAULT_PACK);
+  const items = new Map(
+    files
+      .filter((f) => f.endsWith(".json") && !f.startsWith("schemas/"))
+      .map((f) => JSON.parse(read(f)))
+      .filter((d) => typeof d.id === "string")
+      .map((d) => [d.id, d]),
+  );
+  const labs = [...items.values()].filter(
+    (d) => d.kind === "troubleshooting" && d.troubleshooting?.symptom,
+  );
+  assert.equal(labs.length, 7);
+  for (const lab of labs) {
+    const t = lab.troubleshooting;
+    assert.equal(
+      lab.knowledgeRefs,
+      undefined,
+      `${lab.id} uses learningRefs/debriefRefs`,
+    );
+    assert.ok(t.learningRefs.length > 0 && t.debriefRefs.length > 0, lab.id);
+    for (const ref of t.learningRefs) {
+      const item = items.get(ref);
+      assert.ok(item, `${lab.id} -> ${ref}`);
+      assert.notEqual(
+        item.kind,
+        "troubleshooting",
+        `${lab.id} -> ${ref} is a fault guide`,
+      );
+      for (const related of item.related ?? [])
+        assert.ok(
+          !t.debriefRefs.includes(related),
+          `${lab.id}: ${ref} links to the debrief guide ${related}`,
+        );
+    }
+    assert.ok(
+      t.debriefRefs.some((r) => items.get(r)?.kind === "troubleshooting"),
+      `${lab.id}: the debrief names its guide`,
+    );
+  }
+});

@@ -55,10 +55,6 @@
     "What should PartPresent be when nothing is in front of the sensor?",
     "Sensors exist as normally open and normally closed variants."
   ],
-  "knowledgeRefs": [
-    "troubleshooting.sensor-no-nc-assumption",
-    "fundamentals.no-nc-contacts"
-  ],
   "evidence": [
     {
       "name": "lamp1",
@@ -386,6 +382,7 @@
       "onFail": "Lamp3 did not light when a part blocked the sensor for more than 2 s."
     }
   ],
+  "curriculumOrder": 3,
   "troubleshooting": {
     "symptom": "Since the proximity sensor was replaced, the batch lamp lights after one or two parts and the jam lamp is on while the belt is empty.",
     "reportedBy": "Line operator, packaging cell",
@@ -449,7 +446,11 @@
       "no-false-jam",
       "jam"
     ],
-    "knowledgeRefs": [
+    "learningRefs": [
+      "fundamentals.digital-io",
+      "fundamentals.no-nc-contacts"
+    ],
+    "debriefRefs": [
       "troubleshooting.sensor-no-nc-assumption"
     ],
     "debrief": {

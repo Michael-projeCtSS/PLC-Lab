@@ -1,7 +1,7 @@
 //! Workspace (live lab session) DTOs: projections of authoritative engine state.
 use crate::{
     DiagnosticDto, ExactU64, SignalValueDto, declarations,
-    knowledge::{ExerciseDto, PlatformDto},
+    knowledge::{ExerciseDto, OptionDto, PlatformDto, RelatedDto},
     project::{ChannelRefDto, InterfaceDto, SlotRefDto, StationDto},
 };
 use serde::{Deserialize, Serialize};
@@ -583,6 +583,8 @@ pub struct DiagnosisResultDto {
     pub correct: bool,
     pub message: String,
     pub attempts: u32,
+    /// The repair options, unlocked by a correct diagnosis; empty otherwise.
+    pub repairs: Vec<OptionDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -624,6 +626,8 @@ pub struct DebriefDto {
     pub evidence: Vec<String>,
     pub repair: String,
     pub reasoning: String,
+    /// Knowledge specific to this root cause, revealed only with the debrief.
+    pub references: Vec<RelatedDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

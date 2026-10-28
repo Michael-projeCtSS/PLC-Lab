@@ -586,3 +586,162 @@ fn long_runs_of_large_programs_keep_every_response_bounded() {
     );
     assert!(events.events.len() <= 200 && event_bytes < 128 * 1024);
 }
+
+const LABS: [&str; 7] = [
+    "ts.motor-wont-start",
+    "ts.outputs-dead",
+    "ts.part-sensor-inverted",
+    "ts.vfd-local",
+    "ts.tank-level-reads-high",
+    "ts.remote-level-lost",
+    "ts.remote-level-wrong",
+];
+
+/// Everything the learner sees before the diagnosis: the workspace and the exercise page.
+fn visible_before_diagnosis(app: &DesktopApp, w: &WorkspaceDto, id: &str) -> String {
+    let page = app
+        .exercise(IdRequest {
+            contract_version: V,
+            id: id.into(),
+        })
+        .unwrap();
+    format!(
+        "{}\n{}",
+        serde_json::to_string(w).unwrap(),
+        serde_json::to_string(&page).unwrap()
+    )
+}
+
+#[test]
+fn every_troubleshooting_lab_hides_its_cause_until_verified() {
+    let library =
+        knowledge_core::KnowledgeLibrary::load(&[
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../knowledge")
+        ]);
+    let f = fixture("secrecy");
+    for id in LABS {
+        let lab = library.exercise(id).unwrap_or_else(|| panic!("{id}"));
+        let t = lab.troubleshooting.as_ref().unwrap();
+        let debrief = t.debrief.as_ref().unwrap();
+        // The secrets: guide titles about this fault, the debrief, the repairs that clear
+        // a fault and the internal fault types.
+        let guides: Vec<String> = t
+            .debrief_refs
+            .iter()
+            .map(|r| library.title_of(r).unwrap())
+            .collect();
+        assert!(!guides.is_empty(), "{id} has no debrief reference");
+        let mut secrets: Vec<String> = guides.clone();
+        secrets.push(debrief.root_cause.clone());
+        secrets.push(debrief.repair.clone());
+        secrets.extend(
+            t.repairs
+                .iter()
+                .filter(|r| !r.clears.is_empty())
+                .map(|r| r.label.clone()),
+        );
+        secrets.extend(t.faults.iter().map(|x| {
+            serde_json::to_value(&x.fault).unwrap()["type"]
+                .as_str()
+                .unwrap()
+                .to_owned()
+        }));
+
+        let (project, w) = exercise(&f.app, id);
+        let visible = visible_before_diagnosis(&f.app, &w, id);
+        for secret in &secrets {
+            assert!(
+                !visible.contains(secret.as_str()),
+                "{id} reveals {secret:?}"
+            );
+        }
+        assert!(
+            !visible.contains("\"troubleshooting."),
+            "{id} links a troubleshooting guide before the diagnosis"
+        );
+        let brief = w
+            .exercise
+            .as_ref()
+            .unwrap()
+            .troubleshooting
+            .as_ref()
+            .unwrap();
+        assert!(!brief.diagnosed && brief.repairs.is_empty(), "{id}");
+        assert!(
+            !w.exercise.as_ref().unwrap().knowledge_refs.is_empty(),
+            "{id} offers general concepts"
+        );
+        // A repair before the diagnosis is refused by the backend, not only hidden.
+        if let Some(r) = t.repairs.first() {
+            let refused = f.app.repair(RepairRequest {
+                contract_version: V,
+                workspace_id: w.workspace_id,
+                repair: r.id.to_string(),
+            });
+            assert_eq!(refused.unwrap_err().code, "APP-INVALID-REQUEST", "{id}");
+        }
+        let early = check(&f.app, w.workspace_id, &project.programs[0].source, None);
+        assert!(!early.passed && early.debrief.is_none(), "{id}");
+
+        // A correct diagnosis unlocks the repairs, and the debrief follows verification.
+        let result = f
+            .app
+            .diagnose(DiagnosisRequest {
+                contract_version: V,
+                workspace_id: w.workspace_id,
+                option: t.root_causes[0].to_string(),
+            })
+            .unwrap();
+        assert!(result.correct, "{id}");
+        assert_eq!(result.repairs.len(), t.repairs.len(), "{id}");
+        let station = if t.repairs.is_empty() {
+            // Configuration labs: download the documented configuration of the scene.
+            let documented = f
+                .app
+                .create_project(ProjectCreateRequest {
+                    contract_version: V,
+                    name: "Reference".into(),
+                    exercise: None,
+                    scene: Some(lab.scene.to_string()),
+                    platform: None,
+                })
+                .unwrap();
+            Some(documented.station)
+        } else {
+            for r in t.repairs.iter().filter(|r| !r.clears.is_empty()) {
+                repair(&f.app, w.workspace_id, r.id.as_str());
+            }
+            None
+        };
+        let report = check(&f.app, w.workspace_id, &project.programs[0].source, station);
+        assert!(report.passed, "{id}: {:?}", report.criteria);
+        let shown = report.debrief.expect("debrief after verification");
+        assert_eq!(shown.root_cause, debrief.root_cause, "{id}");
+        assert_eq!(
+            shown
+                .references
+                .iter()
+                .map(|r| r.title.clone())
+                .collect::<Vec<_>>(),
+            guides,
+            "{id}"
+        );
+        // Reopening the lab keeps the unlocked repairs, still without the debrief.
+        let reopened = f
+            .app
+            .open_workspace(WorkspaceOpenRequest {
+                contract_version: V,
+                project_id: project.id.clone(),
+            })
+            .unwrap();
+        let brief = reopened.exercise.unwrap().troubleshooting.unwrap();
+        assert!(brief.diagnosed, "{id}");
+        assert_eq!(brief.repairs.len(), t.repairs.len(), "{id}");
+        f.app
+            .close_workspace(WorkspaceRequest {
+                contract_version: V,
+                workspace_id: reopened.workspace_id,
+            })
+            .unwrap();
+    }
+}

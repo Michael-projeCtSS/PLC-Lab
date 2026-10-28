@@ -225,5 +225,6 @@
       },
       "onFail": "A held button was counted more than once. Count edges, not levels."
     }
-  ]
+  ],
+  "curriculumOrder": 5
 }

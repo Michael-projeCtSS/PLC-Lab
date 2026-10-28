@@ -56,10 +56,6 @@
     "The PLC can only request the drive to run; the drive decides whether it accepts the request.",
     "Which drive signal tells you whether the drive listens to its terminals?"
   ],
-  "knowledgeRefs": [
-    "troubleshooting.vfd-local-remote",
-    "fundamentals.drives-basics"
-  ],
   "evidence": [
     {
       "name": "start",
@@ -198,6 +194,7 @@
       "onFail": "The drive kept running after Stop."
     }
   ],
+  "curriculumOrder": 4,
   "troubleshooting": {
     "symptom": "Since the drive was inspected this morning, pressing Start does nothing: the conveyor stays still and the run lamp stays dark. No drive fault is shown and the PLC shows DriveRun TRUE.",
     "reportedBy": "Line operator, conveyor line 3",
@@ -259,9 +256,12 @@
       "runs",
       "stops"
     ],
-    "knowledgeRefs": [
-      "troubleshooting.vfd-local-remote",
-      "fundamentals.drives-basics"
+    "learningRefs": [
+      "fundamentals.drives-basics",
+      "fundamentals.troubleshooting-method"
+    ],
+    "debriefRefs": [
+      "troubleshooting.vfd-local-remote"
     ],
     "debrief": {
       "rootCause": "The conveyor drive was left in Local (keypad) control after maintenance. In Local the drive ignores its run terminal, so the PLC's run command arrived but was not accepted.",

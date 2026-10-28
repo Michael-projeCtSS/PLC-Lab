@@ -280,5 +280,6 @@
       },
       "onFail": "DrainPump was switched on."
     }
-  ]
+  ],
+  "curriculumOrder": 6
 }

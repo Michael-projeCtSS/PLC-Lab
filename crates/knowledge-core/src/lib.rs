@@ -408,6 +408,62 @@ impl KnowledgeLibrary {
                 self.packs[pack].counts.articles -= 1;
             }
         }
+        // Troubleshooting labs show their learning references before the diagnosis, so
+        // those must be general knowledge: no troubleshooting guide, no lab.
+        let mut leaking = Vec::new();
+        for (id, exercise) in &self.exercises {
+            let Some(t) = &exercise.troubleshooting else {
+                continue;
+            };
+            // Guides that describe this lab's fault: the debrief references and every
+            // troubleshooting guide that names this lab as its simulation.
+            let specific: BTreeSet<&Identifier> = t
+                .debrief_refs
+                .iter()
+                .chain(self.articles.values().filter_map(|a| {
+                    a.troubleshooting
+                        .as_ref()
+                        .filter(|d| d.simulated_in.contains(id))
+                        .map(|_| &a.id)
+                }))
+                .collect();
+            for r in &t.learning_refs {
+                let problem = match self.articles.get(r) {
+                    Some(a) if a.kind == ArticleKind::Troubleshooting => {
+                        Some("is a troubleshooting guide")
+                    }
+                    Some(a) if a.related.iter().any(|x| specific.contains(x)) => {
+                        Some("links to a guide about this lab's fault")
+                    }
+                    Some(_) => None,
+                    None if self.lessons.contains_key(r) => None,
+                    None => Some("is not a general article or lesson"),
+                };
+                if let Some(problem) = problem {
+                    leaking.push((
+                        id.clone(),
+                        format!(
+                            "exercise '{id}': learning reference '{r}' {problem}; references shown before the diagnosis must not reveal the cause"
+                        ),
+                    ));
+                }
+            }
+            for r in &t.debrief_refs {
+                if !known.contains(r) {
+                    self.packs[self.origin[id]].warnings.push(format!(
+                        "exercise '{id}' debrief references unknown item '{r}'"
+                    ));
+                }
+            }
+        }
+        for (id, problem) in leaking {
+            if let Some(pack) = self.origin.get(&id).copied() {
+                self.packs[pack].errors.push(problem);
+                if self.exercises.remove(&id).is_some() {
+                    self.packs[pack].counts.exercises -= 1;
+                }
+            }
+        }
         for (id, lesson) in &self.lessons {
             let pack = self.origin[id];
             for s in &lesson.sections {

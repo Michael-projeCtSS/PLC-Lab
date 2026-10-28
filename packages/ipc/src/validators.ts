@@ -227,6 +227,7 @@ export const exercise = obj<G.ExerciseDto>({
       symptom: str,
       reportedBy: str,
       diagnosisOptions: arr(option),
+      diagnosed: bool,
       repairs: arr(option),
     }),
   ),
@@ -273,6 +274,7 @@ export const library = obj<G.LibraryDto>({
   ),
   platforms: arr(platform),
   scenes: arr(obj<G.SceneSummaryDto>({ id: str, title: str, summary: str })),
+  notices: arr(str),
 });
 
 // ---- projects ----------------------------------------------------------------------
@@ -706,6 +708,7 @@ export const diagnosis = obj<G.DiagnosisResultDto>({
   correct: bool,
   message: str,
   attempts: u32,
+  repairs: arr(option),
 });
 export const repair = obj<G.RepairResultDto>({ message: str, frame });
 export const gradeReport = obj<G.GradeReportDto>({
@@ -737,6 +740,7 @@ export const gradeReport = obj<G.GradeReportDto>({
       evidence: arr(str),
       repair: str,
       reasoning: str,
+      references: arr(related),
     }),
   ),
 });

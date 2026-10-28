@@ -51,10 +51,6 @@
     "Modbus addresses on the wire start at 0; documentation often writes 40001 for address 0.",
     "A float32 high word interpreted as INT looks like a large number."
   ],
-  "knowledgeRefs": [
-    "troubleshooting.modbus-wrong-register",
-    "protocol.modbus-tcp"
-  ],
   "evidence": [
     {
       "name": "start",
@@ -308,6 +304,7 @@
       ]
     }
   },
+  "curriculumOrder": 7,
   "troubleshooting": {
     "symptom": "The tank stays empty. The HMI shows a level above 100 % although the sight glass shows about 10 %. Communication status is OK.",
     "reportedBy": "Commissioning engineer, tank farm",
@@ -344,7 +341,11 @@
       "no-overflow",
       "comm-guard"
     ],
-    "knowledgeRefs": [
+    "learningRefs": [
+      "protocol.modbus-tcp",
+      "fundamentals.industrial-networks"
+    ],
+    "debriefRefs": [
       "troubleshooting.modbus-wrong-register"
     ],
     "debrief": {

@@ -13,7 +13,7 @@
     {
       "type": "concept",
       "heading": "Read - execute - write",
-      "body": "Each cycle the PLC copies all inputs into the **input image**, runs the whole program against that frozen image, then copies the **output image** to the outputs. PLC Lab shows exactly these steps in the cause-and-effect panel: *PLC read*, *PLC logic result*, *Process* and *Next PLC input*."
+      "body": "Each cycle the PLC copies all inputs into the **input image**, runs the whole program against that frozen image, then copies the **output image** to the outputs. PLC Lab shows these steps for every cycle in the five-step cause-and-effect panel: *PLC read* (the input image the scan used), *PLC logic result* (the values the program committed), *Output command* (what the field devices received), *Process* (what physically changed) and *Next PLC input* (what the next scan will read)."
     },
     {
       "type": "visual",

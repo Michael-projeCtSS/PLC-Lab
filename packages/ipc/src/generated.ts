@@ -95,7 +95,16 @@ export type CriterionDto = { id: string, title: string, points: number, };
 
 export type OptionDto = { id: string, label: string, };
 
-export type TroubleshootingBriefDto = { symptom: string, reportedBy: string, diagnosisOptions: Array<OptionDto>, repairs: Array<OptionDto>, };
+export type TroubleshootingBriefDto = { symptom: string, reportedBy: string, diagnosisOptions: Array<OptionDto>, 
+/**
+ * Whether the workspace's investigation already contains a correct diagnosis.
+ */
+diagnosed: boolean, 
+/**
+ * Repair options. Empty until the workspace's investigation has a correct diagnosis,
+ * because the right repair would reveal the root cause.
+ */
+repairs: Array<OptionDto>, };
 
 export type ExerciseDto = { id: string, revision: number, title: string, kind: "practice" | "troubleshooting", difficulty: "beginner" | "intermediate" | "advanced", summary: string, objectives: Array<string>, minutes: number, scene: string, platform: string, requiredInterface: Array<RequiredTagDto>, instructions: Array<string>, hints: Array<string>, knowledgeRefs: Array<RelatedDto>, criteria: Array<CriterionDto>, troubleshooting: TroubleshootingBriefDto | null, };
 
@@ -103,7 +112,12 @@ export type PlatformDto = { id: string, displayName: string, vendor: string, fam
 
 export type SceneSummaryDto = { id: string, title: string, summary: string, };
 
-export type LibraryDto = { lessons: Array<LessonSummaryDto>, exercises: Array<ExerciseSummaryDto>, platforms: Array<PlatformDto>, scenes: Array<SceneSummaryDto>, };
+export type LibraryDto = { lessons: Array<LessonSummaryDto>, exercises: Array<ExerciseSummaryDto>, platforms: Array<PlatformDto>, scenes: Array<SceneSummaryDto>, 
+/**
+ * Non-fatal problems found at startup, for example a progress file that could not be
+ * read and was kept aside.
+ */
+notices: Array<string>, };
 
 export type SlotRefDto = { rack: number, slot: number, };
 
@@ -373,7 +387,11 @@ export type EvidenceRequest = { contractVersion: number, workspaceId: ExactU64, 
 
 export type DiagnosisRequest = { contractVersion: number, workspaceId: ExactU64, option: string, };
 
-export type DiagnosisResultDto = { correct: boolean, message: string, attempts: number, };
+export type DiagnosisResultDto = { correct: boolean, message: string, attempts: number, 
+/**
+ * The repair options, unlocked by a correct diagnosis; empty otherwise.
+ */
+repairs: Array<OptionDto>, };
 
 export type RepairRequest = { contractVersion: number, workspaceId: ExactU64, repair: string, };
 
@@ -383,7 +401,11 @@ export type CheckRequest = { contractVersion: number, workspaceId: ExactU64, sou
 
 export type CriterionResultDto = { id: string, title: string, points: number, earned: number, passed: boolean, feedback: string, detail: string, };
 
-export type DebriefDto = { rootCause: string, evidence: Array<string>, repair: string, reasoning: string, };
+export type DebriefDto = { rootCause: string, evidence: Array<string>, repair: string, reasoning: string, 
+/**
+ * Knowledge specific to this root cause, revealed only with the debrief.
+ */
+references: Array<RelatedDto>, };
 
 export type GradeReportDto = { 
 /**

@@ -345,16 +345,75 @@ pub struct Progress {
     pub exercises: BTreeMap<String, ExerciseProgress>,
 }
 
+/// Result of loading the progress file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProgressLoad {
+    pub progress: Progress,
+    /// Set when the file could not be used; says where the original was kept.
+    pub notice: Option<String>,
+    /// False when an unusable file could not be moved aside: saving would destroy it.
+    pub writable: bool,
+}
+
 impl Progress {
-    pub fn load(path: &Path) -> Self {
-        fs::read_to_string(path)
-            .ok()
-            .and_then(|t| serde_json::from_str::<Progress>(&t).ok())
-            .filter(|p| p.format_version == FORMAT_VERSION)
-            .unwrap_or(Progress {
-                format_version: FORMAT_VERSION,
-                ..Default::default()
-            })
+    fn fresh() -> Self {
+        Progress {
+            format_version: FORMAT_VERSION,
+            ..Default::default()
+        }
+    }
+
+    /// Load progress. A missing file starts fresh. A file that cannot be read, parsed or
+    /// that has another format version is never overwritten: it is renamed to
+    /// `<name>.unreadable-<seconds>` next to it and progress starts fresh with a notice.
+    pub fn load(path: &Path) -> ProgressLoad {
+        let reason = match fs::read_to_string(path) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return ProgressLoad {
+                    progress: Self::fresh(),
+                    notice: None,
+                    writable: true,
+                };
+            }
+            Err(e) => e.to_string(),
+            Ok(text) => match serde_json::from_str::<Progress>(&text) {
+                Ok(p) if p.format_version == FORMAT_VERSION => {
+                    return ProgressLoad {
+                        progress: p,
+                        notice: None,
+                        writable: true,
+                    };
+                }
+                Ok(p) => format!("format version {} is not supported", p.format_version),
+                Err(e) => e.to_string(),
+            },
+        };
+        let secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "progress.json".into());
+        let kept = path.with_file_name(format!("{name}.unreadable-{secs}"));
+        match fs::rename(path, &kept) {
+            Ok(()) => ProgressLoad {
+                progress: Self::fresh(),
+                notice: Some(format!(
+                    "Your saved progress could not be read ({reason}). The file was kept as {} and progress starts empty.",
+                    kept.file_name()
+                        .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+                )),
+                writable: true,
+            },
+            Err(e) => ProgressLoad {
+                progress: Self::fresh(),
+                notice: Some(format!(
+                    "Your saved progress could not be read ({reason}) or moved aside ({e}). Progress is not saved in this session so that the file is not overwritten."
+                )),
+                writable: false,
+            },
+        }
     }
     pub fn save(&self, path: &Path) -> Result<(), ProjectError> {
         let text =
@@ -446,6 +505,80 @@ mod tests {
         assert!(!dir.join(".p-1.plclab.tmp").exists());
         store.delete(&p.id).unwrap();
         assert!(matches!(store.load(&p.id), Err(ProjectError::NotFound(_))));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    fn progress_dir(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("plclab-progress-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+    fn kept_files(dir: &Path) -> Vec<PathBuf> {
+        let mut out: Vec<PathBuf> = fs::read_dir(dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.to_string_lossy().contains(".unreadable-"))
+            .collect();
+        out.sort();
+        out
+    }
+
+    #[test]
+    fn missing_and_valid_progress_load_without_notice() {
+        let dir = progress_dir("valid");
+        let path = dir.join("progress.json");
+        let fresh = Progress::load(&path);
+        assert_eq!(fresh.notice, None);
+        assert!(fresh.writable && fresh.progress.lessons.is_empty());
+        let mut p = fresh.progress;
+        p.record_lesson("lesson.one", 2, 3);
+        p.save(&path).unwrap();
+        let loaded = Progress::load(&path);
+        assert_eq!(loaded.notice, None);
+        assert!(loaded.progress.lessons.contains_key("lesson.one"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn corrupt_progress_is_kept_aside_and_never_overwritten() {
+        let dir = progress_dir("corrupt");
+        let path = dir.join("progress.json");
+        let damaged = "{ \"formatVersion\": 1, \"lessons\": { truncated";
+        fs::write(&path, damaged).unwrap();
+        let loaded = Progress::load(&path);
+        let notice = loaded.notice.expect("a notice explains the reset");
+        assert!(notice.contains("progress.json.unreadable-"), "{notice}");
+        assert!(loaded.writable && loaded.progress.lessons.is_empty());
+        let kept = kept_files(&dir);
+        assert_eq!(kept.len(), 1);
+        assert_eq!(fs::read_to_string(&kept[0]).unwrap(), damaged);
+        assert!(!path.exists());
+        // Saving new progress creates a new file and leaves the kept copy untouched.
+        let mut p = loaded.progress;
+        p.record_lesson("lesson.one", 1, 1);
+        p.save(&path).unwrap();
+        assert_eq!(fs::read_to_string(&kept[0]).unwrap(), damaged);
+        assert!(
+            Progress::load(&path)
+                .progress
+                .lessons
+                .contains_key("lesson.one")
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn progress_from_a_newer_format_is_kept_aside() {
+        let dir = progress_dir("newer");
+        let path = dir.join("progress.json");
+        let newer = "{\"formatVersion\": 99, \"lessons\": {}, \"exercises\": {}}";
+        fs::write(&path, newer).unwrap();
+        let loaded = Progress::load(&path);
+        assert!(loaded.notice.unwrap().contains("format version 99"));
+        assert_eq!(fs::read_to_string(&kept_files(&dir)[0]).unwrap(), newer);
         let _ = fs::remove_dir_all(&dir);
     }
 

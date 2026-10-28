@@ -249,5 +249,6 @@
       },
       "onFail": "RunLamp was off while the contactor was pulled in."
     }
-  ]
+  ],
+  "curriculumOrder": 2
 }

@@ -51,10 +51,6 @@
     "Read the connection status: is it a timeout, a refusal, an exception or no route?",
     "A replacement device often arrives with a different default address."
   ],
-  "knowledgeRefs": [
-    "troubleshooting.ip-subnet-mismatch",
-    "protocol.modbus-tcp"
-  ],
   "evidence": [
     {
       "name": "start",
@@ -208,6 +204,7 @@
       "onFail": "The valve was open while the transmitter was not communicating."
     }
   ],
+  "curriculumOrder": 6,
   "troubleshooting": {
     "symptom": "Since the transmitter was exchanged, the tank does not fill. The HMI shows 'level communication fault'.",
     "reportedBy": "Shift supervisor, tank farm",
@@ -271,7 +268,11 @@
       "no-overflow",
       "comm-guard"
     ],
-    "knowledgeRefs": [
+    "learningRefs": [
+      "fundamentals.industrial-networks",
+      "protocol.modbus-tcp"
+    ],
+    "debriefRefs": [
       "troubleshooting.ip-subnet-mismatch"
     ],
     "debrief": {

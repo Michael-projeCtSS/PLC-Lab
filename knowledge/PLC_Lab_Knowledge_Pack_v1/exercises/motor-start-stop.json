@@ -6,6 +6,7 @@
   "title": "Motor start/stop with seal-in",
   "kind": "practice",
   "difficulty": "beginner",
+  "curriculumOrder": 3,
   "summary": "Start a conveyor motor with a momentary Start button, keep it running after the button is released, and stop it with a normally closed Stop button or the overload relay.",
   "objectives": [
     "Latch a motor contactor with a seal-in (self-holding) path",

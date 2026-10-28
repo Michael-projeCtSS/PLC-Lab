@@ -48,6 +48,10 @@ struct AppState {
     library: KnowledgeLibrary,
     store: ProjectStore,
     progress: Progress,
+    /// False when an unreadable progress file could not be moved aside.
+    progress_writable: bool,
+    /// Non-fatal startup problems shown to the learner.
+    notices: Vec<String>,
     workspace: Option<Workspace>,
     next_workspace: u64,
     next_run: u64,
@@ -82,12 +86,18 @@ impl AppState {
     fn save_project(&self, project: &project_model::Project) -> AppResult<()> {
         self.store.save(project).map_err(AppError::from)
     }
+    fn save_progress(&self, path: &std::path::Path) -> AppResult<()> {
+        if self.progress_writable {
+            self.progress.save(path)?;
+        }
+        Ok(())
+    }
 }
 
 impl DesktopApp {
     pub fn new(paths: AppPaths, info: AppInfo) -> Self {
         let library = KnowledgeLibrary::load(&paths.knowledge_roots);
-        let progress = Progress::load(&paths.progress_file);
+        let loaded = Progress::load(&paths.progress_file);
         let store = ProjectStore::new(paths.projects_dir.clone());
         Self {
             paths,
@@ -95,7 +105,9 @@ impl DesktopApp {
             state: Mutex::new(AppState {
                 library,
                 store,
-                progress,
+                progress: loaded.progress,
+                progress_writable: loaded.writable,
+                notices: loaded.notice.into_iter().collect(),
                 workspace: None,
                 next_workspace: 0,
                 next_run: 0,
@@ -168,7 +180,11 @@ impl DesktopApp {
         boundary((|| {
             version(request.contract_version)?;
             let state = self.lock()?;
-            Ok(library::library(&state.library, &state.progress))
+            Ok(library::library(
+                &state.library,
+                &state.progress,
+                &state.notices,
+            ))
         })())
     }
 
@@ -197,8 +213,12 @@ impl DesktopApp {
             state
                 .progress
                 .record_lesson(&request.id, request.correct, request.total);
-            state.progress.save(&self.paths.progress_file)?;
-            Ok(library::library(&state.library, &state.progress))
+            state.save_progress(&self.paths.progress_file)?;
+            Ok(library::library(
+                &state.library,
+                &state.progress,
+                &state.notices,
+            ))
         })())
     }
 
@@ -433,7 +453,7 @@ impl DesktopApp {
             let exercise_dto = workspace
                 .exercise
                 .as_ref()
-                .map(|e| library::exercise(&state.library, e));
+                .map(|e| library::exercise_view(&state.library, e, workspace.diagnosed()));
             let dto = workspace.workspace_dto(&request.project_id, exercise_dto);
             state.workspace = Some(workspace);
             Ok(dto)
@@ -764,7 +784,7 @@ impl DesktopApp {
     pub fn check(&self, request: CheckRequest) -> Result<GradeReportDto, IpcError> {
         boundary((|| {
             version(request.contract_version)?;
-            let (exercise, scene, profile, station, faults, investigation, exercise_id) = {
+            let (exercise, scene, profile, station, faults, investigation, exercise_id, references) = {
                 let mut state = self.lock()?;
                 let w = state.workspace(request.workspace_id)?;
                 let exercise = w.exercise.clone().ok_or_else(|| {
@@ -775,14 +795,23 @@ impl DesktopApp {
                         .map_err(|e| AppError::InvalidRequest(e.message))?,
                     None => w.project.station.clone(),
                 };
-                (
-                    exercise,
+                let (scene, profile, faults, investigation, exercise_id) = (
                     w.scene.clone(),
                     w.profile.clone(),
-                    station,
                     w.remaining_faults(),
                     w.investigation.clone(),
                     w.exercise_id(),
+                );
+                let references = library::debrief_references(&state.library, &exercise);
+                (
+                    exercise,
+                    scene,
+                    profile,
+                    station,
+                    faults,
+                    investigation,
+                    exercise_id,
+                    references,
                 )
             };
             // Assessment runs without holding the application lock.
@@ -834,6 +863,7 @@ impl DesktopApp {
                             evidence: d.evidence.clone(),
                             repair: d.repair.clone(),
                             reasoning: d.reasoning.clone(),
+                            references: references.clone(),
                         });
                     GradeReportDto {
                         outcome: "GRADED".into(),
@@ -886,7 +916,7 @@ impl DesktopApp {
                 state
                     .progress
                     .record_exercise(id, report.score, max, report.passed);
-                state.progress.save(&self.paths.progress_file)?;
+                state.save_progress(&self.paths.progress_file)?;
                 if let Some(w) = state
                     .workspace
                     .as_mut()

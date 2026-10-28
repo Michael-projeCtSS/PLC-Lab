@@ -21,6 +21,11 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
         </div>
       </div>
       <ErrorNotice error={library.error} />
+      {l?.notices.map((n) => (
+        <div key={n} className="notice warning" style={{ marginBottom: 12 }}>
+          {n}
+        </div>
+      ))}
       {l && (
         <>
           <div className="tiles">

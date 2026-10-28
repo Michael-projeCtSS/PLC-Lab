@@ -51,10 +51,6 @@
     "The program is the one that worked yesterday.",
     "An output module needs its own 24 V load supply to switch anything."
   ],
-  "knowledgeRefs": [
-    "troubleshooting.missing-field-power",
-    "fundamentals.digital-io"
-  ],
   "evidence": [
     {
       "name": "start",
@@ -154,6 +150,7 @@
       "onFail": "The contactor command did not follow Start."
     }
   ],
+  "curriculumOrder": 2,
   "troubleshooting": {
     "symptom": "Pressing Start does nothing at the machine. On the programming device MotorContactor shows TRUE.",
     "reportedBy": "Maintenance technician, conveyor line 1",
@@ -217,7 +214,11 @@
       "runs",
       "command"
     ],
-    "knowledgeRefs": [
+    "learningRefs": [
+      "fundamentals.digital-io",
+      "fundamentals.diagnostics"
+    ],
+    "debriefRefs": [
       "troubleshooting.missing-field-power"
     ],
     "debrief": {

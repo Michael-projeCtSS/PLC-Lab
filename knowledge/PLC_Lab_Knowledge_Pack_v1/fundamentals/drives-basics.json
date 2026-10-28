@@ -49,8 +49,8 @@
     "src.plclab-simulation"
   ],
   "related": [
-    "troubleshooting.vfd-local-remote",
     "fundamentals.start-stop-latch",
-    "fundamentals.industrial-networks"
+    "fundamentals.industrial-networks",
+    "fundamentals.digital-io"
   ]
 }

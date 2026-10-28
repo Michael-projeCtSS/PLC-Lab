@@ -56,8 +56,7 @@
   ],
   "related": [
     "protocol.modbus-rtu",
-    "troubleshooting.modbus-wrong-register",
-    "troubleshooting.ip-subnet-mismatch"
+    "fundamentals.industrial-networks"
   ],
   "protocol": "modbus-tcp",
   "fidelity": {

@@ -229,5 +229,6 @@
       },
       "onFail": "The motor started although Stop was pressed during the warning."
     }
-  ]
+  ],
+  "curriculumOrder": 4
 }

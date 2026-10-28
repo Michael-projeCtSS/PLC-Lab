@@ -51,10 +51,6 @@
     "A 4-20 mA transmitter delivers 5.6 mA at 10 % level.",
     "What does a channel configured for 0-20 mA make of 4 mA?"
   ],
-  "knowledgeRefs": [
-    "troubleshooting.analog-wrong-range",
-    "fundamentals.4-20ma"
-  ],
   "evidence": [
     {
       "name": "start",
@@ -331,6 +327,7 @@
       }
     ]
   },
+  "curriculumOrder": 5,
   "troubleshooting": {
     "symptom": "Filling stops at about half the tank instead of 60 %. The HMI shows 28 % when the sight glass shows 10 %.",
     "reportedBy": "Process operator, tank farm",
@@ -367,7 +364,11 @@
       "stops",
       "no-overfill"
     ],
-    "knowledgeRefs": [
+    "learningRefs": [
+      "fundamentals.4-20ma",
+      "fundamentals.scaling"
+    ],
+    "debriefRefs": [
       "troubleshooting.analog-wrong-range"
     ],
     "debrief": {

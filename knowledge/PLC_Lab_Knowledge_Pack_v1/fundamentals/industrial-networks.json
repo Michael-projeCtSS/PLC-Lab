@@ -43,7 +43,6 @@
   "related": [
     "protocol.modbus-tcp",
     "protocol.profinet",
-    "troubleshooting.ip-subnet-mismatch",
-    "troubleshooting.modbus-wrong-register"
+    "fundamentals.addressing"
   ]
 }

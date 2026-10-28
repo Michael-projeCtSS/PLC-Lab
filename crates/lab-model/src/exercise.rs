@@ -56,8 +56,14 @@ pub struct ExerciseDefinition {
     pub instructions: Vec<String>,
     #[serde(default)]
     pub hints: Vec<String>,
+    /// References shown with a practice task. Troubleshooting exercises leave this empty
+    /// and use `troubleshooting.learningRefs` and `troubleshooting.debriefRefs`.
     #[serde(default)]
     pub knowledge_refs: Vec<Identifier>,
+    /// Position in the curriculum among exercises of the same kind (1 = first). Lists are
+    /// ordered by it; exercises without it follow, ordered by identifier.
+    #[serde(default)]
+    pub curriculum_order: Option<u16>,
     pub evidence: Vec<EvidenceSignal>,
     pub scenarios: Vec<Scenario>,
     pub criteria: Vec<Criterion>,
@@ -284,8 +290,14 @@ pub struct TroubleshootingSetup {
     pub repairs: Vec<RepairOption>,
     /// Criterion IDs that verify the repaired system.
     pub verification: Vec<Identifier>,
+    /// General references that help the investigation without identifying the cause.
+    /// Shown from the moment the lab opens, so they must never point at the specific
+    /// fault (knowledge-pack loading rejects troubleshooting guides here).
     #[serde(default)]
-    pub knowledge_refs: Vec<Identifier>,
+    pub learning_refs: Vec<Identifier>,
+    /// References specific to the root cause; delivered only inside the debrief.
+    #[serde(default)]
+    pub debrief_refs: Vec<Identifier>,
     /// Explanation revealed only after the repaired system passes verification.
     #[serde(default)]
     pub debrief: Option<Debrief>,

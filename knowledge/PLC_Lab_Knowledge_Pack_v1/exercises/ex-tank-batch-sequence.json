@@ -254,5 +254,6 @@
       },
       "onFail": "The tank overflowed."
     }
-  ]
+  ],
+  "curriculumOrder": 9
 }

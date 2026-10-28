@@ -1,7 +1,7 @@
 //! The shipped knowledge pack is valid, searchable, and every exercise in it is solvable:
 //! practice exercises pass with their reference solution and fail with the starter
 //! program; troubleshooting exercises pass once repaired and fail with the fault present.
-use knowledge_core::{Category, KnowledgeLibrary, PackStatus, SearchQuery};
+use knowledge_core::{ArticleKind, Category, KnowledgeLibrary, PackStatus, SearchQuery};
 use lab_engine::{AssessmentOutcome, assess};
 use lab_model::exercise::ExerciseKind;
 use std::path::PathBuf;
@@ -252,9 +252,56 @@ fn troubleshooting_exercises_fail_until_repaired_and_pass_afterwards() {
             "{}: incomplete debrief",
             e.id
         );
+        // Before the diagnosis the lab shows only general concepts; the guide about its
+        // fault belongs to the debrief.
+        assert!(
+            e.knowledge_refs.is_empty(),
+            "{}: use learningRefs/debriefRefs",
+            e.id
+        );
+        assert!(
+            !t.learning_refs.is_empty(),
+            "{}: no learning references",
+            e.id
+        );
+        for r in &t.learning_refs {
+            let a = lib
+                .article(r.as_str())
+                .unwrap_or_else(|| panic!("{} -> {r}", e.id));
+            assert_ne!(a.kind, ArticleKind::Troubleshooting, "{} -> {r}", e.id);
+            for x in &a.related {
+                assert!(
+                    !t.debrief_refs.contains(x),
+                    "{}: learning reference {r} links to the debrief guide {x}",
+                    e.id
+                );
+            }
+        }
+        assert!(
+            t.debrief_refs.iter().any(|r| lib
+                .article(r.as_str())
+                .is_some_and(|a| a.kind == ArticleKind::Troubleshooting)),
+            "{}: the debrief names no troubleshooting guide",
+            e.id
+        );
         checked += 1;
     }
     assert!(checked >= 7, "{checked} troubleshooting exercises");
+    // Every exercise has a unique position in its curriculum.
+    for kind in [ExerciseKind::Practice, ExerciseKind::Troubleshooting] {
+        let mut orders: Vec<u16> = lib
+            .exercises()
+            .filter(|e| e.kind == kind)
+            .map(|e| {
+                e.curriculum_order
+                    .unwrap_or_else(|| panic!("{} has no curriculumOrder", e.id))
+            })
+            .collect();
+        let n = orders.len();
+        orders.sort_unstable();
+        orders.dedup();
+        assert_eq!(orders.len(), n, "{kind:?} curriculum order is not unique");
+    }
     // The minimum troubleshooting curriculum: NO/NC, analog range, field supply, drive
     // local/remote, Modbus register map and network addressing.
     for id in [

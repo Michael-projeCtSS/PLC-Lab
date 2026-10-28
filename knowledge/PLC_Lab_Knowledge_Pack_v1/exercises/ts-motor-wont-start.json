@@ -6,6 +6,7 @@
   "title": "Conveyor will not start after panel maintenance",
   "kind": "troubleshooting",
   "difficulty": "beginner",
+  "curriculumOrder": 1,
   "summary": "The conveyor worked yesterday. After the operator panel was serviced, pressing Start does nothing. Find the root cause from evidence, repair it and prove the system works.",
   "objectives": [
     "Compare what the PLC sees with what the field device does",
@@ -33,7 +34,6 @@
     "A normally closed contact delivers 24 V while the button is NOT pressed. What does the Stop input show?",
     "Measure the Stop input terminal with the button released."
   ],
-  "knowledgeRefs": ["fundamentals.no-nc-contacts", "troubleshooting.nc-contact-replaced-by-no"],
   "evidence": [
     { "name": "start", "source": { "type": "plcTag", "tag": "StartPB" } },
     { "name": "contactor", "source": { "type": "plcTag", "tag": "MotorContactor" } }
@@ -105,7 +105,8 @@
       { "id": "replace-di-module", "label": "Replace the digital input module", "clears": [] }
     ],
     "verification": ["starts", "runs", "stops"],
-    "knowledgeRefs": ["troubleshooting.nc-contact-replaced-by-no"],
+    "learningRefs": ["fundamentals.no-nc-contacts", "fundamentals.troubleshooting-method"],
+    "debriefRefs": ["troubleshooting.nc-contact-replaced-by-no"],
     "debrief": {
       "rootCause": "During the panel service the Stop button received a normally open contact block instead of a normally closed one. The program expects StopPB to be TRUE while Stop is not pressed, so it saw a permanent stop command.",
       "evidence": [

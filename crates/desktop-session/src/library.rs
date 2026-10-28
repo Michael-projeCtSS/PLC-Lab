@@ -12,7 +12,7 @@ use knowledge_core::{
 };
 use lab_model::{
     Identifier,
-    exercise::{Difficulty, ExerciseDefinition, ExerciseKind},
+    exercise::{Difficulty, ExerciseDefinition, ExerciseKind, TroubleshootingSetup},
     scene::{SignalDirection, TagType},
 };
 use project_model::Progress;
@@ -332,7 +332,7 @@ fn max_score(e: &ExerciseDefinition) -> u32 {
     }
 }
 
-pub fn library(library: &KnowledgeLibrary, progress: &Progress) -> LibraryDto {
+pub fn library(library: &KnowledgeLibrary, progress: &Progress, notices: &[String]) -> LibraryDto {
     let mut lessons: Vec<LessonSummaryDto> = library
         .lessons()
         .map(|l| {
@@ -351,12 +351,13 @@ pub fn library(library: &KnowledgeLibrary, progress: &Progress) -> LibraryDto {
         })
         .collect();
     lessons.sort_by_key(|l| l.number);
-    let mut exercises: Vec<(Difficulty, ExerciseSummaryDto)> = library
+    // Curriculum order, not difficulty or duration, decides the sequence a learner sees.
+    let mut exercises: Vec<(u16, ExerciseSummaryDto)> = library
         .exercises()
         .map(|e| {
             let p = progress.exercises.get(e.id.as_str());
             (
-                e.difficulty,
+                e.curriculum_order.unwrap_or(u16::MAX),
                 ExerciseSummaryDto {
                     id: e.id.to_string(),
                     title: e.title.clone(),
@@ -374,11 +375,7 @@ pub fn library(library: &KnowledgeLibrary, progress: &Progress) -> LibraryDto {
             )
         })
         .collect();
-    exercises.sort_by(|a, b| {
-        a.0.cmp(&b.0)
-            .then_with(|| a.1.minutes.cmp(&b.1.minutes))
-            .then_with(|| a.1.id.cmp(&b.1.id))
-    });
+    exercises.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.id.cmp(&b.1.id)));
     let mut scenes: Vec<SceneSummaryDto> = library
         .scenes()
         .map(|s| SceneSummaryDto {
@@ -393,6 +390,7 @@ pub fn library(library: &KnowledgeLibrary, progress: &Progress) -> LibraryDto {
         exercises: exercises.into_iter().map(|(_, e)| e).collect(),
         platforms: library.profiles().iter().map(convert::platform).collect(),
         scenes,
+        notices: notices.to_vec(),
     }
 }
 
@@ -452,11 +450,23 @@ pub fn direction(d: SignalDirection) -> &'static str {
     }
 }
 
+/// The exercise as shown outside a workspace: troubleshooting repairs stay locked.
 pub fn exercise(library: &KnowledgeLibrary, e: &ExerciseDefinition) -> ExerciseDto {
-    let mut refs = e.knowledge_refs.clone();
-    if let Some(t) = &e.troubleshooting {
-        refs.extend(t.knowledge_refs.iter().cloned());
-    }
+    exercise_view(library, e, false)
+}
+
+/// The exercise as shown in a workspace. Troubleshooting labs expose only their general
+/// learning references; the repair options appear once `diagnosed` (a correct diagnosis
+/// is on record), and cause-specific references only inside the debrief.
+pub fn exercise_view(
+    library: &KnowledgeLibrary,
+    e: &ExerciseDefinition,
+    diagnosed: bool,
+) -> ExerciseDto {
+    let refs = match &e.troubleshooting {
+        Some(t) => &t.learning_refs,
+        None => &e.knowledge_refs,
+    };
     ExerciseDto {
         id: e.id.to_string(),
         revision: e.revision,
@@ -479,7 +489,7 @@ pub fn exercise(library: &KnowledgeLibrary, e: &ExerciseDefinition) -> ExerciseD
             .collect(),
         instructions: e.instructions.clone(),
         hints: e.hints.clone(),
-        knowledge_refs: related(library, &refs),
+        knowledge_refs: related(library, refs),
         criteria: if e.kind == ExerciseKind::Troubleshooting {
             vec![
                 CriterionDto {
@@ -519,16 +529,32 @@ pub fn exercise(library: &KnowledgeLibrary, e: &ExerciseDefinition) -> ExerciseD
                     label: o.label.clone(),
                 })
                 .collect(),
-            repairs: t
-                .repairs
-                .iter()
-                .map(|o| OptionDto {
-                    id: o.id.to_string(),
-                    label: o.label.clone(),
-                })
-                .collect(),
+            diagnosed,
+            repairs: if diagnosed {
+                repair_options(t)
+            } else {
+                Vec::new()
+            },
         }),
     }
+}
+
+pub fn repair_options(t: &TroubleshootingSetup) -> Vec<OptionDto> {
+    t.repairs
+        .iter()
+        .map(|o| OptionDto {
+            id: o.id.to_string(),
+            label: o.label.clone(),
+        })
+        .collect()
+}
+
+/// Cause-specific references of a troubleshooting lab, for its debrief.
+pub fn debrief_references(library: &KnowledgeLibrary, e: &ExerciseDefinition) -> Vec<RelatedDto> {
+    e.troubleshooting
+        .as_ref()
+        .map(|t| related(library, &t.debrief_refs))
+        .unwrap_or_default()
 }
 
 pub fn exercise_by_id(library: &KnowledgeLibrary, id: &str) -> AppResult<ExerciseDto> {

@@ -487,6 +487,19 @@ impl Workspace {
         })
     }
 
+    /// Whether a diagnosis on record names a root cause.
+    pub fn diagnosed(&self) -> bool {
+        self.exercise
+            .as_ref()
+            .and_then(|e| e.troubleshooting.as_ref())
+            .is_some_and(|t| {
+                self.investigation
+                    .diagnoses
+                    .iter()
+                    .any(|d| t.root_causes.iter().any(|r| r.as_str() == d))
+            })
+    }
+
     pub fn diagnose(&mut self, option: &str) -> AppResult<DiagnosisResultDto> {
         let t = self
             .exercise
@@ -502,6 +515,11 @@ impl Workspace {
             });
         }
         let correct = t.root_causes.iter().any(|r| r.as_str() == option);
+        let repairs = if correct {
+            crate::library::repair_options(t)
+        } else {
+            Vec::new()
+        };
         if self.investigation.diagnoses.len() < 64 {
             self.investigation.diagnoses.push(option.to_owned());
         }
@@ -514,10 +532,17 @@ impl Workspace {
                 "This cause does not explain all observed symptoms. Compare the PLC values with the field measurements again.".into()
             },
             attempts: u32::try_from(self.investigation.diagnoses.len()).unwrap_or(u32::MAX),
+            repairs,
         })
     }
 
     pub fn repair(&mut self, repair: &str) -> AppResult<String> {
+        // The repair options reveal the cause, so they are available only after it was named.
+        if !self.diagnosed() {
+            return Err(AppError::InvalidRequest(
+                "Submit a diagnosis that explains the evidence before repairing.".into(),
+            ));
+        }
         let option = self
             .exercise
             .as_ref()

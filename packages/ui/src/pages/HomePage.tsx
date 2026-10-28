@@ -53,6 +53,11 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   return (
     <div className="page-inner">
       <ErrorNotice error={data.error} />
+      {library?.notices.map((n) => (
+        <div key={n} className="notice warning" style={{ marginBottom: 12 }}>
+          {n}
+        </div>
+      ))}
       <section className="hero">
         <div className="hero-main">
           <h1>Learn industrial automation by doing</h1>

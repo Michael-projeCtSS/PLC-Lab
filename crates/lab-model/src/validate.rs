@@ -547,6 +547,15 @@ pub fn validate_exercise(
                 format!("verification references missing criterion '{v}'")
             });
         }
+        // Everything outside the debrief is visible before the diagnosis.
+        p.check(exercise.knowledge_refs.is_empty(), || {
+            "troubleshooting exercises list references as learningRefs (before diagnosis) or debriefRefs (after verification), not as knowledgeRefs".into()
+        });
+        for r in &t.learning_refs {
+            p.check(!t.debrief_refs.contains(r), || {
+                format!("reference '{r}' cannot be both a learning and a debrief reference")
+            });
+        }
     }
     if let Some(station) = &exercise.starter_station
         && let Err(ModelError::Invalid(problems)) = validate_station(station)
