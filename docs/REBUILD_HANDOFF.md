@@ -1,54 +1,48 @@
 # Rebuild handoff
 
-Branch: `claude/product-rebuild-v1` (not pushed until the CI checkpoint).
-
-This file records the resumable state of the product rebuild. It is updated at every
-checkpoint commit. The authoritative history is `git log`.
+Resumable state of the product rebuild. The authoritative history is `git log` on branch
+`claude/product-rebuild-v1` (pushed to `origin`, never force-pushed).
 
 ## Checkpoint status
 
-| Checkpoint                                     | State                                                                                   |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------- |
-| A. Backend workspace builds                    | PASS (`cargo check --workspace --all-targets`, `clippy -D warnings`)                    |
-| B. IPC generated, strict tests                 | PASS (`npm run ipc:generate`, `npm run typecheck`, `npm run lint`, `vitest run`)        |
-| C. Tauri + rebuilt shell                       | Code complete; native launch not yet validated                                          |
-| D. Free Lab workspace                          | UI complete over real backend; native validation pending                                |
-| E. Learn / Practice / Troubleshoot / Knowledge | UI complete; knowledge content in progress                                              |
-| F. Knowledge ZIP                               | Pending                                                                                 |
-| G. Project persistence                         | Backend + UI complete (create, open, save, save as, import, export, autosave of source) |
-| H. Grading                                     | PASS in `crates/desktop-session/tests/app.rs` (practice and troubleshooting)            |
-| I. Full CI                                     | Pending (workflow still describes the previous milestone)                               |
-| J. Native Windows validation                   | Pending                                                                                 |
+| Checkpoint                                     | State                                                                                                                 |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| A. Backend workspace builds                    | PASS locally for every crate except the Tauri host (local host rebuild blocked by Smart App Control); PASS in CI      |
+| B. IPC generated, strict tests                 | PASS (`ipc:generate` drift-free, typecheck, ESLint, Vitest)                                                           |
+| C. Tauri + rebuilt shell runs                  | PASS: local native debug smoke 2026-10-27 (11 steps)                                                                  |
+| D. Free Lab workspace                          | PASS in native smoke and adapter tests                                                                                |
+| E. Learn / Practice / Troubleshoot / Knowledge | PASS: content loads, exercises solvable, labs fail until repaired                                                     |
+| F. Knowledge ZIP                               | PASS: deterministic, verified byte for byte, Windows Expand-Archive identical                                         |
+| G. Project persistence                         | PASS: adapter tests (create, save as, export, import, invalid input)                                                  |
+| H. Grading                                     | PASS: practice and troubleshooting grading tests, conformance solvability                                             |
+| I. Full CI                                     | See "CI" below                                                                                                        |
+| J. Native Windows validation                   | Debug: PASS locally. Release and root launcher: BLOCKED locally (Smart App Control); validated by the CI Windows lane |
+
+## Local environment limitation
+
+Smart App Control on the development machine blocks some freshly compiled, unsigned
+binaries (os error 4551): test executables, build scripts (`serde_core` in release) and
+proc-macro DLLs (`zerovec_derive`). It was never disabled or bypassed. Consequences: local
+release builds and the local root-launcher check cannot run; some test binaries cannot run
+locally after relinking. Hosted CI executes all of them.
 
 ## Commands that pass locally
 
-- `npm run format:check`
-- `npm run typecheck`
-- `npm run lint` (ESLint and `cargo clippy --workspace --all-targets --locked -- -D warnings`)
-- `npx vitest run`
-- `node --test tests/architecture/*.test.mjs`
-- `cargo test --workspace --locked --no-fail-fast`: every suite that Windows allows to
-  execute passes. Smart App Control (os error 4551) blocks some freshly built test
-  binaries; those suites were run with `cargo test --release` and pass, except the
-  `app-contract` unit binary, which is blocked in both profiles locally. Its drift check
-  is equivalent to `npm run ipc:generate` followed by `git diff --exit-code
-packages/ipc/src/generated.ts`, which is clean. Windows security is not bypassed.
-- `npm run build --workspace @plc-lab/desktop`
+`npm run format:check`, `npm run typecheck`, ESLint, `npx vitest run`,
+`node --test tests/architecture/*.test.mjs`, `npm run knowledge:verify`,
+`npm audit --omit=dev --audit-level=high`,
+`cargo check|clippy --workspace --exclude plc-lab-desktop --all-targets --locked`
+(`-D warnings`), `cargo fmt --all -- --check`, and every Rust test binary that the local
+policy allows to execute.
 
-## Architecture decisions in this rebuild
+## CI
 
-- ADR-0018 world time and PLC modes, ADR-0019 causal observation and compact trace,
-  ADR-0020 headless engine boundary, ADR-0021 IR readiness and STL control flow.
-- `desktop-session` is an application adapter only (no simulation semantics). Typed
-  `AppError` values map to `IpcError` codes only at its public methods.
-- The host never interprets error codes: pacing uses the typed `TickOutcome`.
-- The UI validates every response with combinators typed against the generated contract.
+The latest run for this branch is listed by `gh run list --branch claude/product-rebuild-v1`.
+The Windows lane publishes `plc-lab-windows-release-<attempt>` (staged release, root
+launcher, knowledge archive) only when every validation stage passed.
 
 ## Next exact tasks
 
-1. Knowledge content under `knowledge/PLC_Lab_Knowledge_Pack_v1/` (schemas, sources,
-   fundamentals, vendors, protocols, troubleshooting, 20 lessons, exercises).
-2. Pack ZIP script and `releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip`.
-3. Release staging (`releases/current/`), root launcher `PLC Lab.exe`,
-   `RUN_PLC_LAB.bat`, updated BAT helpers.
-4. CI workflow update, docs rewrite, `docs/PRODUCT_REBUILD_REPORT.md`, push, CI.
+1. If a CI stage fails, read `artifacts/ci/<lane>/<stage>.log` in the uploaded evidence,
+   fix the cause and push (no force).
+2. Optional product work from [ROADMAP.md](ROADMAP.md) (signed distribution first).
