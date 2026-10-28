@@ -47,16 +47,23 @@ SmartScreen may refuse to start a locally built copy. See
    simulation and grades behavior over time. The minimum path: pushbutton and lamp,
    motor jog, motor start/stop with seal-in, TON delayed start, button counter, tank
    filling; then analog scaling, part counting, a batch sequence and a Modbus level.
-4. **TROUBLESHOOT** labs start from a fault report. Reproduce the symptom, collect
+4. **COMMISSION** labs hand you a newly installed conveyor cell that does not start. The
+   **Commissioning** tab of the workspace (available in every workspace) is a checklist
+   from power to process that the simulation evaluates from what the installation shows
+   and from the tests you perform: operate every button and sensor, switch every output
+   and watch the checks turn into results. Labs: missing input field supply, guard switch
+   with the wrong contact type, swapped Start/Stop wiring, swapped output wiring, missing
+   contactor feedback, input module in the wrong slot.
+5. **TROUBLESHOOT** labs start from a fault report. Reproduce the symptom, collect
    evidence (inputs, outputs, LEDs, measurements, diagnostics, ping, drive display),
    submit a diagnosis, repair and verify. Labs: Stop contact replaced by NO, inverted
    presence sensor, 4-20 mA channel set to 0-20 mA, missing output field supply, drive
    left in local control, Modbus register offset, transmitter in the wrong subnet. After
    a passed verification a debrief explains the root cause, the evidence that pointed to
    it, the correct repair and the reasoning.
-5. **KNOWLEDGE** is the reference: fundamentals, instructions, eight PLC vendors and
+6. **KNOWLEDGE** is the reference: fundamentals, instructions, eight PLC vendors and
    their families, nine industrial protocols and troubleshooting guides, all searchable.
-6. **PROGRESS** shows completed lessons and best scores.
+7. **PROGRESS** shows completed lessons and best scores.
 
 ## Free Lab
 

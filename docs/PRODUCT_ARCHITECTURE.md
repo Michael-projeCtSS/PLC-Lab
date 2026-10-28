@@ -25,26 +25,26 @@ Tauri host (commands, pacing, trusted paths) ─> packages/ipc (strict validator
 
 ## Crates and their responsibility
 
-| Crate                | Responsibility                                                                 |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `plc-types`          | PLC types and values, diagnostics, identities, standard block signatures       |
-| `plc-ir`             | Canonical PLC IR and its validator                                             |
-| `st-frontend`        | Structured Text lexer, parser, AST and compiler to IR                          |
-| `plc-runtime`        | The only PLC runtime: transactional scans, budgets, standard blocks, clock     |
-| `simulation-core`    | `WorldTime`, deterministic event scheduler, `SimulationClock`                  |
-| `trace-core`         | Byte-bounded keyframe/delta signal trace and bounded event log                 |
-| `lab-model`          | Versioned data: scenes, components, hardware, profiles, faults, exercises      |
-| `process-simulation` | Exact fixed-point physics of scene components and process events               |
-| `hardware-model`     | Configured vs installed modules, wiring, channel conversion, LEDs, diagnostics |
-| `network-core`       | Deterministic virtual Ethernet segment and behavioral Modbus TCP client/server |
-| `grading-core`       | Behavioral rule evaluation over grading evidence; troubleshooting scoring      |
-| `lab-engine`         | Headless lab session: one world, cycle execution, observations, assessment     |
-| `knowledge-core`     | Knowledge pack discovery, validation, cross-references and search index        |
-| `project-model`      | `.plclab` project format, migrations, atomic store, learner progress           |
-| `app-contract`       | IPC v8 transport DTOs only (serde, ts-rs); generates TypeScript declarations   |
-| `desktop-session`    | Application adapter: use cases over engine, library and projects               |
-| `plc-lab-desktop`    | Tauri host: lifecycle, trusted paths, command adapters, pacing loop            |
-| `plc-lab-launcher`   | Root `Launcher.exe` window and the `PLC Lab.exe` alias (ADR-0026)              |
+| Crate                | Responsibility                                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `plc-types`          | PLC types and values, diagnostics, identities, standard block signatures                                       |
+| `plc-ir`             | Canonical PLC IR and its validator                                                                             |
+| `st-frontend`        | Structured Text lexer, parser, AST and compiler to IR                                                          |
+| `plc-runtime`        | The only PLC runtime: transactional scans, budgets, standard blocks, clock                                     |
+| `simulation-core`    | `WorldTime`, deterministic event scheduler, `SimulationClock`                                                  |
+| `trace-core`         | Byte-bounded keyframe/delta signal trace and bounded event log                                                 |
+| `lab-model`          | Versioned data: scenes, components, hardware, profiles, faults, exercises                                      |
+| `process-simulation` | Exact fixed-point physics of scene components and process events                                               |
+| `hardware-model`     | Configured vs installed modules, wiring, channel conversion, LEDs, diagnostics                                 |
+| `network-core`       | Deterministic virtual Ethernet segment and behavioral Modbus TCP client/server                                 |
+| `grading-core`       | Behavioral rule evaluation over grading evidence; troubleshooting scoring                                      |
+| `lab-engine`         | Headless lab session: one world, cycle execution, observations, assessment, commissioning checklist (ADR-0027) |
+| `knowledge-core`     | Knowledge pack discovery, validation, cross-references and search index                                        |
+| `project-model`      | `.plclab` project format, migrations, atomic store, learner progress                                           |
+| `app-contract`       | IPC v8 transport DTOs only (serde, ts-rs); generates TypeScript declarations                                   |
+| `desktop-session`    | Application adapter: use cases over engine, library and projects                                               |
+| `plc-lab-desktop`    | Tauri host: lifecycle, trusted paths, command adapters, pacing loop                                            |
+| `plc-lab-launcher`   | Root `Launcher.exe` window and the `PLC Lab.exe` alias (ADR-0026)                                              |
 
 Dependency rules are enforced by `tests/architecture/boundaries.test.mjs` against the real
 `cargo metadata` graph: semantic crates never depend on the contract, adapter, host or

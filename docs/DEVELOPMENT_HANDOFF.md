@@ -4,7 +4,7 @@ Branch `claude/product-development-v2`, started from the accepted rebuild report
 `84918f1` (validated source `fb57c7b`). This file records where development stands so
 work can continue from a clean, buildable state.
 
-## Checkpoint 1: Launcher.exe (this checkpoint)
+## Checkpoint 1: Launcher.exe (green)
 
 Done:
 
@@ -33,6 +33,23 @@ Done:
 Not done (deliberately deferred, documented in ADR-0026): installing a knowledge pack
 ZIP from the launcher. "Manage Knowledge Packs" opens the trusted user folder.
 
+Validated: CI run 40753806573 (Windows and Linux lanes green, launcher-gui 11 steps).
+
+## Checkpoint 2: commissioning framework and digital I/O lab (P1, P2)
+
+- Engine-evaluated checklist (ADR-0027, `crates/lab-engine/src/commissioning.rs`): Power,
+  Hardware, Network, Inputs, Outputs, Drives, Process; states OK / ATTENTION / FAULT /
+  UNTESTED / NOT_APPLICABLE; I/O tests tracked per cycle; never reads injected faults.
+- `commissioning` query (contract 8, additive), Commissioning tab in every workspace,
+  COMMISSION navigation section, `ExerciseKind::Commissioning` with the troubleshooting
+  flow (`is_fault_finding`).
+- Scene `scene.dio-commissioning` and six labs (`cm.dio-*`): input field supply, guard
+  switch NO/NC, swapped Start/Stop, swapped outputs, missing contactor feedback, module in
+  the wrong slot. Article updates: `fundamentals.commissioning` (checklist and fidelity),
+  new `troubleshooting.missing-feedback`.
+- Tests: `crates/lab-engine/tests/commissioning.rs`, the secrecy and verification workflow
+  over all 13 fault-finding labs, UI tests, a native smoke step.
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
@@ -42,10 +59,8 @@ native smoke test run on hosted Windows CI, which is authoritative.
 
 ## Next checkpoints
 
-1. P1 Commissioning workspace: COMMISSION area with checklist categories (power,
-   hardware, network, inputs, outputs, drives, process) derived from simulated state.
-2. P2 Digital I/O commissioning lab.
-3. Then P3 analog, P4 VFD, P5 network diagnostics, P6 hardware configuration, P7 watch
+1. Checkpoint 3: P3 analog commissioning lab.
+2. Then P4 VFD, P5 network diagnostics, P6 hardware configuration, P7 watch
    and force, P8 diagnostic buffer, P9 alarms and events, P10 startup and restart,
    P11 ST depth, P12 LAD readiness.
 

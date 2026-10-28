@@ -55,6 +55,18 @@ parameters); deceleration is immediate.
   thresholds, diagnostic texts.
 - **Not modeled**: module parameter sets of real products, hot swap, firmware versions.
 
+## Commissioning checklist
+
+- **Exact (model rules)**: every check is derived from observable simulated state
+  (module status and LEDs, field supplies, diagnostics, input readings and quality,
+  outputs, terminal voltages, device indications, network status, PLC mode) compared
+  with the scene's documented wiring; it never reads injected faults (ADR-0027).
+- **Approximated**: an input test passes when the drawn input is determined by the
+  device (one value at rest, the other actuated); missing feedback is reported after an
+  actuator was energized for 3 s; terminals are ideal 24 V or 0 V.
+- **Not modeled**: safety-function validation, insulation and protective-earth tests,
+  documented sign-off.
+
 ## Network
 
 Modbus TCP is behavioral (`APPROXIMATED_BEHAVIORAL`): FC03/FC04 polling, transaction
