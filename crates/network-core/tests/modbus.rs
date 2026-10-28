@@ -121,6 +121,46 @@ fn host_without_server_refuses_and_offset_errors_return_exceptions() {
 }
 
 #[test]
+fn unit_identifier_is_checked_only_by_devices_that_route_by_unit() {
+    // A device that ignores the unit identifier answers any unit.
+    let mut net = NetworkRuntime::new(Some(&installation()));
+    net.configure(
+        plc("192.168.0.10"),
+        &[scan(&GOOD.replace("\"unitId\": 1", "\"unitId\": 7"))],
+    );
+    run(&mut net, 50, 400);
+    assert_eq!(net.scan_status(0), Some(ScanStatus::Ok));
+    assert_eq!(net.value(0, 0), Some(ScanValue::Int(400)));
+
+    // A gateway that serves only unit 1 rejects unit 7 with exception 0B.
+    let text = serde_json::to_string(&installation()).unwrap().replace(
+        r#""unitIds":{"type":"ignore"}"#,
+        r#""unitIds":{"type":"accept","units":[1]}"#,
+    );
+    assert!(text.contains(r#""units":[1]"#), "{text}");
+    let gateway: NetworkInstallation = serde_json::from_str(&text).unwrap();
+    let mut net = NetworkRuntime::new(Some(&gateway));
+    net.configure(
+        plc("192.168.0.10"),
+        &[scan(&GOOD.replace("\"unitId\": 1", "\"unitId\": 7"))],
+    );
+    run(&mut net, 50, 400);
+    assert_eq!(
+        net.scan_status(0),
+        Some(ScanStatus::Exception(exception::GATEWAY_TARGET_FAILED))
+    );
+    assert_eq!(
+        net.value(0, 0),
+        None,
+        "no value is invented after an exception"
+    );
+    let mut net = NetworkRuntime::new(Some(&gateway));
+    net.configure(plc("192.168.0.10"), &[scan(GOOD)]);
+    run(&mut net, 50, 400);
+    assert_eq!(net.scan_status(0), Some(ScanStatus::Ok));
+}
+
+#[test]
 fn word_order_mismatch_produces_a_wrong_but_explainable_value() {
     let mut net = NetworkRuntime::new(Some(&installation()));
     let swapped = GOOD.replace(
