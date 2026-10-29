@@ -38,7 +38,7 @@ SmartScreen may refuse to start a locally built copy. See
 
 1. **HOME** offers the next step: continue the course, practice, troubleshoot or open
    the Free Lab.
-2. **LEARN** has 20 short lessons from "What is a PLC?" to troubleshooting methodology.
+2. **LEARN** has 21 short lessons from "What is a PLC?" to troubleshooting methodology.
    Each lesson explains one idea, shows an example and a common mistake, asks a question
    and links an exercise.
 3. **PRACTICE** exercises give you a machine and a task. Write the program, press
@@ -55,7 +55,10 @@ SmartScreen may refuse to start a locally built copy. See
    with the wrong contact type, swapped Start/Stop wiring, swapped output wiring, missing
    contactor feedback, input module in the wrong slot. Analog labs on a buffer tank with
    a 2-wire 4-20 mA transmitter and a 0-10 V cross-check sensor: broken loop, missing
-   loop supply, 0-10 V sensor on a current input, 0-20 versus 4-20 mA, zero offset.
+   loop supply, 0-10 V sensor on a current input, 0-20 versus 4-20 mA, zero offset. Drive
+   labs on a conveyor with a generic VFD behavioral model (run, run enable, fault reset,
+   preset speed; ready, running, remote and fault relays): local control, a latched trip,
+   missing run enable, keypad speed reference, no mains supply.
 5. **TROUBLESHOOT** labs start from a fault report. Reproduce the symptom, collect
    evidence (inputs, outputs, LEDs, measurements, diagnostics, ping, drive display),
    submit a diagnosis, repair and verify. Labs: Stop contact replaced by NO, inverted

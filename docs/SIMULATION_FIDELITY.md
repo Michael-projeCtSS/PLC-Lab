@@ -34,13 +34,15 @@ Volumes and flows use exact fixed-point integers (mL, mL/s), so results do not d
 the cycle length. Process events: overflow, dry run, high-high, low-low, motor overload.
 Real fluid dynamics, valve characteristics and motor torque are not modeled.
 
-The **variable frequency drive** is `APPROXIMATED_BEHAVIORAL`: a run terminal, relay
-outputs ready (always TRUE: drive trips are not simulated), running and remote, a local
-(keypad) control state that ignores the run terminal (fault `driveLocalControl`), a
-linear ramp to full speed, an output frequency shown on a 50 Hz basis and an approximate
-motor current (20 % of rated current at standstill rising linearly to 100 %). Speed
-references, parameters, fieldbus control words, braking and safety functions such as
-Safe Torque Off are not modeled. Switching from Local back to Remote while the run terminal
+The **variable frequency drive** is `APPROXIMATED_BEHAVIORAL`, a generic behavioral model:
+a run terminal, optional run enable, fault acknowledge and preset speed terminals, relay
+outputs ready, running, remote and fault, a local (keypad) control state that ignores the
+run terminal (fault `driveLocalControl`), a latched trip (`driveTrip`), a keypad speed
+reference (`driveKeypadReference`), a mains supply (`driveNoSupply`), a linear ramp to
+the speed reference, an output frequency shown on a 50 Hz basis and an approximate motor
+current (20 % of rated current at standstill rising linearly to 100 %). Parameters,
+fault codes, fieldbus control words, braking and safety functions such as Safe Torque Off
+are not modeled. Switching from Local back to Remote while the run terminal
 is ON starts the drive at once (real drives may require a new run edge, depending on their
 parameters); deceleration is immediate.
 
@@ -61,6 +63,19 @@ parameters); deceleration is immediate.
   0 mA. Real modules differ (separate 2-/4-wire terminals, external loop supplies, and
   possible damage when an active source meets a supplied input); the knowledge pack labels
   this as generic and points to the module manuals.
+
+## Drives (generic VFD behavioral model)
+
+- **Exact (model rules)**: control place (local ignores the run terminal), ready chain
+  (mains supply, no fault, run enable when the drive has an enable terminal), latched trip
+  acknowledged by a rising edge of the reset terminal once the cause is gone, terminal
+  or keypad speed reference with an optional preset speed, relays for ready, running,
+  remote and fault.
+- **Approximated**: linear acceleration over the configured ramp, immediate deceleration,
+  a simple current model.
+- **Not modeled**: product parameters and fault codes, motor data and control modes,
+  braking, fieldbus control (planned with the network diagnostics milestone), safe torque
+  off as a safety function.
 
 ## Commissioning checklist
 

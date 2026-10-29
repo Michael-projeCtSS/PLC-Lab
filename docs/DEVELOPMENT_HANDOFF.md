@@ -69,6 +69,26 @@ Validated: CI run 40757889061 (both lanes green; native smoke 17 steps on every 
   scaling article; a program-fix lab needs a verification path for student programs in the
   secrecy workflow).
 
+Validated: CI run 40830883517 (attempt 2; attempt 1 lost the Windows job to an `npm ci`
+process crash, exit 0xC0000409, before any project code ran).
+
+## Checkpoint 4: drive commissioning (P4)
+
+- Generic VFD behavioral model (`process-simulation` `Drive`): optional run enable, fault
+  relay and acknowledge terminals, preset speed, keypad reference, latched trip, mains
+  supply; ramp continues from the current speed when the reference rises.
+- Faults: `driveTrip`, `driveKeypadReference`, `driveNoSupply` (plus the existing
+  `driveLocalControl` and `openCircuit` for a missing enable wire).
+- Checklist Drives: ready (with the missing condition), local/remote, run enable, fault,
+  run command, speed reference (value and source), speed and feedback; Power shows the
+  drive mains supply.
+- Content: `scene.drive-commissioning`, labs `cm.vfd-local`, `cm.vfd-trip`, `cm.vfd-enable`,
+  `cm.vfd-keypad`, `cm.vfd-no-supply`, lesson 21 (drive commissioning), guides
+  `drive-not-ready`, `drive-trip-acknowledge`, `drive-reference-source`, the generic model
+  section in `fundamentals.drives-basics`, `fundamentals.transmitter-wiring`.
+- Not done: communication timeout of a fieldbus-controlled drive (needs the network work of
+  P5).
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
@@ -78,8 +98,8 @@ native smoke test run on hosted Windows CI, which is authoritative.
 
 ## Next checkpoints
 
-1. Checkpoint 4: P4 drive commissioning (generic VFD behavioral model).
-2. Then P5 network diagnostics, P6 hardware configuration, P7 watch
+1. Checkpoint 5: P5 network diagnostics (and the fieldbus drive timeout).
+2. Then P6 hardware configuration, P7 watch
    and force, P8 diagnostic buffer, P9 alarms and events, P10 startup and restart,
    P11 ST depth, P12 LAD readiness.
 
