@@ -224,7 +224,21 @@ enum State {
     Drive(Drive),
 }
 
-/// Generic VFD behavioral model: terminals, ready chain, latched trip and a speed ramp.
+/// Generic VFD behavioral model (not a specific product): terminals, ready chain,
+/// latched trip and a speed ramp in world time.
+///
+/// Rules:
+/// - `ready = supplied AND NOT tripped AND (enable present OR no enable terminal)`;
+/// - the drive runs (accepts the run command) only while
+///   `run command AND remote AND ready`; any change that breaks this stops it at once;
+/// - a trip latches; a rising edge of the reset terminal acknowledges it only when its cause
+///   is gone (a held reset acknowledges nothing later);
+/// - the speed reference is per mille of rated speed, 0..=1000: the keypad value when the
+///   reference source is the keypad, else the preset value while the preset terminal is
+///   energized, else the terminal value; the actual speed ramps from the current speed to
+///   the reference at 1000 per mille per `ramp`, drops at once to a lower reference and is
+///   0 while not running;
+/// - without supply every relay is open and the display is dark.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Drive {
     ramp: u64,
@@ -753,6 +767,13 @@ impl SceneRuntime {
             .get(component)
             .cloned()
             .ok_or_else(|| SceneError::UnknownComponent(component.to_string()))?;
+        // Port metadata is the authority: only declared command terminals can be energized.
+        if !self.is_digital_sink(component, port) {
+            return Err(SceneError::UnknownPort {
+                component: id.to_string(),
+                port: port.into(),
+            });
+        }
         let stuck = self.faults[component].valve_stuck.is_some();
         match (&mut self.states[component], port) {
             (State::Lamp { lit, .. }, "coil") => *lit = energized,
@@ -1083,8 +1104,9 @@ impl SceneRuntime {
             ) => (contact(*c, *present), *style),
             (State::Drive(d), "ready") => (d.ready(), OutputStyle::DryContact),
             (State::Drive(d), "running") => (d.started.is_some(), OutputStyle::DryContact),
-            (State::Drive(d), "remote") => (!d.local, OutputStyle::DryContact),
-            (State::Drive(d), "fault") => (d.tripped, OutputStyle::DryContact),
+            // Without supply every relay of the drive is de-energized (open).
+            (State::Drive(d), "remote") => (d.supplied && !d.local, OutputStyle::DryContact),
+            (State::Drive(d), "fault") => (d.supplied && d.tripped, OutputStyle::DryContact),
             _ => return Err(unknown()),
         };
         let conducting = if f.feedback_missing.contains(port) {

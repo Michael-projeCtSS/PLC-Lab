@@ -420,3 +420,105 @@ fn the_generic_drive_needs_enable_follows_its_reference_and_latches_trips() {
         .unwrap();
     assert!(relay(&s, "running"));
 }
+
+#[test]
+fn a_held_reset_acknowledges_nothing_later_and_undeclared_terminals_are_refused() {
+    let mut s = full_drive_scene();
+    let drive = s.index_of_str("drive").unwrap();
+    let relay = |s: &SceneRuntime, port: &str| s.digital_output(drive, port).unwrap().conducting;
+    s.set_coil(drive, "enable", true).unwrap();
+    s.set_coil(drive, "reset", true).unwrap();
+    s.apply_fault(drive, ComponentFault::DriveTrip).unwrap();
+    s.clear_fault(drive, &ComponentFault::DriveTrip).unwrap();
+    assert!(
+        relay(&s, "fault"),
+        "a reset held before the trip is no acknowledgement"
+    );
+    s.set_coil(drive, "reset", false).unwrap();
+    s.set_coil(drive, "reset", true).unwrap();
+    assert!(!relay(&s, "fault"), "a new rising edge acknowledges");
+    // The plain drive of the base scene declares no enable terminal.
+    let mut plain = SceneRuntime::new(&scene(), 1).unwrap();
+    let d = plain.index_of_str("drive").unwrap();
+    assert!(plain.set_coil(d, "enable", true).is_err());
+    assert!(
+        plain.set_coil(d, "ready", true).is_err(),
+        "a relay output is no terminal"
+    );
+}
+
+#[test]
+fn drive_invariants_hold_for_every_sequence_of_terminals_and_faults() {
+    let mut s = full_drive_scene();
+    let drive = s.index_of_str("drive").unwrap();
+    let faults = [
+        ComponentFault::DriveLocalControl,
+        ComponentFault::DriveTrip,
+        ComponentFault::DriveKeypadReference,
+        ComponentFault::DriveNoSupply,
+    ];
+    let mut active = [false; 4];
+    let mut seed: u64 = 7;
+    let mut now = 0;
+    for _ in 0..3000 {
+        // Deterministic pseudo-random sequence of terminal changes, faults and time.
+        seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+        let pick = (seed >> 33) % 9;
+        let on = (seed >> 20) & 1 == 1;
+        match pick {
+            0..=3 => {
+                let port = ["run", "enable", "reset", "preset"][pick as usize];
+                s.set_coil(drive, port, on).unwrap();
+            }
+            4..=7 => {
+                let i = (pick - 4) as usize;
+                if active[i] {
+                    s.clear_fault(drive, &faults[i]).unwrap();
+                } else {
+                    s.apply_fault(drive, faults[i].clone()).unwrap();
+                }
+                active[i] = !active[i];
+            }
+            _ => {
+                now += 100;
+                s.advance_to(at(now)).unwrap();
+            }
+        }
+        let b = |name: &str| q(&s, "drive", name) == Quantity::Bool(true);
+        let Quantity::Integer(speed) = q(&s, "drive", "speedPermille") else {
+            panic!()
+        };
+        let Quantity::Integer(reference) = q(&s, "drive", "referencePermille") else {
+            panic!()
+        };
+        let relay = |port: &str| s.digital_output(drive, port).unwrap().conducting;
+        if b("running") {
+            assert!(
+                b("ready") && b("remote") && b("command"),
+                "running needs ready, remote, run"
+            );
+        }
+        if b("ready") {
+            assert!(b("supplied") && !b("tripped") && b("enableCommand"));
+        }
+        if !b("supplied") {
+            assert!(!relay("ready") && !relay("running") && !relay("remote") && !relay("fault"));
+        }
+        assert!((0..=reference).contains(&speed) && reference <= 1000);
+        if !b("running") {
+            assert_eq!(speed, 0);
+        }
+    }
+}
+
+#[test]
+fn drive_speed_values_are_validated_as_per_mille() {
+    let mut scene = scene();
+    for c in &mut scene.components {
+        if let ComponentKind::VariableFrequencyDrive { speed_permille, .. } = &mut c.kind {
+            *speed_permille = 1200;
+        }
+    }
+    let error = validate_scene(&scene).unwrap_err().to_string();
+    assert!(error.contains("per mille"), "{error}");
+}

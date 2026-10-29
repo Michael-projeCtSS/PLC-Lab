@@ -1,0 +1,68 @@
+{
+  "id": "troubleshooting.drive-command-path",
+  "kind": "troubleshooting",
+  "title": "Run command lost on the way to the drive",
+  "summary": "A ready drive in remote control stays stopped although the PLC output is on: the command does not arrive.",
+  "tags": [
+    "drive",
+    "VFD",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "PLC commanded is not drive accepted",
+      "body": "The PLC output, the terminal voltage at the PLC, the field wire, the drive terminal and the drive's own indication are separate steps. A command can be present at one and missing at the next."
+    },
+    {
+      "heading": "Find the gap",
+      "body": "With the drive ready and in remote, compare the PLC output (LED and measured 24 V) with what the drive shows for its run terminal. The fault lies between the last point where the command is present and the first where it is missing. With a fieldbus the same reasoning applies to the communication status instead of a wire."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Generic VFD behavioral model: local/remote control place, ready chain (supply, no fault, run enable), run command, latched trip with acknowledge, terminal or keypad speed reference with a preset speed, ready/running/remote/fault relays"
+    ],
+    "approximated": [
+      "Linear acceleration ramp, immediate deceleration, simple motor current"
+    ],
+    "omitted": [
+      "Product parameters and fault codes",
+      "Fieldbus control and its communication monitoring",
+      "Braking",
+      "Safe torque off and other safety functions"
+    ]
+  },
+  "related": [
+    "fundamentals.drives-basics"
+  ],
+  "troubleshooting": {
+    "faultId": "drive-command-path",
+    "area": "Drives",
+    "target": "Drive run command",
+    "effect": "The drive never receives the run command",
+    "symptoms": [
+      "PLC run output ON, drive stopped",
+      "Drive ready and in remote"
+    ],
+    "evidence": [
+      "PLC output terminal at 24 V",
+      "Drive run terminal not energized"
+    ],
+    "diagnosticMethod": [
+      "Compare sent and received command",
+      "Measure along the command path"
+    ],
+    "repair": [
+      "Repair the command path, then verify"
+    ],
+    "explanation": "A command is only effective where it is received; diagnose the path, not just the program.",
+    "simulatedIn": [
+      "cm.vfd-run-wire"
+    ]
+  }
+}

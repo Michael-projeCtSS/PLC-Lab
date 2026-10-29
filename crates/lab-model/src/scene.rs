@@ -300,6 +300,35 @@ impl ComponentKind {
             | Self::PresenceSensor { .. } => return None,
         })
     }
+    /// What a declared port means for commissioning and diagnostics. Names are
+    /// presentation; this table is the authority. `None` for undeclared ports.
+    pub fn port_role(&self, port: &str) -> Option<PortRole> {
+        let (_, kind) = self.ports().into_iter().find(|(name, _)| *name == port)?;
+        Some(match (self, kind) {
+            (_, PortKind::DigitalSink) => PortRole::Command,
+            (_, PortKind::AnalogSource) => PortRole::Measurement,
+            (Self::MotorStarter { .. }, _) if port == "aux" => PortRole::Feedback,
+            (Self::OnOffValve { .. }, _) => PortRole::Feedback,
+            (Self::VariableFrequencyDrive { .. }, _) if port == "running" => PortRole::Feedback,
+            (Self::MotorStarter { .. } | Self::VariableFrequencyDrive { .. }, _) => {
+                PortRole::Status
+            }
+            (
+                Self::PushButton { .. }
+                | Self::SelectorSwitch { .. }
+                | Self::LevelSwitch { .. }
+                | Self::PresenceSensor { .. },
+                _,
+            ) => PortRole::Sensor,
+            (
+                Self::PilotLamp { .. }
+                | Self::Pump { .. }
+                | Self::Tank { .. }
+                | Self::LevelTransmitter { .. },
+                _,
+            ) => return None,
+        })
+    }
     /// Quantities that show received commands, one per digital sink port.
     pub fn commanded_quantities(&self) -> Vec<&'static str> {
         let mut out: Vec<&'static str> = self
@@ -310,6 +339,22 @@ impl ComponentKind {
         out.dedup();
         out
     }
+}
+
+/// The meaning of a port, independent of its name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PortRole {
+    /// An operator device or process sensor (button, selector, level switch, sensor).
+    Sensor,
+    /// A command terminal of an actuator.
+    Command,
+    /// Confirms that an actuator did what it was told (contactor auxiliary contact,
+    /// valve limit switches, drive running relay).
+    Feedback,
+    /// Device status (drive ready, remote and fault relays, overload contact).
+    Status,
+    /// An analog measurement signal.
+    Measurement,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

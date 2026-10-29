@@ -373,12 +373,13 @@ fn each_analog_fault_shows_in_the_analog_checks() {
 
 const DRIVE_SCENE: &str =
     include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/drive-commissioning.json");
-const DRIVE_LABS: [&str; 5] = [
+const DRIVE_LABS: [&str; 6] = [
     include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-local.json"),
     include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-trip.json"),
     include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-enable.json"),
     include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-keypad.json"),
     include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-no-supply.json"),
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-run-wire.json"),
 ];
 
 /// The drive bench in RUN after Start was pressed, with a lab's faults (or none).
@@ -434,7 +435,7 @@ fn a_correct_drive_installation_passes_the_drive_checks() {
 
 #[test]
 fn each_drive_fault_shows_in_the_drive_checks() {
-    let expected: [(&str, &str, CheckState, &str); 5] = [
+    let expected: [(&str, &str, CheckState, &str); 6] = [
         (
             "drives",
             "control-place",
@@ -465,6 +466,12 @@ fn each_drive_fault_shows_in_the_drive_checks() {
             CheckState::Fault,
             "no mains supply",
         ),
+        (
+            "outputs",
+            "actuator",
+            CheckState::Fault,
+            "switched 24 V, but Conveyor drive U1 / motor M1 did not respond",
+        ),
     ];
     for (index, (category, item, want, text)) in expected.into_iter().enumerate() {
         let list = drive_bench(Some(index)).commissioning();
@@ -472,4 +479,110 @@ fn each_drive_fault_shows_in_the_drive_checks() {
         assert_eq!(state(&list, category, item), want, "lab {index}: {found}");
         assert!(found.contains(text), "lab {index}: {found}");
     }
+}
+
+#[test]
+fn an_unpowered_drive_shows_no_display_readings() {
+    let list = drive_bench(Some(4)).commissioning();
+    for item in ["control-place", "fault", "reference"] {
+        assert_eq!(state(&list, "drives", item), CheckState::Untested, "{item}");
+        assert!(findings(&list, "drives", item).contains("no indication"));
+    }
+    assert!(findings(&list, "drives", "ready").contains("not ready (no mains supply)"));
+}
+
+fn is_true(
+    layer: &[(lab_engine::SignalId, lab_engine::SignalValue)],
+    id: lab_engine::SignalId,
+) -> bool {
+    layer
+        .iter()
+        .any(|(s, v)| *s == id && *v == lab_engine::SignalValue::Bool(true))
+}
+
+/// First cycles at which: the PLC commands RUN, the drive receives it, the drive runs, the
+/// running relay is staged for the next scan, the PLC lights the run lamp; and the speeds.
+fn causal_chain(faulty: Option<usize>) -> ([Option<u64>; 5], Vec<i64>) {
+    let scene: SceneDefinition = parse_json(DRIVE_SCENE).unwrap();
+    let station = scene.reference_station.clone();
+    let exercise: ExerciseDefinition = parse_json(DRIVE_LABS[faulty.unwrap_or(0)]).unwrap();
+    let mut s = LabSession::new(
+        scene,
+        station,
+        PlatformProfile::generic(),
+        SessionConfig::default(),
+    )
+    .unwrap();
+    if let Some(t) = faulty.and(exercise.troubleshooting.as_ref()) {
+        for f in &t.faults {
+            s.inject_fault(&FaultInjection {
+                id: f.id.clone(),
+                fault: f.fault.clone(),
+            })
+            .unwrap();
+        }
+    }
+    s.download(&exercise.starter_program, 1, None).unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    let id = |path: &str| s.signals().by_path(path).unwrap();
+    let signals = [
+        ("committed", id("plc.DriveRun")),
+        ("process", id("process.drive.command")),
+        ("process", id("process.drive.running")),
+        ("next", id("plc.DriveRunning")),
+        ("committed", id("plc.RunLamp")),
+    ];
+    let speed = id("process.drive.speedPermille");
+    s.operate(OperatorAction::Press {
+        component: "start".into(),
+    })
+    .unwrap();
+    let mut first = [None; 5];
+    let mut speeds = Vec::new();
+    for _ in 0..40 {
+        let o = s.step_cycle().unwrap();
+        for (slot, (layer, signal)) in signals.iter().enumerate() {
+            let layer = match *layer {
+                "committed" => &o.committed,
+                "process" => &o.process_after,
+                _ => &o.staged_next,
+            };
+            if is_true(layer, *signal) && first[slot].is_none() {
+                first[slot] = Some(o.header.cycle);
+            }
+        }
+        if let Some((_, lab_engine::SignalValue::Count(v))) =
+            o.process_after.iter().find(|(sig, _)| *sig == speed)
+        {
+            speeds.push(*v);
+        }
+    }
+    (first, speeds)
+}
+
+/// PLC command -> drive state -> physical process -> feedback relay -> next scan input.
+#[test]
+fn the_drive_moves_the_process_and_its_feedback_returns_through_the_scan() {
+    let (first, speeds) = causal_chain(None);
+    let [command, received, running, feedback, lamp] = first.map(Option::unwrap);
+    assert!(command <= received && received <= running, "{first:?}");
+    assert!(
+        running <= feedback,
+        "the running relay is sampled after the drive runs"
+    );
+    assert_eq!(
+        lamp,
+        feedback + 1,
+        "the next scan reads the feedback and lights the lamp"
+    );
+    assert!(speeds.windows(2).all(|w| w[0] <= w[1]), "{speeds:?}");
+    assert!(
+        speeds.last() > speeds.first(),
+        "the motor accelerates: {speeds:?}"
+    );
+    // In local control the PLC commands and the drive receives RUN, but does not accept it.
+    let ([command, received, running, _, lamp], speeds) = causal_chain(Some(0));
+    assert!(command.is_some() && received.is_some());
+    assert!(running.is_none() && lamp.is_none());
+    assert!(speeds.iter().all(|v| *v == 0));
 }

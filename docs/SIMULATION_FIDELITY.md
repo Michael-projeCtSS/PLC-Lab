@@ -66,16 +66,27 @@ parameters); deceleration is immediate.
 
 ## Drives (generic VFD behavioral model)
 
-- **Exact (model rules)**: control place (local ignores the run terminal), ready chain
-  (mains supply, no fault, run enable when the drive has an enable terminal), latched trip
-  acknowledged by a rising edge of the reset terminal once the cause is gone, terminal
-  or keypad speed reference with an optional preset speed, relays for ready, running,
-  remote and fault.
-- **Approximated**: linear acceleration over the configured ramp, immediate deceleration,
-  a simple current model.
-- **Not modeled**: product parameters and fault codes, motor data and control modes,
-  braking, fieldbus control (planned with the network diagnostics milestone), safe torque
-  off as a safety function.
+Not a specific product. Rules (also in `process-simulation` `Drive`):
+
+- `ready = mains supplied AND NOT faulted AND (run enable present OR no enable terminal)`.
+- The drive accepts the run command (runs) only while `run command AND remote AND ready`;
+  any change that breaks this condition stops it at once. A PLC output that is ON is
+  therefore not a running motor: compare the PLC output, the drive's received command
+  (terminal) and its running relay.
+- Local control ignores the run terminal; returning to remote with the run command
+  present starts the drive at once (real drives may require a new run edge).
+- A trip latches. A rising edge of the reset terminal acknowledges it only when the cause
+  is gone; a reset held while the trip occurs acknowledges nothing.
+- Speed reference in per mille of rated speed (0..=1000, validated): keypad value when the
+  keypad is the reference source, else the preset value while the preset terminal is
+  energized, else the terminal value. The actual speed ramps in world time at 1000 per
+  mille per ramp time from the current speed, drops at once to a lower reference and is 0
+  while stopped or faulted. The display shows it on a 50 Hz basis.
+- Without mains supply the display is dark and every relay (ready, running, remote, fault)
+  is open; supply returns without an initialization delay.
+- Not modeled: product parameters and fault codes, motor data and control modes, braking,
+  safe torque off as a safety function, and fieldbus control with its communication
+  monitoring (`CommunicationHealthy`), which belongs to the network diagnostics milestone.
 
 ## Commissioning checklist
 

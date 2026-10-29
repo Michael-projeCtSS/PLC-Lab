@@ -27,6 +27,9 @@ fault and never re-evaluate machine behavior in the user interface.
   machine reactions (a contactor pulling in while Start is held) are not mistaken for
   wiring. Feedback contacts of actuators are not candidates for input tests. The tracker
   is cleared by a repair and by a world reset, because the installation then changed.
+- Port semantics come from model metadata (`ComponentKind::port_role`: sensor, command,
+  feedback, status, measurement) and port direction from `ComponentKind::ports`; names
+  are presentation. The scene runtime refuses to energize undeclared terminals.
 - Item states: OK, ATTENTION, FAULT, UNTESTED, NOT_APPLICABLE; a category shows its most
   severe item. Findings are plain observations with addresses and tags; each item says
   which tool shows it.

@@ -588,7 +588,8 @@ fn long_runs_of_large_programs_keep_every_response_bounded() {
     assert!(events.events.len() <= 200 && event_bytes < 128 * 1024);
 }
 
-const LABS: [&str; 23] = [
+const LABS: [&str; 24] = [
+    "cm.vfd-run-wire",
     "cm.vfd-local",
     "cm.vfd-trip",
     "cm.vfd-enable",

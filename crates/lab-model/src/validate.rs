@@ -89,6 +89,32 @@ pub fn validate_scene(scene: &SceneDefinition) -> Result<(), ModelError> {
                     });
                 }
             }
+            ComponentKind::VariableFrequencyDrive {
+                ramp_ms,
+                speed_permille,
+                preset_permille,
+                keypad_permille,
+                ..
+            } => {
+                p.check(*ramp_ms > 0, || {
+                    format!("drive '{}' needs a positive ramp time", c.id)
+                });
+                for value in [
+                    Some(*speed_permille),
+                    *preset_permille,
+                    Some(*keypad_permille),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    p.check(value <= 1000, || {
+                        format!(
+                            "drive '{}' speed values are per mille of rated speed (0..=1000), not {value}",
+                            c.id
+                        )
+                    });
+                }
+            }
             ComponentKind::LevelTransmitter {
                 tank: t,
                 range_min_ml,

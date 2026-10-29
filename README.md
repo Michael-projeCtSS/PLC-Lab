@@ -58,7 +58,8 @@ SmartScreen may refuse to start a locally built copy. See
    loop supply, 0-10 V sensor on a current input, 0-20 versus 4-20 mA, zero offset. Drive
    labs on a conveyor with a generic VFD behavioral model (run, run enable, fault reset,
    preset speed; ready, running, remote and fault relays): local control, a latched trip,
-   missing run enable, keypad speed reference, no mains supply.
+   missing run enable, keypad speed reference, no mains supply, run command not reaching
+   the drive.
 5. **TROUBLESHOOT** labs start from a fault report. Reproduce the symptom, collect
    evidence (inputs, outputs, LEDs, measurements, diagnostics, ping, drive display),
    submit a diagnosis, repair and verify. Labs: Stop contact replaced by NO, inverted

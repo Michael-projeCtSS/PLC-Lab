@@ -56,5 +56,20 @@
     "fundamentals.start-stop-latch",
     "fundamentals.industrial-networks",
     "fundamentals.digital-io"
-  ]
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Generic VFD behavioral model: local/remote control place, ready chain (supply, no fault, run enable), run command, latched trip with acknowledge, terminal or keypad speed reference with a preset speed, ready/running/remote/fault relays"
+    ],
+    "approximated": [
+      "Linear acceleration ramp, immediate deceleration, simple motor current"
+    ],
+    "omitted": [
+      "Product parameters and fault codes",
+      "Fieldbus control and its communication monitoring",
+      "Braking",
+      "Safe torque off and other safety functions"
+    ]
+  }
 }

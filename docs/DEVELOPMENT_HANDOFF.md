@@ -82,10 +82,21 @@ process crash, exit 0xC0000409, before any project code ran).
 - Checklist Drives: ready (with the missing condition), local/remote, run enable, fault,
   run command, speed reference (value and source), speed and feedback; Power shows the
   drive mains supply.
-- Content: `scene.drive-commissioning`, labs `cm.vfd-local`, `cm.vfd-trip`, `cm.vfd-enable`,
-  `cm.vfd-keypad`, `cm.vfd-no-supply`, lesson 21 (drive commissioning), guides
-  `drive-not-ready`, `drive-trip-acknowledge`, `drive-reference-source`, the generic model
-  section in `fundamentals.drives-basics`, `fundamentals.transmitter-wiring`.
+- Content: `scene.drive-commissioning`, six labs with different evidence: `cm.vfd-local`
+  (ready, LOC, command received but not accepted), `cm.vfd-trip` (latched fault, reset
+  refused until the cause is removed), `cm.vfd-enable` (commanded, not ready: enable
+  missing at the drive), `cm.vfd-keypad` (runs at the keypad speed, selector ignored),
+  `cm.vfd-no-supply` (display dark, every relay open), `cm.vfd-run-wire` (ready and remote,
+  PLC output at 24 V, command not received). Lesson 21 (drive commissioning), guides
+  `drive-not-ready`, `drive-trip-acknowledge`, `drive-reference-source`,
+  `drive-command-path` with fidelity classification, the generic model section and
+  fidelity of `fundamentals.drives-basics`, `fundamentals.transmitter-wiring`.
+- Review fixes (separate commit after `72e074d`): relays of an unpowered drive are open,
+  undeclared terminals are refused, drive speed values are validated, port roles are model
+  metadata (`ComponentKind::port_role`) instead of name lists in the checklist, display
+  readings of an unpowered drive are not shown; tests for drive invariants over a
+  deterministic random sequence, held reset, causal chain PLC -> drive -> process ->
+  feedback -> next scan.
 - Not done: communication timeout of a fieldbus-controlled drive (needs the network work of
   P5).
 

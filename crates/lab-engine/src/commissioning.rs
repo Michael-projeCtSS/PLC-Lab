@@ -11,7 +11,7 @@ use crate::{plc::PlcMode, session::LabSession};
 use hardware_model::{ChannelValue, DiagnosticKind, LedState, Measurement, ModuleStatus, Quality};
 use lab_model::{
     hardware::{ChannelMode, ChannelRef, ModuleClass, SlotRef},
-    scene::{AnalogSignal, ComponentKind, ContactType, PortKind, TransmitterWiring},
+    scene::{AnalogSignal, ComponentKind, ContactType, PortKind, PortRole, TransmitterWiring},
 };
 use network_core::ScanStatus;
 use process_simulation::Quantity;
@@ -126,14 +126,26 @@ struct OutputTest {
 }
 
 /// A device the student operates or the process actuates, and the quantity that shows it.
+/// For a sensor port (port metadata), the quantity that shows the device actuated.
 fn actuation(kind: &ComponentKind, port: &str) -> Option<&'static str> {
+    if kind.port_role(port) != Some(PortRole::Sensor) {
+        return None;
+    }
     match kind {
         ComponentKind::PushButton { .. } => Some("pressed"),
         ComponentKind::PresenceSensor { .. } => Some("present"),
         ComponentKind::LevelSwitch { .. } => Some("wet"),
-        ComponentKind::SelectorSwitch { .. } if port.starts_with("position") => Some("position"),
+        ComponentKind::SelectorSwitch { .. } => Some("position"),
         _ => None,
     }
+}
+
+/// The selector position a selector port stands for: its index among the declared ports.
+fn port_position(kind: &ComponentKind, port: &str) -> Option<i64> {
+    kind.ports()
+        .iter()
+        .position(|(name, _)| *name == port)
+        .and_then(|i| i64::try_from(i).ok())
 }
 
 /// The drawn contact type of an input device, when it has one.
@@ -147,13 +159,13 @@ fn contact_of(kind: &ComponentKind) -> Option<ContactType> {
 }
 
 /// Source ports that report an actuator's response to its command.
-fn feedback_ports(kind: &ComponentKind) -> &'static [&'static str] {
-    match kind {
-        ComponentKind::MotorStarter { .. } => &["aux"],
-        ComponentKind::OnOffValve { .. } => &["openSwitch", "closedSwitch"],
-        ComponentKind::VariableFrequencyDrive { .. } => &["running"],
-        _ => &[],
-    }
+/// Ports that report an actuator's response to its command (port metadata).
+fn feedback_ports(kind: &ComponentKind) -> Vec<&'static str> {
+    kind.ports()
+        .into_iter()
+        .filter(|(name, _)| kind.port_role(name) == Some(PortRole::Feedback))
+        .map(|(name, _)| name)
+        .collect()
 }
 
 /// Whether a feedback input changed with its actuator: it showed a value while energized
@@ -300,10 +312,7 @@ impl IoTests {
             if let Some(quantity) = actuation(&definition.kind, &wire.port) {
                 let actuated = match scene.quantity(index, quantity) {
                     Some(Quantity::Integer(p)) => {
-                        wire.port
-                            .strip_prefix("position")
-                            .and_then(|n| n.parse().ok())
-                            == Some(p)
+                        port_position(&definition.kind, &wire.port) == Some(p)
                     }
                     other => is_on(other),
                 };
@@ -1459,10 +1468,6 @@ impl LabSession {
             };
         }
         let mut results: Vec<(Vec<CheckState>, Vec<String>)> = vec![Default::default(); 7];
-        let mut add = |index: usize, state: CheckState, finding: String| {
-            results[index].0.push(state);
-            results[index].1.push(finding);
-        };
         for index in drives {
             let definition = &self.scene_def.components[index];
             let label = &definition.label;
@@ -1480,8 +1485,23 @@ impl LabSession {
             };
             let percent = |p: i64| format!("{}.{} %", p / 10, p % 10);
             let (ready, tripped, commanded) = (q("ready"), q("tripped"), q("command"));
+            // Control place, fault and reference are read on the drive's display, which is
+            // dark without supply.
+            let supplied = q("supplied");
+            let mut add = |item: usize, state: CheckState, finding: String| {
+                let (state, finding) = if !supplied && matches!(item, 1 | 3 | 5) {
+                    (
+                        CheckState::Untested,
+                        format!("{label}: no indication, the drive has no supply"),
+                    )
+                } else {
+                    (state, finding)
+                };
+                results[item].0.push(state);
+                results[item].1.push(finding);
+            };
             let mut reasons = Vec::new();
-            if !q("supplied") {
+            if !supplied {
                 reasons.push("no mains supply");
             }
             if tripped {
@@ -1566,7 +1586,10 @@ impl LabSession {
                 .installation
                 .wiring
                 .iter()
-                .filter(|w| w.component.as_str() == id && w.port == "run")
+                .filter(|w| {
+                    w.component.as_str() == id
+                        && definition.kind.command_quantity(&w.port) == Some("command")
+                })
                 .any(|w| {
                     self.tests
                         .outputs

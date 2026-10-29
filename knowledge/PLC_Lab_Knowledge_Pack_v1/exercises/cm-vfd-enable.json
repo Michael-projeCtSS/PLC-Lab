@@ -330,6 +330,10 @@
         "label": "The drive has no mains supply"
       },
       {
+        "id": "run-wire",
+        "label": "The run command does not reach the drive terminal"
+      },
+      {
         "id": "motor",
         "label": "The motor is defective"
       }

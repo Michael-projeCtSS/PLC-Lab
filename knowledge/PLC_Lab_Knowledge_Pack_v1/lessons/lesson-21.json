@@ -2,24 +2,40 @@
   "id": "lesson.drive-commissioning",
   "number": 21,
   "title": "Commissioning a variable frequency drive",
-  "summary": "Bring a drive into service: control place, ready chain, run command, fault handling and speed reference.",
+  "summary": "Bring a drive into service: why a run command is not a running motor, control place, the ready chain, faults, speed reference and the command path.",
   "level": "intermediate",
-  "minutes": 20,
+  "minutes": 25,
   "objectives": [
+    "Explain why a PLC run command does not guarantee a running motor",
     "Check a drive's ready chain in order",
-    "Distinguish control place, fault and reference source problems"
+    "Distinguish control place, fault, reference and command path problems"
   ],
   "sections": [
     {
       "type": "concept",
-      "heading": "What a drive needs to run",
-      "body": "A drive runs when it is **ready** (supplied, not faulted, enabled), in **remote** control, and receives a **run command**. Its speed follows the selected **reference source**. Each condition has its own indication: display, relays and LEDs."
+      "heading": "What a variable frequency drive does",
+      "body": "A variable frequency drive (VFD) feeds a motor with a variable frequency and voltage, so the motor can start smoothly and run at different speeds. The PLC tells the drive what to do through terminals (or a fieldbus); the drive reports back what it is doing through relays and its display.\n\nReal drives differ between vendors and models in their terminals, parameters, fault codes and behavior. PLC Lab uses a **generic behavioral VFD** to teach the diagnostic concepts that most drives share; for a real drive, the manual decides."
+    },
+    {
+      "type": "concept",
+      "heading": "A run command is not a running motor",
+      "body": "The PLC can command RUN, but the drive **accepts** it only when it is **ready** (supplied, not faulted, run enable present) and in **remote** control. So 'PLC output TRUE' and 'motor running' are two different facts. Diagnose a stopped drive by comparing what the PLC sent, what the drive received and what the drive reports: the running relay and the display show the drive's own answer."
     },
     {
       "type": "visual",
       "heading": "The ready chain",
       "body": "Work from left to right.",
-      "diagram": "  mains --> no fault --> run enable --> READY --> remote? --> run command --> RUNNING --> speed = reference"
+      "diagram": "  mains --> no fault --> run enable --> READY --> remote? --> run command received --> RUNNING --> speed ramps to reference"
+    },
+    {
+      "type": "concept",
+      "heading": "Speed reference and actual speed",
+      "body": "The **speed reference** is the speed the drive is asked for; it comes from the selected source (terminal presets, an analog input, a fieldbus or the keypad). The **actual speed** is what the motor does: it ramps up to the reference, follows a lower reference and is zero while the drive is stopped or faulted. A drive that runs at the wrong speed is usually listening to another reference source."
+    },
+    {
+      "type": "concept",
+      "heading": "Command path and physical result",
+      "body": "Between the PLC program and the turning motor there is a path: output, wire, drive terminal (or fieldbus communication), drive logic, motor. Each step can lose the command. Drive diagnostics (display, ready, running, remote and fault relays) tell you how far the command got, which is why they matter more than guessing."
     },
     {
       "type": "example",
@@ -32,9 +48,15 @@
       "body": "Pressing Reset again and again on a tripped drive. A latched trip clears only after the cause is removed; find the cause first, then acknowledge."
     },
     {
+      "type": "task",
+      "heading": "Try it",
+      "body": "Open the first drive commissioning lab and find out why Start is ignored.",
+      "exercise": "cm.vfd-local"
+    },
+    {
       "type": "challenge",
       "heading": "Next step",
-      "body": "Try the drive commissioning labs in COMMISSION.",
+      "body": "Choose the most informative check.",
       "question": {
         "question": "The run command is present but the drive is not ready. What do you check first?",
         "options": [
@@ -48,6 +70,16 @@
     }
   ],
   "checkpoint": [
+    {
+      "question": "The PLC output for RUN is TRUE and the drive is ready and in remote, but it does not run. Where is the problem most likely?",
+      "options": [
+        "In the speed reference",
+        "On the command path to the drive's run terminal",
+        "In the PLC program"
+      ],
+      "answer": 1,
+      "explanation": "A ready drive in remote runs when it receives the command; find where the command is lost."
+    },
     {
       "question": "Which setting makes a ready drive ignore its run terminal?",
       "options": [
