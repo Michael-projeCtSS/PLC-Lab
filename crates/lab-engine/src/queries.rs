@@ -305,6 +305,14 @@ impl LabSession {
     }
 
     /// Current values of selected signals (watch list), from authoritative state.
+    /// The I/O channel a channel signal (`io.<moduleId>.ch<n>`) currently refers to.
+    pub fn channel_of(&self, signal: SignalId) -> Option<lab_model::hardware::ChannelRef> {
+        self.channels
+            .iter()
+            .find(|(_, s)| *s == signal)
+            .map(|(c, _)| *c)
+    }
+
     pub fn watch(&self, signals: &[SignalId]) -> Vec<(SignalId, Option<SignalValue>)> {
         let latest = self.last.as_ref();
         signals

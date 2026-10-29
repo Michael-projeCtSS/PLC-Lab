@@ -374,6 +374,42 @@ pub struct VariablesDto {
     pub total: u32,
     pub rows: Vec<VariableRowDto>,
 }
+/// Live rows of a watch table: the signals by id, at most 64.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WatchRequest {
+    pub contract_version: u32,
+    pub workspace_id: ExactU64,
+    pub signals: Vec<u32>,
+}
+/// One watched signal as the runtime holds it: canonical identity, value, type, quality,
+/// where it comes from, the PLC's scan input, committed value and next input, and an
+/// active force.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WatchEntryDto {
+    pub signal: u32,
+    pub path: String,
+    pub label: String,
+    pub kind: String,
+    pub value_type: String,
+    pub unit: Option<String>,
+    pub active: bool,
+    pub value: Option<SignalValueDto>,
+    pub scan_value: Option<SignalValueDto>,
+    pub committed: Option<SignalValueDto>,
+    pub staged: Option<SignalValueDto>,
+    pub source: Option<String>,
+    pub quality: Option<String>,
+    pub forced: Option<SignalValueDto>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WatchDto {
+    pub world_time_us: ExactU64,
+    pub cycle: ExactU64,
+    pub rows: Vec<WatchEntryDto>,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TrendRequest {
@@ -803,7 +839,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         CauseEffectDto, AlarmDto, SimulationStatusDto, TraceStatsDto, LiveFrameDto, WorkspaceDto, CompileRequest,
         DeclarationDto, CompileResultDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, FrameRequest, CycleRequest,
-        VariablesRequest, VariableRowDto, VariablesDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
+        VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticEntryDto, ModuleTypeDto,
         CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareFindingDto, SignalMapRowDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,

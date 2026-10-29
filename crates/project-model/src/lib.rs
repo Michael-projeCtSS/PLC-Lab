@@ -1,7 +1,7 @@
 //! Versioned local PLC Lab project files (`.plclab`) and learner progress.
 //!
 //! A project stores configuration and documents only: platform, scene reference, hardware
-//! configuration, program sources, watch lists, simulation settings and exercise state.
+//! configuration, program sources, watch tables, simulation settings and exercise state.
 //! Runtime internals are never persisted. Older formats migrate forward explicitly;
 //! newer formats are rejected rather than guessed. Writes are atomic (temp file + rename).
 
@@ -17,7 +17,11 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Project file format. 2: configured modules carry a stable `id`. 3: watch entries name
 /// I/O channels by module id (`io.<moduleId>.ch<n>`) instead of position. 4: the station
 /// configuration last downloaded into the PLC is stored apart from the expected one.
-pub const FORMAT_VERSION: u32 = 4;
+/// 5: named watch tables replace the single watch list.
+pub const FORMAT_VERSION: u32 = 5;
+/// Watch table limits.
+pub const MAX_WATCH_TABLES: usize = 16;
+pub const MAX_WATCH_ROWS: usize = 64;
 /// Progress file format, versioned independently of projects.
 pub const PROGRESS_FORMAT_VERSION: u32 = 1;
 /// Recent-projects list format, versioned independently of projects.
@@ -91,6 +95,37 @@ impl Default for SimulationSettings {
     }
 }
 
+/// How a watch row shows integer values; booleans and REAL values ignore it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WatchFormat {
+    #[default]
+    Auto,
+    Decimal,
+    Hex,
+    Binary,
+}
+
+/// One watched signal, by canonical signal path (`plc.StartPB`, `plc.Delay.Q`,
+/// `process.tank.levelMl`, `io.<moduleId>.ch<n>`): never by editor text, so the same row
+/// works for programs in any language.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WatchRow {
+    pub signal: String,
+    #[serde(default)]
+    pub format: WatchFormat,
+}
+
+/// A named watch table of a project.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WatchTable {
+    pub id: Identifier,
+    pub name: String,
+    pub rows: Vec<WatchRow>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ExerciseState {
@@ -126,7 +161,7 @@ pub struct Project {
     pub downloaded_station: Option<StationConfig>,
     pub programs: Vec<ProgramDocument>,
     #[serde(default)]
-    pub watch: Vec<String>,
+    pub watch_tables: Vec<WatchTable>,
     #[serde(default)]
     pub simulation: SimulationSettings,
     #[serde(default)]
@@ -163,11 +198,7 @@ impl Project {
                 "program documents must be Structured Text of at most 256 KiB".into(),
             ));
         }
-        if self.watch.len() > 64 {
-            return Err(ProjectError::Invalid(
-                "a watch list holds at most 64 signals".into(),
-            ));
-        }
+        validate_watch_tables(&self.watch_tables)?;
         if !(10..=1000).contains(&self.simulation.cycle_ms)
             || !(10..=1000).contains(&self.simulation.speed_percent)
         {
@@ -187,6 +218,38 @@ impl Project {
     pub fn plc_station(&self) -> &StationConfig {
         self.downloaded_station.as_ref().unwrap_or(&self.station)
     }
+}
+
+fn validate_watch_tables(tables: &[WatchTable]) -> Result<(), ProjectError> {
+    let invalid = |m: String| Err(ProjectError::Invalid(m));
+    if tables.len() > MAX_WATCH_TABLES {
+        return invalid(format!(
+            "a project holds at most {MAX_WATCH_TABLES} watch tables"
+        ));
+    }
+    let mut ids = std::collections::BTreeSet::new();
+    for table in tables {
+        if !ids.insert(table.id.as_str()) {
+            return invalid(format!("watch table id '{}' is used twice", table.id));
+        }
+        let name = table.name.trim();
+        if name.is_empty() || name.chars().count() > 40 {
+            return invalid("a watch table name must have 1 to 40 characters".into());
+        }
+        if table.rows.len() > MAX_WATCH_ROWS {
+            return invalid(format!(
+                "watch table '{name}' holds more than {MAX_WATCH_ROWS} signals"
+            ));
+        }
+        if table
+            .rows
+            .iter()
+            .any(|r| r.signal.trim().is_empty() || r.signal.len() > 200)
+        {
+            return invalid(format!("watch table '{name}' has an invalid signal"));
+        }
+    }
+    Ok(())
 }
 
 /// Parse a project file, migrating older formats. Newer formats are rejected.
@@ -212,6 +275,9 @@ pub fn parse(text: &str) -> Result<Project, ProjectError> {
     }
     if version <= 3 {
         value = migrate_v3(value)?;
+    }
+    if version <= 4 {
+        value = migrate_v4(value)?;
     }
     let project: Project =
         serde_json::from_value(value).map_err(|e| ProjectError::Parse(e.to_string()))?;
@@ -293,6 +359,29 @@ fn migrate_v3(mut value: serde_json::Value) -> Result<serde_json::Value, Project
         .as_object_mut()
         .ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?
         .insert("formatVersion".into(), serde_json::json!(4));
+    Ok(value)
+}
+
+/// Format 4 had one watch list; it becomes the table "Watch 1" (none when it was empty).
+fn migrate_v4(mut value: serde_json::Value) -> Result<serde_json::Value, ProjectError> {
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?;
+    let rows: Vec<serde_json::Value> = match object.remove("watch") {
+        None => Vec::new(),
+        Some(serde_json::Value::Array(list)) => list
+            .into_iter()
+            .map(|signal| serde_json::json!({ "signal": signal, "format": "auto" }))
+            .collect(),
+        Some(_) => return Err(ProjectError::Parse("watch must be a list".into())),
+    };
+    let tables = if rows.is_empty() {
+        serde_json::json!([])
+    } else {
+        serde_json::json!([{ "id": "watch-1", "name": "Watch 1", "rows": rows }])
+    };
+    object.insert("watchTables".into(), tables);
+    object.insert("formatVersion".into(), serde_json::json!(5));
     Ok(value)
 }
 
@@ -707,7 +796,12 @@ mod tests {
         ];
         let p = parse(&v2(&legacy)).unwrap();
         assert_eq!(p.format_version, FORMAT_VERSION);
-        assert_eq!(p.watch, mapped);
+        let rows: Vec<&str> = p.watch_tables[0]
+            .rows
+            .iter()
+            .map(|r| r.signal.as_str())
+            .collect();
+        assert_eq!(rows, mapped);
         let back = parse(&to_json(&p).unwrap()).unwrap();
         assert_eq!(back, p, "the current format round-trips");
         // No module at that position, or no such channel: refused, never guessed.
@@ -743,6 +837,54 @@ mod tests {
     }
 
     #[test]
+    fn the_watch_list_becomes_a_named_table_and_tables_are_bounded() {
+        let v4 = |watch: serde_json::Value| {
+            let mut value: serde_json::Value = serde_json::from_str(&project_json(4)).unwrap();
+            value["watch"] = watch;
+            value.to_string()
+        };
+        let listed = serde_json::json!(["plc.StartPB", "io.di-r0s1.ch0"]);
+        let p = parse(&v4(listed)).unwrap();
+        assert_eq!(p.watch_tables.len(), 1);
+        let table = &p.watch_tables[0];
+        assert_eq!(
+            (table.id.as_str(), table.name.as_str()),
+            ("watch-1", "Watch 1")
+        );
+        assert_eq!(table.rows[1].signal, "io.di-r0s1.ch0");
+        assert_eq!(table.rows[1].format, WatchFormat::Auto);
+        let back = parse(&to_json(&p).unwrap()).unwrap();
+        assert_eq!(back, p, "watch tables round-trip");
+        let empty = parse(&v4(serde_json::json!([]))).unwrap();
+        assert!(empty.watch_tables.is_empty());
+        // Limits: table count, row count, names and duplicate ids.
+        let table = |id: &str, rows: usize| WatchTable {
+            id: Identifier::new(id).unwrap(),
+            name: format!("Table {id}"),
+            rows: (0..rows)
+                .map(|i| WatchRow {
+                    signal: format!("plc.V{i}"),
+                    format: WatchFormat::Hex,
+                })
+                .collect(),
+        };
+        let mut q = p.clone();
+        q.watch_tables = (0..MAX_WATCH_TABLES)
+            .map(|i| table(&format!("t{i}"), 2))
+            .collect();
+        assert_eq!(q.validate(), Ok(()));
+        q.watch_tables.push(table("extra", 1));
+        assert!(q.validate().is_err(), "too many tables");
+        q.watch_tables = vec![table("a", MAX_WATCH_ROWS + 1)];
+        assert!(q.validate().is_err(), "too many rows");
+        q.watch_tables = vec![table("a", 1), table("a", 1)];
+        assert!(q.validate().is_err(), "duplicate ids");
+        q.watch_tables = vec![table("a", 1)];
+        q.watch_tables[0].name = "  ".into();
+        assert!(q.validate().is_err(), "empty name");
+    }
+
+    #[test]
     fn version_zero_migrates_and_future_versions_are_rejected() {
         let v0 = serde_json::json!({
             "format": "plclab-project", "formatVersion": 0, "id": "p-0", "name": "Old",
@@ -757,8 +899,8 @@ mod tests {
             "PROGRAM Old END_PROGRAM"
         );
         assert_eq!(
-            parse(&project_json(5)),
-            Err(ProjectError::UnsupportedVersion(5))
+            parse(&project_json(6)),
+            Err(ProjectError::UnsupportedVersion(6))
         );
         assert!(parse(&project_json(1).replace("\"name\":\"My lab\"", "\"name\":\"\"")).is_err());
         assert!(parse("{not json").is_err());

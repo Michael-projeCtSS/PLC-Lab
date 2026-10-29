@@ -161,6 +161,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             commands::frame,
             commands::cycle,
             commands::variables,
+            commands::watch,
             commands::trend,
             commands::events,
             commands::hardware,

@@ -123,7 +123,7 @@ export function project(overrides: Partial<ProjectDto> = {}): ProjectDto {
         source: "PROGRAM Main\nEND_PROGRAM\n",
       },
     ],
-    watch: [],
+    watchTables: [],
     simulation: { cycleMs: 100, speedPercent: 100 },
     createdAt: "2026-10-27T10:00:00Z",
     updatedAt: "2026-10-27T10:00:00Z",

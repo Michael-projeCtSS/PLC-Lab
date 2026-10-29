@@ -710,6 +710,20 @@ impl DesktopApp {
         })())
     }
 
+    pub fn watch(&self, request: WatchRequest) -> Result<WatchDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            if request.signals.len() > project_model::MAX_WATCH_ROWS {
+                return Err(AppError::InvalidRequest(format!(
+                    "A watch table holds at most {} signals.",
+                    project_model::MAX_WATCH_ROWS
+                )));
+            }
+            let mut state = self.lock()?;
+            Ok(state.workspace(request.workspace_id)?.watch(&request.signals))
+        })())
+    }
+
     pub fn variables(&self, request: VariablesRequest) -> Result<VariablesDto, IpcError> {
         boundary((|| {
             version(request.contract_version)?;

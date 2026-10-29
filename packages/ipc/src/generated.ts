@@ -167,11 +167,15 @@ export type ProgramDocumentDto = { id: string, name: string, language: string, s
 
 export type SimulationSettingsDto = { cycleMs: number, speedPercent: number, };
 
+export type WatchRowDto = { signal: string, format: "auto" | "decimal" | "hex" | "binary", };
+
+export type WatchTableDto = { id: string, name: string, rows: Array<WatchRowDto>, };
+
 export type ProjectDto = { id: string, name: string, 
 /**
  * "freeLab" | "exercise"
  */
-kind: "freeLab" | "exercise", exercise: string | null, platform: string, scene: string, station: StationDto, programs: Array<ProgramDocumentDto>, watch: Array<string>, simulation: SimulationSettingsDto, createdAt: string, updatedAt: string, };
+kind: "freeLab" | "exercise", exercise: string | null, platform: string, scene: string, station: StationDto, programs: Array<ProgramDocumentDto>, watchTables: Array<WatchTableDto>, simulation: SimulationSettingsDto, createdAt: string, updatedAt: string, };
 
 export type ProjectSummaryDto = { id: string, name: string, kind: string, exercise: string | null, platform: string, scene: string, updatedAt: string, };
 
@@ -338,6 +342,12 @@ export type VariablesRequest = { contractVersion: number, workspaceId: ExactU64,
 export type VariableRowDto = { signal: number, name: string, kind: string, scanValue: SignalValueDto | null, committed: SignalValueDto | null, staged: SignalValueDto | null, source: string | null, quality: string | null, forced: SignalValueDto | null, };
 
 export type VariablesDto = { total: number, rows: Array<VariableRowDto>, };
+
+export type WatchRequest = { contractVersion: number, workspaceId: ExactU64, signals: Array<number>, };
+
+export type WatchEntryDto = { signal: number, path: string, label: string, kind: string, valueType: string, unit: string | null, active: boolean, value: SignalValueDto | null, scanValue: SignalValueDto | null, committed: SignalValueDto | null, staged: SignalValueDto | null, source: string | null, quality: string | null, forced: SignalValueDto | null, };
+
+export type WatchDto = { worldTimeUs: ExactU64, cycle: ExactU64, rows: Array<WatchEntryDto>, };
 
 export type TrendRequest = { contractVersion: number, workspaceId: ExactU64, signals: Array<number>, fromUs: ExactU64, toUs: ExactU64, maxPoints: number, };
 

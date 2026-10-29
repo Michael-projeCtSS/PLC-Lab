@@ -14,9 +14,11 @@ import {
   type ProjectDto,
   type SignalDto,
   type StationDto,
+  type WatchTableDto,
   type WorkspaceDto,
 } from "@plc-lab/ipc";
 import { useCoalescedRead } from "../useCoalescedRead";
+import { newTableId, newTableName, setRows, updateTable } from "./watchEdit";
 
 export type Message = {
   id: number;
@@ -37,7 +39,8 @@ export function useLab(projectId: string) {
   const [diagnostics, setDiagnostics] = useState<DiagnosticDto[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [report, setReport] = useState<GradeReportDto | null>(null);
-  const [watch, setWatchState] = useState<string[]>([]);
+  const [watchTables, setWatchTables] = useState<WatchTableDto[]>([]);
+  const [activeTable, setActiveTable] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [fatal, setFatal] = useState<unknown>(null);
   const revision = useRef(0);
@@ -58,6 +61,10 @@ export function useLab(projectId: string) {
     () => (workspace ? { workspaceId: workspace.workspaceId } : null),
     [workspace],
   );
+  // The active watch table drives the live frame's watch values and the waveforms.
+  const table =
+    watchTables.find((t) => t.id === activeTable) ?? watchTables[0] ?? null;
+  const watch = useMemo(() => table?.rows.map((r) => r.signal) ?? [], [table]);
   const watchIds = useMemo(
     () =>
       watch
@@ -103,7 +110,8 @@ export function useLab(projectId: string) {
       applyFrame(nextFrameRequest(), w.frame);
       setSignals(w.signals);
       setSourceState(p.programs[0]?.source ?? "");
-      setWatchState(p.watch);
+      setWatchTables(p.watchTables);
+      setActiveTable(p.watchTables[0]?.id ?? null);
     })().catch((e: unknown) => active && setFatal(e));
     return () => {
       active = false;
@@ -304,13 +312,15 @@ export function useLab(projectId: string) {
     [log, project, source],
   );
 
-  const setWatch = useCallback(
-    (paths: string[]) => {
-      setWatchState(paths);
+  /** Save the watch tables in the project; the backend validates the limits. */
+  const saveWatchTables = useCallback(
+    (tables: WatchTableDto[], active?: string | null) => {
+      setWatchTables(tables);
+      if (active !== undefined) setActiveTable(active);
       if (!project) return;
       const next = {
         ...project,
-        watch: paths,
+        watchTables: tables,
         programs: project.programs.map((d, i) =>
           i === 0 ? { ...d, source } : d,
         ),
@@ -323,6 +333,20 @@ export function useLab(projectId: string) {
         );
     },
     [log, project, source],
+  );
+
+  /** Watch exactly these signal paths in the active table (created when none exists). */
+  const setWatch = useCallback(
+    (paths: string[]) => {
+      const current = table ?? {
+        id: newTableId(watchTables),
+        name: newTableName(watchTables),
+        rows: [],
+      };
+      const next = setRows(current, paths);
+      saveWatchTables(updateTable(watchTables, next), next.id);
+    },
+    [table, watchTables, saveWatchTables],
   );
 
   return {
@@ -341,6 +365,10 @@ export function useLab(projectId: string) {
     report,
     watch,
     setWatch,
+    watchTables,
+    activeTable: table?.id ?? null,
+    selectTable: setActiveTable,
+    saveWatchTables,
     saveStation,
     watchIds,
     busy,

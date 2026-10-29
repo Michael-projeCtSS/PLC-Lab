@@ -47,6 +47,7 @@ export const COMMANDS = [
   "frame",
   "cycle",
   "variables",
+  "watch",
   "trend",
   "events",
   "hardware",
@@ -182,6 +183,9 @@ export const api = {
     ),
   variables: (w: Ws, filter: string | null, offset: number, limit: number) =>
     call("variables", { ...w, filter, offset, limit }, V.variables),
+  /** Live rows of a watch table (at most 64 signals). */
+  watch: (w: Ws, signals: number[]) =>
+    call("watch", { ...w, signals }, V.watch),
   trend: (
     w: Ws,
     signals: number[],

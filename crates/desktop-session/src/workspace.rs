@@ -798,6 +798,52 @@ impl Workspace {
         }
     }
 
+    /// Live watch rows for signal ids; ids the runtime does not know are left out.
+    pub fn watch(&self, signals: &[u32]) -> WatchDto {
+        let s = &self.session;
+        let (_, rows) = s.variables(None, 0, usize::MAX);
+        let details: std::collections::BTreeMap<_, _> =
+            rows.into_iter().map(|r| (r.signal, r)).collect();
+        let ids: Vec<SignalId> = signals.iter().map(|id| SignalId(*id)).collect();
+        let rows = s
+            .watch(&ids)
+            .into_iter()
+            .filter_map(|(id, value)| {
+                let descriptor = s.signals().get(id)?;
+                let row = details.get(&id);
+                let channel = s.channel_of(id);
+                let source = row
+                    .and_then(|r| r.source.clone())
+                    .or_else(|| channel.map(|c| s.channel_address(c)));
+                let reading = channel.and_then(|c| s.station().reading(c));
+                let quality = row
+                    .and_then(|r| r.quality)
+                    .or_else(|| reading.map(|r| r.quality));
+                Some(WatchEntryDto {
+                    signal: id.0,
+                    path: descriptor.path.clone(),
+                    label: descriptor.label.clone(),
+                    kind: convert::signal_kind(descriptor.kind).into(),
+                    value_type: format!("{:?}", descriptor.value_type).to_uppercase(),
+                    unit: descriptor.unit.map(str::to_owned),
+                    active: descriptor.active,
+                    value: value.map(convert::value),
+                    scan_value: row.and_then(|r| r.scan_value).map(convert::value),
+                    committed: row.and_then(|r| r.committed).map(convert::value),
+                    staged: row.and_then(|r| r.staged).map(convert::value),
+                    source,
+                    quality: quality.map(|q| convert::quality(q).into()),
+                    forced: row.and_then(|r| r.forced).map(convert::value),
+                })
+            })
+            .collect();
+        WatchDto {
+            world_time_us: ExactU64(s.now().as_micros()),
+            cycle: ExactU64(s.cycle()),
+            rows,
+        }
+    }
+
     pub fn variables(&self, filter: Option<&str>, offset: u32, limit: u16) -> VariablesDto {
         let (total, rows) =
             self.session

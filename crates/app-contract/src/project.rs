@@ -123,6 +123,22 @@ pub struct SimulationSettingsDto {
     pub cycle_ms: u32,
     pub speed_percent: u32,
 }
+/// One watched signal by canonical signal path.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WatchRowDto {
+    pub signal: String,
+    #[ts(type = "\"auto\" | \"decimal\" | \"hex\" | \"binary\"")]
+    pub format: String,
+}
+/// A named watch table of a project.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WatchTableDto {
+    pub id: String,
+    pub name: String,
+    pub rows: Vec<WatchRowDto>,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ProjectDto {
@@ -136,7 +152,7 @@ pub struct ProjectDto {
     pub scene: String,
     pub station: StationDto,
     pub programs: Vec<ProgramDocumentDto>,
-    pub watch: Vec<String>,
+    pub watch_tables: Vec<WatchTableDto>,
     pub simulation: SimulationSettingsDto,
     pub created_at: String,
     pub updated_at: String,
@@ -224,7 +240,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
     declarations!(config;
         SlotRefDto, ChannelRefDto, ChannelConfigDto, ConfiguredModuleDto, IoMappingDto, InterfaceDto, ModbusDataTypeDto,
         ModbusValueDto, ModbusScanDto, StationNetworkDto, StationDto, ProgramDocumentDto, SimulationSettingsDto,
-        ProjectDto, ProjectSummaryDto, ProjectListDto, ProjectCreateRequest, ProjectSaveRequest, SourceUpdateRequest,
+        WatchRowDto, WatchTableDto, ProjectDto, ProjectSummaryDto, ProjectListDto, ProjectCreateRequest, ProjectSaveRequest, SourceUpdateRequest,
         ProjectSaveAsRequest, ProjectImportRequest, ProjectExportDto, OpenRequestDto, OpenRequestEventDto
     )
 }

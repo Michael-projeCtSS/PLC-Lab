@@ -342,6 +342,17 @@ export const station = obj<G.StationDto>({
   }),
 });
 const projectKind = literal("freeLab", "exercise");
+const watchTable = obj<G.WatchTableDto>({
+  id: str,
+  name: str,
+  rows: arr(
+    obj<G.WatchRowDto>({
+      signal: str,
+      format: literal("auto", "decimal", "hex", "binary"),
+    }),
+    64,
+  ),
+});
 export const project = obj<G.ProjectDto>({
   id: str,
   name: str,
@@ -358,7 +369,7 @@ export const project = obj<G.ProjectDto>({
       source: str,
     }),
   ),
-  watch: arr(str),
+  watchTables: arr(watchTable, 16),
   simulation: obj<G.SimulationSettingsDto>({ cycleMs: u32, speedPercent: u32 }),
   createdAt: str,
   updatedAt: str,
@@ -578,6 +589,29 @@ export const variables = obj<G.VariablesDto>({
       forced: nullable(signalValue),
     }),
     500,
+  ),
+});
+export const watch = obj<G.WatchDto>({
+  worldTimeUs: u64,
+  cycle: u64,
+  rows: arr(
+    obj<G.WatchEntryDto>({
+      signal: u32,
+      path: str,
+      label: str,
+      kind: str,
+      valueType: str,
+      unit: nullable(str),
+      active: bool,
+      value: nullable(signalValue),
+      scanValue: nullable(signalValue),
+      committed: nullable(signalValue),
+      staged: nullable(signalValue),
+      source: nullable(str),
+      quality: nullable(str),
+      forced: nullable(signalValue),
+    }),
+    64,
   ),
 });
 export const trend = obj<G.TrendDto>({

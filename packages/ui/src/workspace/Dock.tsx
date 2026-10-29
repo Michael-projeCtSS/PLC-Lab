@@ -10,6 +10,7 @@ import { formatValue, numeric, seconds, valueClass } from "../format";
 import { Badge, Tabs, VirtualList } from "../ui";
 import { useFrameQuery } from "./useFrameQuery";
 import type { Lab } from "./useLab";
+import { WatchTables } from "./WatchTables";
 
 type DockTab = "variables" | "watch" | "waves" | "events" | "messages";
 
@@ -42,7 +43,7 @@ export function Dock({ lab }: { lab: Lab }) {
       />
       <div className="ws-dock-body">
         {tab === "variables" && <Variables lab={lab} />}
-        {tab === "watch" && <Watch lab={lab} />}
+        {tab === "watch" && <WatchTables lab={lab} />}
         {tab === "waves" && <Waveforms lab={lab} />}
         {tab === "events" && <Events lab={lab} />}
         {tab === "messages" && <Messages lab={lab} />}
@@ -237,102 +238,6 @@ function Variables({ lab }: { lab: Lab }) {
                           {watched ? "Unwatch" : "Watch"}
                         </button>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Watch({ lab }: { lab: Lab }) {
-  const [adding, setAdding] = useState("");
-  const byPath = new Map(lab.signals.map((s) => [s.path, s]));
-  const values = new Map(
-    (lab.frame?.watch ?? []).map((w) => [w.signal, w.value]),
-  );
-  const candidates = lab.signals.filter(
-    (s) => s.active && !lab.watch.includes(s.path) && s.kind !== "CHANNEL",
-  );
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div className="row" style={{ padding: "4px 8px" }}>
-        <select
-          className="input"
-          value={adding}
-          onChange={(e) => setAdding(e.target.value)}
-          aria-label="Signal to watch"
-          style={{ width: 280 }}
-        >
-          <option value="">Add a PLC tag or process value…</option>
-          {candidates.map((s) => (
-            <option key={s.path} value={s.path}>
-              {s.kind === "PHYSICAL" ? "Process: " : "PLC: "}
-              {s.label}
-            </option>
-          ))}
-        </select>
-        <button
-          className="btn btn-sm"
-          disabled={!adding}
-          onClick={() => (
-            lab.setWatch([...lab.watch, adding].slice(0, 64)),
-            setAdding("")
-          )}
-        >
-          Add
-        </button>
-      </div>
-      <div style={{ flex: 1, overflow: "auto" }}>
-        {lab.watch.length === 0 ? (
-          <div className="empty">
-            Add PLC tags and process values to follow them together. Watched
-            signals also appear in Waveforms.
-          </div>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Signal</th>
-                <th>Source</th>
-                <th>Value</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {lab.watch.map((path) => {
-                const s = byPath.get(path);
-                const v = s ? (values.get(s.id) ?? null) : null;
-                return (
-                  <tr key={path}>
-                    <td className="mono">{s?.label ?? path}</td>
-                    <td className="dim">
-                      {s
-                        ? s.kind === "PHYSICAL"
-                          ? "process"
-                          : s.kind === "PLC_INPUT"
-                            ? "PLC input"
-                            : s.kind === "PLC_OUTPUT"
-                              ? "PLC output"
-                              : "PLC"
-                        : "not available"}
-                    </td>
-                    <td className={valueClass(v)}>
-                      {formatValue(v, s?.unit ?? null)}
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-ghost"
-                        onClick={() =>
-                          lab.setWatch(lab.watch.filter((p) => p !== path))
-                        }
-                      >
-                        Remove
-                      </button>
                     </td>
                   </tr>
                 );

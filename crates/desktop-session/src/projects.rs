@@ -14,7 +14,7 @@ use lab_model::{
 };
 use project_model::{
     FORMAT_VERSION, ProgramDocument, Project, ProjectFormat, ProjectKind, ProjectStore,
-    ProjectSummary, SimulationSettings,
+    ProjectSummary, SimulationSettings, WatchFormat, WatchRow, WatchTable,
 };
 
 /// UTC wall-clock timestamp for project metadata only (never simulation time).
@@ -69,7 +69,22 @@ pub fn to_dto(p: &Project) -> AppResult<ProjectDto> {
                 source: d.source.clone(),
             })
             .collect(),
-        watch: p.watch.clone(),
+        watch_tables: p
+            .watch_tables
+            .iter()
+            .map(|t| WatchTableDto {
+                id: t.id.to_string(),
+                name: t.name.clone(),
+                rows: t
+                    .rows
+                    .iter()
+                    .map(|r| WatchRowDto {
+                        signal: r.signal.clone(),
+                        format: watch_format_name(r.format).into(),
+                    })
+                    .collect(),
+            })
+            .collect(),
         simulation: SimulationSettingsDto {
             cycle_ms: p.simulation.cycle_ms,
             speed_percent: p.simulation.speed_percent,
@@ -126,7 +141,11 @@ pub fn apply_edit(
             })
         })
         .collect::<AppResult<_>>()?;
-    stored.watch = dto.watch.clone();
+    stored.watch_tables = dto
+        .watch_tables
+        .iter()
+        .map(watch_table)
+        .collect::<AppResult<_>>()?;
     stored.simulation = SimulationSettings {
         cycle_ms: dto.simulation.cycle_ms,
         speed_percent: dto.simulation.speed_percent,
@@ -152,6 +171,48 @@ pub fn apply_edit(
     stored.updated_at = timestamp();
     stored.validate()?;
     Ok(())
+}
+
+fn watch_format_name(format: WatchFormat) -> &'static str {
+    match format {
+        WatchFormat::Auto => "auto",
+        WatchFormat::Decimal => "decimal",
+        WatchFormat::Hex => "hex",
+        WatchFormat::Binary => "binary",
+    }
+}
+
+/// A watch table from the view; the stored project validates its limits.
+fn watch_table(dto: &WatchTableDto) -> AppResult<WatchTable> {
+    let id = Identifier::new(dto.id.as_str()).map_err(|_| {
+        AppError::InvalidRequest(format!("'{}' is not a valid watch table id.", dto.id))
+    })?;
+    let rows = dto
+        .rows
+        .iter()
+        .map(|r| {
+            let format = match r.format.as_str() {
+                "auto" => WatchFormat::Auto,
+                "decimal" => WatchFormat::Decimal,
+                "hex" => WatchFormat::Hex,
+                "binary" => WatchFormat::Binary,
+                other => {
+                    return Err(AppError::InvalidRequest(format!(
+                        "Unknown watch format '{other}'."
+                    )));
+                }
+            };
+            Ok(WatchRow {
+                signal: r.signal.clone(),
+                format,
+            })
+        })
+        .collect::<AppResult<_>>()?;
+    Ok(WatchTable {
+        id,
+        name: dto.name.trim().to_owned(),
+        rows,
+    })
 }
 
 fn type_name(t: TagType) -> &'static str {
@@ -270,7 +331,7 @@ pub fn create(
                 language: "ST".into(),
                 source: e.starter_program.clone(),
             }],
-            watch: Vec::new(),
+            watch_tables: Vec::new(),
             simulation: SimulationSettings::default(),
             exercise_state: None,
         }
@@ -315,7 +376,7 @@ pub fn create(
                 language: "ST".into(),
                 source: starter_program(scene),
             }],
-            watch: Vec::new(),
+            watch_tables: Vec::new(),
             simulation: SimulationSettings::default(),
             exercise_state: None,
         }

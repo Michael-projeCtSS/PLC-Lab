@@ -742,7 +742,20 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
     );
     let mut edited = project.clone();
     edited.programs[0].source = source.clone();
-    edited.watch = vec!["plc.DriveRun".into(), "process.drive.speedPermille".into()];
+    edited.watch_tables = vec![WatchTableDto {
+        id: "drive".into(),
+        name: "Drive".into(),
+        rows: vec![
+            WatchRowDto {
+                signal: "plc.DriveRun".into(),
+                format: "auto".into(),
+            },
+            WatchRowDto {
+                signal: "process.drive.speedPermille".into(),
+                format: "hex".into(),
+            },
+        ],
+    }];
     edited.station.network.interface = None;
     // A moved module keeps its stable id and takes its mapped channels along, as the
     // station editor does.
@@ -780,7 +793,7 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
         })
         .unwrap();
     assert_eq!(reopened.programs[0].source, source);
-    assert_eq!(reopened.watch, edited.watch);
+    assert_eq!(reopened.watch_tables, edited.watch_tables);
     assert_eq!(reopened.station, edited.station);
     let reopened_module = reopened
         .station
@@ -813,7 +826,7 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
     assert_ne!(copy.id, project.id);
     assert_eq!(copy.name, "Drive bench copy");
     assert_eq!(copy.programs[0].source, source);
-    assert_eq!(copy.watch, edited.watch);
+    assert_eq!(copy.watch_tables, edited.watch_tables);
     assert_eq!(copy.station, edited.station);
     assert_eq!(copy.platform, "siemens.s7-1500");
     assert_eq!(copy.scene, "scene.conveyor-drive");
@@ -1199,6 +1212,122 @@ fn saved_and_downloaded_configurations_survive_reopen_and_restart() {
         .unwrap()
         .text;
     assert!(file.contains("\"downloadedStation\""), "{file}");
+}
+
+#[test]
+fn watch_rows_come_from_the_runtime_for_every_kind_of_canonical_signal() {
+    let f = fixture("watch-rows");
+    let (project, w) = open(
+        &f.app,
+        ProjectCreateRequest {
+            contract_version: V,
+            name: "Watch".into(),
+            exercise: None,
+            scene: Some("scene.hardware-station".into()),
+            platform: None,
+        },
+    );
+    let id = w.workspace_id;
+    // PLC tag signals exist once a program is loaded.
+    let (loaded, _) = f
+        .app
+        .build_and_load(BuildLoadRequest {
+            contract_version: V,
+            workspace_id: id,
+            source: project.programs[0].source.clone(),
+            revision: ExactU64(1),
+            station: None,
+            run_after_load: false,
+        })
+        .unwrap();
+    assert_eq!(loaded.outcome, "LOADED", "{:?}", loaded.message);
+    f.app
+        .plc_mode(PlcModeRequest {
+            contract_version: V,
+            workspace_id: id,
+            mode: "RUN".into(),
+        })
+        .unwrap();
+    step(&f.app, id, 10);
+    let signal = |signals: &[SignalDto], path: &str| -> u32 {
+        signals.iter().find(|s| s.path == path).unwrap().id
+    };
+    let paths = [
+        "plc.LevelRaw",
+        "plc.InletValve",
+        "io.ai-r0s4.ch0",
+        "process.tank.levelPermille",
+    ];
+    let mut ids: Vec<u32> = paths.iter().map(|p| signal(&loaded.signals, p)).collect();
+    f.app
+        .force(ForceRequest {
+            contract_version: V,
+            workspace_id: id,
+            signal: ids[1],
+            value: Some(SignalValueDto::Bool { value: true }),
+        })
+        .unwrap();
+    // An id the runtime does not know is left out.
+    ids.push(u32::MAX);
+    let watch = |ids: Vec<u32>| {
+        f.app.watch(WatchRequest {
+            contract_version: V,
+            workspace_id: id,
+            signals: ids,
+        })
+    };
+    let live = watch(ids.clone()).unwrap();
+    let rows: Vec<&str> = live.rows.iter().map(|r| r.path.as_str()).collect();
+    assert_eq!(rows, paths);
+    let [level, valve, channel, tank] = &live.rows[..] else {
+        panic!("{:?}", live.rows)
+    };
+    assert_eq!(
+        (level.kind.as_str(), level.value_type.as_str()),
+        ("PLC_INPUT", "INT")
+    );
+    assert!(
+        level.scan_value.is_some() && level.source.is_some(),
+        "{level:?}"
+    );
+    assert_eq!(level.quality.as_deref(), Some("GOOD"));
+    assert_eq!(valve.kind, "PLC_OUTPUT");
+    assert_eq!(valve.forced, Some(SignalValueDto::Bool { value: true }));
+    assert!(valve.committed.is_some(), "{valve:?}");
+    assert_eq!(channel.kind, "CHANNEL");
+    assert_eq!(channel.label, "R0/S4/CH0");
+    assert_eq!(channel.quality.as_deref(), Some("GOOD"), "{channel:?}");
+    assert!(
+        channel.source.is_some() && channel.value.is_some(),
+        "{channel:?}"
+    );
+    assert_eq!(tank.kind, "PHYSICAL");
+    assert!(
+        matches!(tank.value, Some(SignalValueDto::Count { .. })),
+        "{tank:?}"
+    );
+    assert!(live.cycle.0 >= 10, "{}", live.cycle.0);
+    // A watch table holds at most 64 signals.
+    let refused = watch(vec![ids[0]; 65]).unwrap_err();
+    assert_eq!(refused.code, "APP-INVALID-REQUEST");
+    // A moved module keeps its canonical channel: the row still resolves.
+    let mut station = project.station.clone();
+    let ai = station
+        .modules
+        .iter_mut()
+        .find(|m| m.id == "ai-r0s4")
+        .unwrap();
+    ai.position.slot = 6;
+    for mapping in station.io_map.iter_mut() {
+        if mapping.channel.slot == 4 {
+            mapping.channel.slot = 6;
+        }
+    }
+    station.modules.sort_by_key(|m| m.position.slot);
+    load(&f.app, id, &project.programs[0].source, 2, Some(station));
+    let moved = watch(vec![ids[2]]).unwrap();
+    assert_eq!(moved.rows[0].path, "io.ai-r0s4.ch0");
+    assert_eq!(moved.rows[0].label, "R0/S6/CH0");
 }
 
 #[test]
