@@ -1,16 +1,15 @@
 @echo off
-rem Starts the staged PLC Lab release. Development mode is RUN_PLC_LAB_DEV.bat.
+rem Optional fallback: PLC Lab starts by double-clicking "PLC Lab.exe" in this folder.
+rem Development mode is RUN_PLC_LAB_DEV.bat.
 setlocal EnableExtensions DisableDelayedExpansion
-set "PLC_LAB_DIR=%~dp0releases\current"
-set "PLC_LAB_APP=%PLC_LAB_DIR%\PLC Lab Desktop.exe"
-if not exist "%PLC_LAB_APP%" (
-  echo No local PLC Lab release exists. Run BUILD_PLC_LAB_RELEASE.bat first.
+if not exist "%~dp0PLC Lab.exe" (
+  echo PLC Lab.exe was not found next to this file. Run BUILD_PLC_LAB_RELEASE.bat first.
   if not "%PLC_LAB_NO_PAUSE%"=="1" pause
   exit /b 1
 )
-start "" /D "%PLC_LAB_DIR%" "%PLC_LAB_APP%"
+start "" "%~dp0PLC Lab.exe"
 if errorlevel 1 (
-  echo ERROR: PLC Lab could not be started from "%PLC_LAB_APP%".
+  echo ERROR: "%~dp0PLC Lab.exe" could not be started.
   if not "%PLC_LAB_NO_PAUSE%"=="1" pause
   exit /b 1
 )

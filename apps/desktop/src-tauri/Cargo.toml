@@ -25,5 +25,9 @@ app-contract.workspace = true
 desktop-session.workspace = true
 tokio = { version = "1", features = ["time"] }
 
+# Native message boxes for startup problems and the WebView2 runtime check (safe Win32).
+[target.'cfg(windows)'.dependencies]
+winsafe = { version = "0.0.29", features = ["advapi", "user"] }
+
 [lints]
 workspace = true

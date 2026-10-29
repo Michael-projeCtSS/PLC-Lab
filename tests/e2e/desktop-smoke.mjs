@@ -2,13 +2,14 @@
 // No transport mocks: the test drives the real UI, which calls the real backend.
 //
 // Usage: node tests/e2e/desktop-smoke.mjs [--exe <path>] [--build development|release]
-//                                         [--out <artifacts subfolder>] [--launcher]
-//                                         [--bat] [--relocate]
+//                                         [--out <artifacts subfolder>] [--bat] [--relocate]
 //
-// --launcher  the executable is the root launcher: it starts the staged app and exits.
-// --bat       start through RUN_PLC_LAB.bat (the release fallback) instead of --exe.
-// --relocate  first copy PLC Lab.exe, RUN_PLC_LAB.bat and releases/current into a fresh
-//             folder whose path contains spaces and start from that copy.
+// Every launch uses another working directory than the executable's folder.
+// --exe       the executable relative to the product root; "PLC Lab.exe" is the user's
+//             entry point (the application itself, ADR-0030).
+// --bat       start through RUN_PLC_LAB.bat (the optional fallback) instead of --exe.
+// --relocate  first copy the staged distribution (PLC Lab.exe, resources/, the BAT) into a
+//             fresh folder whose path contains spaces and start from that copy.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -18,6 +19,11 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright-core";
+import {
+  APPLICATION,
+  distributionEntries,
+  verifyDistribution,
+} from "../../scripts/distribution.mjs";
 import { taskListContainsApplication } from "../../scripts/human-test.mjs";
 import { root } from "../../scripts/toolchain.mjs";
 
@@ -26,13 +32,12 @@ const { values } = parseArgs({
     exe: { type: "string", default: "target/debug/plc-lab-desktop.exe" },
     build: { type: "string", default: "development" },
     out: { type: "string", default: "desktop-smoke" },
-    launcher: { type: "boolean", default: false },
     bat: { type: "boolean", default: false },
     relocate: { type: "boolean", default: false },
   },
 });
-// Both the root launcher and the batch file start the staged app and exit.
-const detached = values.launcher || values.bat;
+// The batch file starts PLC Lab.exe and exits.
+const detached = values.bat;
 if (process.platform !== "win32")
   throw new Error("The native smoke test requires Windows and WebView2.");
 
@@ -85,26 +90,33 @@ let launchError = null;
 // The folder the application is started from: the repository or a relocated copy.
 let installation = root;
 if (values.relocate) {
-  installation = await mkdtemp(path.join(os.tmpdir(), "PLC Lab Test "));
-  for (const item of [
-    "PLC Lab.exe",
-    "RUN_PLC_LAB.bat",
-    path.join("releases", "current"),
-  ])
+  installation = await mkdtemp(
+    path.join(os.tmpdir(), "PLC Lab Product Test With Spaces "),
+  );
+  for (const item of await distributionEntries(root))
     await cp(path.join(root, item), path.join(installation, item), {
       recursive: true,
       errorOnExist: true,
     });
 }
+// A release runs from the staged distribution: one application executable, no second one.
+if (values.build === "release") {
+  const problems = await verifyDistribution(installation);
+  assert.deepEqual(problems, [], `distribution in ${installation}`);
+}
 const target = values.bat
   ? path.join(installation, "RUN_PLC_LAB.bat")
   : path.resolve(installation, values.exe);
+// The process that owns the window: PLC Lab.exe for the BAT and the root executable.
+const image = values.bat ? APPLICATION : path.basename(target);
 const environment = {
   ...process.env,
   WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
   WEBVIEW2_USER_DATA_FOLDER: path.join(directory, `webview-${stamp}`),
   PLC_LAB_DATA_DIR: path.join(directory, `data-${stamp}`),
   PLC_LAB_NO_PAUSE: "1",
+  // A startup problem is printed and exits instead of waiting in a message box.
+  PLC_LAB_NO_DIALOG: "1",
 };
 const application = values.bat
   ? spawn(
@@ -119,8 +131,8 @@ const application = values.bat
       },
     )
   : spawn(target, [], {
-      // The launcher must not depend on the working directory.
-      cwd: values.launcher ? os.tmpdir() : path.dirname(target),
+      // The application must not depend on the working directory.
+      cwd: os.tmpdir(),
       env: environment,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
@@ -232,6 +244,16 @@ try {
     );
     assert.equal(pack.status, "LOADED", pack.errors.join("; "));
     assert.ok(pack.exercises >= 17, `${pack.exercises} exercises`);
+    // Paths may differ in case or short-name form; the folder layout must match.
+    if (values.build === "release")
+      assert.ok(
+        pack.path
+          .toLowerCase()
+          .includes(
+            `${path.sep}${path.join("resources", "knowledge-packs")}${path.sep}`.toLowerCase(),
+          ),
+        `the release loaded its pack from ${pack.path}, not from resources/`,
+      );
     if (values.relocate)
       assert.ok(
         pack.path.includes(path.basename(installation)),
@@ -674,7 +696,6 @@ try {
   await page.screenshot({ path: path.join(directory, "final.png") });
 
   await step("a second launch activates the running instance", async () => {
-    const image = detached ? "PLC Lab Desktop.exe" : path.basename(target);
     const second = values.bat
       ? spawn(
           process.env.ComSpec ?? "cmd.exe",
@@ -705,7 +726,7 @@ try {
       });
     });
     assert.equal(code, 0, "the second launch exits cleanly");
-    // A launcher or BAT exits at once; give a second application time to appear.
+    // A second launch hands over and exits at once; give a second window time to appear.
     await delay(5_000);
     const instances = (
       spawnSync(
@@ -735,10 +756,64 @@ try {
     );
   });
 
+  if (!values.bat)
+    await step(
+      "a second launch with a project file opens it in the running instance",
+      async () => {
+        const created = await invoke("create_project", {
+          contractVersion: 8,
+          name: "Handoff source",
+          exercise: null,
+          scene: "scene.io-basics",
+          platform: "generic.iec",
+        });
+        assert.ok(created.ok, JSON.stringify(created.error));
+        const exported = await invoke("export_project", {
+          contractVersion: 8,
+          id: created.ok.id,
+        });
+        assert.ok(exported.ok, JSON.stringify(exported.error));
+        const project = JSON.parse(exported.ok.text);
+        project.name = "Handed over project";
+        const file = path.join(
+          directory,
+          `handoff ${stamp}`,
+          "Handed over project.plclab",
+        );
+        await mkdir(path.dirname(file), { recursive: true });
+        await writeFile(file, JSON.stringify(project));
+        // PLC Lab.exe "<file.plclab>": the running instance receives the typed request.
+        const second = spawn(target, [file], {
+          cwd: os.tmpdir(),
+          env: environment,
+          windowsHide: true,
+          stdio: "ignore",
+        });
+        const code = await new Promise((resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(new Error("the project launch did not exit")),
+            30_000,
+          );
+          second.once("error", reject);
+          second.once("exit", (c) => {
+            clearTimeout(timer);
+            resolve(c);
+          });
+        });
+        assert.equal(code, 0, "the project launch hands over and exits");
+        await page
+          .getByText("Handed over project", { exact: true })
+          .first()
+          .waitFor({ timeout: 15_000 });
+        await page
+          .getByRole("button", { name: "Build & Load to PLC" })
+          .waitFor({ timeout: 30_000 });
+      },
+    );
+
   await step("application exits on a close request", async () => {
     await browser.close().catch(() => undefined);
     browser = undefined;
-    const image = detached ? "PLC Lab Desktop.exe" : path.basename(target);
     const tasklist = path.join(
       process.env.SystemRoot ?? "C:/Windows",
       "System32",
@@ -785,7 +860,7 @@ try {
   await browser?.close().catch(() => undefined);
   if (application.exitCode === null) application.kill();
   if (detached)
-    spawnSync("taskkill", ["/IM", "PLC Lab Desktop.exe", "/T", "/F"], {
+    spawnSync("taskkill", ["/IM", APPLICATION, "/T", "/F"], {
       stdio: "ignore",
     });
   await writeFile(path.join(directory, "native.log"), output);

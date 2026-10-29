@@ -128,7 +128,7 @@ test("release staging preserves exact bytes and replaces the whole previous arti
       code: "ENOENT",
     });
     const manifest = JSON.parse(
-      await readFile(path.join(current, "release-manifest.json"), "utf8"),
+      await readFile(path.join(current, "product.json"), "utf8"),
     );
     assert.equal(manifest.files[0].name, "copied.bin");
     assert.equal(manifest.files[0].sha256.length, 64);
@@ -157,7 +157,7 @@ test("release staging preserves exact bytes and replaces the whole previous arti
 });
 
 test(
-  "release BAT from another working directory fails clearly when no release exists",
+  "fallback BAT from another working directory fails clearly when PLC Lab.exe is missing",
   { skip: process.platform !== "win32" },
   async () => {
     const directory = await fixture();
@@ -180,7 +180,7 @@ test(
       assert.notEqual(result.status, 0);
       assert.match(
         result.stdout,
-        /No local PLC Lab release exists\. Run BUILD_PLC_LAB_RELEASE\.bat first\./,
+        /PLC Lab\.exe was not found next to this file\. Run BUILD_PLC_LAB_RELEASE\.bat first\./,
       );
     } finally {
       await cleanup(directory);

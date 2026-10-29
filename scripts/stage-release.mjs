@@ -22,13 +22,18 @@ import {
   PACK_NAME,
   verifyZip,
 } from "./knowledge-pack.mjs";
+import {
+  APPLICATION,
+  LEGACY_DIRS,
+  LEGACY_FILES,
+  PRODUCT_MANIFEST,
+  RESOURCES,
+  verifyDistribution,
+} from "./distribution.mjs";
 
-export const APPLICATION = "PLC Lab Desktop.exe";
-/** Root entry points: the primary launcher window and the compatibility alias. */
-export const ROOT_LAUNCHERS = [
-  { source: "Launcher.exe", target: "Launcher.exe" },
-  { source: "plc-lab-launcher.exe", target: "PLC Lab.exe" },
-];
+// The product root holds the one application executable `PLC Lab.exe` (the Tauri
+// release binary itself, renamed) and `resources/` with the data it reads (ADR-0030).
+export { APPLICATION };
 
 function within(parent, target) {
   const relative = path.relative(parent, path.resolve(target));
@@ -122,17 +127,17 @@ export async function stageArtifactSet(
       );
     }
     await writeFile(
-      path.join(staging, "release-manifest.json"),
+      path.join(staging, PRODUCT_MANIFEST),
       `${JSON.stringify({ ...information, stagedAt: new Date().toISOString(), files: records }, null, 2)}\n`,
     );
     await writeFile(
       path.join(staging, "RUNTIME_REQUIREMENTS.txt"),
       [
         "PLC Lab portable release (not an installer).",
-        "Start it with Launcher.exe (or PLC Lab.exe / RUN_PLC_LAB.bat) in the repository root, or with PLC Lab Desktop.exe in this folder.",
+        "Start it by double-clicking PLC Lab.exe in the folder that contains this resources folder.",
         "Requires Windows 10/11 x64 and the Microsoft Edge WebView2 Runtime (preinstalled on current Windows; not bundled).",
-        "Knowledge packs are read from knowledge-packs\\ in this folder and from %APPDATA%\\dev.plclab.desktop\\knowledge-packs.",
-        "Keep every file listed in release-manifest.json together.",
+        "Knowledge packs are read from resources\\knowledge-packs\\ and from %APPDATA%\\dev.plclab.desktop\\knowledge-packs.",
+        "Keep PLC Lab.exe and this resources folder together; product.json lists every file with its SHA-256.",
         "",
       ].join("\r\n"),
     );
@@ -232,12 +237,13 @@ async function main() {
     throw new Error(
       "Could not identify executable DLL imports; release artifact set was not verified.",
     );
-  const files = [{ source: sourceName, target: APPLICATION }];
+  // DLLs built with the application sit beside it; system DLLs are only recorded.
+  const localDependencies = [];
   const systemDependencies = [];
   for (const name of dependencies) {
     try {
       await stat(path.join(sourceDir, name));
-      files.push({ source: name, target: name });
+      localDependencies.push(name);
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
       if (!/^(api-ms-win-|ext-ms-win-)/i.test(name)) {
@@ -248,31 +254,31 @@ async function main() {
       systemDependencies.push(name);
     }
   }
-  const parent = path.join(root, "releases");
-  await mkdir(parent, { recursive: true });
-  within(await realpath(root), await realpath(parent));
-  const destination = path.join(parent, "current");
   // The default knowledge pack ships as the verified release archive's content.
   const pack = verifyZip(DEFAULT_ZIP, DEFAULT_PACK);
   if (pack.problems.length)
     throw new Error(
       `The knowledge pack archive does not verify: ${pack.problems.join("; ")}. Run npm run knowledge:zip.`,
     );
-  const launchers = [];
-  for (const { source, target } of ROOT_LAUNCHERS) {
-    const file = path.join(sourceDir, source);
-    if (!(await stat(file)).isFile())
-      throw new Error(`Root launcher build is missing: ${file}`);
-    launchers.push({ file, name: target, sha256: await hash(file) });
+  const productRoot = await realpath(root);
+  // The executable first: it cannot be replaced while PLC Lab runs, and nothing else
+  // changes when that fails.
+  await installFile(sourceExe, path.join(productRoot, APPLICATION));
+  const installed = [];
+  for (const name of localDependencies) {
+    await installFile(path.join(sourceDir, name), path.join(productRoot, name));
+    installed.push({ name, sha256: await hash(path.join(sourceDir, name)) });
   }
   await stageArtifactSet(
     sourceDir,
-    destination,
-    files,
+    path.join(productRoot, RESOURCES),
+    [],
     {
       appVersion: application.version,
       profile: "release",
       architecture: "x64",
+      application: { name: APPLICATION, sha256: await hash(sourceExe) },
+      dependencies: installed,
       sourceExecutable: path.relative(root, sourceExe),
       sourceModifiedAt: (await stat(sourceExe)).mtime.toISOString(),
       systemDependencies,
@@ -281,44 +287,53 @@ async function main() {
         archive: path.relative(root, DEFAULT_ZIP).split(path.sep).join("/"),
         sha256: await hash(DEFAULT_ZIP),
       },
-      rootLaunchers: launchers.map(({ name, sha256 }) => ({ name, sha256 })),
     },
     [{ source: DEFAULT_PACK, target: `knowledge-packs/${PACK_NAME}` }],
   );
-  for (const required of [
-    APPLICATION,
-    "release-manifest.json",
-    "RUNTIME_REQUIREMENTS.txt",
-    `knowledge-packs/${PACK_NAME}/pack.json`,
-  ])
-    if (!(await stat(path.join(destination, required))).isFile())
-      throw new Error(`Release staging is incomplete: ${required} is missing.`);
-  for (const { file, name } of launchers)
-    await installLauncher(file, path.join(root, name));
-  console.log(`Release ready: ${path.join(destination, APPLICATION)}`);
-  console.log(`Start PLC Lab with: ${path.join(root, "Launcher.exe")}`);
+  await removeLegacy(productRoot);
+  const problems = await verifyDistribution(productRoot);
+  if (problems.length)
+    throw new Error(
+      `The staged distribution is incomplete: ${problems.join("; ")}`,
+    );
+  console.log(`Release ready: ${path.join(productRoot, APPLICATION)}`);
   console.log(
-    "The staged executable is byte-identical to the successful Tauri release build.",
+    "Start PLC Lab by double-clicking PLC Lab.exe in this folder. It is the Tauri release build itself, byte-identical to the successful build.",
   );
   console.log(
     "Runtime requirements: Windows x64 with Microsoft Edge WebView2 installed. This is not an installer.",
   );
 }
 
-/** Replace the root launcher atomically and verify its bytes. */
-async function installLauncher(source, target) {
+/** Replace a file in the product root atomically and verify its bytes. */
+async function installFile(source, target) {
   const temporary = `${target}.${randomUUID()}.tmp`;
   await copyFile(source, temporary, constants.COPYFILE_EXCL);
   try {
     if ((await hash(source)) !== (await hash(temporary)))
-      throw new Error("Root launcher copy verification failed.");
+      throw new Error("copy verification failed");
     await rename(temporary, target);
   } catch (error) {
     await rm(temporary, { force: true });
     throw new Error(
-      `The root launcher ${path.basename(target)} could not be replaced (${error.message}). Close PLC Lab and its launcher and try again.`,
+      `${path.basename(target)} could not be replaced (${error.message}). Close PLC Lab and try again.`,
       { cause: error },
     );
+  }
+}
+
+/** Remove entry points of earlier distributions (the retired launcher and the separate
+ * application folder); earlier builds generated them, never the user. */
+async function removeLegacy(productRoot) {
+  for (const name of LEGACY_FILES) {
+    const file = path.join(productRoot, name);
+    within(productRoot, file);
+    await rm(file, { force: true });
+  }
+  for (const name of LEGACY_DIRS) {
+    const dir = path.join(productRoot, name);
+    within(productRoot, dir);
+    await rm(dir, { recursive: true, force: true });
   }
 }
 

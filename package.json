@@ -36,13 +36,11 @@
     "knowledge:zip": "node scripts/knowledge-pack.mjs zip",
     "knowledge:verify": "node scripts/knowledge-pack.mjs verify",
     "knowledge:install-check": "node scripts/knowledge-install-check.mjs",
-    "stage:release": "node scripts/rust.mjs build --release --locked -p plc-lab-launcher && node scripts/stage-release.mjs",
-    "test:desktop:release": "node tests/e2e/desktop-smoke.mjs --exe \"releases/current/PLC Lab Desktop.exe\" --build release --out release-smoke",
-    "test:launcher": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --build release --out launcher-smoke --launcher",
-    "test:launcher:gui": "node tests/e2e/launcher-smoke.mjs",
-    "test:launcher:bat": "node tests/e2e/desktop-smoke.mjs --bat --build release --out launcher-bat-smoke",
-    "test:launcher:relocated": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --launcher --relocate --build release --out launcher-relocated-smoke",
-    "test:bat:relocated": "node tests/e2e/desktop-smoke.mjs --bat --relocate --build release --out bat-relocated-smoke",
+    "stage:release": "node scripts/stage-release.mjs",
+    "check:distribution": "node scripts/distribution.mjs",
+    "test:desktop:release": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --build release --out release-smoke",
+    "test:release:relocated": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --relocate --build release --out release-relocated-smoke",
+    "test:release:bat": "node tests/e2e/desktop-smoke.mjs --bat --build release --out release-bat-smoke",
     "build:release:native": "node scripts/native.mjs build --no-bundle -- --locked"
   },
   "devDependencies": {

@@ -101,9 +101,11 @@ test("the IPC contract is DTO-only and the adapter has no host dependency", () =
   assert.deepEqual(deps("app-contract"), ["serde", "serde_json", "ts-rs"]);
   for (const d of deps("desktop-session"))
     assert.doesNotMatch(d, /^tauri|^tokio/);
+  // winsafe: safe Win32 bindings, used only for the startup message box and the WebView2
+  // runtime check before the window exists (ADR-0030).
   assert.deepEqual(
     deps("plc-lab-desktop").filter((d) => !/^tauri/.test(d)),
-    ["app-contract", "desktop-session", "tokio"],
+    ["app-contract", "desktop-session", "tokio", "winsafe"],
   );
 });
 
@@ -132,6 +134,13 @@ test("the host uses only the reviewed single-instance plugin and the web view ge
     /Command|process::|spawn|shell|fs::/,
     "a launch request is parsed, never executed or read here",
   );
+  const resources = read("apps/desktop/src-tauri/src/resources.rs");
+  assert.doesNotMatch(
+    resources,
+    /Command|spawn|shell|open_request/,
+    "release resources are only inspected, never executed",
+  );
+  assert.match(resources, /std::env::current_exe\(\)/);
   assert.ok(
     host.indexOf(".plugin(tauri_plugin_single_instance") <
       host.indexOf(".setup("),

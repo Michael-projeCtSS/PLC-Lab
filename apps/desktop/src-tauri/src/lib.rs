@@ -1,23 +1,23 @@
-//! PLC Lab desktop host: application lifecycle, trusted storage locations, host pacing
-//! and command adapters. Semantics live in the Rust core crates.
+//! PLC Lab desktop host, shipped as the single executable `PLC Lab.exe`: application
+//! lifecycle, trusted storage locations, host pacing and command adapters. Semantics live
+//! in the Rust core crates. Data it ships with is read from `resources/` next to the
+//! executable (ADR-0030).
 mod commands;
 mod execution_driver;
+mod resources;
 mod startup;
 
 use desktop_session::{AppInfo, AppPaths, DesktopApp};
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Emitter, Manager};
 
-/// Knowledge pack roots, in priority order: packs shipped next to the executable, packs
-/// the user installed into the application data folder, and (development builds only)
-/// the repository's canonical pack sources.
+/// Knowledge pack roots, in priority order: packs shipped in `resources/knowledge-packs`
+/// next to the executable, packs the user installed into the application data folder,
+/// and (development builds only) the repository's canonical pack sources.
 fn knowledge_roots(app_data: &std::path::Path) -> Vec<PathBuf> {
     let mut roots = Vec::new();
-    if let Some(dir) = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-    {
-        roots.push(dir.join("knowledge-packs"));
+    if let Some(dir) = resources::executable_dir() {
+        roots.push(resources::shipped_packs(&dir));
     }
     roots.push(app_data.join("knowledge-packs"));
     #[cfg(debug_assertions)]
@@ -51,11 +51,38 @@ fn open_requested(app: &tauri::AppHandle, args: &[String], cwd: &std::path::Path
 }
 
 pub fn run() {
+    // A release without the resources folder beside it cannot work: say why and stop.
+    if !cfg!(debug_assertions)
+        && let Some(dir) = resources::executable_dir()
+        && let Err(problem) = resources::check_resources(&dir)
+    {
+        resources::report_problem(&problem);
+        std::process::exit(1);
+    }
+    // Until the window exists, problems (including panics) are shown in a native message
+    // box: a windowed release has no console and the view cannot report them yet.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|info| {
+        resources::report_problem(&resources::failure_text(&info.to_string()));
+    }));
+    let built = builder().build(tauri::generate_context!());
+    std::panic::set_hook(default_hook);
+    match built {
+        Ok(app) => app.run(|_, _| {}),
+        Err(error) => {
+            resources::report_problem(&resources::failure_text(&error.to_string()));
+            std::process::exit(1);
+        }
+    }
+}
+
+fn builder() -> tauri::Builder<tauri::Wry> {
     tauri::Builder::default()
-        // One application state per user: a second launch (double-click, root launcher or
-        // BAT) must not load its own copy of progress and projects and later overwrite the
-        // first. It hands over to the running instance, which comes to the front, and exits.
-        // Its arguments pass only through the typed `startup::open_request` parser.
+        // One application state per user: a second launch (double-click, a project file or
+        // the BAT) must not load its own copy of progress and projects and later overwrite
+        // the first. It hands its arguments to the running instance, which comes to the
+        // front and opens a requested project, and exits. Arguments pass only through the
+        // typed `startup::open_request` parser.
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             open_requested(app, &args, std::path::Path::new(&cwd));
             focus_main_window(app);
@@ -67,8 +94,14 @@ pub fn run() {
                 Some(dir) if !dir.is_empty() => PathBuf::from(dir),
                 _ => app.path().app_data_dir()?,
             };
-            std::fs::create_dir_all(app_data.join("projects"))?;
-            std::fs::create_dir_all(app_data.join("knowledge-packs"))?;
+            for dir in [app_data.join("projects"), app_data.join("knowledge-packs")] {
+                std::fs::create_dir_all(&dir).map_err(|e| {
+                    format!(
+                        "The PLC Lab data folder {} cannot be used: {e}",
+                        dir.display()
+                    )
+                })?;
+            }
             let paths = AppPaths {
                 knowledge_roots: knowledge_roots(&app_data),
                 projects_dir: app_data.join("projects"),
@@ -141,6 +174,4 @@ pub fn run() {
             commands::check,
             commands::take_open_request
         ])
-        .run(tauri::generate_context!())
-        .expect("PLC Lab desktop host failed to start");
 }

@@ -28,7 +28,7 @@ jobs:
         run: node scripts/ci.mjs setup-rust
       - name: Verify Windows build tools and provide WebView2 if needed
         run: node scripts/ci.mjs windows-prerequisites
-      - name: Checks, release tests, knowledge pack, native smoke, release build and launcher smoke
+      - name: Checks, release tests, knowledge pack, native smoke, release build and root PLC Lab.exe smoke
         run: npm run ci:windows
       - name: Preserve validation evidence
         if: always()
@@ -46,12 +46,11 @@ jobs:
             artifacts/release-smoke/native.log
             artifacts/release-smoke/result.json
             artifacts/release-smoke/*.png
-            artifacts/launcher-smoke/native.log
-            artifacts/launcher-smoke/result.json
-            artifacts/launcher-smoke/*.png
-            artifacts/launcher-window-smoke/native.log
-            artifacts/launcher-window-smoke/result.json
-            artifacts/launcher-window-smoke/*.png
+            artifacts/release-relocated-smoke/native.log
+            artifacts/release-relocated-smoke/result.json
+            artifacts/release-relocated-smoke/*.png
+            artifacts/release-bat-smoke/native.log
+            artifacts/release-bat-smoke/result.json
       - name: Publish the validated Windows release
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -59,10 +58,9 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: |
-            Launcher.exe
             PLC Lab.exe
             RUN_PLC_LAB.bat
-            releases/current/**
+            resources/**
             releases/knowledge/**
 
   linux-core:

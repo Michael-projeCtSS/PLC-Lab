@@ -70,8 +70,9 @@ function prepare(mode) {
       ? ["plc-lab-desktop.exe"]
       : [
           "plc-lab-desktop.exe",
-          "PLC Lab Desktop.exe",
           "PLC Lab.exe",
+          // Entry points of earlier distributions: staging removes their files.
+          "PLC Lab Desktop.exe",
           "Launcher.exe",
         ];
   for (const name of applicationNames) {
