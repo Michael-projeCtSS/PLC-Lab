@@ -153,6 +153,7 @@ mod tests {
             unit: AnalogUnit::Microamp,
             value: ua,
             signal: AnalogSignal::Current4To20mA,
+            loop_powered: true,
         })
     }
     fn int(r: AnalogReading) -> (i16, AnalogCondition) {

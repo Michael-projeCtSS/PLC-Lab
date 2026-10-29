@@ -532,7 +532,19 @@ impl StationRuntime {
         }
         let (component, port) = self.wire_at(channel, effective)?;
         let index = scene.index_of_str(component).ok()?;
-        scene.analog_output(index, port).ok()
+        let field = scene.analog_output(index, port).ok()?;
+        // Generic loop model: a 2-wire transmitter conducts only when the input supplies
+        // the loop; a 4-wire transmitter drives a passive input. The wrong combination
+        // carries no valid loop current (real modules differ; see SIMULATION_FIDELITY).
+        let supplied = self
+            .configured
+            .channel_config(channel)
+            .is_none_or(|c| c.loop_supply);
+        if field.unit == process_simulation::AnalogUnit::Microamp && field.loop_powered != supplied
+        {
+            return Some(AnalogField { value: 0, ..field });
+        }
+        Some(field)
     }
 
     /// Sample every configured input channel from the physical process.
@@ -607,6 +619,7 @@ impl StationRuntime {
                                     unit: process_simulation::AnalogUnit::Millivolt,
                                     value: 24_000,
                                     signal: lab_model::scene::AnalogSignal::Voltage0To10V,
+                                    loop_powered: false,
                                 })
                             } else {
                                 field

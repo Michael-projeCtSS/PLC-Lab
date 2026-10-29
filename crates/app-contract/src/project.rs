@@ -31,6 +31,9 @@ pub struct ChannelConfigDto {
     /// "off" | "holdLast"
     #[ts(type = "\"off\" | \"holdLast\"")]
     pub stop_behavior: String,
+    /// Current inputs: the channel supplies the loop (2-wire transmitter); `false` for a
+    /// passive input (4-wire transmitter).
+    pub loop_supply: bool,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

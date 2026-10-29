@@ -285,3 +285,88 @@ fn the_checklist_is_deterministic() {
     commission(&mut b);
     assert_eq!(a.commissioning(), b.commissioning());
 }
+
+const ANALOG_SCENE: &str =
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/analog-commissioning.json");
+const ANALOG_LABS: [&str; 5] = [
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-ai-loop-break.json"),
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-ai-loop-supply.json"),
+    include_str!(
+        "../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-ai-voltage-as-current.json"
+    ),
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-ai-zero-twenty.json"),
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-ai-offset.json"),
+];
+
+/// The analog bench with a lab's starter configuration and faults (or the documented one).
+fn analog_bench(faulty: Option<usize>) -> LabSession {
+    let scene: SceneDefinition = parse_json(ANALOG_SCENE).unwrap();
+    let exercise: ExerciseDefinition = parse_json(ANALOG_LABS[faulty.unwrap_or(0)]).unwrap();
+    let station = faulty
+        .and(exercise.starter_station.clone())
+        .unwrap_or_else(|| scene.reference_station.clone());
+    let mut s = LabSession::new(
+        scene,
+        station,
+        PlatformProfile::generic(),
+        SessionConfig::default(),
+    )
+    .unwrap();
+    if let Some(t) = faulty.and(exercise.troubleshooting.as_ref()) {
+        for f in &t.faults {
+            s.inject_fault(&FaultInjection {
+                id: f.id.clone(),
+                fault: f.fault.clone(),
+            })
+            .unwrap();
+        }
+    }
+    s.download(&exercise.starter_program, 1, None).unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    run(&mut s, 500);
+    s
+}
+
+#[test]
+fn a_correct_analog_installation_matches_the_drawing_and_the_sight_glass() {
+    let s = analog_bench(None);
+    let list = s.commissioning();
+    for item in ["analog-signal", "analog-raw", "scaling"] {
+        assert_eq!(
+            state(&list, "inputs", item),
+            CheckState::Ok,
+            "{item}: {}",
+            findings(&list, "inputs", item)
+        );
+    }
+    let raw = findings(&list, "inputs", "analog-raw");
+    assert!(raw.contains("7.20 mA"), "20 % of a 4-20 mA loop: {raw}");
+    assert!(raw.contains("2.00 V"), "20 % of 0-10 V: {raw}");
+    assert!(
+        findings(&list, "inputs", "scaling").contains("= 20000 ml; sight glass 20000 ml"),
+        "{}",
+        findings(&list, "inputs", "scaling")
+    );
+}
+
+#[test]
+fn each_analog_fault_shows_in_the_analog_checks() {
+    let expected: [(&str, CheckState, &str); 5] = [
+        ("analog-raw", CheckState::Fault, "0.00 mA"),
+        (
+            "analog-signal",
+            CheckState::Fault,
+            "2-wire transmitter, but",
+        ),
+        ("analog-signal", CheckState::Fault, "drawn 0-10 V"),
+        ("analog-signal", CheckState::Fault, "drawn 4-20 mA"),
+        ("scaling", CheckState::Attention, "differs by 10000 ml"),
+    ];
+    for (index, (item, want, text)) in expected.into_iter().enumerate() {
+        let s = analog_bench(Some(index));
+        let list = s.commissioning();
+        let found = findings(&list, "inputs", item);
+        assert_eq!(state(&list, "inputs", item), want, "lab {index}: {found}");
+        assert!(found.contains(text), "lab {index}: {found}");
+    }
+}

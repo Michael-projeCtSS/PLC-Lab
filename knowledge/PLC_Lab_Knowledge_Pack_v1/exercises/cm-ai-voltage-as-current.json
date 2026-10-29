@@ -1,0 +1,431 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "cm.ai-voltage-as-current",
+  "revision": 1,
+  "title": "Commissioning: cross-check sensor reads nonsense",
+  "kind": "commissioning",
+  "difficulty": "intermediate",
+  "summary": "The tank refuses to fill because the two level measurements disagree. The ultrasonic sensor is new. Commission the cross-check input.",
+  "objectives": [
+    "Match the channel mode to the device signal",
+    "Read a voltage signal correctly"
+  ],
+  "estimatedMinutes": 25,
+  "scene": "scene.analog-commissioning",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while not pressed. *)\n    LevelHigh : BOOL; (* High level switch LSH-205: TRUE when wet. *)\n    InletOpen : BOOL; (* Inlet valve open limit switch. *)\n    LevelRaw : INT; (* LT-203, 4-20 mA: generic profile 0..10000 = 0..100 %. *)\n    CheckRaw : INT; (* LT-204, 0-10 V cross-check: generic profile 0..10000 = 0..100 %. *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve XV-201 solenoid. *)\n    DrainPump : BOOL; (* Drain pump P-202. *)\n    LevelPercent : REAL; (* Level from LT-203, 0..100 %. *)\n    CheckPercent : REAL; (* Level from LT-204, 0..100 %. *)\n    DeviationAlarm : BOOL; (* The two measurements differ by more than 5 %. *)\nEND_VAR\nVAR\n    Filling : BOOL; (* Fill request latch. *)\nEND_VAR\n(* The program passed its factory test; this lab is about the installation and configuration. *)\nLevelPercent := INT_TO_REAL(LevelRaw) / 100.0;\nCheckPercent := INT_TO_REAL(CheckRaw) / 100.0;\nDeviationAlarm := (LevelPercent - CheckPercent > 5.0) OR (CheckPercent - LevelPercent > 5.0);\nFilling := (StartPB OR Filling) AND StopPB AND NOT LevelHigh AND NOT DeviationAlarm AND LevelPercent < 80.0;\nInletValve := Filling;\nDrainPump := FALSE;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelRaw",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "CheckRaw",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "The PLC runs the accepted program. Press Start and confirm the symptom.",
+    "Open the Commissioning tab: work through the analog checks against the drawing.",
+    "Measure the loop current or voltage at the analog input and compare it with the sight glass.",
+    "Diagnose, correct, then verify."
+  ],
+  "hints": [
+    "Which signal type does the drawing show for LT-204?",
+    "Measure the terminal and compare with the channel mode."
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "raw",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelRaw"
+      }
+    },
+    {
+      "name": "percent",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelPercent"
+      }
+    },
+    {
+      "name": "check",
+      "source": {
+        "type": "plcTag",
+        "tag": "CheckPercent"
+      }
+    },
+    {
+      "name": "alarm",
+      "source": {
+        "type": "plcTag",
+        "tag": "DeviationAlarm"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "level",
+      "source": {
+        "type": "component",
+        "component": "tank",
+        "quantity": "levelPermille"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "fill",
+      "title": "Start filling and let the tank reach its setpoint",
+      "durationMs": 14000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "measures",
+      "title": "Both measurements agree with the tank level",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 400,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            },
+            {
+              "type": "compare",
+              "signal": "check",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "check",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            }
+          ]
+        }
+      },
+      "onFail": "LevelPercent and CheckPercent were not about 20 % while the tank held 20 %."
+    },
+    {
+      "id": "fills",
+      "title": "The tank fills to about 80 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "ge",
+          "value": 780
+        },
+        "byMs": 13000
+      },
+      "onFail": "The tank did not reach 78 %."
+    },
+    {
+      "id": "no-alarm",
+      "title": "No deviation alarm while filling",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "alarm",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The two level measurements disagreed by more than 5 %."
+    },
+    {
+      "id": "no-overfill",
+      "title": "The level stays below 90 %",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "le",
+          "value": 900
+        },
+        "fromMs": 0
+      },
+      "onFail": "The tank was filled above 90 %."
+    }
+  ],
+  "starterStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA",
+            "diagnostics": true,
+            "loopSupply": true
+          },
+          {
+            "channel": 1,
+            "mode": "current4To20mA",
+            "diagnostics": true,
+            "loopSupply": false
+          },
+          {
+            "channel": 2,
+            "mode": "disabled"
+          },
+          {
+            "channel": 3,
+            "mode": "disabled"
+          }
+        ]
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "LevelHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "tag": "InletOpen"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "DrainPump"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "tag": "LevelRaw"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 1
+        },
+        "tag": "CheckRaw"
+      }
+    ]
+  },
+  "curriculumOrder": 42,
+  "troubleshooting": {
+    "symptom": "The tank does not fill. The deviation alarm is active although the sight glass shows a normal level.",
+    "reportedBy": "Process operator, buffer tank T-200",
+    "faults": [],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program scales the levels wrongly"
+      },
+      {
+        "id": "lt1-loop-break",
+        "label": "The LT-203 current loop is broken"
+      },
+      {
+        "id": "loop-supply-off",
+        "label": "The LT-203 input does not supply the 2-wire loop"
+      },
+      {
+        "id": "lt2-mode",
+        "label": "The LT-204 input is configured for current instead of 0-10 V"
+      },
+      {
+        "id": "lt1-zero-twenty",
+        "label": "The LT-203 input is configured for 0-20 mA instead of 4-20 mA"
+      },
+      {
+        "id": "lt1-offset",
+        "label": "LT-203 reads too high: its zero is offset"
+      },
+      {
+        "id": "valve",
+        "label": "The inlet valve does not open"
+      }
+    ],
+    "rootCauses": [
+      "lt2-mode"
+    ],
+    "repairs": [],
+    "verification": [
+      "measures",
+      "fills",
+      "no-alarm",
+      "no-overfill"
+    ],
+    "learningRefs": [
+      "fundamentals.0-10v",
+      "fundamentals.4-20ma"
+    ],
+    "debriefRefs": [
+      "troubleshooting.analog-wrong-range"
+    ],
+    "debrief": {
+      "rootCause": "The LT-204 input was configured for 4-20 mA, but LT-204 delivers 0-10 V. A current input interprets the voltage source through its low input resistance, so the raw value bore no relation to the level and the deviation alarm blocked filling.",
+      "evidence": [
+        "The drawing shows LT-204 as a 0-10 V sensor.",
+        "The channel was configured for 4-20 mA.",
+        "LT-203 and the sight glass agreed; only the cross-check value was implausible."
+      ],
+      "repair": "Configure the LT-204 input for 0-10 V and download the configuration; then compare both measurements again.",
+      "reasoning": "Every analog channel must be set to the signal its device delivers. On real modules a voltage source on a current input can also overload the input; check the module manual before connecting."
+    }
+  }
+}

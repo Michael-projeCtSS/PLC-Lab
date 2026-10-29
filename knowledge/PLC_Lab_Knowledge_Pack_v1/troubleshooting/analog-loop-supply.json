@@ -1,0 +1,57 @@
+{
+  "id": "troubleshooting.analog-loop-supply",
+  "kind": "troubleshooting",
+  "title": "2-wire transmitter without loop supply",
+  "summary": "A loop-powered transmitter connected to a passive input has no power: the loop current is 0 mA although the wiring is intact.",
+  "tags": [
+    "2-wire",
+    "4-wire",
+    "loop supply",
+    "4-20 mA",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "What happens",
+      "body": "A 2-wire transmitter needs the loop to be driven. On a passive input (meant for 4-wire devices) nothing drives it, so no current flows. The input reads 0 mA and, with live-zero diagnostics, reports a wire break that is not one."
+    },
+    {
+      "heading": "How to tell it from a broken wire",
+      "body": "The wiring checks out end to end, the transmitter display (if any) stays dark, and the drawing shows a 2-wire device while the channel is configured as a passive input. A broken wire shows 0 mA on a correctly supplied loop instead."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.4-20ma",
+    "fundamentals.analog-io"
+  ],
+  "troubleshooting": {
+    "faultId": "analog-loop-supply",
+    "area": "Analog I/O",
+    "target": "Current input channel",
+    "effect": "No loop current; the input reports a wire break",
+    "symptoms": [
+      "0 mA on an intact loop",
+      "Wire break diagnostic without a broken wire"
+    ],
+    "evidence": [
+      "The drawing shows a 2-wire transmitter",
+      "The channel is configured as a passive input",
+      "Loop current 0 mA"
+    ],
+    "diagnosticMethod": [
+      "Compare the transmitter type with the channel configuration",
+      "Measure the loop current"
+    ],
+    "repair": [
+      "Supply the loop (channel setting or external loop supply, as the module manual specifies)"
+    ],
+    "explanation": "Loop power is part of the signal design: decide for every transmitter who powers the loop, and configure the input to match.",
+    "simulatedIn": [
+      "cm.ai-loop-supply"
+    ]
+  }
+}

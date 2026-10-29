@@ -22,6 +22,10 @@
     {
       "heading": "Vendor helpers",
       "body": "Most platforms provide scaling functions, for example NORM_X/SCALE_X on Siemens S7-1200/S7-1500 or module-level scaling to engineering units on Logix analog modules. The underlying mathematics is always the same straight line; check the exact raw range of your module."
+    },
+    {
+      "heading": "Checking the scaling during commissioning",
+      "body": "Compare the scaled value with an independent reference at two or more points: a sight glass, a second instrument or a calibrator that injects known signals (for example 4, 12 and 20 mA). An error that is the same everywhere is a **zero (offset)** error; an error that grows with the value is a **span** error. Some measurements have a **reversed range** on purpose, for example an ullage measurement where 4 mA means full: the scaling then runs from the upper value at the low signal to the lower value at the high signal, and must match the transmitter's configured range."
     }
   ],
   "facts": [],

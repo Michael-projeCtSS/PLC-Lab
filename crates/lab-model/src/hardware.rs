@@ -237,6 +237,10 @@ pub struct ChannelConfig {
     pub diagnostics: bool,
     #[serde(default)]
     pub stop_behavior: OutputStopBehavior,
+    /// Current inputs: the channel supplies the loop for a 2-wire transmitter. A 4-wire
+    /// transmitter needs a passive input (`false`).
+    #[serde(default = "yes")]
+    pub loop_supply: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

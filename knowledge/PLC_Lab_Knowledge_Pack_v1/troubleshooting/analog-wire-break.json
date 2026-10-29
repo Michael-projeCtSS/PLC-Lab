@@ -47,6 +47,8 @@
       "Verify the value returns and the diagnostic goes outgoing"
     ],
     "explanation": "A live-zero signal makes a broken loop detectable: below about 3.6 mA the value cannot be a real measurement.",
-    "simulatedIn": []
+    "simulatedIn": [
+      "cm.ai-loop-break"
+    ]
   }
 }

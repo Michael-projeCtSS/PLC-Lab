@@ -68,6 +68,19 @@ pub enum AnalogSignal {
     Voltage0To10V,
 }
 
+/// How a current-output transmitter is powered (generic educational model).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransmitterWiring {
+    /// Loop-powered: the transmitter regulates a current that the input channel (or an
+    /// external loop supply) drives through it.
+    #[default]
+    TwoWire,
+    /// Separately powered: the transmitter drives the loop current itself into a passive
+    /// input. Voltage-output devices are always separately powered.
+    FourWire,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LampColor {
@@ -146,6 +159,8 @@ pub enum ComponentKind {
         range_min_ml: u64,
         range_max_ml: u64,
         signal: AnalogSignal,
+        #[serde(default)]
+        wiring: TransmitterWiring,
     },
     /// Generic proximity or photoelectric presence sensor whose target is set by the
     /// student or a scenario. Port: `output`.

@@ -132,7 +132,12 @@ mode: "disabled" | "digital" | "current4To20mA" | "current0To20mA" | "voltage0To
 /**
  * "off" | "holdLast"
  */
-stopBehavior: "off" | "holdLast", };
+stopBehavior: "off" | "holdLast", 
+/**
+ * Current inputs: the channel supplies the loop (2-wire transmitter); `false` for a
+ * passive input (4-wire transmitter).
+ */
+loopSupply: boolean, };
 
 export type ConfiguredModuleDto = { position: SlotRefDto, module: string, startAddress: number, channels: Array<ChannelConfigDto>, };
 

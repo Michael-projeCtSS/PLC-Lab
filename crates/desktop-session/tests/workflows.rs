@@ -588,7 +588,12 @@ fn long_runs_of_large_programs_keep_every_response_bounded() {
     assert!(events.events.len() <= 200 && event_bytes < 128 * 1024);
 }
 
-const LABS: [&str; 13] = [
+const LABS: [&str; 18] = [
+    "cm.ai-loop-break",
+    "cm.ai-loop-supply",
+    "cm.ai-voltage-as-current",
+    "cm.ai-zero-twenty",
+    "cm.ai-offset",
     "cm.dio-input-supply",
     "cm.dio-guard-contact",
     "cm.dio-swapped-buttons",

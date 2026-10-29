@@ -96,7 +96,25 @@ export function HardwareTab({
         mode,
         diagnostics: true,
         stopBehavior: "off",
+        loopSupply: true,
       });
+    setDraft(next);
+  };
+  /** Current inputs: whether the channel supplies the loop (2-wire) or is passive (4-wire). */
+  const editLoopSupply = (
+    m: ModuleViewDto,
+    channel: number,
+    supply: boolean,
+  ) => {
+    const next: StationDto = structuredClone(station);
+    const module = next.modules.find(
+      (x) =>
+        x.position.rack === m.position.rack &&
+        x.position.slot === m.position.slot,
+    );
+    const existing = module?.channels.find((c) => c.channel === channel);
+    if (!existing) return;
+    existing.loopSupply = supply;
     setDraft(next);
   };
   const editModule = (m: ModuleViewDto, type: string) => {
@@ -273,15 +291,17 @@ export function HardwareTab({
               </thead>
               <tbody>
                 {selected.channels.map((c) => {
-                  const configured =
-                    station.modules
-                      .find(
-                        (x) =>
-                          x.position.slot === selected.position.slot &&
-                          x.position.rack === selected.position.rack,
-                      )
-                      ?.channels.find((x) => x.channel === c.channel)?.mode ??
-                    c.mode;
+                  const config = station.modules
+                    .find(
+                      (x) =>
+                        x.position.slot === selected.position.slot &&
+                        x.position.rack === selected.position.rack,
+                    )
+                    ?.channels.find((x) => x.channel === c.channel);
+                  const configured = config?.mode ?? c.mode;
+                  const current =
+                    configured === "current4To20mA" ||
+                    configured === "current0To20mA";
                   return (
                     <tr key={c.channel}>
                       <td>{c.channel}</td>
@@ -310,6 +330,26 @@ export function HardwareTab({
                           </select>
                         ) : (
                           (MODE_LABEL[c.mode] ?? c.mode)
+                        )}
+                        {advanced && current && config && (
+                          <label
+                            className="row"
+                            style={{ gap: 4, fontSize: 11 }}
+                            title="On: the input supplies the loop for a 2-wire transmitter. Off: passive input for a separately powered 4-wire transmitter. Follow the module manual: terminal designs differ between products."
+                          >
+                            <input
+                              type="checkbox"
+                              checked={config.loopSupply}
+                              onChange={(e) =>
+                                editLoopSupply(
+                                  selected,
+                                  c.channel,
+                                  e.target.checked,
+                                )
+                              }
+                            />
+                            Loop supply (2-wire)
+                          </label>
                         )}
                       </td>
                       <td>{c.tag ?? <span className="dim">—</span>}</td>

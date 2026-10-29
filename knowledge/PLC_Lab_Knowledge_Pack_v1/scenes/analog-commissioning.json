@@ -1,0 +1,421 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.analog-commissioning",
+  "revision": 1,
+  "title": "Analog commissioning bench",
+  "summary": "A buffer tank before handover: an inlet valve and a drain pump, a 2-wire 4-20 mA hydrostatic level transmitter for control, a 0-10 V ultrasonic level sensor as a cross-check, a high level switch for safety, and a compact PLC with a 4-channel analog input module.",
+  "components": [
+    {
+      "id": "start",
+      "label": "Start S1",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyOpen",
+        "color": "green"
+      }
+    },
+    {
+      "id": "stop",
+      "label": "Stop S2",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyClosed",
+        "color": "red"
+      }
+    },
+    {
+      "id": "inlet",
+      "label": "Inlet valve XV-201",
+      "kind": {
+        "type": "onOffValve",
+        "travelMs": 1500,
+        "flowMlPerS": 8000
+      }
+    },
+    {
+      "id": "pump",
+      "label": "Drain pump P-202",
+      "kind": {
+        "type": "pump",
+        "flowMlPerS": 5000
+      }
+    },
+    {
+      "id": "tank",
+      "label": "Tank T-200",
+      "kind": {
+        "type": "tank",
+        "capacityMl": 100000,
+        "initialMl": 20000,
+        "highHighMl": 97000,
+        "lowLowMl": 5000
+      }
+    },
+    {
+      "id": "lsh",
+      "label": "High level switch LSH-205",
+      "kind": {
+        "type": "levelSwitch",
+        "tank": "tank",
+        "switchLevelMl": 95000,
+        "contact": "normallyOpen",
+        "output": "pnp"
+      }
+    },
+    {
+      "id": "lt1",
+      "label": "Level transmitter LT-203",
+      "kind": {
+        "type": "levelTransmitter",
+        "tank": "tank",
+        "rangeMinMl": 0,
+        "rangeMaxMl": 100000,
+        "signal": "current4To20mA",
+        "wiring": "twoWire"
+      }
+    },
+    {
+      "id": "lt2",
+      "label": "Level sensor LT-204",
+      "kind": {
+        "type": "levelTransmitter",
+        "tank": "tank",
+        "rangeMinMl": 0,
+        "rangeMaxMl": 100000,
+        "signal": "voltage0To10V",
+        "wiring": "fourWire"
+      }
+    }
+  ],
+  "couplings": [
+    {
+      "type": "valveFillsTank",
+      "valve": "inlet",
+      "tank": "tank"
+    },
+    {
+      "type": "pumpDrainsTank",
+      "pump": "pump",
+      "tank": "tank"
+    }
+  ],
+  "installation": {
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "ai4.ui"
+      }
+    ],
+    "wiring": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "component": "start",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "component": "stop",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "component": "lsh",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "component": "inlet",
+        "port": "openSwitch"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "component": "inlet",
+        "port": "solenoid"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "component": "pump",
+        "port": "motor"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "component": "lt1",
+        "port": "signal"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 1
+        },
+        "component": "lt2",
+        "port": "signal"
+      }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA",
+            "diagnostics": true,
+            "loopSupply": true
+          },
+          {
+            "channel": 1,
+            "mode": "voltage0To10V",
+            "diagnostics": true,
+            "loopSupply": false
+          },
+          {
+            "channel": 2,
+            "mode": "disabled"
+          },
+          {
+            "channel": 3,
+            "mode": "disabled"
+          }
+        ]
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "LevelHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "tag": "InletOpen"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "DrainPump"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "tag": "LevelRaw"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 1
+        },
+        "tag": "CheckRaw"
+      }
+    ]
+  },
+  "interface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Start button S1, normally open: TRUE while pressed."
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Stop button S2, normally closed: TRUE while NOT pressed."
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "High level switch LSH-205 (normally open): TRUE when wet (safety stop)."
+    },
+    {
+      "tag": "InletOpen",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Inlet valve XV-201 open limit switch."
+    },
+    {
+      "tag": "LevelRaw",
+      "type": "INT",
+      "direction": "input",
+      "description": "LT-203 hydrostatic level transmitter, 4-20 mA, 2-wire: raw value (generic profile 0..10000 = 0..100 %)."
+    },
+    {
+      "tag": "CheckRaw",
+      "type": "INT",
+      "direction": "input",
+      "description": "LT-204 ultrasonic level sensor, 0-10 V: raw value of the cross-check measurement (generic profile 0..10000 = 0..100 %)."
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Inlet valve XV-201 solenoid: TRUE opens the valve."
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Drain pump P-202 contactor."
+    }
+  ],
+  "layout": [
+    {
+      "component": "inlet",
+      "x": 260,
+      "y": 90
+    },
+    {
+      "component": "tank",
+      "x": 420,
+      "y": 150,
+      "width": 220,
+      "height": 300
+    },
+    {
+      "component": "lsh",
+      "x": 660,
+      "y": 190
+    },
+    {
+      "component": "lt1",
+      "x": 340,
+      "y": 330
+    },
+    {
+      "component": "lt2",
+      "x": 470,
+      "y": 100
+    },
+    {
+      "component": "pump",
+      "x": 720,
+      "y": 500
+    },
+    {
+      "component": "start",
+      "x": 80,
+      "y": 470
+    },
+    {
+      "component": "stop",
+      "x": 170,
+      "y": 470
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.4-20ma",
+    "fundamentals.0-10v",
+    "fundamentals.scaling",
+    "fundamentals.commissioning"
+  ]
+}

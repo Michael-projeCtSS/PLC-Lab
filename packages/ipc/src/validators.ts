@@ -306,6 +306,7 @@ export const station = obj<G.StationDto>({
           ),
           diagnostics: bool,
           stopBehavior: literal("off", "holdLast"),
+          loopSupply: bool,
         }),
       ),
     }),

@@ -1,0 +1,57 @@
+{
+  "id": "troubleshooting.analog-calibration",
+  "kind": "troubleshooting",
+  "title": "Transmitter zero or span error",
+  "summary": "The transmitter delivers a valid signal that does not match the process: a constant error points to the zero, a growing error to the span.",
+  "tags": [
+    "calibration",
+    "zero",
+    "span",
+    "offset",
+    "over range",
+    "4-20 mA"
+  ],
+  "sections": [
+    {
+      "heading": "Recognizing it",
+      "body": "The channel configuration matches the drawing and the signal is within range, yet the value disagrees with an independent reference. Check the error at two levels: the same difference everywhere is an offset (zero) error; a difference that grows with the level is a span error. A large offset also pushes the signal over range near the top or under range near the bottom."
+    },
+    {
+      "heading": "What to do",
+      "body": "Compare with a reference (sight glass, second instrument, calibrator), then recalibrate the transmitter's lower and upper range values. Do not hide a calibration error by changing the scaling in the program: the next replacement transmitter would then be wrong."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.scaling",
+    "fundamentals.4-20ma"
+  ],
+  "troubleshooting": {
+    "faultId": "analog-calibration",
+    "area": "Analog I/O",
+    "target": "Transmitter",
+    "effect": "The measured value is offset from the process value",
+    "symptoms": [
+      "Two measurements of the same quantity disagree",
+      "Over range near the top of the range"
+    ],
+    "evidence": [
+      "A reference agrees with the other measurement",
+      "The loop current differs from the expected current for the level"
+    ],
+    "diagnosticMethod": [
+      "Compare at two levels",
+      "Calculate the expected current from the transmitter range"
+    ],
+    "repair": [
+      "Recalibrate the transmitter zero and span"
+    ],
+    "explanation": "Calibration belongs to the instrument; scaling in the PLC must follow the documented range.",
+    "simulatedIn": [
+      "cm.ai-offset"
+    ]
+  }
+}

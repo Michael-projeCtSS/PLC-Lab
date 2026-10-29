@@ -49,6 +49,8 @@
     ],
     "explanation": "With a 0-20 mA range, 4 mA is converted as 20 % of the range. The transmitter is correct; the configuration interprets the current differently.",
     "simulatedIn": [
+      "cm.ai-voltage-as-current",
+      "cm.ai-zero-twenty",
       "ts.tank-level-reads-high"
     ]
   }

@@ -15,7 +15,7 @@ use lab_model::{
     fault::StuckPosition,
     scene::{
         AnalogSignal, ComponentKind, ContactType, Coupling, LampColor, OutputStyle, PortKind,
-        SceneDefinition,
+        SceneDefinition, TransmitterWiring,
     },
 };
 use simulation_core::{WorldTime, deterministic_hash};
@@ -84,6 +84,8 @@ pub struct AnalogField {
     pub unit: AnalogUnit,
     pub value: i64,
     pub signal: AnalogSignal,
+    /// A 2-wire current transmitter: it conducts only when the input supplies the loop.
+    pub loop_powered: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -206,6 +208,7 @@ enum State {
         min: u64,
         max: u64,
         signal: AnalogSignal,
+        wiring: TransmitterWiring,
     },
     Presence {
         contact: ContactType,
@@ -332,11 +335,13 @@ impl SceneRuntime {
                     range_min_ml,
                     range_max_ml,
                     signal,
+                    wiring,
                 } => State::Transmitter {
                     tank: find(tank)?,
                     min: *range_min_ml,
                     max: (*range_max_ml).max(range_min_ml + 1),
                     signal: *signal,
+                    wiring: *wiring,
                 },
                 ComponentKind::PresenceSensor { output, contact } => State::Presence {
                     contact: *contact,
@@ -1031,6 +1036,7 @@ impl SceneRuntime {
             min,
             max,
             signal,
+            wiring,
         }) = self.states.get(component)
         else {
             return Err(SceneError::UnknownPort {
@@ -1082,6 +1088,7 @@ impl SceneRuntime {
             unit,
             value,
             signal: *signal,
+            loop_powered: unit == AnalogUnit::Microamp && *wiring == TransmitterWiring::TwoWire,
         })
     }
 

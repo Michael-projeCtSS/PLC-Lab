@@ -1,0 +1,339 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "cm.ai-loop-break",
+  "revision": 1,
+  "title": "Commissioning: level transmitter shows a fault",
+  "kind": "commissioning",
+  "difficulty": "intermediate",
+  "summary": "The buffer tank was installed and wired. When filling is started, nothing happens and the level display shows a fault. Commission the analog loop.",
+  "objectives": [
+    "Measure a 4-20 mA loop",
+    "Recognize a broken loop from the live zero"
+  ],
+  "estimatedMinutes": 25,
+  "scene": "scene.analog-commissioning",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while not pressed. *)\n    LevelHigh : BOOL; (* High level switch LSH-205: TRUE when wet. *)\n    InletOpen : BOOL; (* Inlet valve open limit switch. *)\n    LevelRaw : INT; (* LT-203, 4-20 mA: generic profile 0..10000 = 0..100 %. *)\n    CheckRaw : INT; (* LT-204, 0-10 V cross-check: generic profile 0..10000 = 0..100 %. *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve XV-201 solenoid. *)\n    DrainPump : BOOL; (* Drain pump P-202. *)\n    LevelPercent : REAL; (* Level from LT-203, 0..100 %. *)\n    CheckPercent : REAL; (* Level from LT-204, 0..100 %. *)\n    DeviationAlarm : BOOL; (* The two measurements differ by more than 5 %. *)\nEND_VAR\nVAR\n    Filling : BOOL; (* Fill request latch. *)\nEND_VAR\n(* The program passed its factory test; this lab is about the installation and configuration. *)\nLevelPercent := INT_TO_REAL(LevelRaw) / 100.0;\nCheckPercent := INT_TO_REAL(CheckRaw) / 100.0;\nDeviationAlarm := (LevelPercent - CheckPercent > 5.0) OR (CheckPercent - LevelPercent > 5.0);\nFilling := (StartPB OR Filling) AND StopPB AND NOT LevelHigh AND NOT DeviationAlarm AND LevelPercent < 80.0;\nInletValve := Filling;\nDrainPump := FALSE;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelRaw",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "CheckRaw",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "The PLC runs the accepted program. Press Start and confirm the symptom.",
+    "Open the Commissioning tab: work through the analog checks against the drawing.",
+    "Measure the loop current or voltage at the analog input and compare it with the sight glass.",
+    "Diagnose, correct, then verify."
+  ],
+  "hints": [
+    "Measure the loop current at the analog input.",
+    "What does a live-zero signal tell you that 0-20 mA cannot?"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "raw",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelRaw"
+      }
+    },
+    {
+      "name": "percent",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelPercent"
+      }
+    },
+    {
+      "name": "check",
+      "source": {
+        "type": "plcTag",
+        "tag": "CheckPercent"
+      }
+    },
+    {
+      "name": "alarm",
+      "source": {
+        "type": "plcTag",
+        "tag": "DeviationAlarm"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "level",
+      "source": {
+        "type": "component",
+        "component": "tank",
+        "quantity": "levelPermille"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "fill",
+      "title": "Start filling and let the tank reach its setpoint",
+      "durationMs": 14000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "measures",
+      "title": "Both measurements agree with the tank level",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 400,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            },
+            {
+              "type": "compare",
+              "signal": "check",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "check",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            }
+          ]
+        }
+      },
+      "onFail": "LevelPercent and CheckPercent were not about 20 % while the tank held 20 %."
+    },
+    {
+      "id": "fills",
+      "title": "The tank fills to about 80 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "ge",
+          "value": 780
+        },
+        "byMs": 13000
+      },
+      "onFail": "The tank did not reach 78 %."
+    },
+    {
+      "id": "no-alarm",
+      "title": "No deviation alarm while filling",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "alarm",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The two level measurements disagreed by more than 5 %."
+    },
+    {
+      "id": "no-overfill",
+      "title": "The level stays below 90 %",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "le",
+          "value": 900
+        },
+        "fromMs": 0
+      },
+      "onFail": "The tank was filled above 90 %."
+    }
+  ],
+  "curriculumOrder": 40,
+  "troubleshooting": {
+    "symptom": "The tank does not fill. The level display of LT-203 shows a fault value.",
+    "reportedBy": "Instrument technician, buffer tank T-200",
+    "faults": [
+      {
+        "id": "lt1-loop-break",
+        "fault": {
+          "type": "loopBreak",
+          "component": "lt1"
+        }
+      }
+    ],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program scales the levels wrongly"
+      },
+      {
+        "id": "lt1-loop-break",
+        "label": "The LT-203 current loop is broken"
+      },
+      {
+        "id": "loop-supply-off",
+        "label": "The LT-203 input does not supply the 2-wire loop"
+      },
+      {
+        "id": "lt2-mode",
+        "label": "The LT-204 input is configured for current instead of 0-10 V"
+      },
+      {
+        "id": "lt1-zero-twenty",
+        "label": "The LT-203 input is configured for 0-20 mA instead of 4-20 mA"
+      },
+      {
+        "id": "lt1-offset",
+        "label": "LT-203 reads too high: its zero is offset"
+      },
+      {
+        "id": "valve",
+        "label": "The inlet valve does not open"
+      }
+    ],
+    "rootCauses": [
+      "lt1-loop-break"
+    ],
+    "repairs": [
+      {
+        "id": "fix-lt1-loop-break",
+        "label": "Repair the broken LT-203 loop wire at the junction box",
+        "clears": [
+          "lt1-loop-break"
+        ]
+      },
+      {
+        "id": "fix-valve",
+        "label": "Replace the inlet valve solenoid",
+        "clears": []
+      },
+      {
+        "id": "fix-transmitter",
+        "label": "Replace LT-203 with a new transmitter",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "measures",
+      "fills",
+      "no-alarm",
+      "no-overfill"
+    ],
+    "learningRefs": [
+      "fundamentals.analog-io",
+      "fundamentals.scaling"
+    ],
+    "debriefRefs": [
+      "troubleshooting.analog-wire-break"
+    ],
+    "debrief": {
+      "rootCause": "The LT-203 loop was open at the junction box. No current flowed, so the input saw 0 mA, far below the 4 mA live zero, and reported a wire break. The program received an invalid level, raised the deviation alarm and never filled.",
+      "evidence": [
+        "The loop current at the input measured 0 mA, below the live zero of 4 mA.",
+        "The input reported a wire break (quality) with diagnostics enabled.",
+        "LT-204 and the sight glass agreed, so the tank level itself was fine."
+      ],
+      "repair": "Repair the open loop wire, then verify that the current matches the level (4 mA empty, 20 mA full).",
+      "reasoning": "A live zero exists to make a broken loop visible: 0 mA cannot be a valid level. Measure the current before suspecting the transmitter or the program."
+    }
+  }
+}

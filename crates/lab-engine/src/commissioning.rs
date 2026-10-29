@@ -10,8 +10,8 @@
 use crate::{plc::PlcMode, session::LabSession};
 use hardware_model::{ChannelValue, DiagnosticKind, LedState, Measurement, ModuleStatus, Quality};
 use lab_model::{
-    hardware::{ChannelRef, ModuleClass, SlotRef},
-    scene::{ComponentKind, ContactType, PortKind},
+    hardware::{ChannelMode, ChannelRef, ModuleClass, SlotRef},
+    scene::{AnalogSignal, ComponentKind, ContactType, PortKind, TransmitterWiring},
 };
 use network_core::ScanStatus;
 use process_simulation::Quantity;
@@ -108,6 +108,12 @@ impl InputTest {
     }
 }
 
+struct AnalogChecks {
+    signal: CheckItem,
+    raw: CheckItem,
+    scaling: CheckItem,
+}
+
 #[derive(Debug, Clone, Default)]
 struct OutputTest {
     commanded: bool,
@@ -164,6 +170,24 @@ fn is_on(q: Option<Quantity>) -> bool {
 
 fn slot_text(slot: SlotRef) -> String {
     format!("rack {} slot {}", slot.rack, slot.slot)
+}
+
+fn signal_text(s: AnalogSignal) -> &'static str {
+    match s {
+        AnalogSignal::Current4To20mA => "4-20 mA",
+        AnalogSignal::Current0To20mA => "0-20 mA",
+        AnalogSignal::Voltage0To10V => "0-10 V",
+    }
+}
+
+fn mode_text(m: ChannelMode) -> &'static str {
+    match m {
+        ChannelMode::Disabled => "disabled",
+        ChannelMode::Digital => "digital",
+        ChannelMode::Current4To20mA => "4-20 mA",
+        ChannelMode::Current0To20mA => "0-20 mA",
+        ChannelMode::Voltage0To10V => "0-10 V",
+    }
 }
 
 fn bool_text(v: bool) -> &'static str {
@@ -977,58 +1001,7 @@ impl LabSession {
                 contacts.push(finding);
             }
         }
-        let analog: Vec<String> = self
-            .station
-            .configuration()
-            .modules
-            .iter()
-            .filter(|m| matches!(m.module.class(), ModuleClass::AnalogInput { .. }))
-            .flat_map(|m| {
-                (0..m.module.channel_count()).map(move |channel| ChannelRef {
-                    rack: m.position.rack,
-                    slot: m.position.slot,
-                    channel,
-                })
-            })
-            .filter(|c| self.station.tag_for(*c).is_some())
-            .filter_map(|c| {
-                self.station.reading(c).map(|r| {
-                    let value = match r.value {
-                        ChannelValue::Int(i) => i.to_string(),
-                        ChannelValue::Real(v) => format!("{v}"),
-                        ChannelValue::Bool(b) => bool_text(b).to_owned(),
-                    };
-                    format!(
-                        "{} = {value} ({})",
-                        self.channel_name(c),
-                        quality_text(r.quality)
-                    )
-                })
-            })
-            .collect();
-        let analog_item = |id, title, how| {
-            if analog.is_empty() {
-                item(
-                    id,
-                    title,
-                    CheckState::NotApplicable,
-                    vec!["This machine has no analog inputs.".into()],
-                    "",
-                )
-            } else {
-                item(
-                    id,
-                    title,
-                    if analog.iter().any(|a| !a.ends_with("(good)")) {
-                        CheckState::Fault
-                    } else {
-                        CheckState::Ok
-                    },
-                    analog.clone(),
-                    how,
-                )
-            }
-        };
+        let analog = self.analog_checks();
         let no_devices = |findings: Vec<String>| {
             if findings.is_empty() {
                 vec!["No operator devices or sensors are wired to inputs.".into()]
@@ -1073,17 +1046,193 @@ impl LabSession {
                     no_devices(contacts),
                     "Compare the input at rest with the drawing: NC reads TRUE at rest, NO FALSE.",
                 ),
-                analog_item(
-                    "analog-raw",
-                    "Analog raw value",
-                    "Watch: the raw input value; measure the loop.",
-                ),
-                analog_item(
-                    "scaling",
-                    "Scaling",
-                    "Compare the scaled value with the process value.",
-                ),
+                analog.signal,
+                analog.raw,
+                analog.scaling,
             ],
+        }
+    }
+
+    /// Analog inputs wired to transmitters: signal type and loop against the drawing, the
+    /// raw value and its condition, and the transmitter value against the sight glass.
+    fn analog_checks(&self) -> AnalogChecks {
+        let mut signal = (Vec::new(), Vec::new());
+        let mut raw = (Vec::new(), Vec::new());
+        let mut scaling = (Vec::new(), Vec::new());
+        for wire in &self.scene_def.installation.wiring {
+            let Ok(index) = self.scene.index_of_str(wire.component.as_str()) else {
+                continue;
+            };
+            let definition = &self.scene_def.components[index];
+            let ComponentKind::LevelTransmitter {
+                tank,
+                range_min_ml,
+                range_max_ml,
+                signal: drawn,
+                wiring,
+            } = &definition.kind
+            else {
+                continue;
+            };
+            let label = &definition.label;
+            let name = self.channel_name(wire.channel);
+            let config = self.station.configuration().channel_config(wire.channel);
+            let mode = config.map_or(ChannelMode::Disabled, |c| c.mode);
+            let supplied = config.is_none_or(|c| c.loop_supply);
+            let current = matches!(
+                drawn,
+                AnalogSignal::Current4To20mA | AnalogSignal::Current0To20mA
+            );
+            // Signal type and loop: the configuration against the drawing.
+            let expected_mode = match drawn {
+                AnalogSignal::Current4To20mA => ChannelMode::Current4To20mA,
+                AnalogSignal::Current0To20mA => ChannelMode::Current0To20mA,
+                AnalogSignal::Voltage0To10V => ChannelMode::Voltage0To10V,
+            };
+            let two_wire = *wiring == TransmitterWiring::TwoWire;
+            let (state, finding) = if mode != expected_mode {
+                (
+                    CheckState::Fault,
+                    format!(
+                        "{label}: drawn {}, {name} configured {}",
+                        signal_text(*drawn),
+                        mode_text(mode)
+                    ),
+                )
+            } else if current && two_wire && !supplied {
+                (
+                    CheckState::Fault,
+                    format!(
+                        "{label}: 2-wire transmitter, but {name} is a passive input: nothing supplies the loop"
+                    ),
+                )
+            } else if current && !two_wire && supplied {
+                (
+                    CheckState::Fault,
+                    format!(
+                        "{label}: 4-wire transmitter on an input that supplies the loop (needs a passive input)"
+                    ),
+                )
+            } else {
+                let power = match (current, two_wire) {
+                    (true, true) => "2-wire, loop supplied by the input",
+                    (true, false) => "4-wire, passive input",
+                    (false, _) => "separately powered",
+                };
+                (
+                    CheckState::Ok,
+                    format!("{label}: {} {power}; {name} matches", signal_text(*drawn)),
+                )
+            };
+            signal.0.push(state);
+            signal.1.push(finding);
+            // Raw value and its condition.
+            let measured = match self.station.measure(wire.channel, &self.scene) {
+                Measurement::Microamps(ua) => Some((ua, "mA")),
+                Measurement::Millivolts(mv) => Some((mv, "V")),
+                Measurement::NoModule => None,
+            };
+            let (state, finding) = match (self.station.reading(wire.channel), measured) {
+                (Some(r), Some((value, unit))) => {
+                    let raw_text = match r.value {
+                        ChannelValue::Int(i) => i.to_string(),
+                        ChannelValue::Real(v) => format!("{v}"),
+                        ChannelValue::Bool(b) => bool_text(b).to_owned(),
+                    };
+                    let state = match r.quality {
+                        Quality::Good => CheckState::Ok,
+                        Quality::Overrange | Quality::Underrange => CheckState::Attention,
+                        _ => CheckState::Fault,
+                    };
+                    (
+                        state,
+                        format!(
+                            "{label} on {name}: {}.{:02} {unit}, raw {raw_text} ({})",
+                            value / 1000,
+                            (value % 1000).abs() / 10,
+                            quality_text(r.quality)
+                        ),
+                    )
+                }
+                _ => (CheckState::Fault, format!("{label} on {name}: no reading")),
+            };
+            let valid = state != CheckState::Fault;
+            raw.0.push(state);
+            raw.1.push(finding);
+            // The value the signal stands for (drawn range) against the tank's sight glass.
+            let span = i64::try_from(range_max_ml.saturating_sub(*range_min_ml).max(1))
+                .unwrap_or(i64::MAX);
+            let min = i64::try_from(*range_min_ml).unwrap_or(0);
+            let ppm = measured.map(|(value, _)| match drawn {
+                AnalogSignal::Current4To20mA => (value - 4_000) * 1_000_000 / 16_000,
+                AnalogSignal::Current0To20mA => value * 1_000_000 / 20_000,
+                AnalogSignal::Voltage0To10V => value * 1_000_000 / 10_000,
+            });
+            let level = self.scene.index_of_str(tank.as_str()).ok().and_then(|t| {
+                match self.scene.quantity(t, "levelMl") {
+                    Some(Quantity::Integer(ml)) => Some(ml),
+                    _ => None,
+                }
+            });
+            let (state, finding) = match (ppm, level) {
+                (Some(ppm), Some(level)) if valid => {
+                    let value = min + ppm * span / 1_000_000;
+                    let deviation = (value - level).abs();
+                    let text = format!(
+                        "{label}: {}.{} % of {range_min_ml}..{range_max_ml} ml = {value} ml; sight glass {level} ml",
+                        ppm / 10_000,
+                        (ppm % 10_000).abs() / 1_000
+                    );
+                    // Within 2 % of the span counts as matching.
+                    if deviation * 50 <= span {
+                        (CheckState::Ok, text)
+                    } else {
+                        (
+                            CheckState::Attention,
+                            format!("{text}: differs by {deviation} ml"),
+                        )
+                    }
+                }
+                _ => (
+                    CheckState::Untested,
+                    format!("{label}: no valid signal to compare with the sight glass"),
+                ),
+            };
+            scaling.0.push(state);
+            scaling.1.push(finding);
+        }
+        let make = |id, title, (states, findings): (Vec<CheckState>, Vec<String>), how| {
+            if states.is_empty() {
+                item(
+                    id,
+                    title,
+                    CheckState::NotApplicable,
+                    vec!["This machine has no analog transmitters.".into()],
+                    "",
+                )
+            } else {
+                item(id, title, worst(states), findings, how)
+            }
+        };
+        AnalogChecks {
+            signal: make(
+                "analog-signal",
+                "Analog signal type and loop",
+                signal,
+                "Hardware view (Advanced): channel mode and loop supply against the drawing.",
+            ),
+            raw: make(
+                "analog-raw",
+                "Analog raw value",
+                raw,
+                "Measure the loop current or voltage at the terminal; Watch: the raw value.",
+            ),
+            scaling: make(
+                "scaling",
+                "Scaling",
+                scaling,
+                "Compare the transmitter value with the sight glass, then with your scaled value in Watch.",
+            ),
         }
     }
 

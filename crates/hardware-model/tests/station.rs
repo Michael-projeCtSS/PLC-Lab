@@ -5,7 +5,7 @@ use hardware_model::{
 use lab_model::{
     hardware::{ChannelMode, ChannelRef, ModuleType, SlotRef, StationConfig},
     profile::{AnalogRepresentation, PlatformProfile},
-    scene::{OutputStyle, SceneDefinition},
+    scene::{ComponentKind, OutputStyle, SceneDefinition, TransmitterWiring},
     validate_scene,
 };
 use process_simulation::{ComponentFault, SceneRuntime};
@@ -432,4 +432,47 @@ fn wiring_against_port_direction_or_to_unknown_ports_is_rejected() {
     let mut extra = base.clone();
     extra["components"][2]["kind"]["direction"] = serde_json::json!("output");
     assert!(serde_json::from_value::<SceneDefinition>(extra).is_err());
+}
+
+#[test]
+fn a_current_loop_needs_exactly_one_power_source() {
+    // 2-wire transmitters are loop-powered by the input; 4-wire ones drive a passive input.
+    for (wiring, loop_supply, expected_ua) in [
+        (TransmitterWiring::TwoWire, true, 12_000),
+        (TransmitterWiring::TwoWire, false, 0),
+        (TransmitterWiring::FourWire, false, 12_000),
+        (TransmitterWiring::FourWire, true, 0),
+    ] {
+        let mut s = scene();
+        for c in &mut s.components {
+            if let ComponentKind::LevelTransmitter { wiring: w, .. } = &mut c.kind {
+                *w = wiring;
+            }
+        }
+        let mut config = s.reference_station.clone();
+        let ai = config
+            .modules
+            .iter_mut()
+            .find(|m| m.module == ModuleType::Ai4)
+            .unwrap();
+        ai.channels[0].loop_supply = loop_supply;
+        let runtime = SceneRuntime::new(&s, 1).unwrap();
+        let mut station = StationRuntime::new(
+            config,
+            s.installation.clone(),
+            profile(AnalogRepresentation::S7Nominal27648),
+        )
+        .unwrap();
+        assert_eq!(
+            station.measure(ch(4, 0), &runtime),
+            Measurement::Microamps(expected_ua),
+            "{wiring:?}, loop supply {loop_supply}"
+        );
+        let reading = station.sample_inputs(&runtime, WorldTime::ZERO)[&ch(4, 0)];
+        assert_eq!(
+            reading.quality == Quality::WireBreak,
+            expected_ua == 0,
+            "{wiring:?}, loop supply {loop_supply}: {reading:?}"
+        );
+    }
 }
