@@ -588,6 +588,73 @@ try {
     },
   );
 
+  await step(
+    "engineering tools: watch table, variable detail, forcing and diagnostic buffer",
+    async () => {
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+      await page.getByRole("button", { name: "FREE LAB", exact: true }).click();
+      await page.getByRole("button", { name: "New project" }).click();
+      await page
+        .getByLabel("Machine (scene)")
+        .selectOption("scene.hardware-station");
+      await page.getByRole("button", { name: "Create and open" }).click();
+      await page
+        .getByRole("button", { name: "Build & Load to PLC" })
+        .click({ timeout: 30_000 });
+      const monitoring = page.getByRole("tablist", { name: "Monitoring" });
+      // A watch table row of a canonical signal and its online detail.
+      await monitoring.getByRole("tab", { name: /^Watch/ }).click();
+      await page.getByRole("button", { name: "New table" }).click();
+      await page.getByLabel("Find a signal").fill("LevelRaw");
+      await page.getByRole("button", { name: /^Add LevelRaw/ }).click();
+      const table = page.getByRole("table", { name: /^Watch table / });
+      await table.getByText("LevelRaw").first().waitFor({ timeout: 15_000 });
+      await table.getByRole("button", { name: "Details" }).click();
+      await page
+        .getByLabel("Online variable")
+        .getByText("plc.LevelRaw")
+        .waitFor({ timeout: 10_000 });
+      // A forced output: the banner warns until all forces are removed.
+      await monitoring.getByRole("tab", { name: "Variables" }).click();
+      await page
+        .getByRole("row")
+        .filter({ hasText: "InletValve" })
+        .getByTitle("Force TRUE")
+        .click({ timeout: 15_000 });
+      const banner = page.getByRole("alert", { name: "Forces active" });
+      await banner.waitFor({ timeout: 10_000 });
+      await banner.getByRole("button", { name: "Show forces" }).click();
+      await banner
+        .getByRole("table", { name: "Active forces" })
+        .getByText(/InletValve/)
+        .first()
+        .waitFor({ timeout: 10_000 });
+      await page.screenshot({
+        path: path.join(directory, "forces-active.png"),
+      });
+      await banner.getByRole("button", { name: "Remove all forces" }).click();
+      await banner.waitFor({ state: "detached", timeout: 10_000 });
+      // The CPU diagnostic buffer shows the download and the start as events.
+      await page
+        .getByRole("tablist", { name: "Workspace views" })
+        .getByRole("tab", { name: /^Diagnostics/ })
+        .click();
+      const buffer = page.getByRole("table", { name: "Diagnostic buffer" });
+      await buffer
+        .getByText("Program downloaded into the CPU.")
+        .first()
+        .waitFor({ timeout: 10_000 });
+      await buffer
+        .getByText(/changed from STOP to RUN/)
+        .first()
+        .waitFor();
+      await page.getByRole("button", { name: "Pause" }).click();
+      await page.screenshot({
+        path: path.join(directory, "engineering-tools.png"),
+      });
+    },
+  );
+
   await step("project round trip through the real backend", async () => {
     const created = await invoke("create_project", {
       contractVersion: 8,

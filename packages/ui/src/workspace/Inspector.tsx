@@ -12,6 +12,7 @@ import { isFaultFinding, type Navigate } from "../route";
 import { CauseEffect } from "./CauseEffect";
 import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
+import { VariableDetail } from "./VariableDetail";
 
 type Tab = "task" | "cause" | "properties";
 
@@ -26,6 +27,13 @@ export function Inspector({
 }) {
   const exercise = lab.workspace?.exercise ?? null;
   const [tab, setTab] = useState<Tab>(exercise ? "task" : "cause");
+  // Choosing a variable anywhere shows its online detail (state adjusted while rendering).
+  const signal = selection?.kind === "signal" ? selection.id : null;
+  const [shown, setShown] = useState<number | null>(null);
+  if (signal !== null && signal !== shown) {
+    setShown(signal);
+    setTab("properties");
+  }
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <Tabs<Tab>
@@ -430,6 +438,8 @@ function Investigation({
 function Properties({ lab, selection }: { lab: Lab; selection: Selection }) {
   const { workspace, frame } = lab;
   if (!workspace || !frame) return null;
+  if (selection?.kind === "signal")
+    return <VariableDetail lab={lab} signal={selection.id} />;
   if (selection?.kind === "component") {
     const c = workspace.scene.components.find((x) => x.id === selection.id);
     const state = frame.components.find((x) => x.id === selection.id);

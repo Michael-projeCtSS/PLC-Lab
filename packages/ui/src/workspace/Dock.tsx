@@ -9,12 +9,19 @@ import {
 import { formatValue, numeric, seconds, valueClass } from "../format";
 import { Badge, Tabs, VirtualList } from "../ui";
 import { useFrameQuery } from "./useFrameQuery";
+import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
 import { WatchTables } from "./WatchTables";
 
 type DockTab = "variables" | "watch" | "waves" | "events" | "messages";
 
-export function Dock({ lab }: { lab: Lab }) {
+export function Dock({
+  lab,
+  select = () => undefined,
+}: {
+  lab: Lab;
+  select?: (s: Selection) => void;
+}) {
   const [tab, setTab] = useState<DockTab>("variables");
   const errors = lab.messages.filter((m) => m.kind === "error").length;
   return (
@@ -42,8 +49,8 @@ export function Dock({ lab }: { lab: Lab }) {
         ]}
       />
       <div className="ws-dock-body">
-        {tab === "variables" && <Variables lab={lab} />}
-        {tab === "watch" && <WatchTables lab={lab} />}
+        {tab === "variables" && <Variables lab={lab} select={select} />}
+        {tab === "watch" && <WatchTables lab={lab} select={select} />}
         {tab === "waves" && <Waveforms lab={lab} />}
         {tab === "events" && <Events lab={lab} />}
         {tab === "messages" && <Messages lab={lab} />}
@@ -52,7 +59,7 @@ export function Dock({ lab }: { lab: Lab }) {
   );
 }
 
-function ForceCell({
+export function ForceCell({
   lab,
   signal,
   kind,
@@ -146,7 +153,13 @@ export function NumericForce({
   );
 }
 
-function Variables({ lab }: { lab: Lab }) {
+function Variables({
+  lab,
+  select,
+}: {
+  lab: Lab;
+  select: (s: Selection) => void;
+}) {
   const [filter, setFilter] = useState("");
   const [detail, setDetail] = useState(false);
   const ws = lab.ws;
@@ -219,7 +232,15 @@ function Variables({ lab }: { lab: Lab }) {
                 const watched = s ? lab.watch.includes(s.path) : false;
                 return (
                   <tr key={r.signal}>
-                    <td className="mono">{r.name}</td>
+                    <td className="mono">
+                      <button
+                        className="btn btn-sm btn-ghost mono"
+                        title="Show the online detail of this variable"
+                        onClick={() => select({ kind: "signal", id: r.signal })}
+                      >
+                        {r.name}
+                      </button>
+                    </td>
                     <td className="dim">
                       {r.kind === "PLC_INPUT"
                         ? "input"

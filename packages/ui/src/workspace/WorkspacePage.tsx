@@ -171,7 +171,7 @@ export function WorkspacePage({
             onResize={setDockHeight}
           />
           <div className="ws-dock" style={{ height: dockHeight }}>
-            <Dock lab={lab} />
+            <Dock lab={lab} select={select} />
           </div>
         </div>
       </div>

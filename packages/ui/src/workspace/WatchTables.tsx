@@ -9,6 +9,7 @@ import { api, type WatchTableDto } from "@plc-lab/ipc";
 import { formatValue, seconds, valueClass } from "../format";
 import { Badge, Tabs } from "../ui";
 import { useFrameQuery } from "./useFrameQuery";
+import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
 import {
   MAX_ROWS,
@@ -87,7 +88,13 @@ function storeColumns(columns: Column[]) {
   }
 }
 
-export function WatchTables({ lab }: { lab: Lab }) {
+export function WatchTables({
+  lab,
+  select = () => undefined,
+}: {
+  lab: Lab;
+  select?: (s: Selection) => void;
+}) {
   const ws = lab.ws;
   const [columns, setColumns] = useState<Column[]>(loadColumns);
   const [search, setSearch] = useState("");
@@ -356,6 +363,16 @@ export function WatchTables({ lab }: { lab: Lab }) {
                       </select>
                     </td>
                     <td>
+                      {known && (
+                        <button
+                          className="btn btn-sm btn-ghost"
+                          onClick={() =>
+                            select({ kind: "signal", id: known.id })
+                          }
+                        >
+                          Details
+                        </button>
+                      )}
                       <button
                         className="btn btn-sm btn-ghost"
                         onClick={() =>
