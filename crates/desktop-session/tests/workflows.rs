@@ -405,6 +405,10 @@ fn each_network_lab_shows_its_own_evidence_in_the_network_view() {
 
 #[test]
 fn each_hardware_lab_shows_its_own_evidence_in_the_hardware_view() {
+    let library =
+        knowledge_core::KnowledgeLibrary::load(&[
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../knowledge")
+        ]);
     let f = fixture("hardware-labs");
     let request = |id| WorkspaceRequest {
         contract_version: V,
@@ -446,7 +450,7 @@ fn each_hardware_lab_shows_its_own_evidence_in_the_hardware_view() {
         "hw.ai-mode",
         "hw.wrong-slot",
     ] {
-        let (_, w) = exercise(&f.app, lab);
+        let (project, w) = exercise(&f.app, lab);
         let id = w.workspace_id;
         press(&f.app, id, "start");
         step(&f.app, id, 30);
@@ -563,7 +567,80 @@ fn each_hardware_lab_shows_its_own_evidence_in_the_hardware_view() {
             "{lab}: {:?}",
             checklist.categories
         );
+        let evidence = (found, closed.value);
+
+        // The diagnosis unlocks the repair, which changes the authoritative state; a
+        // configuration lab is repaired by downloading the documented configuration.
+        let setup = library
+            .exercise(lab)
+            .and_then(|e| e.troubleshooting.as_ref())
+            .unwrap();
+        assert!(diagnose(&f.app, id, setup.root_causes[0].as_str()), "{lab}");
+        if setup.repairs.is_empty() {
+            let documented = f
+                .app
+                .create_project(ProjectCreateRequest {
+                    contract_version: V,
+                    name: "Reference".into(),
+                    exercise: None,
+                    scene: Some("scene.hardware-station".into()),
+                    platform: None,
+                })
+                .unwrap();
+            load(
+                &f.app,
+                id,
+                &project.programs[0].source,
+                1,
+                Some(documented.station),
+            );
+        } else {
+            for r in setup.repairs.iter().filter(|r| !r.clears.is_empty()) {
+                repair(&f.app, id, r.id.as_str());
+            }
+        }
+        step(&f.app, id, 5);
+        let repaired = f.app.hardware(request(id)).unwrap();
+        assert!(
+            repaired.findings.is_empty(),
+            "{lab}: {:?}",
+            repaired.findings
+        );
+        if lab == "hw.sensor-channel" {
+            // The rewired switch now reaches the mapped channel.
+            assert_eq!(
+                signal(&repaired, "InletClosed").value,
+                Some(SignalValueDto::Bool { value: true })
+            );
+        }
+        // Reopening the repaired project replays the repair ...
         f.app.close_workspace(request(id)).unwrap();
+        let reopened = f
+            .app
+            .open_workspace(WorkspaceOpenRequest {
+                contract_version: V,
+                project_id: project.id.clone(),
+            })
+            .unwrap();
+        step(&f.app, reopened.workspace_id, 5);
+        let again = f.app.hardware(request(reopened.workspace_id)).unwrap();
+        assert!(again.findings.is_empty(), "{lab}: {:?}", again.findings);
+        f.app
+            .close_workspace(request(reopened.workspace_id))
+            .unwrap();
+        // ... and a new attempt at the lab starts with the fault and the same evidence.
+        let (_, fresh) = exercise(&f.app, lab);
+        step(&f.app, fresh.workspace_id, 5);
+        let restored = f.app.hardware(request(fresh.workspace_id)).unwrap();
+        assert_eq!(
+            (
+                categories(&restored),
+                signal(&restored, "InletClosed").value
+            ),
+            evidence,
+            "{lab}: the fault is back"
+        );
+        f.app.close_workspace(request(fresh.workspace_id)).unwrap();
     }
 }
 
