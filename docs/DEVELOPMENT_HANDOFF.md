@@ -102,6 +102,10 @@ crash (exit 0xC0000409) before any project code ran.
 - Not done: communication timeout of a fieldbus-controlled drive (needs the network work of
   P5).
 
+Validated: `ca8d02f08712472f9d108b73148d176bbed9599d`, CI run 40833648513 (Windows job
+123313305166 and Linux job 123313305607 PASS; native smoke 17 steps on every entry point,
+launcher smoke 11 steps).
+
 ## Checkpoint 5: network diagnostics (P5)
 
 - Network projection (ADR-0028, contract 8 additive): per connection the downloaded
