@@ -214,6 +214,9 @@ build 20 steps).
   pending after reopen, a downloaded one survives an application restart, the exported
   file carries `downloadedStation`.
 
+Validated: `7a31ebe2e0224b4199e15055a73a456a25f89a6f`, CI run 40920318148 (Windows job
+123611455125 and Linux job 123611455530 PASS).
+
 ## Checkpoint 7-C: watch tables
 
 - Project format 5 (ADR-0032): named `watchTables` (16 x 64 rows of canonical signal
@@ -229,6 +232,10 @@ build 20 steps).
 - Tests: project model (migration, round trip, limits), workflow (every signal kind, a
   force, unknown ids, the 64 limit, a moved module's channel row still resolves),
   persistence of watch tables, UI (values, quality, force, columns, editing).
+
+Validated: `4a3ba91e8023724ca5173d818bd87fed407a0b92`, CI run 40925230579 (Windows job
+123628821057 and Linux job 123628820816 PASS; native smoke 20 steps on the debug build,
+the root `PLC Lab.exe` and the relocated copy, 19 through the BAT).
 
 ## Checkpoint 7-D: forcing
 
@@ -256,6 +263,24 @@ build 20 steps).
   field supply lab (active error of `do-r0s3`, cleared after the repair, CPU events with
   details, filters, order and bounds), UI (states, details, filters, paging).
 
+## Checkpoint 7-F: online variable detail and the native engineering smoke
+
+- Choosing a variable in Variables or a watch row (Details) shows its online detail in
+  the inspector: canonical id, kind, type, value, scan input, committed value, next
+  input, quality, source, force state with force controls for PLC I/O, the I/O binding
+  (channel id, address, device and port on the drawing, device state) and the recent
+  value changes from the trace (last 20 s). Every value comes from the `watch`, `trend`
+  and `hardware` projections; the view evaluates nothing. No IPC change.
+- Native smoke step "engineering tools" on every entry point: a Free Lab project on the
+  hardware station is built and loaded, a watch table gets `LevelRaw` and shows its
+  online detail, `InletValve` is forced (banner and force list), all forces are removed
+  (banner gone), and the diagnostic buffer shows the program download and the STOP to
+  RUN change.
+- Tests: UI (detail values, quality, binding, recent changes, force controls), native
+  smoke.
+- Limitation: the declaration's source location is not shown; the ST compiler keeps no
+  declaration spans yet.
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
@@ -270,9 +295,8 @@ agent.
 
 ## Next checkpoints
 
-1. Checkpoint 7 (after 7-A): B saved-versus-downloaded configuration across reopen,
-   C watch tables, D forcing, E diagnostic buffer, F online variable detail and the
-   native engineering smoke.
+1. Checkpoint 7: D forcing, E diagnostic buffer and F online variable detail are
+   validated one slice at a time on hosted CI.
 2. Checkpoint 8: alarms and events, startup and restart, sequence diagnostics (P9, P10).
 3. Checkpoint 9: ST depth, multiple POUs and FB instances (P11), then LAD readiness.
 
