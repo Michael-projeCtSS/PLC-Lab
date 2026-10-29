@@ -244,6 +244,18 @@ build 20 steps).
   pruning, all logged), workflow (list, remove all, reset, reopen), UI (banner, list,
   removal, typed entry).
 
+## Checkpoint 7-E: diagnostic buffer
+
+- ADR-0034: the bounded CPU buffer also records single events (CPU operating state
+  changes with before and after, program and hardware downloads). The backend derives
+  severity, category, structured details and, for incoming conditions, active or the
+  time they cleared.
+- Typed `diagnostic_buffer` query (newest first, filters severity, category, module id,
+  pages of at most 200); Diagnostics tab view with filters, states, details and paging.
+- Tests: engine (mode changes and downloads recorded as events), workflow over the
+  field supply lab (active error of `do-r0s3`, cleared after the repair, CPU events with
+  details, filters, order and bounds), UI (states, details, filters, paging).
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
