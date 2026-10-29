@@ -852,7 +852,10 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
     )
     .unwrap();
     // The file itself is the current format and stores every module's stable id.
-    assert_eq!(future["formatVersion"], serde_json::json!(4));
+    assert_eq!(
+        future["formatVersion"],
+        serde_json::json!(project_model::FORMAT_VERSION)
+    );
     let ids: Vec<&str> = future["station"]["modules"]
         .as_array()
         .unwrap()
