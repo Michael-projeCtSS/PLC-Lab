@@ -576,6 +576,10 @@ impl LabSession {
                     "{}: {name} installed but not in the project",
                     slot_text(view.position)
                 )),
+                ModuleStatus::NoModulePower => slots.push(format!(
+                    "{}: {name} installed but not answering (status LEDs dark)",
+                    slot_text(view.position)
+                )),
                 ModuleStatus::Ok | ModuleStatus::NoFieldPower => {}
             }
             if view.status_led != LedState::Green {

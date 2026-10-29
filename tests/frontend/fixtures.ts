@@ -95,6 +95,7 @@ export const station: ProjectDto["station"] = {
   cpu: "cpu.compact",
   modules: [
     {
+      id: "di-r0s1",
       position: { rack: 0, slot: 1 },
       module: "di8.24vdc.sink",
       startAddress: 0,

@@ -139,7 +139,11 @@ stopBehavior: "off" | "holdLast",
  */
 loopSupply: boolean, };
 
-export type ConfiguredModuleDto = { position: SlotRefDto, module: string, startAddress: number, channels: Array<ChannelConfigDto>, };
+export type ConfiguredModuleDto = { 
+/**
+ * Stable module identity; survives moving the module to another slot.
+ */
+id: string, position: SlotRefDto, module: string, startAddress: number, channels: Array<ChannelConfigDto>, };
 
 export type IoMappingDto = { channel: ChannelRefDto, tag: string, };
 
@@ -361,9 +365,9 @@ export type ChannelViewDto = { channel: number, mode: string, tag: string | null
 
 export type ModuleViewDto = { position: SlotRefDto, configured: string | null, installed: string | null, configuredName: string | null, installedName: string | null, product: string | null, 
 /**
- * "OK" | "MISSING" | "MISMATCH" | "NO_FIELD_POWER" | "UNCONFIGURED"
+ * "OK" | "MISSING" | "MISMATCH" | "NO_FIELD_POWER" | "NO_MODULE_POWER" | "UNCONFIGURED"
  */
-status: "OK" | "MISSING" | "MISMATCH" | "NO_FIELD_POWER" | "UNCONFIGURED", statusLed: string, channels: Array<ChannelViewDto>, };
+status: "OK" | "MISSING" | "MISMATCH" | "NO_FIELD_POWER" | "NO_MODULE_POWER" | "UNCONFIGURED", statusLed: string, channels: Array<ChannelViewDto>, };
 
 export type DiagnosticEntryDto = { timeUs: ExactU64, source: string, kind: string, 
 /**

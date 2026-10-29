@@ -215,6 +215,14 @@ pub(crate) fn link(
                     PlcType::Int
                 },
             ),
+            ModuleClass::AnalogOutput { .. } => (
+                TagRole::Output,
+                if profile.analog == AnalogRepresentation::EngineeringUnits {
+                    PlcType::Real
+                } else {
+                    PlcType::Int
+                },
+            ),
             _ => {
                 issues.push(BindingIssue {
                     tag: mapping.tag.to_string(),

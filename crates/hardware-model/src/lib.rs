@@ -69,6 +69,7 @@ pub enum HardwareFault {
     WrongModule(SlotRef, ModuleType),
     WrongSlot(SlotRef, SlotRef),
     FieldPowerMissing(SlotRef),
+    ModulePowerMissing(SlotRef),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -80,6 +81,8 @@ pub enum ModuleStatus {
     Mismatch(ModuleType),
     /// Plugged in, but its load/field supply is missing.
     NoFieldPower,
+    /// Plugged in, but its electronics have no supply: it does not answer the CPU.
+    NoModulePower,
     /// Plugged in but not part of the configuration.
     Unconfigured,
 }
@@ -152,10 +155,19 @@ pub struct ModuleView {
     pub channels: Vec<ChannelView>,
 }
 
+/// An analog output channel: the PLC's command read back, its quality, and the field
+/// value at the terminal (µA or mV; 0 while the channel does not drive).
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct AnalogOutputState {
+    reading: ChannelReading,
+    field: Measurement,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Installed {
     module: ModuleType,
     powered: bool,
+    electronics: bool,
     /// Where the module's terminals were originally wired (front connector follows the module).
     wired_as: SlotRef,
 }
@@ -170,6 +182,8 @@ pub struct StationRuntime {
     readings: BTreeMap<ChannelRef, ChannelReading>,
     outputs: BTreeMap<ChannelRef, bool>,
     last_run_outputs: BTreeMap<ChannelRef, bool>,
+    /// Analog output channels: commanded value and what the terminal drives.
+    analog_outputs: BTreeMap<ChannelRef, AnalogOutputState>,
     buffer: DiagnosticBuffer,
     active: BTreeSet<(DiagnosticSource, DiagnosticKind)>,
 }
@@ -197,6 +211,7 @@ impl StationRuntime {
             readings: BTreeMap::new(),
             outputs: BTreeMap::new(),
             last_run_outputs: BTreeMap::new(),
+            analog_outputs: BTreeMap::new(),
             buffer: DiagnosticBuffer::new(200),
             active: BTreeSet::new(),
         };
@@ -260,6 +275,7 @@ impl StationRuntime {
                     Installed {
                         module: m.module,
                         powered: m.field_power,
+                        electronics: m.module_power,
                         wired_as: m.position,
                     },
                 )
@@ -279,6 +295,7 @@ impl StationRuntime {
                             Installed {
                                 module: *module,
                                 powered: true,
+                                electronics: true,
                                 wired_as: *p,
                             },
                         );
@@ -292,6 +309,11 @@ impl StationRuntime {
                 HardwareFault::FieldPowerMissing(p) => {
                     if let Some(m) = map.get_mut(p) {
                         m.powered = false;
+                    }
+                }
+                HardwareFault::ModulePowerMissing(p) => {
+                    if let Some(m) = map.get_mut(p) {
+                        m.electronics = false;
                     }
                 }
                 _ => {}
@@ -310,6 +332,8 @@ impl StationRuntime {
             effective.get(&position),
         ) {
             (Some(_), None) => ModuleStatus::Missing,
+            // Without electronics supply the module cannot report its type.
+            (_, Some(i)) if !i.electronics => ModuleStatus::NoModulePower,
             (Some(c), Some(i)) if c.module != i.module => ModuleStatus::Mismatch(i.module),
             (Some(_), Some(i)) if !i.powered => ModuleStatus::NoFieldPower,
             (Some(_), Some(_)) => ModuleStatus::Ok,
@@ -343,6 +367,8 @@ impl StationRuntime {
                     installed: *installed,
                 },
                 ModuleStatus::NoFieldPower => DiagnosticKind::NoFieldPower,
+                // The CPU cannot tell an unpowered module from a missing one.
+                ModuleStatus::NoModulePower => DiagnosticKind::ModuleMissing,
                 ModuleStatus::Unconfigured => DiagnosticKind::UnconfiguredModule,
             };
             current.insert((source, kind));
@@ -663,8 +689,105 @@ impl StationRuntime {
         &self.readings
     }
 
+    /// An input's reading, or an analog output's commanded value read back.
     pub fn reading(&self, channel: ChannelRef) -> Option<ChannelReading> {
-        self.readings.get(&channel).copied()
+        self.readings
+            .get(&channel)
+            .or_else(|| self.analog_outputs.get(&channel).map(|o| &o.reading))
+            .copied()
+    }
+
+    /// Apply analog output commands: the module converts each command into a field value
+    /// for its channel mode (inverse of the input bands). Without a running CPU, a healthy
+    /// module or its field supply, the channel drives nothing.
+    pub fn drive_analog(
+        &mut self,
+        commands: &BTreeMap<ChannelRef, analog::AnalogRaw>,
+        cpu_running: bool,
+    ) {
+        let effective = self.effective();
+        let mut states = BTreeMap::new();
+        for module in &self.configured.modules {
+            if !matches!(module.module.class(), ModuleClass::AnalogOutput { .. }) {
+                continue;
+            }
+            let status = self.status_of(module.position, &effective);
+            for index in 0..module.module.channel_count() {
+                let channel = ChannelRef {
+                    rack: module.position.rack,
+                    slot: module.position.slot,
+                    channel: index,
+                };
+                let mode = self
+                    .configured
+                    .channel_config(channel)
+                    .map_or(default_mode(module.module), |c| c.mode);
+                let command = commands.get(&channel).copied();
+                let zero = match self.profile.analog {
+                    lab_model::profile::AnalogRepresentation::EngineeringUnits => {
+                        analog::AnalogRaw::Real(0.0)
+                    }
+                    _ => analog::AnalogRaw::Int(0),
+                };
+                let raw = if cpu_running {
+                    command.unwrap_or(zero)
+                } else {
+                    zero
+                };
+                let value = match raw {
+                    analog::AnalogRaw::Int(i) => ChannelValue::Int(i),
+                    analog::AnalogRaw::Real(r) => ChannelValue::Real(r),
+                };
+                let unit_zero = if matches!(
+                    mode,
+                    ChannelMode::Current4To20mA | ChannelMode::Current0To20mA
+                ) {
+                    Measurement::Microamps(0)
+                } else {
+                    Measurement::Millivolts(0)
+                };
+                // Like digital outputs, an analog output drives nothing while the CPU is
+                // not in RUN (substitute value 0 mA / 0 V).
+                let (quality, field) = if mode == ChannelMode::Disabled {
+                    (Quality::ChannelDisabled, unit_zero)
+                } else if !cpu_running {
+                    (Quality::Good, unit_zero)
+                } else if status == ModuleStatus::NoFieldPower {
+                    (Quality::NoFieldPower, unit_zero)
+                } else if status != ModuleStatus::Ok {
+                    (Quality::ModuleFault, unit_zero)
+                } else {
+                    match analog::output(raw, mode, self.profile.analog) {
+                        Some(o) => (
+                            match o.condition {
+                                analog::AnalogCondition::Overflow => Quality::Overflow,
+                                analog::AnalogCondition::Underflow => Quality::Underflow,
+                                analog::AnalogCondition::Overrange => Quality::Overrange,
+                                analog::AnalogCondition::Underrange => Quality::Underrange,
+                                _ => Quality::Good,
+                            },
+                            match o.unit {
+                                process_simulation::AnalogUnit::Microamp => {
+                                    Measurement::Microamps(o.field)
+                                }
+                                process_simulation::AnalogUnit::Millivolt => {
+                                    Measurement::Millivolts(o.field)
+                                }
+                            },
+                        ),
+                        None => (Quality::ChannelDisabled, unit_zero),
+                    }
+                };
+                states.insert(
+                    channel,
+                    AnalogOutputState {
+                        reading: ChannelReading { value, quality },
+                        field,
+                    },
+                );
+            }
+        }
+        self.analog_outputs = states;
     }
 
     /// Apply output channel commands (CPU in RUN) and drive wired actuators.
@@ -769,6 +892,10 @@ impl StationRuntime {
                     None => Measurement::Microamps(0),
                 }
             }
+            ModuleClass::AnalogOutput { .. } => self
+                .analog_outputs
+                .get(&channel)
+                .map_or(Measurement::Millivolts(0), |o| o.field),
             _ => Measurement::NoModule,
         }
     }
@@ -807,7 +934,7 @@ impl StationRuntime {
                 let status_led = match status {
                     ModuleStatus::Ok if channel_faults => LedState::RedFlashing,
                     ModuleStatus::Ok => LedState::Green,
-                    ModuleStatus::Missing => LedState::Off,
+                    ModuleStatus::Missing | ModuleStatus::NoModulePower => LedState::Off,
                     ModuleStatus::Mismatch(_) | ModuleStatus::NoFieldPower => LedState::RedFlashing,
                     ModuleStatus::Unconfigured => LedState::GreenFlashing,
                 };
@@ -820,7 +947,7 @@ impl StationRuntime {
                                     slot: position.slot,
                                     channel: index,
                                 };
-                                let reading = self.readings.get(&channel).copied();
+                                let reading = self.reading(channel);
                                 let output = self.outputs.get(&channel).copied();
                                 let led = status != ModuleStatus::Missing
                                     && match m.class() {

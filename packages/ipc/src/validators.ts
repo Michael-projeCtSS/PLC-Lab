@@ -291,6 +291,7 @@ export const station = obj<G.StationDto>({
   cpu: str,
   modules: arr(
     obj<G.ConfiguredModuleDto>({
+      id: str,
       position: slotRef,
       module: str,
       startAddress: u16,
@@ -626,6 +627,7 @@ export const hardware = obj<G.HardwareDto>({
         "MISSING",
         "MISMATCH",
         "NO_FIELD_POWER",
+        "NO_MODULE_POWER",
         "UNCONFIGURED",
       ),
       statusLed: str,

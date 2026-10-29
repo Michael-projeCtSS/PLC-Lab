@@ -38,6 +38,8 @@ pub struct ChannelConfigDto {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConfiguredModuleDto {
+    /// Stable module identity; survives moving the module to another slot.
+    pub id: String,
     pub position: SlotRefDto,
     pub module: String,
     pub start_address: u16,

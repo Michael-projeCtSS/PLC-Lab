@@ -136,6 +136,64 @@ pub fn convert(
     Some(reading)
 }
 
+/// What an analog output channel drives into the field for a commanded value: the inverse
+/// of the input bands. Values beyond the overrange limit are clamped there (overflow), as
+/// are values below the lower limit (underflow); engineering-unit profiles command the
+/// field value directly (mA or V).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AnalogOutputValue {
+    /// Microamperes or millivolts at the terminal.
+    pub field: i64,
+    pub unit: AnalogUnit,
+    pub condition: AnalogCondition,
+}
+
+pub fn output(
+    command: AnalogRaw,
+    mode: ChannelMode,
+    representation: AnalogRepresentation,
+) -> Option<AnalogOutputValue> {
+    let (lo, hi, live_zero, unit) = match mode {
+        ChannelMode::Current4To20mA => (4_000i64, 20_000i64, true, AnalogUnit::Microamp),
+        ChannelMode::Current0To20mA => (0, 20_000, false, AnalogUnit::Microamp),
+        ChannelMode::Voltage0To10V => (0, 10_000, false, AnalogUnit::Millivolt),
+        ChannelMode::Disabled | ChannelMode::Digital => return None,
+    };
+    let span = hi - lo;
+    // Overrange headroom of the input bands (about 117.6 % of span), live zero down to 0.
+    let max = lo + span * 32_511 / 27_648;
+    let min = if live_zero { 0 } else { lo };
+    let wanted = match (command, representation) {
+        (AnalogRaw::Real(v), _) => (f64::from(v) * 1_000.0).round() as i64,
+        (AnalogRaw::Int(raw), representation) => {
+            let n = match representation {
+                AnalogRepresentation::S7Nominal27648 => 27_648,
+                AnalogRepresentation::FullScale32767 => 32_767,
+                AnalogRepresentation::PerTenThousand | AnalogRepresentation::EngineeringUnits => {
+                    10_000
+                }
+            };
+            lo + (i64::from(raw) * span * 2 + n).div_euclid(2 * n)
+        }
+    };
+    let (field, condition) = if wanted > max {
+        (max, AnalogCondition::Overflow)
+    } else if wanted > hi {
+        (wanted, AnalogCondition::Overrange)
+    } else if wanted < min {
+        (min, AnalogCondition::Underflow)
+    } else if wanted < lo {
+        (wanted, AnalogCondition::Underrange)
+    } else {
+        (wanted, AnalogCondition::Normal)
+    };
+    Some(AnalogOutputValue {
+        field,
+        unit,
+        condition,
+    })
+}
+
 /// Round-half-up linear scaling of `x` in `[lo, hi]` to `[0, n]`.
 fn scale(x: i64, lo: i64, hi: i64, n: i64) -> i64 {
     let numerator = (i128::from(x) - i128::from(lo)) * i128::from(n) * 2 + i128::from(hi - lo);
@@ -156,6 +214,75 @@ mod tests {
             loop_powered: true,
         })
     }
+    #[test]
+    fn outputs_drive_the_inverse_of_the_input_bands() {
+        let out = |raw: i16, mode| {
+            let o = output(
+                AnalogRaw::Int(raw),
+                mode,
+                AnalogRepresentation::PerTenThousand,
+            )
+            .unwrap();
+            (o.field, o.condition)
+        };
+        assert_eq!(
+            out(0, ChannelMode::Current4To20mA),
+            (4_000, AnalogCondition::Normal)
+        );
+        assert_eq!(
+            out(5_000, ChannelMode::Current4To20mA),
+            (12_000, AnalogCondition::Normal)
+        );
+        assert_eq!(
+            out(10_000, ChannelMode::Voltage0To10V),
+            (10_000, AnalogCondition::Normal)
+        );
+        assert_eq!(
+            out(11_000, ChannelMode::Voltage0To10V).1,
+            AnalogCondition::Overrange
+        );
+        assert_eq!(
+            out(i16::MAX, ChannelMode::Current0To20mA).1,
+            AnalogCondition::Overflow
+        );
+        assert_eq!(
+            out(-1_000, ChannelMode::Current4To20mA),
+            (2_400, AnalogCondition::Underrange)
+        );
+        assert_eq!(
+            out(-20_000, ChannelMode::Voltage0To10V),
+            (0, AnalogCondition::Underflow)
+        );
+        assert!(
+            output(
+                AnalogRaw::Int(0),
+                ChannelMode::Disabled,
+                AnalogRepresentation::PerTenThousand
+            )
+            .is_none()
+        );
+        // An input reads back what an output drives.
+        let field = output(
+            AnalogRaw::Int(2_500),
+            ChannelMode::Current4To20mA,
+            AnalogRepresentation::S7Nominal27648,
+        )
+        .unwrap();
+        let back = convert(
+            Some(AnalogField {
+                unit: field.unit,
+                value: field.field,
+                signal: AnalogSignal::Current4To20mA,
+                loop_powered: false,
+            }),
+            ChannelMode::Current4To20mA,
+            false,
+            AnalogRepresentation::S7Nominal27648,
+        )
+        .unwrap();
+        assert_eq!(back.raw, AnalogRaw::Int(2_500));
+    }
+
     fn int(r: AnalogReading) -> (i16, AnalogCondition) {
         let AnalogRaw::Int(v) = r.raw else {
             panic!("integer expected")

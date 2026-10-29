@@ -297,7 +297,11 @@ pub fn validate_station(station: &StationConfig) -> Result<(), ModelError> {
         "station cpu must be a CPU module".into()
     });
     let mut positions = BTreeSet::new();
+    let mut ids = BTreeSet::new();
     for m in &station.modules {
+        p.check(ids.insert(m.id.as_str()), || {
+            format!("configured module id '{}' is used twice", m.id)
+        });
         p.check(positions.insert(m.position), || {
             format!(
                 "configured slot R{}/S{} is duplicated",

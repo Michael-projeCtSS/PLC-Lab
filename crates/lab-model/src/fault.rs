@@ -119,6 +119,10 @@ pub enum FaultSpec {
     FieldPowerMissing {
         position: SlotRef,
     },
+    /// The module electronics (backplane) supply is missing; the module does not answer.
+    ModulePowerMissing {
+        position: SlotRef,
+    },
     NetworkLinkDown {
         device: Identifier,
     },
@@ -155,7 +159,8 @@ impl FaultSpec {
             Self::ModuleMissing { .. }
             | Self::WrongModuleInstalled { .. }
             | Self::ModuleInWrongSlot { .. }
-            | Self::FieldPowerMissing { .. } => FaultCategory::Hardware,
+            | Self::FieldPowerMissing { .. }
+            | Self::ModulePowerMissing { .. } => FaultCategory::Hardware,
             Self::NetworkLinkDown { .. }
             | Self::PlcLinkDown
             | Self::DeviceOffline { .. }

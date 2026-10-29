@@ -14,7 +14,12 @@ use std::{
 };
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const FORMAT_VERSION: u32 = 1;
+/// Project file format. 2: configured modules carry a stable `id`.
+pub const FORMAT_VERSION: u32 = 2;
+/// Progress file format, versioned independently of projects.
+pub const PROGRESS_FORMAT_VERSION: u32 = 1;
+/// Recent-projects list format, versioned independently of projects.
+pub const RECENT_FORMAT_VERSION: u32 = 1;
 pub const EXTENSION: &str = "plclab";
 pub const MAX_PROJECT_BYTES: u64 = 4 * 1024 * 1024;
 
@@ -181,6 +186,9 @@ pub fn parse(text: &str) -> Result<Project, ProjectError> {
     if version == 0 {
         value = migrate_v0(value)?;
     }
+    if version <= 1 {
+        value = migrate_v1(value)?;
+    }
     let project: Project =
         serde_json::from_value(value).map_err(|e| ProjectError::Parse(e.to_string()))?;
     project.validate()?;
@@ -200,7 +208,17 @@ fn migrate_v0(mut value: serde_json::Value) -> Result<serde_json::Value, Project
         "programs".into(),
         serde_json::json!([{ "id": "main", "name": "Main", "language": "ST", "source": source }]),
     );
-    object.insert("formatVersion".into(), serde_json::json!(FORMAT_VERSION));
+    object.insert("formatVersion".into(), serde_json::json!(1));
+    Ok(value)
+}
+
+/// Format 1 had no module ids. Reading the station assigns each configured module the
+/// deterministic id of its class and position (`di-r0s1`); saving then persists it.
+fn migrate_v1(mut value: serde_json::Value) -> Result<serde_json::Value, ProjectError> {
+    value
+        .as_object_mut()
+        .ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?
+        .insert("formatVersion".into(), serde_json::json!(2));
     Ok(value)
 }
 
@@ -374,7 +392,7 @@ pub struct RecentProject {
 impl Default for RecentProjects {
     fn default() -> Self {
         Self {
-            format_version: FORMAT_VERSION,
+            format_version: RECENT_FORMAT_VERSION,
             projects: Vec::new(),
         }
     }
@@ -385,7 +403,7 @@ impl RecentProjects {
         fs::read_to_string(path)
             .ok()
             .and_then(|t| serde_json::from_str::<RecentProjects>(&t).ok())
-            .filter(|r| r.format_version == FORMAT_VERSION)
+            .filter(|r| r.format_version == RECENT_FORMAT_VERSION)
             .map(|mut r| {
                 r.projects.truncate(MAX_RECENT);
                 r
@@ -429,7 +447,7 @@ pub struct ProgressLoad {
 impl Progress {
     fn fresh() -> Self {
         Progress {
-            format_version: FORMAT_VERSION,
+            format_version: PROGRESS_FORMAT_VERSION,
             ..Default::default()
         }
     }
@@ -448,7 +466,7 @@ impl Progress {
             }
             Err(e) => e.to_string(),
             Ok(text) => match serde_json::from_str::<Progress>(&text) {
-                Ok(p) if p.format_version == FORMAT_VERSION => {
+                Ok(p) if p.format_version == PROGRESS_FORMAT_VERSION => {
                     return ProgressLoad {
                         progress: p,
                         notice: None,
@@ -533,6 +551,46 @@ mod tests {
     }
 
     #[test]
+    fn version_one_stations_get_stable_module_ids_that_survive_moves_and_round_trips() {
+        let v1 = serde_json::json!({
+            "format": "plclab-project", "formatVersion": 1, "id": "p-1", "name": "My lab",
+            "createdAt": "x", "updatedAt": "x", "kind": {"type": "freeLab"},
+            "platform": "generic.iec", "scene": "scene.io-basics",
+            "station": {"name": "PLC_1", "cpu": "cpu.modular", "modules": [
+                {"position": {"rack": 0, "slot": 1}, "module": "di8.24vdc.sink", "startAddress": 0},
+                {"position": {"rack": 0, "slot": 2}, "module": "ai4.ui", "startAddress": 64,
+                 "channels": [{"channel": 0, "mode": "current4To20mA", "loopSupply": true}]}
+            ], "ioMap": [{"channel": {"rack": 0, "slot": 2, "channel": 0}, "tag": "LevelRaw"}]},
+            "programs": [{"id": "main", "name": "Main", "language": "ST", "source": "PROGRAM Main END_PROGRAM"}]
+        })
+        .to_string();
+        let mut p = parse(&v1).unwrap();
+        assert_eq!(p.format_version, 2);
+        let ids: Vec<&str> = p.station.modules.iter().map(|m| m.id.as_str()).collect();
+        assert_eq!(ids, ["di-r0s1", "ai-r0s2"]);
+        // Moving a module keeps its identity and moves its I/O mappings.
+        let ai = lab_model::hardware::SlotRef { rack: 0, slot: 5 };
+        p.station.move_module("ai-r0s2", ai).unwrap();
+        assert_eq!(p.station.module_by_id("ai-r0s2").unwrap().position, ai);
+        assert_eq!(p.station.io_map[0].channel.slot, 5);
+        assert_eq!(
+            p.station.channel_id(p.station.io_map[0].channel).as_deref(),
+            Some("ai-r0s2.ch0")
+        );
+        assert!(
+            p.station.move_module("di-r0s1", ai).is_err(),
+            "occupied slot"
+        );
+        let text = to_json(&p).unwrap();
+        assert!(text.contains("\"id\": \"ai-r0s2\""));
+        let back = parse(&text).unwrap();
+        assert_eq!(
+            back, p,
+            "ids, slots, channel configuration and mappings round-trip"
+        );
+    }
+
+    #[test]
     fn version_zero_migrates_and_future_versions_are_rejected() {
         let v0 = serde_json::json!({
             "format": "plclab-project", "formatVersion": 0, "id": "p-0", "name": "Old",
@@ -547,8 +605,8 @@ mod tests {
             "PROGRAM Old END_PROGRAM"
         );
         assert_eq!(
-            parse(&project_json(2)),
-            Err(ProjectError::UnsupportedVersion(2))
+            parse(&project_json(3)),
+            Err(ProjectError::UnsupportedVersion(3))
         );
         assert!(parse(&project_json(1).replace("\"name\":\"My lab\"", "\"name\":\"\"")).is_err());
         assert!(parse("{not json").is_err());
@@ -678,7 +736,7 @@ mod tests {
     #[test]
     fn progress_records_best_scores() {
         let mut progress = Progress {
-            format_version: FORMAT_VERSION,
+            format_version: PROGRESS_FORMAT_VERSION,
             ..Default::default()
         };
         progress.record_exercise("ex", 40, 100, false);

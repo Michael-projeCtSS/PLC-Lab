@@ -392,6 +392,7 @@ pub fn module_status(s: ModuleStatus) -> &'static str {
         ModuleStatus::Missing => "MISSING",
         ModuleStatus::Mismatch(_) => "MISMATCH",
         ModuleStatus::NoFieldPower => "NO_FIELD_POWER",
+        ModuleStatus::NoModulePower => "NO_MODULE_POWER",
         ModuleStatus::Unconfigured => "UNCONFIGURED",
     }
 }

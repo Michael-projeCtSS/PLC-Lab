@@ -188,8 +188,12 @@ pub struct InstalledHardware {
 pub struct InstalledModule {
     pub position: SlotRef,
     pub module: ModuleType,
+    /// The field (load / sensor) supply of the module's channels.
     #[serde(default = "yes")]
     pub field_power: bool,
+    /// The module electronics supply (backplane), distinct from the field supply.
+    #[serde(default = "yes")]
+    pub module_power: bool,
 }
 fn yes() -> bool {
     true
@@ -218,7 +222,11 @@ pub struct StationConfig {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(from = "ConfiguredModuleData")]
 pub struct ConfiguredModule {
+    /// Stable identity of the configured module. It survives moving the module to another
+    /// slot; channels are identified as `<id>.ch<n>` (see [`ConfiguredModule::channel_id`]).
+    pub id: Identifier,
     pub position: SlotRef,
     pub module: ModuleType,
     /// Process-image start byte (for byte/bit addressing display) or module start index.
@@ -273,7 +281,89 @@ pub struct IoMapping {
     pub tag: TagName,
 }
 
+/// Serialized form of a configured module; projects and packs written before module ids
+/// existed get a deterministic id from the module class and position.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ConfiguredModuleData {
+    #[serde(default)]
+    id: Option<Identifier>,
+    position: SlotRef,
+    module: ModuleType,
+    #[serde(default)]
+    start_address: u16,
+    #[serde(default)]
+    channels: Vec<ChannelConfig>,
+}
+
+impl From<ConfiguredModuleData> for ConfiguredModule {
+    fn from(d: ConfiguredModuleData) -> Self {
+        Self {
+            id: d
+                .id
+                .unwrap_or_else(|| default_module_id(d.module, d.position)),
+            position: d.position,
+            module: d.module,
+            start_address: d.start_address,
+            channels: d.channels,
+        }
+    }
+}
+
+/// `<class>-r<rack>s<slot>`, for example `di-r0s1`.
+pub fn default_module_id(module: ModuleType, position: SlotRef) -> Identifier {
+    let class = match module.class() {
+        ModuleClass::Cpu => "cpu",
+        ModuleClass::PowerSupply => "ps",
+        ModuleClass::DigitalInput { .. } => "di",
+        ModuleClass::DigitalOutput { .. } => "do",
+        ModuleClass::AnalogInput { .. } => "ai",
+        ModuleClass::AnalogOutput { .. } => "ao",
+    };
+    Identifier::new(format!("{class}-r{}s{}", position.rack, position.slot))
+        .expect("class and numbers form a valid identifier")
+}
+
+impl ConfiguredModule {
+    /// Stable channel identity, independent of the slot the module sits in.
+    pub fn channel_id(&self, channel: u8) -> String {
+        format!("{}.ch{channel}", self.id)
+    }
+}
+
 impl StationConfig {
+    pub fn module_by_id(&self, id: &str) -> Option<&ConfiguredModule> {
+        self.modules.iter().find(|m| m.id.as_str() == id)
+    }
+    /// Stable identity of a configured channel (`None` where no module is configured).
+    pub fn channel_id(&self, channel: ChannelRef) -> Option<String> {
+        self.module_at(channel.slot_ref())
+            .map(|m| m.channel_id(channel.channel))
+    }
+    /// Move a configured module to a free slot; its I/O mappings move with it.
+    pub fn move_module(&mut self, id: &str, to: SlotRef) -> Result<(), String> {
+        let Some(index) = self.modules.iter().position(|m| m.id.as_str() == id) else {
+            return Err(format!("No configured module '{id}'."));
+        };
+        let from = self.modules[index].position;
+        if from == to {
+            return Ok(());
+        }
+        if self.module_at(to).is_some() {
+            return Err(format!(
+                "Rack {} slot {} is already configured.",
+                to.rack, to.slot
+            ));
+        }
+        self.modules[index].position = to;
+        for mapping in &mut self.io_map {
+            if mapping.channel.slot_ref() == from {
+                mapping.channel.rack = to.rack;
+                mapping.channel.slot = to.slot;
+            }
+        }
+        Ok(())
+    }
     pub fn module_at(&self, position: SlotRef) -> Option<&ConfiguredModule> {
         self.modules.iter().find(|m| m.position == position)
     }

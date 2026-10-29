@@ -457,8 +457,10 @@ pub struct ModuleViewDto {
     pub configured_name: Option<String>,
     pub installed_name: Option<String>,
     pub product: Option<String>,
-    /// "OK" | "MISSING" | "MISMATCH" | "NO_FIELD_POWER" | "UNCONFIGURED"
-    #[ts(type = "\"OK\" | \"MISSING\" | \"MISMATCH\" | \"NO_FIELD_POWER\" | \"UNCONFIGURED\"")]
+    /// "OK" | "MISSING" | "MISMATCH" | "NO_FIELD_POWER" | "NO_MODULE_POWER" | "UNCONFIGURED"
+    #[ts(
+        type = "\"OK\" | \"MISSING\" | \"MISMATCH\" | \"NO_FIELD_POWER\" | \"NO_MODULE_POWER\" | \"UNCONFIGURED\""
+    )]
     pub status: String,
     pub status_led: String,
     pub channels: Vec<ChannelViewDto>,

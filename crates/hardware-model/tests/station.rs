@@ -28,7 +28,8 @@ fn scene() -> SceneDefinition {
         "installation": {"cpu": "cpu.modular", "modules": [
             {"position": {"rack": 0, "slot": 2}, "module": "di8.24vdc.sink"},
             {"position": {"rack": 0, "slot": 3}, "module": "do8.24vdc"},
-            {"position": {"rack": 0, "slot": 4}, "module": "ai4.ui"}
+            {"position": {"rack": 0, "slot": 4}, "module": "ai4.ui"},
+            {"position": {"rack": 0, "slot": 5}, "module": "ao2.ui"}
           ], "wiring": [
             {"channel": {"rack": 0, "slot": 2, "channel": 0}, "component": "start", "port": "contact"},
             {"channel": {"rack": 0, "slot": 2, "channel": 1}, "component": "stop", "port": "contact"},
@@ -40,7 +41,9 @@ fn scene() -> SceneDefinition {
             {"position": {"rack": 0, "slot": 2}, "module": "di8.24vdc.sink", "startAddress": 0},
             {"position": {"rack": 0, "slot": 3}, "module": "do8.24vdc", "startAddress": 0},
             {"position": {"rack": 0, "slot": 4}, "module": "ai4.ui", "startAddress": 64,
-             "channels": [{"channel": 0, "mode": "current4To20mA", "diagnostics": true}]}
+             "channels": [{"channel": 0, "mode": "current4To20mA", "diagnostics": true}]},
+            {"position": {"rack": 0, "slot": 5}, "module": "ao2.ui", "startAddress": 80,
+             "channels": [{"channel": 0, "mode": "current4To20mA"}, {"channel": 1, "mode": "voltage0To10V"}]}
           ], "ioMap": [
             {"channel": {"rack": 0, "slot": 2, "channel": 0}, "tag": "StartPB"},
             {"channel": {"rack": 0, "slot": 3, "channel": 0}, "tag": "Lamp"},
@@ -475,4 +478,95 @@ fn a_current_loop_needs_exactly_one_power_source() {
             "{wiring:?}, loop supply {loop_supply}: {reading:?}"
         );
     }
+}
+
+#[test]
+fn analog_outputs_drive_their_terminals_only_when_they_can() {
+    let (scene, mut station) = setup();
+    let ao = |c| ch(5, c);
+    let commands = BTreeMap::from([
+        (ao(0), hardware_model::analog::AnalogRaw::Int(13_824)),
+        (ao(1), hardware_model::analog::AnalogRaw::Int(27_648)),
+    ]);
+    station.drive_analog(&commands, true);
+    assert_eq!(
+        station.measure(ao(0), &scene),
+        Measurement::Microamps(12_000)
+    );
+    assert_eq!(
+        station.measure(ao(1), &scene),
+        Measurement::Millivolts(10_000)
+    );
+    let r = station.reading(ao(0)).unwrap();
+    assert_eq!(
+        (r.value, r.quality),
+        (ChannelValue::Int(13_824), Quality::Good)
+    );
+    // Overflow is clamped and reported.
+    station.drive_analog(
+        &BTreeMap::from([(ao(1), hardware_model::analog::AnalogRaw::Int(32_767))]),
+        true,
+    );
+    assert_eq!(station.reading(ao(1)).unwrap().quality, Quality::Overflow);
+    // In STOP an analog output drives nothing.
+    station.drive_analog(&commands, false);
+    assert_eq!(station.measure(ao(0), &scene), Measurement::Microamps(0));
+    // Without field supply the channel cannot drive, and says so.
+    station.apply_fault(
+        HardwareFault::FieldPowerMissing(SlotRef { rack: 0, slot: 5 }),
+        WorldTime::ZERO,
+    );
+    station.drive_analog(&commands, true);
+    assert_eq!(station.measure(ao(0), &scene), Measurement::Microamps(0));
+    assert_eq!(
+        station.reading(ao(0)).unwrap().quality,
+        Quality::NoFieldPower
+    );
+}
+
+#[test]
+fn module_electronics_power_and_field_power_are_different_conditions() {
+    let (mut scene, mut station) = setup();
+    let slot = SlotRef { rack: 0, slot: 3 };
+    let commands = BTreeMap::from([(ch(3, 0), true)]);
+    // Field supply missing: the module answers (electronics fine) but cannot switch.
+    station.apply_fault(HardwareFault::FieldPowerMissing(slot), WorldTime::ZERO);
+    station.drive_outputs(&commands, true, &mut scene).unwrap();
+    let view = station
+        .module_views()
+        .into_iter()
+        .find(|v| v.position == slot)
+        .unwrap();
+    assert_eq!(view.status, ModuleStatus::NoFieldPower);
+    assert_eq!(
+        station.measure(ch(3, 0), &scene),
+        Measurement::Millivolts(0)
+    );
+    station.clear_fault(&HardwareFault::FieldPowerMissing(slot), WorldTime::ZERO);
+    // Electronics supply missing: the module is installed but does not answer at all.
+    station.apply_fault(HardwareFault::ModulePowerMissing(slot), WorldTime::ZERO);
+    station.drive_outputs(&commands, true, &mut scene).unwrap();
+    let view = station
+        .module_views()
+        .into_iter()
+        .find(|v| v.position == slot)
+        .unwrap();
+    assert_eq!(view.status, ModuleStatus::NoModulePower);
+    assert_eq!(view.installed, Some(ModuleType::Do8), "physically present");
+    assert_eq!(view.status_led, hardware_model::LedState::Off);
+    assert_eq!(
+        station.measure(ch(3, 0), &scene),
+        Measurement::Millivolts(0)
+    );
+    assert!(
+        station.active_diagnostics().any(|(s, k)| *s
+            == hardware_model::DiagnosticSource::Module(slot)
+            && *k == DiagnosticKind::ModuleMissing),
+        "the CPU sees no answer, as for a missing module"
+    );
+    // Inputs of other modules are unaffected.
+    assert_eq!(
+        bool_at(&mut station, &scene, ch(2, 1)),
+        (true, Quality::Good)
+    );
 }

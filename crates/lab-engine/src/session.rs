@@ -522,24 +522,31 @@ impl LabSession {
     pub(crate) fn drive(&mut self) -> Result<(), EngineError> {
         let running = self.plc.mode == PlcMode::Run;
         let mut commands = BTreeMap::new();
+        let mut analog = BTreeMap::new();
         if let Some(snapshot) = self.plc.snapshot() {
             for tag in self.plc.tags() {
                 let Some(channel) = tag.sink else { continue };
                 let forced = self.plc.forces.get(&tag.signal).copied();
-                let value = match forced {
-                    Some(SignalValue::Bool(b)) => Some(b),
-                    _ => match snapshot.committed().get(&tag.symbol) {
-                        Some(PlcValue::Bool(b)) => Some(*b),
-                        _ => None,
-                    },
-                };
-                if let Some(v) = value {
-                    commands.insert(channel, v);
+                match (forced, snapshot.committed().get(&tag.symbol).copied()) {
+                    (Some(SignalValue::Bool(b)), _) | (None, Some(PlcValue::Bool(b))) => {
+                        commands.insert(channel, b);
+                    }
+                    (Some(SignalValue::Int(i)), _) | (None, Some(PlcValue::Int(i))) => {
+                        analog.insert(channel, hardware_model::analog::AnalogRaw::Int(i));
+                    }
+                    (Some(SignalValue::Real(r)), _) => {
+                        analog.insert(channel, hardware_model::analog::AnalogRaw::Real(r));
+                    }
+                    (None, Some(PlcValue::Real(r))) => {
+                        analog.insert(channel, hardware_model::analog::AnalogRaw::Real(r.get()));
+                    }
+                    _ => {}
                 }
             }
         }
         self.station
             .drive_outputs(&commands, running, &mut self.scene)?;
+        self.station.drive_analog(&analog, running);
         for (channel, signal) in &self.channels {
             if let Some(out) = self.station.output(*channel) {
                 self.channel_values.insert(*signal, SignalValue::Bool(out));

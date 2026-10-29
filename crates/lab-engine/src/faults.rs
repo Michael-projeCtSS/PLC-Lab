@@ -112,6 +112,12 @@ pub(crate) fn apply(
             active,
             now,
         ),
+        FaultSpec::ModulePowerMissing { position } => hardware(
+            session,
+            HardwareFault::ModulePowerMissing(*position),
+            active,
+            now,
+        ),
         FaultSpec::NetworkLinkDown { device } => {
             network(session.network.set_device_link(device, !active), device)
         }
