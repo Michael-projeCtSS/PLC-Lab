@@ -249,6 +249,161 @@ fn modbus_commissioning_success_wrong_register_wrong_address_and_correction() {
 }
 
 #[test]
+fn the_network_view_shows_requests_responses_and_bounded_traffic_from_the_model() {
+    let f = fixture("traffic");
+    let (project, w) = exercise(&f.app, "ex.modbus-level");
+    let id = w.workspace_id;
+    load(&f.app, id, MODBUS_SOLUTION, 1, None);
+    step(&f.app, id, 10);
+    let net = network(&f.app, id);
+    let scan = &net.scans[0];
+    let configured = &project.station.network.modbus_tcp[0];
+    // The request is the downloaded configuration; values are decoded by the backend.
+    assert_eq!(scan.request.start_address, configured.start_address);
+    assert_eq!(scan.request.quantity, configured.quantity);
+    assert_eq!(scan.request.function_code, 3);
+    assert_eq!(scan.request.timeout_ms, configured.timeout_ms);
+    assert_eq!(scan.values.len(), configured.values.len());
+    assert!(
+        scan.values.iter().all(|v| v.value.is_some()),
+        "{:?}",
+        scan.values
+    );
+    assert!(scan.last_request_us.is_some() && scan.last_response_us.is_some());
+    assert!(net.devices.iter().all(|d| d.same_subnet == Some(true)));
+    // Traffic pairs every response with an earlier request of the same transaction.
+    let request = net
+        .traffic
+        .iter()
+        .rev()
+        .find(|t| t.kind == "request")
+        .unwrap();
+    assert_eq!(request.address, Some(configured.start_address));
+    assert_eq!(request.unit_id, Some(configured.unit_id));
+    let responses: Vec<_> = net
+        .traffic
+        .iter()
+        .filter(|t| t.kind == "response")
+        .collect();
+    assert!(!responses.is_empty());
+    for r in responses {
+        assert!(
+            net.traffic.iter().any(|q| q.kind == "request"
+                && q.connection == r.connection
+                && q.transaction == r.transaction
+                && q.seq.0 < r.seq.0),
+            "{r:?}"
+        );
+        assert!(r.round_trip_us.is_some());
+    }
+    // A wrong unit on a gateway-style server is not modeled here (the transmitter ignores
+    // the unit); an address past the register map answers exception 02.
+    let mut beyond = project.station.clone();
+    beyond.network.modbus_tcp[0].start_address = 2;
+    load(&f.app, id, MODBUS_SOLUTION, 2, Some(beyond));
+    step(&f.app, id, 10);
+    let net = network(&f.app, id);
+    let exception = net
+        .traffic
+        .iter()
+        .rev()
+        .find(|t| t.kind == "exception")
+        .unwrap();
+    assert_eq!(exception.exception_code, Some(2));
+    // Long runs keep the traffic bounded.
+    step(&f.app, id, 600);
+    assert!(network(&f.app, id).traffic.len() <= 60);
+}
+
+#[test]
+fn each_network_lab_shows_its_own_evidence_in_the_network_view() {
+    let f = fixture("network-labs");
+    let connection =
+        |net: &NetworkDto, id: &str| net.scans.iter().find(|s| s.id == id).unwrap().clone();
+    let kinds = |net: &NetworkDto, id: &str| -> Vec<String> {
+        net.traffic
+            .iter()
+            .filter(|t| t.connection == id)
+            .map(|t| t.kind.clone())
+            .collect()
+    };
+    for lab in [
+        "cm.net-wrong-ip",
+        "cm.net-unit-id",
+        "cm.net-timeout",
+        "cm.net-word-order",
+        "cm.net-register",
+        "cm.net-device-offline",
+    ] {
+        let (_, w) = exercise(&f.app, lab);
+        let id = w.workspace_id;
+        step(&f.app, id, 20);
+        let net = network(&f.app, id);
+        let (lt, li) = (connection(&net, "lt401"), connection(&net, "li402"));
+        match lab {
+            "cm.net-wrong-ip" => {
+                assert_eq!(lt.server, "192.168.10.22");
+                assert!(
+                    kinds(&net, "lt401")
+                        .iter()
+                        .any(|k| k == "arpUnresolved" || k == "timeout")
+                );
+                assert_eq!(ping(&f.app, id, "192.168.10.21"), "REPLY");
+                assert_eq!(li.status, "OK");
+            }
+            "cm.net-unit-id" => {
+                assert!(
+                    net.traffic
+                        .iter()
+                        .any(|t| t.connection == "li402" && t.exception_code == Some(0x0B))
+                );
+                assert_eq!(lt.status, "OK");
+            }
+            "cm.net-timeout" => {
+                assert!(
+                    li.timeouts.0 > 0 && li.exceptions.0 == 0 && li.responses.0 == 0,
+                    "{li:?}"
+                );
+                assert_eq!(ping(&f.app, id, "192.168.10.30"), "REPLY");
+            }
+            "cm.net-word-order" => {
+                assert_eq!((lt.status.as_str(), li.status.as_str()), ("OK", "OK"));
+                let decoded = li.values[0].value.clone().unwrap();
+                // 20.0 is 41A0 0000h; swapped words make it almost zero: far from the
+                // 20 % the tank holds, enough for the deviation alarm.
+                let near_truth = decoded
+                    .parse::<f32>()
+                    .is_ok_and(|v| (v - 20.0).abs() <= 5.0);
+                assert!(
+                    !near_truth,
+                    "the swapped REAL does not match the level: {decoded}"
+                );
+                assert_eq!(li.values[0].word_order.as_deref(), Some("lowWordFirst"));
+            }
+            "cm.net-register" => {
+                assert_eq!(li.request.start_address, 101);
+                assert!(
+                    net.traffic
+                        .iter()
+                        .any(|t| t.connection == "li402" && t.exception_code == Some(0x02))
+                );
+            }
+            _ => {
+                assert!(lt.timeouts.0 > 0 && lt.responses.0 == 0, "{lt:?}");
+                assert_eq!(ping(&f.app, id, "192.168.10.21"), "TIMEOUT");
+                assert_eq!(li.status, "OK");
+            }
+        }
+        f.app
+            .close_workspace(WorkspaceRequest {
+                contract_version: V,
+                workspace_id: id,
+            })
+            .unwrap();
+    }
+}
+
+#[test]
 fn network_troubleshooting_lab_from_symptom_to_debrief() {
     let f = fixture("net-lab");
     let (project, w) = exercise(&f.app, "ts.remote-level-lost");
@@ -588,7 +743,13 @@ fn long_runs_of_large_programs_keep_every_response_bounded() {
     assert!(events.events.len() <= 200 && event_bytes < 128 * 1024);
 }
 
-const LABS: [&str; 24] = [
+const LABS: [&str; 30] = [
+    "cm.net-wrong-ip",
+    "cm.net-unit-id",
+    "cm.net-timeout",
+    "cm.net-word-order",
+    "cm.net-register",
+    "cm.net-device-offline",
     "cm.vfd-run-wire",
     "cm.vfd-local",
     "cm.vfd-trip",

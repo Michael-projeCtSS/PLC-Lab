@@ -1,0 +1,67 @@
+{
+  "id": "troubleshooting.modbus-word-order",
+  "kind": "troubleshooting",
+  "title": "32-bit value with the wrong word order",
+  "summary": "A REAL or 32-bit integer spans two registers; the order of the two words is device specific.",
+  "tags": [
+    "Modbus TCP",
+    "network",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "Communication is error free and the raw words look plausible, but the decoded 32-bit value is absurd."
+    },
+    {
+      "heading": "Check",
+      "body": "Compare the configured word order with the device documentation; if the documentation is unclear, decode the raw words both ways and compare with a known value."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order"
+    ],
+    "approximated": [
+      "Fixed link latency",
+      "One request at a time per connection"
+    ],
+    "omitted": [
+      "TCP retransmission and connection handshakes",
+      "Writes, other function codes and serial bus timing behind gateways",
+      "Byte order inside a register (words are big-endian as the protocol defines)"
+    ]
+  },
+  "related": [
+    "protocol.modbus-tcp"
+  ],
+  "troubleshooting": {
+    "faultId": "modbus-word-order",
+    "area": "Network",
+    "target": "Value decoding",
+    "effect": "The decoded value is absurd",
+    "symptoms": [
+      "Absurd 32-bit value",
+      "No communication errors"
+    ],
+    "evidence": [
+      "Raw words",
+      "Configured word order"
+    ],
+    "diagnosticMethod": [
+      "Decode the raw words both ways"
+    ],
+    "repair": [
+      "Configure the documented word order"
+    ],
+    "explanation": "Swapping the halves of a 32-bit number changes it completely.",
+    "simulatedIn": [
+      "cm.net-word-order"
+    ]
+  }
+}

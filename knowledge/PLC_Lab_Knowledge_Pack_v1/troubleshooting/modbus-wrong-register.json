@@ -47,6 +47,7 @@
     ],
     "explanation": "Modbus addresses on the wire are zero-based; register 40001 in documentation is address 0. Off-by-one errors produce valid responses with the wrong data.",
     "simulatedIn": [
+      "cm.net-register",
       "ts.remote-level-wrong"
     ]
   }

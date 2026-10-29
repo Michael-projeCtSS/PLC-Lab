@@ -1,0 +1,422 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "cm.net-register",
+  "revision": 1,
+  "title": "Network commissioning: register 40101",
+  "kind": "commissioning",
+  "difficulty": "intermediate",
+  "summary": "The documentation says registers 40101-40102. Somebody entered 101. Find out what the PLC actually asks for.",
+  "objectives": [
+    "Diagnose Modbus TCP communication from network evidence",
+    "Compare the configuration with the device documentation"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.network-commissioning",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open. *)\n    StopPB : BOOL; (* Stop button S2, normally closed. *)\n    LevelHighHigh : BOOL; (* High-high level switch: TRUE when wet. *)\n    LevelPermille : INT; (* LT-401 level, per mille, over Modbus TCP. *)\n    LevelCommOK : BOOL; (* LT-401 connection exchanges data. *)\n    LevelLitres : REAL; (* LI-402 level in litres through gateway GW-402. *)\n    GatewayCommOK : BOOL; (* LI-402 connection exchanges data. *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve XV-404. *)\n    DrainPump : BOOL; (* Drain pump P-405. *)\n    LevelPercent : REAL; (* Level from LT-401, 0..100 %. *)\n    CheckPercent : REAL; (* Level from LI-402: litres of a 100 litre tank. *)\n    CommAlarm : BOOL; (* A level connection does not exchange data. *)\n    DeviationAlarm : BOOL; (* The two levels differ by more than 5 %. *)\nEND_VAR\nVAR\n    Filling : BOOL; (* Fill request latch. *)\nEND_VAR\n(* The program passed its factory test; this lab is about the network and its configuration. *)\nLevelPercent := INT_TO_REAL(LevelPermille) / 10.0;\nCheckPercent := LevelLitres;\nCommAlarm := NOT (LevelCommOK AND GatewayCommOK);\nDeviationAlarm := (LevelPercent - CheckPercent > 5.0) OR (CheckPercent - LevelPercent > 5.0);\nFilling := (StartPB OR Filling) AND StopPB AND NOT CommAlarm AND NOT DeviationAlarm AND NOT LevelHighHigh AND LevelPercent < 80.0;\nInletValve := Filling;\nDrainPump := FALSE;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHighHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelPermille",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelCommOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelLitres",
+      "type": "REAL",
+      "direction": "input"
+    },
+    {
+      "tag": "GatewayCommOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "The PLC runs the accepted program. Let the simulation run and press Start; confirm the symptom.",
+    "Open the Network view: nodes, connections, the selected connection's request and response, and the traffic.",
+    "Compare the configuration with the device documentation in the scene description; use ping.",
+    "Diagnose, correct (configuration labs: Advanced mode, then download) or repair, then verify."
+  ],
+  "hints": [
+    "Look at what the PLC sends and what comes back, message by message.",
+    "A fast exception, a timeout and no route mean very different things."
+  ],
+  "evidence": [
+    {
+      "name": "percent",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelPercent"
+      }
+    },
+    {
+      "name": "check",
+      "source": {
+        "type": "plcTag",
+        "tag": "CheckPercent"
+      }
+    },
+    {
+      "name": "comm",
+      "source": {
+        "type": "plcTag",
+        "tag": "CommAlarm"
+      }
+    },
+    {
+      "name": "alarm",
+      "source": {
+        "type": "plcTag",
+        "tag": "DeviationAlarm"
+      }
+    },
+    {
+      "name": "level",
+      "source": {
+        "type": "component",
+        "component": "tank",
+        "quantity": "levelPermille"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "fill",
+      "title": "Communicate, start filling and reach the setpoint",
+      "durationMs": 14000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 1000,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 1300,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "communicates",
+      "title": "Both level connections exchange data",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "comm",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        },
+        "fromMs": 1000
+      },
+      "onFail": "A level connection did not exchange data (CommAlarm)."
+    },
+    {
+      "id": "agrees",
+      "title": "Both levels agree with the tank",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 900,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            },
+            {
+              "type": "compare",
+              "signal": "check",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "check",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            }
+          ]
+        }
+      },
+      "onFail": "LevelPercent and CheckPercent were not about 20 % while the tank held 20 %."
+    },
+    {
+      "id": "fills",
+      "title": "The tank fills to about 80 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "ge",
+          "value": 780
+        },
+        "byMs": 13500
+      },
+      "onFail": "The tank did not reach 78 %."
+    },
+    {
+      "id": "no-overfill",
+      "title": "The level stays below 90 %",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "le",
+          "value": 900
+        },
+        "fromMs": 0
+      },
+      "onFail": "The tank was filled above 90 %."
+    }
+  ],
+  "starterStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "LevelHighHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "DrainPump"
+      }
+    ],
+    "network": {
+      "interface": {
+        "ip": "192.168.10.10",
+        "mask": "255.255.255.0"
+      },
+      "modbusTcp": [
+        {
+          "id": "lt401",
+          "server": "192.168.10.21",
+          "unitId": 1,
+          "function": "readHoldingRegisters",
+          "startAddress": 0,
+          "quantity": 1,
+          "periodMs": 200,
+          "timeoutMs": 500,
+          "values": [
+            {
+              "offset": 0,
+              "dataType": {
+                "type": "int16"
+              },
+              "tag": "LevelPermille"
+            }
+          ],
+          "statusTag": "LevelCommOK"
+        },
+        {
+          "id": "li402",
+          "server": "192.168.10.30",
+          "unitId": 5,
+          "function": "readHoldingRegisters",
+          "startAddress": 101,
+          "quantity": 2,
+          "periodMs": 200,
+          "timeoutMs": 300,
+          "values": [
+            {
+              "offset": 0,
+              "dataType": {
+                "type": "float32",
+                "wordOrder": "highWordFirst"
+              },
+              "tag": "LevelLitres"
+            }
+          ],
+          "statusTag": "GatewayCommOK"
+        }
+      ]
+    }
+  },
+  "curriculumOrder": 64,
+  "troubleshooting": {
+    "symptom": "The tank does not fill. The gateway answers every request with an exception.",
+    "reportedBy": "Commissioning engineer, buffer tank T-400",
+    "faults": [],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program is wrong"
+      },
+      {
+        "id": "lt-ip",
+        "label": "The LT-401 connection uses the wrong IP address"
+      },
+      {
+        "id": "unit-id",
+        "label": "The LI-402 connection uses the wrong unit ID"
+      },
+      {
+        "id": "timeout",
+        "label": "The LI-402 connection's timeout is shorter than the gateway needs"
+      },
+      {
+        "id": "word-order",
+        "label": "The LI-402 REAL value is decoded with the wrong word order"
+      },
+      {
+        "id": "register",
+        "label": "The LI-402 connection reads the wrong registers"
+      },
+      {
+        "id": "lt-offline",
+        "label": "LT-401 is switched off"
+      },
+      {
+        "id": "cable",
+        "label": "The PLC network cable is unplugged"
+      }
+    ],
+    "rootCauses": [
+      "register"
+    ],
+    "repairs": [],
+    "verification": [
+      "communicates",
+      "agrees",
+      "fills",
+      "no-overfill"
+    ],
+    "learningRefs": [
+      "protocol.modbus-tcp",
+      "fundamentals.industrial-networks"
+    ],
+    "debriefRefs": [
+      "troubleshooting.modbus-wrong-register"
+    ],
+    "debrief": {
+      "rootCause": "The connection read from protocol address 101. The documentation's registers 40101-40102 are protocol addresses 100-101 in the 4xxxx convention, so the read started one register late and ran past the device's register map, which the gateway answered with exception 02h (illegal data address).",
+      "evidence": [
+        "Every request was answered with exception 02h.",
+        "The request started at protocol address 101.",
+        "In the 4xxxx notation, 40101 is protocol address 100."
+      ],
+      "repair": "Set the start address to 100, download, and verify the value.",
+      "reasoning": "Always translate the manual's register numbers into the zero-based protocol address the PLC sends, and check which convention the manual uses."
+    }
+  }
+}

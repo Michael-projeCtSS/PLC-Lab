@@ -1,6 +1,14 @@
-/** Network view: topology, Modbus TCP connection state, recent messages and a ping tool. */
+/** Network view: topology, nodes, Modbus TCP connections with a request/response
+ * inspector, the bounded Modbus traffic and a ping tool. Everything shown comes from the
+ * backend's network model; the view never invents protocol traffic. */
 import { useState } from "react";
-import { api, type NetworkDto, type PingDto } from "@plc-lab/ipc";
+import {
+  api,
+  type NetworkDto,
+  type PingDto,
+  type ScanViewDto,
+  type TrafficDto,
+} from "@plc-lab/ipc";
 import { seconds } from "../format";
 import { Badge, ErrorNotice } from "../ui";
 import { useEvidence, useFrameQuery } from "./useFrameQuery";
@@ -14,10 +22,12 @@ export function NetworkTab({ lab, advanced }: { lab: Lab; advanced: boolean }) {
   );
   const [target, setTarget] = useState("");
   const [ping, setPing] = useState<PingDto | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   useEvidence(lab, "network view");
   const n = net.data;
   if (!n || !ws) return <ErrorNotice error={net.error} />;
   const devices = n.devices;
+  const scan = n.scans.find((x) => x.id === selected) ?? n.scans[0];
   const width = Math.max(700, 200 + devices.length * 200);
   return (
     <div
@@ -108,7 +118,63 @@ export function NetworkTab({ lab, advanced }: { lab: Lab; advanced: boolean }) {
       </svg>
       <div className="panel">
         <div className="panel-head">
+          <h4>Nodes</h4>
+          <span className="spacer" />
+          <span className="muted">as each node reports itself</span>
+        </div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Node</th>
+              <th>IP address</th>
+              <th>Subnet mask</th>
+              <th title="Is the address inside the PLC interface's subnet?">
+                PLC subnet
+              </th>
+              <th>Status</th>
+              <th>Requests served</th>
+              <th>Last communication</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PLC</td>
+              <td className="mono">{n.plcInterface?.ip ?? "no IP"}</td>
+              <td className="mono">{n.plcInterface?.mask ?? ""}</td>
+              <td>—</td>
+              <td>{n.plcLinkUp ? "link up" : "no link"}</td>
+              <td>—</td>
+              <td>—</td>
+            </tr>
+            {devices.map((d) => (
+              <tr key={d.id}>
+                <td>{d.label}</td>
+                <td className="mono">{d.ip}</td>
+                <td className="mono">{d.mask}</td>
+                <td>
+                  {d.sameSubnet === null ? "—" : d.sameSubnet ? "yes" : "no"}
+                </td>
+                <td>
+                  {!d.online
+                    ? "not responding"
+                    : d.linkUp
+                      ? "link up"
+                      : "no link"}
+                </td>
+                <td>{d.modbusServer ? d.requestsServed : "—"}</td>
+                <td className="mono">
+                  {d.lastActivityUs ? seconds(d.lastActivityUs) : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="panel">
+        <div className="panel-head">
           <h4>Modbus TCP connections (PLC is client)</h4>
+          <span className="spacer" />
+          <span className="muted">select one to inspect it</span>
         </div>
         <table className="table">
           <thead>
@@ -122,20 +188,30 @@ export function NetworkTab({ lab, advanced }: { lab: Lab; advanced: boolean }) {
               <th>Timeouts</th>
               <th>Exceptions</th>
               <th>Round trip</th>
-              <th>Registers (last good)</th>
             </tr>
           </thead>
           <tbody>
             {n.scans.length === 0 && (
               <tr>
-                <td colSpan={10} className="muted">
+                <td colSpan={9} className="muted">
                   No Modbus connection is configured in this station.
                 </td>
               </tr>
             )}
             {n.scans.map((s) => (
-              <tr key={s.id}>
-                <td>{s.id}</td>
+              <tr
+                key={s.id}
+                className={s.id === scan?.id ? "selected" : undefined}
+              >
+                <td>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    aria-pressed={s.id === scan?.id}
+                    onClick={() => setSelected(s.id)}
+                  >
+                    {s.id}
+                  </button>
+                </td>
                 <td className="mono">{s.server}</td>
                 <td>{s.unitId}</td>
                 <td>
@@ -155,38 +231,56 @@ export function NetworkTab({ lab, advanced }: { lab: Lab; advanced: boolean }) {
                 <td>{s.responses}</td>
                 <td>{s.timeouts}</td>
                 <td>{s.exceptions}</td>
-                <td>
-                  {s.lastRoundTripUs
-                    ? `${(Number(s.lastRoundTripUs) / 1000).toFixed(1)} ms`
-                    : "—"}
-                </td>
-                <td className="mono">
-                  {s.registers.map((r, i) => `${i}: ${r}`).join("  ")}
-                </td>
+                <td>{milliseconds(s.lastRoundTripUs)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {scan && <Inspector scan={scan} />}
       <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
         <div className="panel grow">
           <div className="panel-head">
-            <h4>Recent messages</h4>
+            <h4>Modbus traffic</h4>
+            <span className="spacer" />
+            <span className="muted">
+              newest {n.traffic.length}, oldest first
+            </span>
           </div>
-          <div style={{ maxHeight: 220, overflow: "auto" }}>
-            <table className="table">
+          <div style={{ maxHeight: 260, overflow: "auto" }}>
+            <table className="table" aria-label="Modbus traffic">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Connection</th>
+                  <th>TID</th>
+                  <th />
+                  <th>Message</th>
+                </tr>
+              </thead>
               <tbody>
-                {n.recent.length === 0 && (
+                {n.traffic.length === 0 && (
                   <tr>
-                    <td className="muted">
-                      No traffic yet. Run the simulation.
+                    <td colSpan={5} className="muted">
+                      No traffic yet. The PLC polls its connections in RUN while
+                      the simulation runs.
                     </td>
                   </tr>
                 )}
-                {n.recent.map((e) => (
-                  <tr key={e.seq} className={e.severity}>
-                    <td className="mono dim">{seconds(e.timeUs)}</td>
-                    <td>{e.text}</td>
+                {n.traffic.map((t) => (
+                  <tr
+                    key={t.seq}
+                    className={
+                      t.kind === "request" || t.kind === "response"
+                        ? undefined
+                        : "warning"
+                    }
+                  >
+                    <td className="mono dim">{seconds(t.timeUs)}</td>
+                    <td>{t.connection}</td>
+                    <td className="mono">{t.transaction}</td>
+                    <td>{t.kind === "request" ? "→" : "←"}</td>
+                    <td>{trafficText(t)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -239,5 +333,166 @@ export function NetworkTab({ lab, advanced }: { lab: Lab; advanced: boolean }) {
         </p>
       )}
     </div>
+  );
+}
+
+/** Standard Modbus exception codes (Modbus application protocol). */
+const EXCEPTION: Record<number, string | undefined> = {
+  1: "illegal function",
+  2: "illegal data address",
+  3: "illegal data value",
+  4: "server device failure",
+  10: "gateway path unavailable",
+  11: "gateway target device failed to respond",
+};
+
+function hex(value: number, digits: number) {
+  return value.toString(16).toUpperCase().padStart(digits, "0");
+}
+
+function milliseconds(us: string | null) {
+  return us ? `${(Number(us) / 1000).toFixed(1)} ms` : "—";
+}
+
+function exceptionText(code: number | null) {
+  if (code === null) return "exception";
+  return `exception ${hex(code, 2)}h: ${EXCEPTION[code] ?? "not a standard code"}`;
+}
+
+function trafficText(t: TrafficDto): string {
+  switch (t.kind) {
+    case "request":
+      return `FC${hex(t.functionCode ?? 0, 2)} read ${t.quantity ?? 0} register(s) from address ${t.address ?? 0}, unit ${t.unitId ?? 0}, to ${t.peer}`;
+    case "response":
+      return `response from ${t.peer} after ${milliseconds(t.roundTripUs)}`;
+    case "exception":
+      return `${exceptionText(t.exceptionCode)} from ${t.peer}`;
+    case "timeout":
+      return `no response from ${t.peer} within the timeout`;
+    case "noRoute":
+      return `no route to ${t.peer}: outside the PLC subnet and no gateway`;
+    case "arpUnresolved":
+      return `address ${t.peer} not resolved: no device answers at this IP on the segment`;
+    case "refused":
+      return `${t.peer} refused the connection`;
+    case "addressConflict":
+      return `IP address conflict for ${t.peer}`;
+  }
+}
+
+/** Documentation register number in the common 4xxxx / 3xxxx convention. */
+function documentNumber(functionCode: number, address: number) {
+  return (functionCode === 3 ? 40001 : 30001) + address;
+}
+
+function Inspector({ scan }: { scan: ScanViewDto }) {
+  const r = scan.request;
+  return (
+    <section className="panel" aria-label={`Connection ${scan.id}`}>
+      <div className="panel-head">
+        <h4>Connection {scan.id}</h4>
+        <span className="spacer" />
+        <span className="muted">
+          last request {scan.lastRequestUs ? seconds(scan.lastRequestUs) : "—"}{" "}
+          · last response{" "}
+          {scan.lastResponseUs ? seconds(scan.lastResponseUs) : "—"}
+        </span>
+      </div>
+      <div
+        className="row wrap panel-body"
+        style={{ alignItems: "flex-start", gap: 24 }}
+      >
+        <dl className="kv">
+          <dt>Request</dt>
+          <dd>
+            FC{hex(r.functionCode, 2)}{" "}
+            {r.function === "readHoldingRegisters"
+              ? "read holding registers"
+              : "read input registers"}
+          </dd>
+          <dt>Server</dt>
+          <dd className="mono">
+            {scan.server}:{r.port}, unit {scan.unitId}
+          </dd>
+          <dt>Protocol address</dt>
+          <dd className="mono">
+            {r.startAddress} … {r.startAddress + r.quantity - 1} ({r.quantity}{" "}
+            register{r.quantity === 1 ? "" : "s"})
+          </dd>
+          <dt title="Common documentation convention; device manuals differ">
+            In 4xxxx notation
+          </dt>
+          <dd className="mono">
+            {documentNumber(r.functionCode, r.startAddress)} …{" "}
+            {documentNumber(r.functionCode, r.startAddress + r.quantity - 1)}
+          </dd>
+          <dt>Poll period / timeout</dt>
+          <dd>
+            {r.periodMs} ms / {r.timeoutMs} ms
+          </dd>
+          <dt>Status</dt>
+          <dd>{scan.status.replaceAll("_", " ")}</dd>
+        </dl>
+        <div>
+          <strong>Raw words (last good response)</strong>
+          {scan.registers.length === 0 ? (
+            <p className="muted">No good response yet.</p>
+          ) : (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th>Decimal</th>
+                  <th>Hex</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scan.registers.map((w, i) => (
+                  <tr key={i}>
+                    <td className="mono">{r.startAddress + i}</td>
+                    <td className="mono">{w}</td>
+                    <td className="mono">{hex(w, 4)}h</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <div>
+          <strong>Decoded values</strong>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Tag</th>
+                <th>Offset</th>
+                <th>Type</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scan.values.map((v) => (
+                <tr key={v.tag}>
+                  <td>{v.tag}</td>
+                  <td className="mono">+{v.offset}</td>
+                  <td>
+                    {v.dataType === "int16"
+                      ? "INT (16 bit)"
+                      : `REAL (32 bit, ${v.wordOrder === "lowWordFirst" ? "low word first" : "high word first"})`}
+                  </td>
+                  <td className="mono">{v.value ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p className="muted panel-body" style={{ marginTop: 0 }}>
+        Modbus messages carry a zero-based protocol address. Many device manuals
+        number holding registers from 40001 (input registers from 30001), so
+        protocol address 0 is register 40001 there; other manuals count from 0
+        or use six digits (400001). Check which convention the manual uses
+        before entering an address.
+      </p>
+    </section>
   );
 }

@@ -1,0 +1,426 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.network-commissioning",
+  "revision": 1,
+  "title": "Network commissioning bench",
+  "summary": "A 100 litre buffer tank whose level reaches the PLC only over Modbus TCP. Device documentation: PLC 192.168.10.10/24. LT-401 at 192.168.10.21 answers any unit ID; register 40001 holds the level in per mille (INT). Gateway GW-402 at 192.168.10.30 forwards unit ID 5 to level indicator LI-402; registers 40101-40102 hold the level in litres as REAL, high word first; the gateway needs up to 50 ms to answer. HMI-3 at 192.168.10.40.",
+  "components": [
+    {
+      "id": "start",
+      "label": "Start S1",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyOpen",
+        "color": "green"
+      }
+    },
+    {
+      "id": "stop",
+      "label": "Stop S2",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyClosed",
+        "color": "red"
+      }
+    },
+    {
+      "id": "inlet",
+      "label": "Inlet valve XV-404",
+      "kind": {
+        "type": "onOffValve",
+        "travelMs": 1500,
+        "flowMlPerS": 8000
+      }
+    },
+    {
+      "id": "pump",
+      "label": "Drain pump P-405",
+      "kind": {
+        "type": "pump",
+        "flowMlPerS": 5000
+      }
+    },
+    {
+      "id": "tank",
+      "label": "Tank T-400",
+      "kind": {
+        "type": "tank",
+        "capacityMl": 100000,
+        "initialMl": 20000,
+        "highHighMl": 97000,
+        "lowLowMl": 5000
+      }
+    },
+    {
+      "id": "lshh",
+      "label": "High-high level switch LSHH-403",
+      "kind": {
+        "type": "levelSwitch",
+        "tank": "tank",
+        "switchLevelMl": 95000,
+        "contact": "normallyOpen",
+        "output": "pnp"
+      }
+    }
+  ],
+  "couplings": [
+    {
+      "type": "valveFillsTank",
+      "valve": "inlet",
+      "tank": "tank"
+    },
+    {
+      "type": "pumpDrainsTank",
+      "pump": "pump",
+      "tank": "tank"
+    }
+  ],
+  "installation": {
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc"
+      }
+    ],
+    "wiring": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "component": "start",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "component": "stop",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "component": "lshh",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "component": "inlet",
+        "port": "solenoid"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "component": "pump",
+        "port": "motor"
+      }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "LevelHighHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "DrainPump"
+      }
+    ],
+    "network": {
+      "interface": {
+        "ip": "192.168.10.10",
+        "mask": "255.255.255.0"
+      },
+      "modbusTcp": [
+        {
+          "id": "lt401",
+          "server": "192.168.10.21",
+          "unitId": 1,
+          "function": "readHoldingRegisters",
+          "startAddress": 0,
+          "quantity": 1,
+          "periodMs": 200,
+          "timeoutMs": 500,
+          "values": [
+            {
+              "offset": 0,
+              "dataType": {
+                "type": "int16"
+              },
+              "tag": "LevelPermille"
+            }
+          ],
+          "statusTag": "LevelCommOK"
+        },
+        {
+          "id": "li402",
+          "server": "192.168.10.30",
+          "unitId": 5,
+          "function": "readHoldingRegisters",
+          "startAddress": 100,
+          "quantity": 2,
+          "periodMs": 200,
+          "timeoutMs": 300,
+          "values": [
+            {
+              "offset": 0,
+              "dataType": {
+                "type": "float32",
+                "wordOrder": "highWordFirst"
+              },
+              "tag": "LevelLitres"
+            }
+          ],
+          "statusTag": "GatewayCommOK"
+        }
+      ]
+    }
+  },
+  "network": {
+    "latencyUs": 400,
+    "devices": [
+      {
+        "id": "lt-401",
+        "label": "Level transmitter LT-401 (Modbus TCP)",
+        "interface": {
+          "ip": "192.168.10.21",
+          "mask": "255.255.255.0"
+        },
+        "role": {
+          "type": "modbusTcpServer",
+          "unitIds": {
+            "type": "ignore"
+          },
+          "processingUs": 3000,
+          "holdingRegisters": [
+            {
+              "address": 0,
+              "value": {
+                "type": "scaledInt16",
+                "component": "tank",
+                "quantity": "levelPermille",
+                "scale": 1,
+                "divisor": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "gw-402",
+        "label": "Gateway GW-402 with level indicator LI-402 (unit 5)",
+        "interface": {
+          "ip": "192.168.10.30",
+          "mask": "255.255.255.0"
+        },
+        "role": {
+          "type": "modbusTcpServer",
+          "unitIds": {
+            "type": "accept",
+            "units": [
+              5
+            ]
+          },
+          "processingUs": 40000,
+          "holdingRegisters": [
+            {
+              "address": 100,
+              "value": {
+                "type": "float32",
+                "component": "tank",
+                "quantity": "levelMl",
+                "divisor": 1000,
+                "wordOrder": "highWordFirst"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "hmi",
+        "label": "Operator panel HMI-3",
+        "interface": {
+          "ip": "192.168.10.40",
+          "mask": "255.255.255.0"
+        },
+        "role": {
+          "type": "host"
+        }
+      }
+    ]
+  },
+  "interface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Start button S1, normally open."
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Stop button S2, normally closed: TRUE while not pressed."
+    },
+    {
+      "tag": "LevelHighHigh",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "High-high level switch LSHH-403 (normally open): TRUE when wet."
+    },
+    {
+      "tag": "LevelPermille",
+      "type": "INT",
+      "direction": "input",
+      "description": "LT-401 level in per mille, over Modbus TCP."
+    },
+    {
+      "tag": "LevelCommOK",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "TRUE while the LT-401 connection exchanges data."
+    },
+    {
+      "tag": "LevelLitres",
+      "type": "REAL",
+      "direction": "input",
+      "description": "LI-402 level in litres, through gateway GW-402."
+    },
+    {
+      "tag": "GatewayCommOK",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "TRUE while the LI-402 connection exchanges data."
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Inlet valve XV-404 solenoid."
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Drain pump P-405 contactor."
+    }
+  ],
+  "layout": [
+    {
+      "component": "inlet",
+      "x": 260,
+      "y": 90
+    },
+    {
+      "component": "tank",
+      "x": 420,
+      "y": 150,
+      "width": 220,
+      "height": 300
+    },
+    {
+      "component": "lshh",
+      "x": 660,
+      "y": 170
+    },
+    {
+      "component": "pump",
+      "x": 720,
+      "y": 500
+    },
+    {
+      "component": "start",
+      "x": 80,
+      "y": 470
+    },
+    {
+      "component": "stop",
+      "x": 170,
+      "y": 470
+    }
+  ],
+  "knowledgeRefs": [
+    "protocol.modbus-tcp",
+    "fundamentals.industrial-networks",
+    "fundamentals.commissioning"
+  ]
+}

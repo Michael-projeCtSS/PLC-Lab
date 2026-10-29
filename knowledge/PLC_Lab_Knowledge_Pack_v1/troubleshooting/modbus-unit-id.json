@@ -1,0 +1,68 @@
+{
+  "id": "troubleshooting.modbus-unit-id",
+  "kind": "troubleshooting",
+  "title": "Gateway rejects the unit ID",
+  "summary": "Behind a gateway, the unit ID selects the target device; a wrong unit ID is answered with an exception.",
+  "tags": [
+    "Modbus TCP",
+    "network",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "The gateway answers quickly, but with exception 0Bh (gateway target device failed to respond) or 0Ah (gateway path unavailable), depending on the gateway."
+    },
+    {
+      "heading": "Check",
+      "body": "Compare the configured unit ID with the gateway's routing table in its documentation. Directly addressed TCP devices often ignore the unit ID; gateways do not."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order"
+    ],
+    "approximated": [
+      "Fixed link latency",
+      "One request at a time per connection"
+    ],
+    "omitted": [
+      "TCP retransmission and connection handshakes",
+      "Writes, other function codes and serial bus timing behind gateways",
+      "Byte order inside a register (words are big-endian as the protocol defines)"
+    ]
+  },
+  "related": [
+    "protocol.modbus-tcp"
+  ],
+  "troubleshooting": {
+    "faultId": "modbus-unit-id",
+    "area": "Network",
+    "target": "Connection unit ID",
+    "effect": "No data from the device behind the gateway",
+    "symptoms": [
+      "Fast exception replies",
+      "Gateway reachable"
+    ],
+    "evidence": [
+      "Exception code in the traffic",
+      "Configured unit ID"
+    ],
+    "diagnosticMethod": [
+      "Read the exception code",
+      "Compare the unit ID with the documentation"
+    ],
+    "repair": [
+      "Configure the documented unit ID"
+    ],
+    "explanation": "An exception is an answer: the path works, the request is wrong.",
+    "simulatedIn": [
+      "cm.net-unit-id"
+    ]
+  }
+}

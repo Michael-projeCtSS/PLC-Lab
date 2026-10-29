@@ -401,11 +401,66 @@ feedbackWaitS: number, };
 
 export type HardwareDto = { station: StationDto, cpu: string, cpuName: string, cpuProduct: string | null, cpuLeds: Array<LedDto>, modules: Array<ModuleViewDto>, diagnostics: Array<DiagnosticEntryDto>, catalog: Array<ModuleTypeDto>, };
 
-export type ScanViewDto = { id: string, server: string, unitId: number, status: string, connected: boolean, requests: ExactU64, responses: ExactU64, timeouts: ExactU64, exceptions: ExactU64, lastRoundTripUs: ExactU64 | null, registers: Array<number>, };
+export type ScanViewDto = { id: string, server: string, unitId: number, status: string, connected: boolean, requests: ExactU64, responses: ExactU64, timeouts: ExactU64, exceptions: ExactU64, lastRoundTripUs: ExactU64 | null, registers: Array<number>, 
+/**
+ * The request the PLC sends for this connection, from the downloaded configuration.
+ */
+request: ModbusRequestDto, 
+/**
+ * The configured values, decoded by the backend from the last good registers.
+ */
+values: Array<ScanValueDto>, lastRequestUs: ExactU64 | null, lastResponseUs: ExactU64 | null, };
 
-export type DeviceViewDto = { id: string, label: string, ip: string, mask: string, linkUp: boolean, online: boolean, modbusServer: boolean, requestsServed: ExactU64, lastActivityUs: ExactU64 | null, };
+export type ModbusRequestDto = { 
+/**
+ * "readHoldingRegisters" | "readInputRegisters"
+ */
+function: "readHoldingRegisters" | "readInputRegisters", functionCode: number, 
+/**
+ * Zero-based protocol (PDU) address of the first register.
+ */
+startAddress: number, quantity: number, port: number, periodMs: number, timeoutMs: number, };
 
-export type NetworkDto = { plcInterface: InterfaceDto | null, plcLinkUp: boolean, scans: Array<ScanViewDto>, devices: Array<DeviceViewDto>, recent: Array<EventDto>, };
+export type ScanValueDto = { tag: string, 
+/**
+ * Offset from the request start address, in registers.
+ */
+offset: number, 
+/**
+ * "int16" | "float32"
+ */
+dataType: "int16" | "float32", 
+/**
+ * Float32 only: "highWordFirst" | "lowWordFirst"
+ */
+wordOrder: "highWordFirst" | "lowWordFirst" | null, 
+/**
+ * Decoded value, `None` before the first good response.
+ */
+value: string | null, };
+
+export type TrafficDto = { seq: ExactU64, timeUs: ExactU64, 
+/**
+ * The connection (scan) id.
+ */
+connection: string, transaction: number, peer: string, 
+/**
+ * "request" | "response" | "exception" | "timeout" | "noRoute" | "arpUnresolved" |
+ * "refused" | "addressConflict"
+ */
+kind: "request" | "response" | "exception" | "timeout" | "noRoute" | "arpUnresolved" | "refused" | "addressConflict", unitId: number | null, functionCode: number | null, address: number | null, quantity: number | null, roundTripUs: ExactU64 | null, exceptionCode: number | null, };
+
+export type DeviceViewDto = { id: string, label: string, ip: string, mask: string, linkUp: boolean, online: boolean, modbusServer: boolean, requestsServed: ExactU64, lastActivityUs: ExactU64 | null, 
+/**
+ * Whether the device address lies in the PLC interface's subnet (`None` without one).
+ */
+sameSubnet: boolean | null, };
+
+export type NetworkDto = { plcInterface: InterfaceDto | null, plcLinkUp: boolean, scans: Array<ScanViewDto>, devices: Array<DeviceViewDto>, 
+/**
+ * The newest Modbus TCP messages and results, oldest first (bounded).
+ */
+traffic: Array<TrafficDto>, };
 
 export type MeasureRequest = { contractVersion: number, workspaceId: ExactU64, channel: ChannelRefDto, };
 

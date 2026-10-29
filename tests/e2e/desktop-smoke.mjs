@@ -440,6 +440,45 @@ try {
     },
   );
 
+  await step(
+    "network lab: the traffic shows what the gateway answers",
+    async () => {
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+      await page
+        .getByRole("button", { name: "COMMISSION", exact: true })
+        .click();
+      await page
+        .getByRole("button", {
+          name: /Start Network commissioning: the gateway rejects/,
+        })
+        .click();
+      await page
+        .getByRole("button", { name: "Run", exact: true })
+        .click({ timeout: 30_000 });
+      await page.getByRole("tab", { name: "Network" }).click();
+      const traffic = page.getByRole("table", { name: "Modbus traffic" });
+      await traffic
+        .getByText(/exception 0Bh: gateway target device failed to respond/)
+        .first()
+        .waitFor({ timeout: 15_000 });
+      await page.getByRole("button", { name: "li402" }).click();
+      await page
+        .getByRole("region", { name: "Connection li402" })
+        .getByText("40101 … 40102")
+        .waitFor();
+      const body = await page.locator("body").innerText();
+      for (const secret of ["What was wrong", "Gateway rejects the unit ID"])
+        assert.ok(
+          !body.includes(secret),
+          `visible before diagnosis: ${secret}`,
+        );
+      await page.getByRole("button", { name: "Pause" }).click();
+      await page.screenshot({
+        path: path.join(directory, "network-traffic.png"),
+      });
+    },
+  );
+
   await step("project round trip through the real backend", async () => {
     const created = await invoke("create_project", {
       contractVersion: 8,

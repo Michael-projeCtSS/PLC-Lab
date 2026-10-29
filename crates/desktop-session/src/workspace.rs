@@ -30,6 +30,8 @@ use trace_core::EventSeq;
 
 const MAX_WATCH: usize = 64;
 const MAX_EVIDENCE: usize = 128;
+/// Modbus TCP messages shown in the network view (newest kept).
+const MAX_TRAFFIC: usize = 60;
 /// Quantities that would reveal a hidden fault directly; the student must infer them.
 const HIDDEN_QUANTITIES: [&str; 1] = ["stuck"];
 
@@ -1006,21 +1008,37 @@ impl Workspace {
                 mask: i.mask.to_string(),
                 gateway: i.gateway.map(|g| g.to_string()),
             });
-        let recent: Vec<EventDto> = s
+        let config = &s.station().configuration().network;
+        let network_events: Vec<_> = s
             .events()
             .tail(400)
             .into_iter()
             .filter(|(_, e)| matches!(e.kind, lab_engine::LabEventKind::Network { .. }))
-            .map(|(seq, e)| self.event_dto(seq, e))
             .collect();
-        let skip = recent.len().saturating_sub(40);
+        let traffic: Vec<TrafficDto> = network_events
+            .iter()
+            .filter_map(|(seq, e)| match &e.kind {
+                lab_engine::LabEventKind::Network { event } => {
+                    Some(convert::traffic(seq.0, event, config))
+                }
+                _ => None,
+            })
+            .collect();
+        let last = |scan: &str, kind: &str| {
+            traffic
+                .iter()
+                .rev()
+                .find(|t| t.connection == scan && t.kind == kind)
+                .map(|t| t.time_us)
+        };
         NetworkDto {
             plc_interface: interface,
             plc_link_up: net.plc_link_up(),
             scans: net
                 .scan_views()
                 .into_iter()
-                .map(|v| ScanViewDto {
+                .enumerate()
+                .map(|(index, v)| ScanViewDto {
                     id: v.id.to_string(),
                     server: v.server.to_string(),
                     unit_id: v.unit_id,
@@ -1032,6 +1050,20 @@ impl Workspace {
                     exceptions: ExactU64(v.exceptions),
                     last_round_trip_us: v.last_round_trip_us.map(ExactU64),
                     registers: v.registers,
+                    request: config
+                        .modbus_tcp
+                        .get(index)
+                        .map(convert::modbus_request)
+                        .unwrap_or_default(),
+                    values: config.modbus_tcp.get(index).map_or_else(Vec::new, |scan| {
+                        scan.values
+                            .iter()
+                            .enumerate()
+                            .map(|(m, mapping)| convert::scan_value(mapping, net.value(index, m)))
+                            .collect()
+                    }),
+                    last_request_us: last(&v.id.to_string(), "request"),
+                    last_response_us: last(&v.id.to_string(), "response"),
                 })
                 .collect(),
             devices: net
@@ -1047,9 +1079,16 @@ impl Workspace {
                     modbus_server: d.modbus_server,
                     requests_served: ExactU64(d.requests_served),
                     last_activity_us: d.last_activity.map(|t| ExactU64(t.as_micros())),
+                    same_subnet: config
+                        .interface
+                        .as_ref()
+                        .map(|i| i.ip.same_subnet(d.ip, i.mask)),
                 })
                 .collect(),
-            recent: recent.into_iter().skip(skip).collect(),
+            traffic: {
+                let skip = traffic.len().saturating_sub(MAX_TRAFFIC);
+                traffic.into_iter().skip(skip).collect()
+            },
         }
     }
 

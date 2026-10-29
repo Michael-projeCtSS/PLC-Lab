@@ -10,15 +10,111 @@ use lab_engine::{
     CauseEffect, CycleOutcome, LabEvent, LabEventKind, LabSession, ModeReason, OperatorAction,
     PlcMode, SignalKind, SignalValue,
 };
+use lab_model::network::{
+    ModbusDataType, ModbusReadFunction, ModbusTcpScan, ModbusValueMapping, StationNetworkConfig,
+    WordOrder,
+};
 use lab_model::{
     hardware::{ChannelMode, ModuleClass, ModuleType, StationConfig},
     profile::{
         AddressingScheme, AnalogRepresentation, FidelityLevel, FidelityStatement, PlatformProfile,
     },
 };
-use network_core::{NetworkEventKind, ScanStatus};
+use network_core::{NetworkEvent, NetworkEventKind, ScanStatus, ScanValue};
 use plc_types::diagnostics::{Diagnostic, DiagnosticCategory, Severity};
 use process_simulation::ProcessEventKind;
+
+/// The request a configured Modbus TCP connection sends.
+pub fn modbus_request(scan: &ModbusTcpScan) -> ModbusRequestDto {
+    ModbusRequestDto {
+        function: match scan.function {
+            ModbusReadFunction::ReadHoldingRegisters => "readHoldingRegisters",
+            ModbusReadFunction::ReadInputRegisters => "readInputRegisters",
+        }
+        .into(),
+        function_code: scan.function.code(),
+        start_address: scan.start_address,
+        quantity: scan.quantity,
+        port: scan.port,
+        period_ms: scan.period_ms,
+        timeout_ms: scan.timeout_ms,
+    }
+}
+
+/// A configured value of a connection with its decoded content.
+pub fn scan_value(mapping: &ModbusValueMapping, value: Option<ScanValue>) -> ScanValueDto {
+    let (data_type, word_order) = match mapping.data_type {
+        ModbusDataType::Int16 => ("int16", None),
+        ModbusDataType::Float32 { word_order } => (
+            "float32",
+            Some(match word_order {
+                WordOrder::HighWordFirst => "highWordFirst",
+                WordOrder::LowWordFirst => "lowWordFirst",
+            }),
+        ),
+    };
+    ScanValueDto {
+        tag: mapping.tag.to_string(),
+        offset: mapping.offset,
+        data_type: data_type.into(),
+        word_order: word_order.map(Into::into),
+        value: value.map(|v| match v {
+            ScanValue::Int(i) => i.to_string(),
+            ScanValue::Real(r) => format!("{r}"),
+            ScanValue::NotFinite => "not a finite number".into(),
+        }),
+    }
+}
+
+/// One network event as structured traffic for the network view.
+pub fn traffic(seq: u64, event: &NetworkEvent, config: &StationNetworkConfig) -> TrafficDto {
+    let mut t = TrafficDto {
+        seq: ExactU64(seq),
+        time_us: ExactU64(event.time.as_micros()),
+        connection: config
+            .modbus_tcp
+            .get(event.scan)
+            .map_or_else(|| format!("#{}", event.scan), |s| s.id.to_string()),
+        transaction: event.transaction,
+        peer: event.peer.to_string(),
+        kind: String::new(),
+        unit_id: None,
+        function_code: None,
+        address: None,
+        quantity: None,
+        round_trip_us: None,
+        exception_code: None,
+    };
+    t.kind = match &event.kind {
+        NetworkEventKind::RequestSent {
+            function,
+            address,
+            quantity,
+            unit,
+        } => {
+            t.function_code = Some(*function);
+            t.address = Some(*address);
+            t.quantity = Some(*quantity);
+            t.unit_id = Some(*unit);
+            "request"
+        }
+        NetworkEventKind::ResponseReceived { round_trip_us } => {
+            t.round_trip_us = Some(ExactU64(*round_trip_us));
+            "response"
+        }
+        NetworkEventKind::ExceptionReceived { code } => {
+            t.exception_code = Some(*code);
+            "exception"
+        }
+        NetworkEventKind::Timeout => "timeout",
+        NetworkEventKind::NoRoute => "noRoute",
+        NetworkEventKind::ArpUnresolved { .. } => "arpUnresolved",
+        NetworkEventKind::ConnectionRefused => "refused",
+        NetworkEventKind::AddressConflict { .. } => "addressConflict",
+    }
+    .into();
+    t
+}
 
 pub fn value(v: SignalValue) -> SignalValueDto {
     match v {

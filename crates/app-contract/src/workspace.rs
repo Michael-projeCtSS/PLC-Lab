@@ -540,6 +540,64 @@ pub struct ScanViewDto {
     pub exceptions: ExactU64,
     pub last_round_trip_us: Option<ExactU64>,
     pub registers: Vec<u16>,
+    /// The request the PLC sends for this connection, from the downloaded configuration.
+    pub request: ModbusRequestDto,
+    /// The configured values, decoded by the backend from the last good registers.
+    pub values: Vec<ScanValueDto>,
+    pub last_request_us: Option<ExactU64>,
+    pub last_response_us: Option<ExactU64>,
+}
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ModbusRequestDto {
+    /// "readHoldingRegisters" | "readInputRegisters"
+    #[ts(type = "\"readHoldingRegisters\" | \"readInputRegisters\"")]
+    pub function: String,
+    pub function_code: u8,
+    /// Zero-based protocol (PDU) address of the first register.
+    pub start_address: u16,
+    pub quantity: u16,
+    pub port: u16,
+    pub period_ms: u32,
+    pub timeout_ms: u32,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ScanValueDto {
+    pub tag: String,
+    /// Offset from the request start address, in registers.
+    pub offset: u16,
+    /// "int16" | "float32"
+    #[ts(type = "\"int16\" | \"float32\"")]
+    pub data_type: String,
+    /// Float32 only: "highWordFirst" | "lowWordFirst"
+    #[ts(type = "\"highWordFirst\" | \"lowWordFirst\" | null")]
+    pub word_order: Option<String>,
+    /// Decoded value, `None` before the first good response.
+    pub value: Option<String>,
+}
+/// One Modbus TCP message or communication result, as the PLC's network stack saw it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TrafficDto {
+    pub seq: ExactU64,
+    pub time_us: ExactU64,
+    /// The connection (scan) id.
+    pub connection: String,
+    pub transaction: u16,
+    pub peer: String,
+    /// "request" | "response" | "exception" | "timeout" | "noRoute" | "arpUnresolved" |
+    /// "refused" | "addressConflict"
+    #[ts(
+        type = "\"request\" | \"response\" | \"exception\" | \"timeout\" | \"noRoute\" | \"arpUnresolved\" | \"refused\" | \"addressConflict\""
+    )]
+    pub kind: String,
+    pub unit_id: Option<u8>,
+    pub function_code: Option<u8>,
+    pub address: Option<u16>,
+    pub quantity: Option<u16>,
+    pub round_trip_us: Option<ExactU64>,
+    pub exception_code: Option<u8>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -553,6 +611,8 @@ pub struct DeviceViewDto {
     pub modbus_server: bool,
     pub requests_served: ExactU64,
     pub last_activity_us: Option<ExactU64>,
+    /// Whether the device address lies in the PLC interface's subnet (`None` without one).
+    pub same_subnet: Option<bool>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -561,7 +621,8 @@ pub struct NetworkDto {
     pub plc_link_up: bool,
     pub scans: Vec<ScanViewDto>,
     pub devices: Vec<DeviceViewDto>,
-    pub recent: Vec<EventDto>,
+    /// The newest Modbus TCP messages and results, oldest first (bounded).
+    pub traffic: Vec<TrafficDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -692,7 +753,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticEntryDto, ModuleTypeDto,
-        CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareDto, ScanViewDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
+        CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,
         CriterionResultDto, DebriefDto, GradeReportDto, ExecutionWakeDto
     )

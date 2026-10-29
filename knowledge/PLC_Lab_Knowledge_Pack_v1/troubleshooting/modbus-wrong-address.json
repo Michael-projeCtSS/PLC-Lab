@@ -1,0 +1,68 @@
+{
+  "id": "troubleshooting.modbus-wrong-address",
+  "kind": "troubleshooting",
+  "title": "Modbus TCP server address wrong",
+  "summary": "The PLC sends its requests to an address where no device answers.",
+  "tags": [
+    "Modbus TCP",
+    "network",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "Requests time out and the address is not resolved on the segment; ping to the documented address answers, the configured one does not."
+    },
+    {
+      "heading": "Check",
+      "body": "Compare the configured server address with the device documentation and the device's own display or web page."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order"
+    ],
+    "approximated": [
+      "Fixed link latency",
+      "One request at a time per connection"
+    ],
+    "omitted": [
+      "TCP retransmission and connection handshakes",
+      "Writes, other function codes and serial bus timing behind gateways",
+      "Byte order inside a register (words are big-endian as the protocol defines)"
+    ]
+  },
+  "related": [
+    "protocol.modbus-tcp"
+  ],
+  "troubleshooting": {
+    "faultId": "modbus-wrong-address",
+    "area": "Network",
+    "target": "Connection server address",
+    "effect": "Every request times out",
+    "symptoms": [
+      "Timeouts on one connection",
+      "Address not resolved"
+    ],
+    "evidence": [
+      "Configured address differs from the documentation",
+      "Ping"
+    ],
+    "diagnosticMethod": [
+      "Compare configuration and documentation",
+      "Ping both addresses"
+    ],
+    "repair": [
+      "Correct the address and download"
+    ],
+    "explanation": "A connection can only work if it addresses the right device.",
+    "simulatedIn": [
+      "cm.net-wrong-ip"
+    ]
+  }
+}

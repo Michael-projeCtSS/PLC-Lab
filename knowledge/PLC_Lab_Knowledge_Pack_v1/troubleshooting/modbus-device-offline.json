@@ -1,0 +1,68 @@
+{
+  "id": "troubleshooting.modbus-device-offline",
+  "kind": "troubleshooting",
+  "title": "Modbus device switched off",
+  "summary": "A correctly configured device stops answering because it has no power or no link.",
+  "tags": [
+    "Modbus TCP",
+    "network",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "Requests time out and ping gets no reply, although the configuration matches the documentation and other devices answer."
+    },
+    {
+      "heading": "Check",
+      "body": "Go to the device: power, link LED, its own diagnostics. Then verify the connection again."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order"
+    ],
+    "approximated": [
+      "Fixed link latency",
+      "One request at a time per connection"
+    ],
+    "omitted": [
+      "TCP retransmission and connection handshakes",
+      "Writes, other function codes and serial bus timing behind gateways",
+      "Byte order inside a register (words are big-endian as the protocol defines)"
+    ]
+  },
+  "related": [
+    "protocol.modbus-tcp"
+  ],
+  "troubleshooting": {
+    "faultId": "modbus-device-offline",
+    "area": "Network",
+    "target": "Field device",
+    "effect": "No answers from the device",
+    "symptoms": [
+      "Timeouts",
+      "No ping reply"
+    ],
+    "evidence": [
+      "Configuration matches the documentation",
+      "Other devices answer"
+    ],
+    "diagnosticMethod": [
+      "Rule out configuration",
+      "Check the device on site"
+    ],
+    "repair": [
+      "Restore power or link, then verify"
+    ],
+    "explanation": "When the configuration is right, the problem is at the device or on its link.",
+    "simulatedIn": [
+      "cm.net-device-offline"
+    ]
+  }
+}

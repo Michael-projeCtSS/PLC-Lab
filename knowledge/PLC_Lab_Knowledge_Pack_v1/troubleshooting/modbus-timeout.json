@@ -1,0 +1,67 @@
+{
+  "id": "troubleshooting.modbus-timeout",
+  "kind": "troubleshooting",
+  "title": "Timeout shorter than the device needs",
+  "summary": "A reachable device answers too late for the configured timeout.",
+  "tags": [
+    "Modbus TCP",
+    "network",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "Only timeouts, no exceptions; the device answers ping and other connections work. Gateways to serial devices are typically slower than direct TCP devices."
+    },
+    {
+      "heading": "Check",
+      "body": "Compare the configured timeout with the documented response time and the observed round trip times."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order"
+    ],
+    "approximated": [
+      "Fixed link latency",
+      "One request at a time per connection"
+    ],
+    "omitted": [
+      "TCP retransmission and connection handshakes",
+      "Writes, other function codes and serial bus timing behind gateways",
+      "Byte order inside a register (words are big-endian as the protocol defines)"
+    ]
+  },
+  "related": [
+    "protocol.modbus-tcp"
+  ],
+  "troubleshooting": {
+    "faultId": "modbus-timeout",
+    "area": "Network",
+    "target": "Connection timeout",
+    "effect": "Replies arrive after the PLC gave up",
+    "symptoms": [
+      "Timeouts on a slow device",
+      "Device answers ping"
+    ],
+    "evidence": [
+      "Configured timeout",
+      "Documented response time"
+    ],
+    "diagnosticMethod": [
+      "Compare timeout and response time"
+    ],
+    "repair": [
+      "Configure a timeout above the response time"
+    ],
+    "explanation": "The timeout must cover the slowest documented answer, with margin.",
+    "simulatedIn": [
+      "cm.net-timeout"
+    ]
+  }
+}
