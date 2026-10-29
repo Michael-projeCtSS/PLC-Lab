@@ -1,17 +1,24 @@
 import { spawnSync } from "node:child_process";
-import { root, toolchainEnvironment } from "./toolchain.mjs";
+import path from "node:path";
+import { root, selectToolchain } from "./toolchain.mjs";
 
-const result = spawnSync(
-  process.platform === "win32" ? "cargo.exe" : "cargo",
-  process.argv.slice(2),
-  {
-    cwd: root,
-    env: toolchainEnvironment(),
-    stdio: "inherit",
-  },
-);
-if (result.error)
-  console.error(
-    `Rust toolchain unavailable: ${result.error.message}. See docs/DEVELOPMENT.md.`,
+try {
+  const toolchain = selectToolchain();
+  const result = spawnSync(
+    path.join(
+      toolchain.bin,
+      process.platform === "win32" ? "cargo.exe" : "cargo",
+    ),
+    process.argv.slice(2),
+    {
+      cwd: root,
+      env: toolchain.environment,
+      stdio: "inherit",
+    },
   );
-process.exit(result.status ?? 1);
+  if (result.error) throw result.error;
+  process.exitCode = result.status ?? 1;
+} catch (error) {
+  console.error(error.message);
+  process.exitCode = 1;
+}

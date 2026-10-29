@@ -5,7 +5,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
-import { root } from "./toolchain.mjs";
+import { root, readToolchain } from "./toolchain.mjs";
+export { readToolchain } from "./toolchain.mjs";
 
 const rust = (id, args) => ({
   id,
@@ -74,29 +75,6 @@ export function validationPlan(lane, platform = process.platform) {
       },
     ];
   throw new Error(`Unknown validation lane: ${lane}`);
-}
-
-export function readToolchain(text) {
-  const channel = text.match(/^channel\s*=\s*"([\w.-]+)"\s*$/m)?.[1];
-  const profile = text.match(
-    /^profile\s*=\s*"(minimal|default|complete)"\s*$/m,
-  )?.[1];
-  const componentsText = text.match(/^components\s*=\s*(\[[^\n]+\])\s*$/m)?.[1];
-  if (!channel || !profile || !componentsText)
-    throw new Error(
-      "Unsupported or incomplete rust-toolchain.toml; CI cannot guess the toolchain.",
-    );
-  const components = JSON.parse(componentsText);
-  if (
-    !Array.isArray(components) ||
-    components.some(
-      (item) => typeof item !== "string" || !/^[\w-]+$/.test(item),
-    ) ||
-    !components.includes("rustfmt") ||
-    !components.includes("clippy")
-  )
-    throw new Error("CI requires the declared rustfmt and clippy components.");
-  return { channel, profile, components };
 }
 
 export async function runStages(

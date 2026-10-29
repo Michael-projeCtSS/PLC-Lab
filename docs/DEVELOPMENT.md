@@ -4,7 +4,10 @@
 
 - Node.js 24 (CI pins 24.15.0) with npm.
 - Rust 1.99.0 with rustfmt and clippy (`rust-toolchain.toml`). An optional
-  workspace-local installation in `.tools/` is used automatically by `scripts/rust.mjs`.
+  healthy workspace-local installation in `.tools/` is preferred. Otherwise the exact
+  installed pin in configured `RUSTUP_HOME`/`CARGO_HOME` or the standard user homes is
+  used. Build commands never install or repair Rust implicitly; see the
+  [preflight and recovery procedure](HUMAN_TESTING.md#rust-toolchain-preflight).
 - Windows: Visual Studio Build Tools with "Desktop development with C++" and the Windows
   SDK, and the WebView2 Runtime. Linux: the core, frontend and architecture checks run
   without the Tauri host.

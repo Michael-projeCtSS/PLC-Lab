@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { root, toolchainEnvironment } from "./toolchain.mjs";
+import { root, selectToolchain, toolchainEnvironment } from "./toolchain.mjs";
 
 export function lockfileMatchesInstalled(expected, installed) {
   if (!expected.packages || !installed.packages) return false;
@@ -95,9 +95,12 @@ function prepare(mode) {
       );
   }
   console.log("Checking the pinned Rust toolchain...");
-  runNode(["scripts/rust.mjs", "--version"]);
-  runNode(["scripts/rust.mjs", "fmt", "--version"]);
-  runNode(["scripts/rust.mjs", "clippy", "--version"]);
+  const toolchain = selectToolchain();
+  console.log(
+    `Rust health check PASS: ${toolchain.pin}\nUsing ${toolchain.label}: ${toolchain.bin}`,
+  );
+  for (const report of toolchain.reports.filter((report) => !report.healthy))
+    console.log(`${report.label} skipped:\n${report.problems.join("\n")}`);
   if (process.env.CARGO_BUILD_TARGET || process.env.CARGO_TARGET_DIR) {
     throw new Error(
       "Unset CARGO_BUILD_TARGET and CARGO_TARGET_DIR for the standard local human-test workflow. The existing native smoke test uses target/debug.",
@@ -153,7 +156,7 @@ function prepare(mode) {
   return npmCli;
 }
 
-function main() {
+async function main() {
   const mode = process.argv[2];
   const commands = {
     dev: "dev",
@@ -173,6 +176,20 @@ function main() {
     console.log(
       "[DEV] Application closed successfully. The development server has stopped.",
     );
+  if (mode === "build-release") {
+    const { verifyDistribution } = await import("./distribution.mjs");
+    const problems = await verifyDistribution(root);
+    if (problems.length) throw new Error(problems.join("\n"));
+    console.log(
+      [
+        "============================================================",
+        "PLC LAB RELEASE BUILD: SUCCESS",
+        `Application: ${path.join(root, "PLC Lab.exe")}`,
+        "Double-click PLC Lab.exe to start.",
+        "============================================================",
+      ].join("\n"),
+    );
+  }
 }
 
 if (
@@ -180,7 +197,7 @@ if (
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   try {
-    main();
+    await main();
   } catch (error) {
     console.error(
       `ERROR: ${error instanceof Error ? error.message : String(error)}`,

@@ -47,3 +47,38 @@ blocked executable to run; report the exact error (see
 For automated harnesses only, `PLC_LAB_NO_PAUSE=1` suppresses the final keypress wait.
 
 Use the [checklist](HUMAN_TEST_CHECKLIST.md) for a manual session.
+
+## Rust toolchain preflight
+
+The build requires the exact version in `rust-toolchain.toml` (currently 1.99.0,
+Windows x64 host `x86_64-pc-windows-msvc`, minimal profile with rustfmt and clippy).
+`scripts/toolchain.mjs` checks installations in this order:
+
+1. Repository `.tools/cargo` and `.tools/rustup`.
+2. Existing configured `CARGO_HOME`/`RUSTUP_HOME` (standard user homes for unset values).
+3. Standard user `.cargo` and `.rustup` homes.
+
+A `cargo.exe` proxy alone is insufficient. The selector checks the installed toolchain
+files, then runs the actual compiler, Cargo, rustfmt, clippy-driver and rustdoc with a
+five-second timeout per command. It verifies the compiler release/host, Cargo and rustdoc
+release, and the formatter/clippy compiler commit. Cargo's formatter/clippy entry points
+must also exist. It never calls rustup proxies to test availability. The selected
+environment places the actual toolchain binaries first, sets explicit compiler/doc paths,
+pins `RUSTUP_TOOLCHAIN` and disables automatic installation with `RUSTUP_AUTO_INSTALL=0`
+([rustup documentation](https://rust-lang.github.io/rustup/environment-variables.html)).
+
+If no healthy exact pin exists, the BAT stops before dependency installation or
+compilation with **PLC LAB BUILD BLOCKED**, the pin and missing/unusable paths. A broken
+local installation does not prevent use of a healthy user installation. No toolchain is
+downloaded or repaired by preflight. CI retains its separate, explicit pinned Rust setup
+and uses the same parser and health selection afterward.
+
+On a machine without a security block, install the declared pin/components through the
+normal Rust setup before retrying. If Windows reports access denied or a virus/PUA error
+during Rust installation, stop repeated attempts and retain the source/destination and
+Windows error. Check the active antivirus's detection history for that exact file; do
+not disable protection, change ACLs or exclude the repository. See the
+[local recovery evidence](validation/LOCAL_BUILD_RECOVERY.md) for this machine's block.
+
+Successful release builds verify the staged distribution and print **PLC LAB RELEASE
+BUILD: SUCCESS**, the absolute root `PLC Lab.exe` path and the double-click instruction.
