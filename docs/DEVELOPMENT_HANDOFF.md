@@ -171,11 +171,13 @@ launcher smoke 11 steps).
   the CPU interface exists); no scene device consumes an analog output yet (the AO
   terminal is measured with the multimeter).
 
-Validated: `5740f1954f7eadf123979d0ecf9e63282ed16adf`, CI run 40880723450 (Windows job
-123471196691 and Linux job 123471197159 PASS; native smoke 19 steps on every entry point,
-launcher smoke 11 steps). The new Rust tests were first compiled on hosted CI: the local
-Rust toolchain could not be reinstalled (`rustc.exe` refused with access denied, see
-Local machine limits).
+Validated (final, including canonical I/O identity and project format 3):
+`e8fc58d5311d625a064dcb36ccdde62e14f9200f`, CI run 40885264980 (Windows job 123487147173
+and Linux job 123487147505 PASS; native smoke 19 steps on every entry point, launcher
+smoke 11 steps). An earlier candidate (`5740f19`, run 40880723450) passed before the
+identity requirement was added. All Rust of this checkpoint was compiled and tested only
+on hosted CI: the local Rust toolchain could not be reinstalled (`rustc.exe` refused with
+access denied, see Local machine limits).
 
 ## Local machine limits
 
