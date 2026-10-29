@@ -169,12 +169,23 @@ launcher smoke 11 steps).
   the CPU interface exists); no scene device consumes an analog output yet (the AO
   terminal is measured with the multimeter).
 
+Validated: `5740f1954f7eadf123979d0ecf9e63282ed16adf`, CI run 40880723450 (Windows job
+123471196691 and Linux job 123471197159 PASS; native smoke 19 steps on every entry point,
+launcher smoke 11 steps). The new Rust tests were first compiled on hosted CI: the local
+Rust toolchain could not be reinstalled (`rustc.exe` refused with access denied, see
+Local machine limits).
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
 the development machine (os error 4551). It is never disabled or bypassed. The launcher
 release binaries themselves run locally; the full Tauri release build, staging and every
-native smoke test run on hosted Windows CI, which is authoritative.
+native smoke test run on hosted Windows CI, which is authoritative. On 2026-10-29 the
+local `rustc.exe` disappeared and reinstalling the pinned toolchain fails because Windows
+refuses to create `rustc.exe` (os error 5, no Defender or Code Integrity event; Norton
+360 is the active antivirus). Until that is resolved by the machine owner, Rust is
+compiled and tested only on hosted CI; antivirus settings are never changed by the
+agent.
 
 ## Next checkpoints
 
