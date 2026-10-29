@@ -2,8 +2,8 @@
 use lab_engine::{CheckState, Checklist, LabSession, OperatorAction, SessionConfig};
 use lab_model::{
     exercise::{ExerciseDefinition, PlcModeRequest},
-    hardware::{ChannelRef, ModuleType, SlotRef},
     fault::FaultInjection,
+    hardware::{ChannelRef, ModuleType, SlotRef},
     parse_json,
     profile::PlatformProfile,
     scene::SceneDefinition,
