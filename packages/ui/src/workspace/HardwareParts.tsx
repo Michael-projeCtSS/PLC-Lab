@@ -249,12 +249,13 @@ export function ModuleDiagnostics({
       f.slot?.rack === module.position.rack &&
       f.slot.slot === module.position.slot,
   );
-  // Module and channel sources read "Rack <r> slot <s>[ channel …]".
-  const source = new RegExp(
-    `^Rack ${module.position.rack} slot ${module.position.slot}(\\D|$)`,
-  );
+  // Typed identity from the backend; the display text in `source` is never parsed.
   const entries: DiagnosticEntryDto[] = data.diagnostics
-    .filter((d) => source.test(d.source))
+    .filter(
+      (d) =>
+        d.slot?.rack === module.position.rack &&
+        d.slot.slot === module.position.slot,
+    )
     .slice(-20);
   return (
     <section

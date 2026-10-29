@@ -479,6 +479,13 @@ pub struct DiagnosticEntryDto {
     #[ts(type = "\"INCOMING\" | \"OUTGOING\"")]
     pub event: String,
     pub text: String,
+    /// The module slot the entry is about (module and channel sources), as typed
+    /// identity: consumers never parse `source`.
+    pub slot: Option<SlotRefDto>,
+    /// The channel the entry is about (channel sources).
+    pub channel: Option<ChannelRefDto>,
+    /// Stable id of the configured module at `slot`.
+    pub module_id: Option<String>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

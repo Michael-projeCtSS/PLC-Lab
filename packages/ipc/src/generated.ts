@@ -381,7 +381,20 @@ export type DiagnosticEntryDto = { timeUs: ExactU64, source: string, kind: strin
 /**
  * "INCOMING" | "OUTGOING"
  */
-event: "INCOMING" | "OUTGOING", text: string, };
+event: "INCOMING" | "OUTGOING", text: string, 
+/**
+ * The module slot the entry is about (module and channel sources), as typed
+ * identity: consumers never parse `source`.
+ */
+slot: SlotRefDto | null, 
+/**
+ * The channel the entry is about (channel sources).
+ */
+channel: ChannelRefDto | null, 
+/**
+ * Stable id of the configured module at `slot`.
+ */
+moduleId: string | null, };
 
 export type ModuleTypeDto = { id: string, name: string, product: string | null, channels: number, class: string, };
 

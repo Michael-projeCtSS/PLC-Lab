@@ -512,6 +512,11 @@ pub fn exception_name(code: u8) -> &'static str {
 }
 
 pub fn diagnostic_entry(session: &LabSession, e: &DiagnosticEntry) -> DiagnosticEntryDto {
+    let (slot, channel) = match e.source {
+        DiagnosticSource::Module(p) => (Some(p), None),
+        DiagnosticSource::Channel(c) => (Some(c.slot_ref()), Some(c)),
+        _ => (None, None),
+    };
     DiagnosticEntryDto {
         time_us: ExactU64(e.time.as_micros()),
         source: source_text(session, e.source),
@@ -526,6 +531,18 @@ pub fn diagnostic_entry(session: &LabSession, e: &DiagnosticEntry) -> Diagnostic
         }
         .into(),
         text: diagnostic_text(session, e.kind),
+        slot: slot.map(|p| SlotRefDto {
+            rack: p.rack,
+            slot: p.slot,
+        }),
+        channel: channel.map(|c| ChannelRefDto {
+            rack: c.rack,
+            slot: c.slot,
+            channel: c.channel,
+        }),
+        module_id: slot
+            .and_then(|p| session.station().configuration().module_at(p))
+            .map(|m| m.id.to_string()),
     }
 }
 

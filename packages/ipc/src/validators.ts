@@ -654,6 +654,9 @@ export const hardware = obj<G.HardwareDto>({
       kind: str,
       event: literal("INCOMING", "OUTGOING"),
       text: str,
+      slot: nullable(slotRef),
+      channel: nullable(channelRef),
+      moduleId: nullable(str),
     }),
   ),
   catalog: arr(
