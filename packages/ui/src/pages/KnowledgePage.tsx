@@ -8,14 +8,23 @@ import {
 import { Markdown } from "../Markdown";
 import { Badge, Empty, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
+import { useInterface } from "../locale";
+import {
+  englishSearchAlias,
+  localizeContent,
+  searchPolishContent,
+  hasCompleteTranslation,
+  fidelityLabel,
+  contentKindLabel,
+} from "../locale/content";
 import { openExercise, type Navigate } from "../route";
 
 const CATEGORIES = [
-  { id: null, label: "All" },
-  { id: "FUNDAMENTAL", label: "Fundamentals" },
-  { id: "VENDOR_SPECIFIC", label: "Vendor specific" },
-  { id: "TROUBLESHOOTING", label: "Troubleshooting" },
-  { id: "PLC_LAB_SIMULATION", label: "PLC Lab simulation" },
+  { id: null, label: "knowledge.all" },
+  { id: "FUNDAMENTAL", label: "knowledge.fundamentals" },
+  { id: "VENDOR_SPECIFIC", label: "knowledge.vendor" },
+  { id: "TROUBLESHOOTING", label: "knowledge.troubleshooting" },
+  { id: "PLC_LAB_SIMULATION", label: "knowledge.simulation" },
 ] as const;
 
 const CATEGORY_KIND: Record<string, string> = {
@@ -34,36 +43,60 @@ export function KnowledgePage({
   initialQuery: string;
   navigate: Navigate;
 }) {
+  const { preferences, t } = useInterface();
   const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState<string | null>(null);
   const [hits, setHits] = useState<SearchHitDto[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const catalog = useLoad(() => api.catalog(), []);
+  const library = useLoad(() => api.library(), []);
   useEffect(() => {
     if (!query.trim()) return;
     let active = true;
     const timer = setTimeout(() => {
-      api.search(query, { category }).then(
-        (h) => active && setHits(h),
-        (e: unknown) => active && setError(e),
-      );
+      api
+        .search(
+          preferences.language === "pl" ? englishSearchAlias(query) : query,
+          { category },
+        )
+        .then(
+          (h) => {
+            if (!active) return;
+            const collect = (entries: CatalogEntryDto[]): CatalogEntryDto[] =>
+              entries.flatMap((entry) => [entry, ...collect(entry.children)]);
+            const available = [
+              ...(library.data?.lessons ?? []),
+              ...(library.data?.exercises ?? []),
+              ...collect(Object.values(catalog.data ?? {}).flat()),
+            ];
+            const polish =
+              preferences.language === "pl"
+                ? searchPolishContent(query, available, category)
+                : [];
+            const ids = new Set(polish.map((hit) => hit.id));
+            setHits([
+              ...polish,
+              ...localizeContent(h, preferences.language).filter(
+                (hit) => !ids.has(hit.id),
+              ),
+            ]);
+          },
+          (e: unknown) => active && setError(e),
+        );
     }, 150);
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [query, category]);
+  }, [query, category, preferences.language, catalog.data, library.data]);
   const open = (id: string) =>
     navigate({ page: "knowledge", article: id, query });
   return (
     <div className="page-inner">
       <div className="page-header">
         <div>
-          <h1>Knowledge base</h1>
-          <p>
-            Original explanations with provenance. Simplified behavior is marked
-            as a simulation approximation; unverified details are labeled.
-          </p>
+          <h1>{t("knowledge.title")}</h1>
+          <p>{t("knowledge.intro")}</p>
         </div>
       </div>
       <div className="row wrap" style={{ marginBottom: 16 }}>
@@ -71,19 +104,23 @@ export function KnowledgePage({
           className="input grow"
           style={{ height: 34, fontSize: 14 }}
           type="search"
-          placeholder="Search: 4-20 mA, TON, PROFINET, wire break, S7-1500, NO NC…"
+          placeholder={t("knowledge.placeholder")}
           value={query}
-          aria-label="Search knowledge"
+          aria-label={t("knowledge.search")}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div className="segmented" role="group" aria-label="Category">
+        <div
+          className="segmented"
+          role="group"
+          aria-label={t("knowledge.category")}
+        >
           {CATEGORIES.map((c) => (
             <button
-              key={c.label}
+              key={c.id ?? "all"}
               aria-pressed={category === c.id}
               onClick={() => setCategory(c.id)}
             >
-              {c.label}
+              {t(c.label)}
             </button>
           ))}
         </div>
@@ -118,8 +155,8 @@ function SearchResults({
   open: (id: string) => void;
   navigate: Navigate;
 }) {
-  if (hits.length === 0)
-    return <Empty>No matching articles. Try fewer or different words.</Empty>;
+  const { t } = useInterface();
+  if (hits.length === 0) return <Empty>{t("knowledge.none")}</Empty>;
   return (
     <div className="list">
       {hits.map((h) => (
@@ -138,9 +175,12 @@ function SearchResults({
             <div className="row">
               <strong>{h.title}</strong>
               <Badge kind={CATEGORY_KIND[h.category] ?? "normal"}>
-                {h.category.replaceAll("_", " ").toLowerCase()}
+                {t(
+                  CATEGORIES.find((c) => c.id === h.category)?.label ??
+                    "knowledge.all",
+                )}
               </Badge>
-              <Badge>{h.docType}</Badge>
+              <Badge>{contentKindLabel(h.docType, t)}</Badge>
               {h.vendor && <Badge>{h.vendor}</Badge>}
             </div>
             <div className="muted" style={{ fontSize: 12 }}>
@@ -166,6 +206,7 @@ function Catalog({
   };
   open: (id: string) => void;
 }) {
+  const { t } = useInterface();
   const group = (title: string, items: CatalogEntryDto[], note?: string) =>
     items.length > 0 && (
       <section>
@@ -193,15 +234,11 @@ function Catalog({
     );
   return (
     <>
-      {group("Fundamentals", catalog.fundamentals)}
-      {group(
-        "PLC platforms",
-        catalog.vendors,
-        "Tier A: detailed profiles · Tier B: knowledge profiles",
-      )}
-      {group("Industrial communication", catalog.protocols)}
-      {group("Instructions", catalog.instructions)}
-      {group("Troubleshooting guides", catalog.troubleshooting)}
+      {group(t("knowledge.fundamentals"), catalog.fundamentals)}
+      {group(t("knowledge.platforms"), catalog.vendors, t("knowledge.tiers"))}
+      {group(t("knowledge.protocols"), catalog.protocols)}
+      {group(t("knowledge.instructions"), catalog.instructions)}
+      {group(t("knowledge.guides"), catalog.troubleshooting)}
     </>
   );
 }
@@ -217,21 +254,25 @@ function ArticleView({
   back: () => void;
   navigate: Navigate;
 }) {
+  const { t, preferences } = useInterface();
   const article = useLoad<ArticleDto>(() => api.article(id), [id]);
   const a = article.data;
   if (article.error) return <ErrorNotice error={article.error} />;
-  if (!a) return <Empty>Loading…</Empty>;
+  if (!a) return <Empty>{t("knowledge.loading")}</Empty>;
   return (
-    <div className="two-col" style={{ gridTemplateColumns: "1fr 300px" }}>
+    <div className="two-col article-layout">
       <article className="prose">
         <button className="btn btn-ghost btn-sm" onClick={back}>
-          ← Back
+          ← {t("common.back")}
         </button>
         <div className="row wrap" style={{ marginTop: 10 }}>
           <Badge kind={CATEGORY_KIND[a.category] ?? "normal"}>
-            {a.category.replaceAll("_", " ").toLowerCase()}
+            {t(
+              CATEGORIES.find((c) => c.id === a.category)?.label ??
+                "knowledge.all",
+            )}
           </Badge>
-          <Badge>{a.kind}</Badge>
+          <Badge>{contentKindLabel(a.kind, t)}</Badge>
           {a.tier && <Badge>Tier {a.tier}</Badge>}
           {a.tags.map((t) => (
             <span key={t} className="dim" style={{ fontSize: 11 }}>
@@ -241,6 +282,9 @@ function ArticleView({
         </div>
         <h2 style={{ fontSize: 22, marginTop: 8 }}>{a.title}</h2>
         <p>{a.summary}</p>
+        {preferences.language === "pl" && !hasCompleteTranslation(id) && (
+          <p className="callout">{t("knowledge.fallback")}</p>
+        )}
         {a.sections.map((s) => (
           <section key={s.heading}>
             <h3>{s.heading}</h3>
@@ -249,13 +293,13 @@ function ArticleView({
         ))}
         {a.instruction && (
           <section>
-            <h3>Interface</h3>
+            <h3>{t("knowledge.interface")}</h3>
             <table>
               <thead>
                 <tr>
-                  <th>Parameter</th>
-                  <th>Type</th>
-                  <th>Meaning</th>
+                  <th>{t("knowledge.parameter")}</th>
+                  <th>{t("knowledge.type")}</th>
+                  <th>{t("knowledge.meaning")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,25 +318,24 @@ function ArticleView({
               </tbody>
             </table>
             <p>
-              <strong>State:</strong> {a.instruction.state}{" "}
-              <strong>Retentivity:</strong> {a.instruction.retentivity}
+              <strong>{t("knowledge.state")}</strong> {a.instruction.state}{" "}
+              <strong>{t("knowledge.retentive")}</strong>{" "}
+              {a.instruction.retentivity}
             </p>
             <p>
-              <strong>Timing:</strong> {a.instruction.timing}
+              <strong>{t("knowledge.timing")}</strong> {a.instruction.timing}
             </p>
             <p>
-              <strong>PLC Lab support:</strong>{" "}
-              {a.instruction.simulationSupport
-                .replaceAll("_", " ")
-                .toLowerCase()}
+              <strong>{t("knowledge.support")}</strong>{" "}
+              {fidelityLabel(a.instruction.simulationSupport, t)}
             </p>
             {a.instruction.equivalents.length > 0 && (
               <table>
                 <thead>
                   <tr>
-                    <th>Platform</th>
-                    <th>Name</th>
-                    <th>Notes</th>
+                    <th>{t("knowledge.platform")}</th>
+                    <th>{t("knowledge.name")}</th>
+                    <th>{t("knowledge.notes")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -312,35 +355,35 @@ function ArticleView({
         )}
         {a.troubleshooting && (
           <section>
-            <h3>Symptoms</h3>
+            <h3>{t("knowledge.symptoms")}</h3>
             <ul>
               {a.troubleshooting.symptoms.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ul>
-            <h3>Evidence to collect</h3>
+            <h3>{t("knowledge.evidence")}</h3>
             <ul>
               {a.troubleshooting.evidence.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ul>
-            <h3>Diagnostic method</h3>
+            <h3>{t("knowledge.method")}</h3>
             <ol>
               {a.troubleshooting.diagnosticMethod.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ol>
-            <h3>Repair</h3>
+            <h3>{t("knowledge.repair")}</h3>
             <ul>
               {a.troubleshooting.repair.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ul>
-            <h3>Why it happens</h3>
+            <h3>{t("knowledge.why")}</h3>
             <p>{a.troubleshooting.explanation}</p>
             {a.troubleshooting.simulatedIn.length > 0 && (
               <p>
-                Practice it:{" "}
+                {t("knowledge.practice")}{" "}
                 {a.troubleshooting.simulatedIn.map((r) => (
                   <button
                     key={r.id}
@@ -359,7 +402,7 @@ function ArticleView({
         {a.facts.length > 0 && (
           <div className="panel">
             <div className="panel-head">
-              <h4>Key facts</h4>
+              <h4>{t("knowledge.facts")}</h4>
             </div>
             <table className="table fact-table">
               <tbody>
@@ -381,7 +424,7 @@ function ArticleView({
         {a.fidelity && (
           <div className="panel">
             <div className="panel-head">
-              <h4>Simulation fidelity</h4>
+              <h4>{t("knowledge.fidelity")}</h4>
               <Badge
                 kind={
                   a.fidelity.level === "EXACT_BEHAVIORAL"
@@ -391,13 +434,13 @@ function ArticleView({
                       : "auto"
                 }
               >
-                {a.fidelity.level.replaceAll("_", " ").toLowerCase()}
+                {fidelityLabel(a.fidelity.level, t)}
               </Badge>
             </div>
             <div className="panel-body" style={{ fontSize: 12 }}>
               {a.fidelity.modeled.length > 0 && (
                 <>
-                  <strong>Modeled</strong>
+                  <strong>{t("knowledge.modeled")}</strong>
                   <ul>
                     {a.fidelity.modeled.map((m) => (
                       <li key={m}>{m}</li>
@@ -407,7 +450,7 @@ function ArticleView({
               )}
               {a.fidelity.approximated.length > 0 && (
                 <>
-                  <strong>Simulation approximation</strong>
+                  <strong>{t("knowledge.approximation")}</strong>
                   <ul>
                     {a.fidelity.approximated.map((m) => (
                       <li key={m}>{m}</li>
@@ -417,7 +460,7 @@ function ArticleView({
               )}
               {a.fidelity.omitted.length > 0 && (
                 <>
-                  <strong>Not simulated</strong>
+                  <strong>{t("knowledge.omitted")}</strong>
                   <ul>
                     {a.fidelity.omitted.map((m) => (
                       <li key={m}>{m}</li>
@@ -431,7 +474,7 @@ function ArticleView({
         {a.sources.length > 0 && (
           <div className="panel">
             <div className="panel-head">
-              <h4>Sources</h4>
+              <h4>{t("knowledge.sources")}</h4>
             </div>
             <div className="panel-body col">
               {a.sources.map((s) => (
@@ -443,13 +486,17 @@ function ArticleView({
                         s.verification === "VERIFIED" ? "active" : "warning"
                       }
                     >
-                      {s.verification.toLowerCase()}
+                      {t(
+                        s.verification === "VERIFIED"
+                          ? "source.verified"
+                          : "source.unverified",
+                      )}
                     </Badge>
                   </div>
                   <div className="muted">
                     {s.documentType}
-                    {s.documentNumber && ` · ${s.documentNumber}`} · retrieved{" "}
-                    {s.retrieved}
+                    {s.documentNumber && ` · ${s.documentNumber}`} ·{" "}
+                    {t("knowledge.retrieved")} {s.retrieved}
                   </div>
                   <div
                     className="dim mono"
@@ -470,7 +517,7 @@ function ArticleView({
         {a.related.length > 0 && (
           <div className="panel">
             <div className="panel-head">
-              <h4>Related</h4>
+              <h4>{t("knowledge.related")}</h4>
             </div>
             <div className="panel-body col">
               {a.related.map((r) => (

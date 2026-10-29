@@ -1,9 +1,11 @@
+import { useInterface } from "../locale";
 import { api } from "@plc-lab/ipc";
 import { Badge, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
 import { openExercise, sectionOf, type Navigate } from "../route";
 
 export function ProgressPage({ navigate }: { navigate: Navigate }) {
+  const { t } = useInterface();
   const library = useLoad(() => api.library(), []);
   const l = library.data;
   const lessonsDone = l?.lessons.filter((x) => x.completed).length ?? 0;
@@ -13,13 +15,16 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
   const troubleshooting =
     l?.exercises.filter((e) => e.kind === "troubleshooting") ?? [];
   const summary = (items: typeof practice) =>
-    `${items.filter((e) => e.passed).length} / ${items.length} passed`;
+    t("progress.passed", {
+      done: items.filter((e) => e.passed).length,
+      total: items.length,
+    });
   return (
     <div className="page-inner">
       <div className="page-header">
         <div>
-          <h1>Progress</h1>
-          <p>Stored locally on this computer.</p>
+          <h1>{t("progress.title")}</h1>
+          <p>{t("progress.local")}</p>
         </div>
       </div>
       <ErrorNotice error={library.error} />
@@ -32,7 +37,7 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
         <>
           <div className="tiles">
             <div className="tile" style={{ cursor: "default" }}>
-              <h4>Lessons</h4>
+              <h4>{t("learn.lessons")}</h4>
               <span className="score">
                 {lessonsDone} / {l.lessons.length}
               </span>
@@ -45,28 +50,28 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
               </div>
             </div>
             <div className="tile" style={{ cursor: "default" }}>
-              <h4>Practice</h4>
+              <h4>{t("ex.practice")}</h4>
               <span className="score">{summary(practice)}</span>
             </div>
             <div className="tile" style={{ cursor: "default" }}>
-              <h4>Commissioning</h4>
+              <h4>{t("ex.commissioning")}</h4>
               <span className="score">{summary(commissioning)}</span>
             </div>
             <div className="tile" style={{ cursor: "default" }}>
-              <h4>Troubleshooting</h4>
+              <h4>{t("ex.troubleshooting")}</h4>
               <span className="score">{summary(troubleshooting)}</span>
             </div>
           </div>
           <div className="section-title">
-            <h2>Lessons</h2>
+            <h2>{t("learn.lessons")}</h2>
           </div>
           <table className="table panel">
             <thead>
               <tr>
                 <th>#</th>
-                <th>Lesson</th>
-                <th>Status</th>
-                <th>Checkpoint</th>
+                <th>{t("progress.lesson")}</th>
+                <th>{t("progress.status")}</th>
+                <th>{t("learn.checkpoint")}</th>
               </tr>
             </thead>
             <tbody>
@@ -80,9 +85,9 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
                   <td>{x.title}</td>
                   <td>
                     {x.completed ? (
-                      <Badge kind="active">Completed</Badge>
+                      <Badge kind="active">{t("progress.done")}</Badge>
                     ) : (
-                      <Badge>Open</Badge>
+                      <Badge>{t("progress.open")}</Badge>
                     )}
                   </td>
                   <td>
@@ -95,17 +100,17 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
             </tbody>
           </table>
           <div className="section-title">
-            <h2>Exercises</h2>
+            <h2>{t("progress.exercises")}</h2>
           </div>
           <table className="table panel">
             <thead>
               <tr>
-                <th>Exercise</th>
-                <th>Type</th>
-                <th>Level</th>
-                <th>Attempts</th>
-                <th>Best score</th>
-                <th>Status</th>
+                <th>{t("lab.exercise")}</th>
+                <th>{t("progress.type")}</th>
+                <th>{t("progress.level")}</th>
+                <th>{t("progress.attempts")}</th>
+                <th>{t("progress.best")}</th>
+                <th>{t("progress.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -118,19 +123,19 @@ export function ProgressPage({ navigate }: { navigate: Navigate }) {
                   style={{ cursor: "pointer" }}
                 >
                   <td>{e.title}</td>
-                  <td>{e.kind}</td>
-                  <td>{e.difficulty}</td>
+                  <td>{t(`ex.${e.kind}`)}</td>
+                  <td>{t(`ex.${e.difficulty}`)}</td>
                   <td>{e.attempts}</td>
                   <td>
                     {e.attempts > 0 ? `${e.bestScore} / ${e.maxScore}` : "—"}
                   </td>
                   <td>
                     {e.passed ? (
-                      <Badge kind="active">Passed</Badge>
+                      <Badge kind="active">{t("common.passed")}</Badge>
                     ) : e.attempts > 0 ? (
-                      <Badge kind="warning">In progress</Badge>
+                      <Badge kind="warning">{t("progress.active")}</Badge>
                     ) : (
-                      <Badge>Not started</Badge>
+                      <Badge>{t("progress.new")}</Badge>
                     )}
                   </td>
                 </tr>

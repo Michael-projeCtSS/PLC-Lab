@@ -41,7 +41,7 @@ export function AboutPage() {
             <span className="spacer" />
             {status.data && (
               <span className="muted">
-                {status.data.indexedItems} indexed items
+                {t("about.indexed", { count: status.data.indexedItems })}
               </span>
             )}
           </div>
@@ -62,13 +62,25 @@ export function AboutPage() {
                           : "fault"
                     }
                   >
-                    {p.status}
+                    {t(
+                      p.status === "LOADED"
+                        ? "about.loaded"
+                        : p.status === "PARTIAL"
+                          ? "about.partial"
+                          : "about.failed",
+                    )}
                   </Badge>
                 </div>
                 <div className="muted">
-                  {p.id} {p.version} · {p.articles} articles · {p.lessons}{" "}
-                  lessons · {p.exercises} exercises · {p.scenes} scenes ·{" "}
-                  {p.sources} sources · {p.profiles} platform profiles
+                  {p.id} {p.version} ·{" "}
+                  {t("about.counts", {
+                    articles: p.articles,
+                    lessons: p.lessons,
+                    exercises: p.exercises,
+                    scenes: p.scenes,
+                    sources: p.sources,
+                    profiles: p.profiles,
+                  })}
                 </div>
                 <div className="dim mono" style={{ wordBreak: "break-all" }}>
                   {p.path}

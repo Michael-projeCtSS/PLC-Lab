@@ -560,11 +560,15 @@ textarea.input {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 .tile p {
   color: var(--text-2);
   margin: 0;
   font-size: 12px;
+  line-height: 1.55;
 }
 .tile-meta {
   display: flex;
@@ -574,6 +578,11 @@ textarea.input {
   padding-top: 6px;
   color: var(--text-3);
   font-size: 11px;
+  flex-wrap: wrap;
+}
+.tile-meta > span:last-child {
+  color: var(--accent);
+  font-weight: 600;
 }
 .list {
   display: flex;
@@ -663,6 +672,27 @@ textarea.input {
   color: var(--text-1);
   font-size: 14px;
   line-height: 1.6;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.article-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+}
+.article-layout > aside {
+  min-width: 0;
+}
+.prose section {
+  margin: 24px 0;
+}
+.prose li + li {
+  margin-top: 5px;
+}
+.prose pre code {
+  padding: 0;
+  background: none;
+}
+.prose pre {
+  overflow-wrap: normal;
 }
 .prose h2,
 .prose h3 {
@@ -695,11 +725,14 @@ textarea.input {
   border-collapse: collapse;
   margin: 0 0 12px;
   font-size: 13px;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
 }
 .prose th,
 .prose td {
   border: 1px solid var(--line-strong);
-  padding: 4px 8px;
+  padding: 7px 10px;
   text-align: left;
 }
 .prose th {
@@ -731,6 +764,12 @@ textarea.input {
   border-radius: var(--radius);
   background: var(--bg-1);
   font-size: 12px;
+}
+.source-card .row {
+  flex-wrap: wrap;
+}
+.source-card strong {
+  overflow-wrap: anywhere;
 }
 .quiz-option {
   display: block;

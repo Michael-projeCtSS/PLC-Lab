@@ -32,16 +32,18 @@
     "ci:core": "node scripts/ci.mjs core",
     "ci:status": "node scripts/ci.mjs status",
     "test:ci": "node --test tests/architecture/ci.test.mjs",
-    "knowledge:validate": "node scripts/knowledge-pack.mjs validate",
+    "knowledge:validate": "node scripts/knowledge-pack.mjs validate && npm run content:validate",
     "knowledge:zip": "node scripts/knowledge-pack.mjs zip",
-    "knowledge:verify": "node scripts/knowledge-pack.mjs verify",
+    "knowledge:verify": "node scripts/knowledge-pack.mjs verify && npm run content:validate",
     "knowledge:install-check": "node scripts/knowledge-install-check.mjs",
     "stage:release": "node scripts/stage-release.mjs",
     "check:distribution": "node scripts/distribution.mjs",
     "test:desktop:release": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --build release --out release-smoke",
     "test:release:relocated": "node tests/e2e/desktop-smoke.mjs --exe \"PLC Lab.exe\" --relocate --build release --out release-relocated-smoke",
     "test:release:bat": "node tests/e2e/desktop-smoke.mjs --bat --build release --out release-bat-smoke",
-    "build:release:native": "node scripts/native.mjs build --no-bundle -- --locked"
+    "build:release:native": "node scripts/native.mjs build --no-bundle -- --locked",
+    "content:validate": "node scripts/content-locales.mjs",
+    "content:coverage": "node scripts/content-locales.mjs --all"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

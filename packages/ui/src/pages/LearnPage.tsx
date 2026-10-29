@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 import { useState } from "react";
 import { api, type LessonDto, type QuestionDto } from "@plc-lab/ipc";
 import { Markdown } from "../Markdown";
@@ -12,6 +13,7 @@ export function LearnPage({
   lessonId: string | null;
   navigate: Navigate;
 }) {
+  const { t } = useInterface();
   const library = useLoad(() => api.library(), []);
   const lessons = library.data?.lessons ?? [];
   const current =
@@ -20,21 +22,16 @@ export function LearnPage({
     <div className="page-inner">
       <div className="page-header">
         <div>
-          <h1>Learn</h1>
-          <p>
-            A complete path from zero: each lesson explains one idea, shows it,
-            lets you try it and links to a practical exercise.
-          </p>
+          <h1>{t("learn.title")}</h1>
+          <p>{t("learn.intro")}</p>
         </div>
       </div>
       <ErrorNotice error={library.error} />
       {!library.loading && lessons.length === 0 && (
-        <Empty>
-          No lessons are installed. Check the knowledge pack under About.
-        </Empty>
+        <Empty>{t("learn.empty")}</Empty>
       )}
       <div className="two-col">
-        <nav className="sidebar-list" aria-label="Lessons">
+        <nav className="sidebar-list" aria-label={t("learn.lessons")}>
           {lessons.map((l) => (
             <button
               key={l.id}
@@ -70,6 +67,7 @@ function Question({
   q: QuestionDto;
   onAnswer?: (correct: boolean) => void;
 }) {
+  const { t } = useInterface();
   const [chosen, setChosen] = useState<number | null>(null);
   return (
     <div className="callout">
@@ -91,7 +89,7 @@ function Question({
       ))}
       {chosen !== null && (
         <p className="muted" style={{ marginTop: 8 }}>
-          {chosen === q.answer ? "Correct. " : "Not quite. "}
+          {chosen === q.answer ? t("learn.correct") : t("learn.incorrect")}
           {q.explanation}
         </p>
       )}
@@ -99,15 +97,17 @@ function Question({
   );
 }
 
-const SECTION_LABEL: Record<string, string> = {
-  concept: "Concept",
-  visual: "Picture it",
-  example: "Example",
-  simulation: "Try it in the simulator",
-  task: "Practical exercise",
-  mistake: "Common mistake",
-  challenge: "Challenge",
-  summary: "Summary",
+const SECTION_LABEL: Partial<
+  Record<string, import("../locale/en").TranslationKey>
+> = {
+  concept: "learn.concept",
+  visual: "learn.visual",
+  example: "learn.example",
+  simulation: "learn.simulation",
+  task: "learn.task",
+  mistake: "learn.mistake",
+  challenge: "learn.challenge",
+  summary: "learn.summary",
 };
 
 function LessonView({
@@ -119,13 +119,14 @@ function LessonView({
   navigate: Navigate;
   onCompleted: () => void;
 }) {
+  const { t } = useInterface();
   const lesson = useLoad<LessonDto>(() => api.lesson(id), [id]);
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
-  const [saved, setSaved] = useState<string | null>(null);
+  const [saved, setSaved] = useState<boolean>(false);
   const [error, setError] = useState<unknown>(null);
   const l = lesson.data;
   if (lesson.error) return <ErrorNotice error={lesson.error} />;
-  if (!l) return <Empty>Loading lesson…</Empty>;
+  if (!l) return <Empty>{t("learn.loading")}</Empty>;
   const answered = Object.keys(answers).length;
   const correct = Object.values(answers).filter(Boolean).length;
   const openScene = async (scene: string) => {
@@ -142,13 +143,18 @@ function LessonView({
   return (
     <article className="prose" aria-label={l.title}>
       <div className="row muted" style={{ fontSize: 12 }}>
-        Lesson {l.number} · {l.minutes} min · <Badge>{l.level}</Badge>
+        {t("learn.lesson")} {l.number} · {l.minutes} min ·{" "}
+        <Badge>
+          {["beginner", "intermediate", "advanced"].includes(l.level)
+            ? t(`ex.${l.level as "beginner" | "intermediate" | "advanced"}`)
+            : l.level}
+        </Badge>
       </div>
       <h2 style={{ fontSize: 22, marginTop: 6 }}>{l.title}</h2>
       <p>{l.summary}</p>
       {l.objectives.length > 0 && (
         <div className="callout task">
-          <strong>You will learn to</strong>
+          <strong>{t("learn.goals")}</strong>
           <ul>
             {l.objectives.map((o) => (
               <li key={o}>{o}</li>
@@ -160,7 +166,7 @@ function LessonView({
       {l.sections.map((s, i) => (
         <section key={i}>
           <h4 style={{ marginTop: 22 }}>
-            {SECTION_LABEL[s.sectionType] ?? s.sectionType}
+            {t(SECTION_LABEL[s.sectionType] ?? "learn.concept")}
           </h4>
           <h3 style={{ marginTop: 4 }}>{s.heading}</h3>
           <div
@@ -182,7 +188,7 @@ function LessonView({
               className="btn"
               onClick={() => void openScene(s.scene ?? "")}
             >
-              Open this machine in a sandbox
+              {t("learn.sandbox")}
             </button>
           )}
           {s.exercise && (
@@ -194,14 +200,14 @@ function LessonView({
                 )
               }
             >
-              Start the exercise
+              {t("learn.exercise")}
             </button>
           )}
         </section>
       ))}
       {l.checkpoint.length > 0 && (
         <section>
-          <h4 style={{ marginTop: 28 }}>Checkpoint</h4>
+          <h4 style={{ marginTop: 28 }}>{t("learn.checkpoint")}</h4>
           {l.checkpoint.map((q, i) => (
             <Question
               key={i}
@@ -217,29 +223,25 @@ function LessonView({
           disabled={answered < l.checkpoint.length}
           onClick={() =>
             api.completeLesson(l.id, correct, l.checkpoint.length).then(() => {
-              setSaved(
-                `Lesson completed with ${correct} of ${l.checkpoint.length} checkpoint answers correct.`,
-              );
+              setSaved(true);
               onCompleted();
             }, setError)
           }
         >
-          Complete lesson
+          {t("learn.complete")}
         </button>
         {answered < l.checkpoint.length && (
-          <span className="muted">
-            Answer the checkpoint questions to complete the lesson.
-          </span>
+          <span className="muted">{t("learn.answer")}</span>
         )}
       </div>
       {saved && (
         <div className="notice success" style={{ marginTop: 8 }}>
-          {saved}
+          {t("learn.completed", { correct, total: l.checkpoint.length })}
         </div>
       )}
       {l.knowledgeRefs.length > 0 && (
         <section>
-          <h4 style={{ marginTop: 28 }}>References</h4>
+          <h4 style={{ marginTop: 28 }}>{t("learn.refs")}</h4>
           <ul>
             {l.knowledgeRefs.map((r) => (
               <li key={r.id}>

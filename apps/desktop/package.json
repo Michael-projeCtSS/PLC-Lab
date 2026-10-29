@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "node ../../scripts/content-locales.mjs && vite build"
   },
   "dependencies": {
     "@plc-lab/ipc": "*",

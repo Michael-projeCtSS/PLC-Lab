@@ -307,6 +307,93 @@ try {
       );
   });
 
+  await step(
+    "Polish catalogue, open lesson, search and article at three resolutions",
+    async () => {
+      await changeLanguage("pl");
+      await page
+        .getByRole("button", { name: "ĆWICZENIA", exact: true })
+        .click();
+      await page
+        .getByText("Przycisk steruje lampką", { exact: true })
+        .waitFor();
+      for (const [width, height] of [
+        [1366, 768],
+        [1920, 1080],
+        [2560, 1440],
+      ]) {
+        await page.setViewportSize({ width, height });
+        assert.ok(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+          `catalogue overflow at ${width}`,
+        );
+        await page.screenshot({
+          path: path.join(directory, `practice-pl-${width}.png`),
+        });
+      }
+      await page.getByRole("button", { name: "NAUKA", exact: true }).click();
+      await page.getByRole("button", { name: /Pętla prądowa 4-20 mA/ }).click();
+      await page
+        .getByRole("article", { name: "Pętla prądowa 4-20 mA" })
+        .waitFor();
+      await changeLanguage("en");
+      await page.getByRole("article", { name: "The 4-20 mA loop" }).waitFor();
+      await changeLanguage("pl");
+      await page
+        .getByRole("article", { name: "Pętla prądowa 4-20 mA" })
+        .waitFor();
+      await page.screenshot({ path: path.join(directory, "lesson-pl.png") });
+      await page
+        .getByRole("button", { name: "BAZA WIEDZY", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Wszystko", exact: true })
+        .waitFor();
+      assert.ok(
+        !/\b(?:knowledge|learn|brief|progress)\.[a-zA-Z.]+\b/.test(
+          await page.locator("body").innerText(),
+        ),
+        "raw locale keys in Polish knowledge view",
+      );
+      await page
+        .getByRole("searchbox", { name: "Przeszukaj bazę wiedzy" })
+        .fill("opóźnione załączenie");
+      await page
+        .getByRole("button", { name: /TON: opóźnione załączenie/ })
+        .first()
+        .click();
+      await page
+        .getByRole("heading", {
+          name: "TON: opóźnione załączenie",
+          exact: true,
+        })
+        .waitFor();
+      for (const [width, height] of [
+        [1366, 768],
+        [1920, 1080],
+        [2560, 1440],
+      ]) {
+        await page.setViewportSize({ width, height });
+        assert.ok(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+          `reader overflow at ${width}`,
+        );
+        await page.screenshot({
+          path: path.join(directory, `article-pl-${width}.png`),
+        });
+      }
+      await changeLanguage("en");
+      await page
+        .getByRole("heading", { name: "TON: on-delay timer", exact: true })
+        .waitFor();
+      await page.setViewportSize({ width: 1366, height: 768 });
+    },
+  );
+
   await step("practice exercise opens a workspace", async () => {
     await page.getByRole("button", { name: "PRACTICE", exact: true }).click();
     await page
@@ -429,6 +516,26 @@ try {
         );
       await page.getByText("Helpful concepts").waitFor();
       await page.getByText(/unlock the repair step/).waitFor();
+      await changeLanguage("pl");
+      await page.getByText("Zgłoszenie usterki", { exact: true }).waitFor();
+      const polishBefore = await page.locator("body").innerText();
+      for (const secret of [
+        LAB_GUIDE,
+        LAB_REPAIR,
+        LAB_ROOT_CAUSE,
+        "Omówienie naprawy",
+        "Zamontuj blok stykowy NC w przycisku Stop",
+        "Podczas przeglądu szafy w przycisku Stop zamontowano",
+        "contactTypeMismatch",
+      ])
+        assert.ok(
+          !polishBefore.includes(secret),
+          `visible in Polish before diagnosis: ${secret}`,
+        );
+      await page.screenshot({
+        path: path.join(directory, "troubleshooting-pl-locked.png"),
+      });
+      await changeLanguage("en");
       // Symptom: Start does nothing.
       await page.getByRole("button", { name: "Run", exact: true }).click();
       await page.getByRole("tab", { name: "Process" }).click();
@@ -473,6 +580,21 @@ try {
         await debrief.getByText(heading, { exact: true }).waitFor();
       await debrief.getByText(new RegExp(LAB_ROOT_CAUSE)).waitFor();
       await debrief.getByRole("button", { name: LAB_GUIDE }).waitFor();
+      await changeLanguage("pl");
+      const polishDebrief = page.getByLabel("Omówienie naprawy");
+      await polishDebrief
+        .getByText(/Podczas przeglądu szafy w przycisku Stop zamontowano/)
+        .waitFor();
+      await page
+        .getByRole("button", {
+          name: /Zamontuj blok stykowy NC w przycisku Stop/,
+        })
+        .waitFor();
+      await polishDebrief.scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: path.join(directory, "troubleshooting-pl-debrief.png"),
+      });
+      await changeLanguage("en");
       await page.screenshot({
         path: path.join(directory, "troubleshooting-debrief.png"),
       });

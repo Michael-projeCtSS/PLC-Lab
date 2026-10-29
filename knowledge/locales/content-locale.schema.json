@@ -1,0 +1,88 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "packId",
+    "packVersion",
+    "language",
+    "complete",
+    "items"
+  ],
+  "properties": {
+    "format": {
+      "const": "plclab-content-locale-v1"
+    },
+    "packId": {
+      "const": "plclab.core"
+    },
+    "packVersion": {
+      "const": "1.0.0"
+    },
+    "language": {
+      "const": "pl"
+    },
+    "complete": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "exercise-catalogue",
+          "practice",
+          "lessons",
+          "troubleshooting-cases",
+          "instructions"
+        ]
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "file",
+          "fields"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(exercises|lessons|fundamentals|instructions|protocols|troubleshooting|vendors)/[a-zA-Z0-9_-]+\\.json$"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "source",
+                "text"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -18,6 +18,8 @@ import {
   type WorkspaceDto,
 } from "@plc-lab/ipc";
 import { useCoalescedRead } from "../useCoalescedRead";
+import { useInterface } from "../locale";
+import { localizeContent } from "../locale/content";
 import { newTableId, newTableName, setRows, updateTable } from "./watchEdit";
 
 export type Message = {
@@ -31,6 +33,7 @@ export type Message = {
 export type Lab = ReturnType<typeof useLab>;
 
 export function useLab(projectId: string) {
+  const { preferences } = useInterface();
   const [workspace, setWorkspace] = useState<WorkspaceDto | null>(null);
   const [project, setProject] = useState<ProjectDto | null>(null);
   const [frame, setFrame] = useState<LiveFrameDto | null>(null);
@@ -349,9 +352,18 @@ export function useLab(projectId: string) {
     [table, watchTables, saveWatchTables],
   );
 
+  const presentedWorkspace = useMemo(
+    () => localizeContent(workspace, preferences.language),
+    [workspace, preferences.language],
+  );
+  const presentedReport = useMemo(
+    () =>
+      localizeContent(report, preferences.language, workspace?.exercise?.id),
+    [report, preferences.language, workspace?.exercise?.id],
+  );
   return {
     projectId,
-    workspace,
+    workspace: presentedWorkspace,
     project,
     frame,
     signals,
@@ -362,7 +374,7 @@ export function useLab(projectId: string) {
     messages,
     clearMessages: () => setMessages([]),
     log,
-    report,
+    report: presentedReport,
     watch,
     setWatch,
     watchTables,

@@ -45,7 +45,9 @@ export function Toolbar({
           ←
         </button>
         <div className="col" style={{ gap: 0 }}>
-          <strong style={{ fontSize: 13 }}>{project.name}</strong>
+          <strong style={{ fontSize: 13 }}>
+            {exercise?.title ?? project.name}
+          </strong>
           <span className="dim" style={{ fontSize: 11 }}>
             {workspace.scene.title} · {workspace.platform.displayName}
           </span>

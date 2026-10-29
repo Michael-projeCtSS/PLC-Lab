@@ -95,7 +95,15 @@ export function ErrorNotice({
   const message = error instanceof Error ? error.message : String(error);
   return (
     <div className="notice error row" role="alert">
-      <span className="grow">{message}</span>
+      <div className="grow">
+        <strong>{t("error.heading")}</strong>
+        <details>
+          <summary>{t("error.details")}</summary>
+          <div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+            {message}
+          </div>
+        </details>
+      </div>
       {onDismiss && (
         <button className="btn btn-ghost btn-sm" onClick={onDismiss}>
           {t("common.dismiss")}

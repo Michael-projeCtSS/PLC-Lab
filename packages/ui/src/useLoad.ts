@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useInterface } from "./locale";
+import { localizeContent } from "./locale/content";
 
 /** Load data when its key changes; `loading` is true until the current key resolves. */
 export function useLoad<T>(
   load: () => Promise<T>,
   deps: readonly (string | number | null)[],
 ) {
+  const { preferences } = useInterface();
   const [nonce, setNonce] = useState(0);
   const key = `${JSON.stringify(deps)}#${nonce}`;
   const [state, setState] = useState<{
@@ -24,8 +27,12 @@ export function useLoad<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const presented = useMemo(
+    () => localizeContent(state.data, preferences.language),
+    [state.data, preferences.language],
+  );
   return {
-    data: state.data,
+    data: presented,
     error: state.error,
     loading: state.key !== key,
     reload,

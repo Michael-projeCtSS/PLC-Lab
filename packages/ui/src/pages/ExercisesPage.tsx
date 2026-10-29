@@ -93,8 +93,8 @@ export function ExercisesPage({
                     <span>{e.minutes} min</span>
                     {e.attempts > 0 && (
                       <span>
-                        · best {e.bestScore}/{e.maxScore} · {e.attempts} attempt
-                        {e.attempts === 1 ? "" : "s"}
+                        · {t("progress.best")}: {e.bestScore}/{e.maxScore} ·{" "}
+                        {t("progress.attempts")}: {e.attempts}
                       </span>
                     )}
                     <span className="spacer" />

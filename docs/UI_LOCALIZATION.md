@@ -1,111 +1,120 @@
 # Student interface and Polish localization
 
-The interface has centralized typed English/Polish dictionaries under
-`packages/ui/src/locale/`, a Settings button in the shell, durable interface preferences,
-and an English runtime fallback. The Rust execution, simulation, trace, grading, project
-format and desktop IPC contract are unchanged. No dependency was added.
+The interface uses typed English/Polish dictionaries in `packages/ui/src/locale/`.
+Settings persists language, density and beginner explanations in a versioned WebView
+record. Dark is the supported appearance. Changes apply immediately; native smoke also
+verifies persistence through fresh processes. PLC semantics, project formats, protocols
+and the IPC contract are unchanged.
 
-## Scope
+## Exact content coverage
 
-Translated surfaces: main navigation, Home orientation/actions, Free Lab project list
-and creation flow, exercise/commissioning/troubleshooting navigation and introductions,
-Settings, About labels, workspace tabs, primary build/load and PLC/simulation controls,
-variables headings/empty state, force warning, causal sequence and important tooltips.
+This is **partial product localization**. Complete content includes every approved prose
+field, not only titles. The canonical English knowledge pack remains byte-identical.
 
-Settings offers Polski/English, Dark (the only supported appearance), Comfortable or
-Compact density and beginner explanations. Changes apply immediately. Language and the
-other interface preferences survive closing/reopening the app. Settings displays real
-version/build/knowledge-pack information through the existing About backend queries.
+| Category                                       | Complete Polish content | Polish title + summary |
+| ---------------------------------------------- | ----------------------: | ---------------------: |
+| Exercises, total                               |                   17/46 |                  46/46 |
+| Practice (subset)                              |                   10/10 |                  10/10 |
+| Troubleshooting cases (subset)                 |                     7/7 |                    7/7 |
+| Commissioning (subset)                         |                    0/29 |                  29/29 |
+| Lessons                                        |                   22/22 |                  22/22 |
+| Fundamentals                                   |                    0/23 |                   0/23 |
+| Instruction articles                           |                     7/7 |                    7/7 |
+| Protocol articles                              |                     0/9 |                    0/9 |
+| Troubleshooting articles (distinct from cases) |                    0/29 |                   0/29 |
+| Vendor/family articles                         |                    0/24 |                   0/24 |
 
-Basic Free Lab prioritizes Program, Process, essential variable monitoring and the causal
-inspector. The project tree, hardware/network editing, commissioning, Watch, waveforms,
-events and deep properties appear in Advanced. Diagnostic access remains visible when
-an alarm is present; active forces remain prominently visible in either mode. Lessons
-and fault-finding labs retain the views needed to complete their tasks. No PLC state is
-reset by a presentation-mode switch.
+Lessons include objectives, section prose/diagrams and questions/options/explanations.
+Practice/case content includes instructions, hints, objectives, scenario names and grading
+titles/failure feedback. Cases include symptoms, diagnosis/repair labels and gated debriefs.
+Instruction articles include interfaces and equivalence notes for TON, TOF, TP, R_TRIG,
+F_TRIG, CTU and CTD. Source code remains original.
 
-PLC mode controls and simulation controls have separate labelled groups. Keyboard
-accessible descriptions explain their semantics. Enabled beginner explanations also
-show a visible help bubble when a control receives keyboard focus. Build/load success
-has a compact confirmation; compiler diagnostics appear above the editor, with buttons
-that focus their source location. New error messages bring the messages dock forward.
+`npm run content:coverage` lists **2,125 missing display fields**. The checked-in
+[machine-readable report](validation/POLISH_CONTENT_COVERAGE.json) lists every item/path.
+The [UI literal audit](validation/POLISH_UI_AUDIT.md) lists remaining static candidates by
+file/line, with engineering tokens and localization keys excluded. It is a review aid,
+not a whole-product percentage. Dynamic/backend/device text needs manual inspection.
 
-Settings has labelled selectors, initial focus, Escape dismissal and focus restoration.
-Selected tabs use `aria-selected`; button focus remains visible. Navigation can scroll
-within the header at narrower sizes while retaining access to Settings. Native smoke
-checks the Polish Free Lab at 1366×768, 1920×1080 and 2560×1440.
+## Content model, fallback and search
 
-## Deliberately untranslated areas
+The strict sibling sidecar `knowledge/locales/pl.json` is bundled into the UI. See
+[ADR-0036](adr/0036-bundled-educational-content-locales.md). Each replacement requires an
+exact English source match. Missing/stale/custom fields retain English; English mode
+uses originals. Switching language updates open cards, lessons, articles and exercise
+instructions without refetching or mutating stored data or the PLC. Fallback notices mark
+untranslated article/commissioning instructions. No second Polish pack is registered.
 
-This is **partial product localization**, not a translated course catalogue. Lesson and
-knowledge articles, exercise titles/summaries/hints from packs, process component names,
-deep hardware/network/Watch inspectors, commissioning checklist findings, some advanced
-forms and structured backend compiler/runtime diagnostics remain English. Source code,
-user names/tags, industrial protocol/vendor names and typed values are preserved.
-Remaining learning-content translation must use explicit content locales rather than
-modifying canonical source examples or replacing arbitrary text in the DOM.
+The desktop build, `content:validate`, `knowledge:validate` and `knowledge:verify` validate
+the overlay. Tests enforce declared complete categories and report incomplete categories.
+Canonical pack schemas, IDs and deterministic ZIP remain unchanged.
+
+Polish search merges public localized prose from installed library/catalog entries with
+backend English search. Accent-insensitive matching supports `opóźnione załączenie` and
+`żywe zero`; aliases include `falownik` to `VFD`, `sterownik` to `PLC` and `wymuszenie` to
+`force`. Untranslated bodies still require English terms or aliases: search coverage is
+**partial**. Filters/ranking are deterministic. Hidden diagnosis/repair/debrief content
+is never indexed. Projection cannot introduce absent repair/debrief data or references.
+All seven cases have projection anti-leak tests; native smoke verifies real backend gates
+before diagnosis and translated repair/debrief availability after successful verification.
+
+## Interface and remaining gaps
+
+The dictionary contains **368 keys in each language** (parity verified). Translated UI includes navigation, Home, exercise cards, lesson/knowledge/progress chrome,
+Settings/About, task/investigation/results, primary PLC/simulation controls, variable
+headings, force banner and causal explanations. All dictionary keys have Polish entries
+with matching interpolation parameters; not every component uses the dictionary yet.
+
+Basic Free Lab prioritizes Program, Process, variables and causal explanations. Advanced
+retains all engineering tools. Lessons keep required views; active fault/force warnings
+remain visible. Settings has focus handling and accessible selectors. Card wrapping,
+readable article widths, section spacing, code/table scrolling and provenance layout
+support longer Polish text without shrinking fonts.
+
+Remaining localization gaps: full commissioning instructions/findings; fundamentals,
+protocol/troubleshooting/vendor article titles and bodies; process scene/device names;
+deep Hardware, Network, Watch, Force, variable detail and Diagnostic Buffer forms/messages.
+These are tracked gaps, not permanent English exceptions. No accurate whole-product
+percentage is claimed. Template source comments remain English because user/template
+comments are not distinguished by rewriting code.
+
+Error notices have a localized primary heading with expandable original detail.
+Compile/interface/binding failures and diagnosis feedback have localized primary guidance.
+Structured compiler/runtime messages, dynamic grading details and many operation-specific
+errors remain English. The Rust backend and technical diagnostics are preserved.
+
+Intentionally unchanged: ST syntax, code/user comments, names/tags, serialized enums,
+vendor/protocol/product names and official titles/URLs/revisions. Provenance records,
+including our source notes, remain English; translating explanatory source notes is a gap.
 
 ## Terminology
 
-| English           | Polish interface term                                            |
-| ----------------- | ---------------------------------------------------------------- |
-| commissioning     | uruchamianie                                                     |
-| troubleshooting   | diagnostyka usterek                                              |
-| hardware          | sprzęt                                                           |
-| process           | proces                                                           |
-| fault             | usterka; błąd for program/compiler errors                        |
-| diagnostics       | diagnostyka                                                      |
-| Watch table       | tabela podglądu (Watch)                                          |
-| force             | wymuszenie (Force)                                               |
-| download to PLC   | wgraj do PLC                                                     |
-| field/load supply | zasilanie obiektowe / zasilanie obciążenia, according to context |
-| scan              | cykl PLC                                                         |
-| input image       | obraz wejść                                                      |
+| English                   | Polish                                      |
+| ------------------------- | ------------------------------------------- |
+| commissioning             | uruchamianie                                |
+| troubleshooting           | diagnostyka usterek                         |
+| hardware / process        | sprzęt / proces                             |
+| fault                     | usterka; błąd for program/compiler failures |
+| Watch table               | tabela podglądu (Watch)                     |
+| force                     | wymuszenie (Force)                          |
+| download                  | wgraj do PLC                                |
+| field/load supply         | zasilanie obiektowe / zasilanie obciążenia  |
+| module electronics supply | zasilanie elektroniki modułu                |
+| input/output image        | obraz wejść / obraz wyjść                   |
+| scan cycle                | cykl PLC                                    |
+| diagnostic buffer         | bufor diagnostyczny                         |
+| permissive / interlock    | warunek zezwalający / blokada               |
+| seal-in / live zero       | podtrzymanie / żywe zero                    |
 
-PLC RUN/STOP, Structured Text (ST), LAD, FBD, CFC, SFC, I/O, vendor names and protocol
-names retain their recognizable engineering spelling.
+PLC RUN/STOP, Structured Text (ST), I/O, PID, VFD and protocol/vendor names retain recognizable
+forms. Fidelity descriptions are translated only for display; unknown values fall back.
 
-## Validation
+## Validation and next dependency
 
-- TypeScript, ESLint and frontend production build.
-- Frontend tests: language switch/persistence, selectors, failure reporting, dictionary
-  completeness/interpolation/fallback, locale default, Basic/Advanced visibility,
-  separate PLC/simulation groups and the online-monitoring empty state.
-- Existing architecture tests retain the single authoritative Rust runtime and root
-  one-EXE distribution requirements.
-- Native smoke uses the real root Tauri executable, changes language/preferences,
-  reloads and closes/restarts the app, exercises the backend and verifies the Polish
-  workspace at all three sizes. Screenshots/results are saved under
-  `artifacts/student-ux-smoke` locally.
+See [completion report](validation/POLISH_CONTENT_PASS.md) for commands, resolutions,
+release evidence and hosted CI. The Windows policy still blocks some generated Rust test
+executables (4551); no security policy change is made. Hosted CI runs full debug/release
+Rust suites.
 
-Local results for this slice: **67 frontend tests passed**, **45 architecture tests
-passed**, TypeScript/ESLint/formatting passed, native release compilation/staging passed,
-and the root native smoke passed **23 steps**. The last step reuses the same WebView
-profile through two fresh native processes and verifies persisted English, then Polish,
-density and explanation choices. The distribution verifier confirms the root executable
-is byte-identical to the compiled Tauri binary and requires no second application EXE.
-
-| Requested criterion                                                | Acceptance                                                           |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| Typed PL/EN dictionaries, completeness and English fallback        | PASS                                                                 |
-| Language switch and persistence, Polish locale default             | PASS                                                                 |
-| Settings outside About, density and explanations                   | PASS                                                                 |
-| Supported appearance                                               | PASS: Dark; Light/System intentionally deferred                      |
-| Home orientation and primary continuation action                   | PASS                                                                 |
-| Basic Free Lab and complete Advanced toolset                       | PASS                                                                 |
-| Lesson-required views and persistent force/fault visibility        | PASS                                                                 |
-| Distinct PLC/simulation groups, primary build/load, error guidance | PASS                                                                 |
-| Important empty states and concise accessible explanations         | PASS                                                                 |
-| 1366×768, 1920×1080 and 2560×1440                                  | PASS, native screenshots inspected                                   |
-| Focus, accessible names/descriptions, selected-tab state           | PASS for touched controls                                            |
-| Root `PLC Lab.exe` distribution preserved and rebuilt              | PASS                                                                 |
-| Entire product/course Polish translation                           | PARTIAL: explicitly excluded content and advanced views listed above |
-
-Next safe dependency: translate the remaining advanced UI surfaces using these keys,
-then introduce localized educational content as a separate task. No language editor,
-runtime or protocol expansion belongs to this slice.
-
-The existing Windows policy limitation on certain generated Rust test executables
-(error 4551) is unchanged. No repair or security-setting change is part of this task.
-Hosted CI remains responsible for the full debug/release Rust suites. The root
-`PLC Lab.exe` remains the actual staged Tauri application, with data in `resources/`.
+Next safe dependency: full commissioning localization, then the remaining article
+categories and engineering inspectors. No new PLC/editor/protocol functionality is needed.
