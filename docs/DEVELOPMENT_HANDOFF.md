@@ -230,6 +230,20 @@ build 20 steps).
   force, unknown ids, the 64 limit, a moved module's channel row still resolves),
   persistence of watch tables, UI (values, quality, force, columns, editing).
 
+## Checkpoint 7-D: forcing
+
+- ADR-0033: forces target the PLC input image or the PLC output image of I/O tags,
+  typed and validated by the backend; locals and the field state are not forceable.
+  Lifetime: kept over STOP/RUN and downloads that keep the symbol, ended by a download
+  without the symbol and by a memory reset (each removal logged), not persisted (a
+  reopened workspace starts without forces).
+- Engine `active_forces`, `remove_all_forces`; IPC `forces` and `remove_all_forces`.
+- Workspace: persistent FORCES ACTIVE banner (count, list with target and value, Remove,
+  Remove all forces); typed INT/REAL force entry beside BOOL in Variables.
+- Tests: engine (typed forces, targets, STOP/RUN, memory reset, remove all, download
+  pruning, all logged), workflow (list, remove all, reset, reopen), UI (banner, list,
+  removal, typed entry).
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
