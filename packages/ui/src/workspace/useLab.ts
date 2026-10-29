@@ -281,6 +281,29 @@ export function useLab(projectId: string) {
       );
   }, [ws, source, act, log]);
 
+  /** Save an edited station configuration into the project. The backend validates it;
+   * the returned project is the authoritative state (it reaches the PLC on download). */
+  const saveStation = useCallback(
+    async (station: StationDto): Promise<boolean> => {
+      if (!project) return false;
+      const next = {
+        ...project,
+        station,
+        programs: project.programs.map((d, i) =>
+          i === 0 ? { ...d, source } : d,
+        ),
+      };
+      try {
+        setProject(await api.saveProject(next));
+        return true;
+      } catch (e) {
+        log("error", e instanceof Error ? e.message : String(e));
+        return false;
+      }
+    },
+    [log, project, source],
+  );
+
   const setWatch = useCallback(
     (paths: string[]) => {
       setWatchState(paths);
@@ -318,6 +341,7 @@ export function useLab(projectId: string) {
     report,
     watch,
     setWatch,
+    saveStation,
     watchIds,
     busy,
     fatal,

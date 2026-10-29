@@ -1,7 +1,12 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
-import type { HardwareDto } from "@plc-lab/ipc";
-import { frame, station, workspace } from "../../../../tests/frontend/fixtures";
+import type { HardwareDto, StationDto } from "@plc-lab/ipc";
+import {
+  frame,
+  project,
+  station,
+  workspace,
+} from "../../../../tests/frontend/fixtures";
 import type { Lab } from "./useLab";
 
 const fake = vi.hoisted(() => ({
@@ -55,6 +60,9 @@ const hardware: HardwareDto = {
       kind: "MODULE_MISMATCH",
       event: "INCOMING",
       text: "Wrong module type",
+      slot: { rack: 0, slot: 1 },
+      channel: null,
+      moduleId: "di-r0s1",
     },
     {
       timeUs: "0",
@@ -62,6 +70,10 @@ const hardware: HardwareDto = {
       kind: "MODULE_MISSING",
       event: "INCOMING",
       text: "Other slot",
+      // Slot 10 must not be taken for slot 1 (no string prefix matching).
+      slot: { rack: 0, slot: 10 },
+      channel: null,
+      moduleId: null,
     },
   ],
   catalog: [
@@ -110,6 +122,8 @@ function lab(): Lab {
     log: vi.fn(),
     busy: null,
     buildAndLoad: vi.fn(),
+    project: null,
+    saveStation: vi.fn(),
   } as unknown as Lab;
 }
 
@@ -177,4 +191,54 @@ it("compares configured and detected hardware and follows signals", async () => 
     within(diagnostics).getByText("Wrong module type", { selector: "td" }),
   ).toBeInTheDocument();
   expect(within(diagnostics).queryByText("Other slot")).toBeNull();
+});
+
+it("saves advanced edits in the project and offers to download them", async () => {
+  fake.hardware.mockResolvedValue(hardware);
+  fake.noteEvidence.mockResolvedValue(null);
+  const saveStation = vi.fn().mockResolvedValue(true);
+  const buildAndLoad = vi.fn().mockResolvedValue(null);
+  const base = {
+    ...lab(),
+    project: project({ station }),
+    saveStation,
+    buildAndLoad,
+  } as unknown as Lab;
+  const view = (l: Lab) => (
+    <HardwareTab
+      lab={l}
+      selection={{ kind: "module", rack: 0, slot: 1 }}
+      select={vi.fn()}
+      advanced
+    />
+  );
+  const { rerender } = render(view(base));
+  await screen.findByRole("region", { name: "Configured versus actual" });
+  // Project and PLC agree: nothing to download.
+  expect(
+    screen.queryByRole("button", { name: "Download configuration" }),
+  ).toBeNull();
+  fireEvent.click(
+    within(screen.getByRole("tablist", { name: "Module" })).getByRole("tab", {
+      name: "Configuration",
+    }),
+  );
+  fireEvent.change(screen.getByLabelText("Move to slot"), {
+    target: { value: "5" },
+  });
+  // The edit goes to the backend as a project save, with the stable id kept.
+  expect(saveStation).toHaveBeenCalledTimes(1);
+  const moved = saveStation.mock.calls[0]![0] as StationDto;
+  expect(moved.modules.map((m) => [m.id, m.position.slot])).toEqual([
+    ["di-r0s1", 5],
+  ]);
+  expect(moved.ioMap[0]!.channel.slot).toBe(5);
+  // The saved project now differs from the PLC's configuration until downloaded.
+  rerender(view({ ...base, project: project({ station: moved }) } as Lab));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Download configuration" }),
+  );
+  expect(buildAndLoad).toHaveBeenCalledWith(false, moved);
+  fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+  expect(saveStation).toHaveBeenLastCalledWith(hardware.station);
 });

@@ -123,6 +123,21 @@ export function moveModule(
   return next;
 }
 
+/** Whether two station configurations are the same, independent of key order. */
+export function sameStation(a: StationDto, b: StationDto): boolean {
+  const canonical = (v: unknown): unknown =>
+    Array.isArray(v)
+      ? v.map(canonical)
+      : v && typeof v === "object"
+        ? Object.fromEntries(
+            Object.entries(v as Record<string, unknown>)
+              .sort(([x], [y]) => x.localeCompare(y))
+              .map(([k, x]) => [k, canonical(x)]),
+          )
+        : v;
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
 export function freeSlots(station: StationDto): number[] {
   const used = new Set(station.modules.map((m) => m.position.slot));
   return Array.from({ length: MAX_SLOT }, (_, i) => i + 1).filter(

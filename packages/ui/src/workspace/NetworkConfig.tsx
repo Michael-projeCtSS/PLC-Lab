@@ -35,7 +35,9 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
               disabled={lab.busy !== null}
               onClick={() =>
                 void lab
-                  .buildAndLoad(false, draft)
+                  // Only the network part: hardware edits are saved in the
+                  // project meanwhile and must not be overwritten.
+                  .buildAndLoad(false, { ...station, network: draft.network })
                   .then((r) => r?.outcome === "LOADED" && setDraft(null))
               }
             >

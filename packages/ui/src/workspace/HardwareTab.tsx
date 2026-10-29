@@ -1,8 +1,10 @@
 /**
  * Hardware view: the project configuration, the detected (actual) station and their
  * comparison, the signal mapping, live channel values, LEDs, qualities, addresses and a
- * multimeter. Advanced mode edits a draft of the station configuration (add, remove,
- * move modules, change types and channel modes) that is downloaded with the program.
+ * multimeter. Advanced mode edits the project's station configuration (add, remove, move
+ * modules, change types and channel modes): every edit is saved and validated by the
+ * backend, and the saved project is shown. Download brings it into the PLC; Compare
+ * shows the configuration loaded in the PLC against the detected hardware.
  */
 import { useState } from "react";
 import {
@@ -22,7 +24,12 @@ import {
   SignalMapPanel,
   StationEditor,
 } from "./HardwareParts";
-import { freeSlots, moveModule, removeModule } from "./stationEdit";
+import {
+  freeSlots,
+  moveModule,
+  removeModule,
+  sameStation,
+} from "./stationEdit";
 import type { Selection } from "./ProjectTree";
 import { useEvidence, useFrameQuery } from "./useFrameQuery";
 import type { Lab } from "./useLab";
@@ -75,14 +82,25 @@ export function HardwareTab({
   const hw = useFrameQuery<HardwareDto>(lab, () =>
     ws ? api.hardware(ws) : Promise.reject(new Error("No workspace")),
   );
-  const [draft, setDraft] = useState<StationDto | null>(null);
   const [measurement, setMeasurement] = useState<MeasurementDto | null>(null);
   const [view, setView] = useState<View>("compare");
   const [section, setSection] = useState<Section>("overview");
   useEvidence(lab, "hardware view");
   const data = hw.data;
   if (!data || !ws) return <ErrorNotice error={hw.error} />;
-  const station = draft ?? data.station;
+  // The project's (offline) configuration; the PLC holds `data.station` until download.
+  const project = lab.project;
+  const station = project?.station ?? data.station;
+  const pending = !!project && !sameStation(project.station, data.station);
+  const edit = (next: StationDto) => void lab.saveStation(next);
+  /** The project's module for a module view: by stable id, else by position. */
+  const configuredOf = (s: StationDto, m: ModuleViewDto) =>
+    s.modules.find((x) =>
+      m.moduleId
+        ? x.id === m.moduleId
+        : x.position.rack === m.position.rack &&
+          x.position.slot === m.position.slot,
+    );
   const selected =
     selection?.kind === "module"
       ? (data.modules.find(
@@ -97,11 +115,7 @@ export function HardwareTab({
     mode: ChannelConfigDto["mode"],
   ) => {
     const next: StationDto = structuredClone(station);
-    const module = next.modules.find(
-      (x) =>
-        x.position.rack === m.position.rack &&
-        x.position.slot === m.position.slot,
-    );
+    const module = configuredOf(next, m);
     if (!module) return;
     const existing = module.channels.find((c) => c.channel === channel);
     if (existing) existing.mode = mode;
@@ -113,7 +127,7 @@ export function HardwareTab({
         stopBehavior: "off",
         loopSupply: true,
       });
-    setDraft(next);
+    edit(next);
   };
   /** Current inputs: whether the channel supplies the loop (2-wire) or is passive (4-wire). */
   const editLoopSupply = (
@@ -122,27 +136,19 @@ export function HardwareTab({
     supply: boolean,
   ) => {
     const next: StationDto = structuredClone(station);
-    const module = next.modules.find(
-      (x) =>
-        x.position.rack === m.position.rack &&
-        x.position.slot === m.position.slot,
-    );
+    const module = configuredOf(next, m);
     const existing = module?.channels.find((c) => c.channel === channel);
     if (!existing) return;
     existing.loopSupply = supply;
-    setDraft(next);
+    edit(next);
   };
   const editModule = (m: ModuleViewDto, type: string) => {
     const next: StationDto = structuredClone(station);
-    const module = next.modules.find(
-      (x) =>
-        x.position.rack === m.position.rack &&
-        x.position.slot === m.position.slot,
-    );
+    const module = configuredOf(next, m);
     if (!module) return;
     module.module = type;
     module.channels = [];
-    setDraft(next);
+    edit(next);
   };
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "auto" }}>
@@ -169,25 +175,26 @@ export function HardwareTab({
           generic PLC Lab indicators
         </span>
       </div>
-      {draft && (
-        <div className="notice warning row" style={{ margin: "8px 16px" }}>
+      {pending && project && (
+        <div
+          className="notice warning row"
+          style={{ margin: "8px 16px" }}
+          role="status"
+        >
           <span className="grow">
-            The hardware configuration was changed. Download it to the PLC to
-            take effect.
+            The project's hardware configuration differs from the one loaded in
+            the PLC. Download it to take effect; Compare shows the PLC&apos;s
+            configuration.
           </span>
           <button
             className="btn btn-sm btn-primary"
             disabled={lab.busy !== null}
-            onClick={() =>
-              void lab
-                .buildAndLoad(false, draft)
-                .then((r) => r?.outcome === "LOADED" && setDraft(null))
-            }
+            onClick={() => void lab.buildAndLoad(false, project.station)}
           >
             Download configuration
           </button>
-          <button className="btn btn-sm" onClick={() => setDraft(null)}>
-            Discard
+          <button className="btn btn-sm" onClick={() => edit(data.station)}>
+            Discard changes
           </button>
         </div>
       )}
@@ -214,7 +221,7 @@ export function HardwareTab({
         <StationEditor
           station={station}
           catalog={data.catalog}
-          onChange={setDraft}
+          onChange={edit}
         />
       )}
       {view === "signals" && (
@@ -404,13 +411,7 @@ export function HardwareTab({
                       Configured type
                       <select
                         className="input"
-                        value={
-                          station.modules.find(
-                            (x) =>
-                              x.position.slot === selected.position.slot &&
-                              x.position.rack === selected.position.rack,
-                          )?.module ?? ""
-                        }
+                        value={configuredOf(station, selected)?.module ?? ""}
                         onChange={(e) => editModule(selected, e.target.value)}
                       >
                         {data.catalog.map((t) => (
@@ -430,7 +431,7 @@ export function HardwareTab({
                           className="input"
                           value=""
                           onChange={(e) =>
-                            setDraft(
+                            edit(
                               moveModule(
                                 station,
                                 selected.moduleId ?? "",
@@ -452,9 +453,7 @@ export function HardwareTab({
                       <button
                         className="btn btn-sm"
                         onClick={() =>
-                          setDraft(
-                            removeModule(station, selected.moduleId ?? ""),
-                          )
+                          edit(removeModule(station, selected.moduleId ?? ""))
                         }
                       >
                         Remove from configuration
@@ -462,8 +461,9 @@ export function HardwareTab({
                     </div>
                   )}
                   <p className="muted" style={{ margin: 0 }}>
-                    Changes edit the project configuration; download it to the
-                    PLC to take effect. The installed hardware does not change.
+                    Changes are saved in the project configuration; download it
+                    to the PLC to take effect. The installed hardware does not
+                    change.
                   </p>
                 </div>
               ) : (
@@ -492,13 +492,10 @@ export function HardwareTab({
                 </thead>
                 <tbody>
                   {selected.channels.map((c) => {
-                    const config = station.modules
-                      .find(
-                        (x) =>
-                          x.position.slot === selected.position.slot &&
-                          x.position.rack === selected.position.rack,
-                      )
-                      ?.channels.find((x) => x.channel === c.channel);
+                    const config = configuredOf(
+                      station,
+                      selected,
+                    )?.channels.find((x) => x.channel === c.channel);
                     const configured = config?.mode ?? c.mode;
                     const current =
                       configured === "current4To20mA" ||
