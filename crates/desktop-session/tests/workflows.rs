@@ -531,7 +531,7 @@ fn each_hardware_lab_shows_its_own_evidence_in_the_hardware_view() {
                 assert_eq!(level.quality.as_deref(), Some("GOOD"), "{level:?}");
             }
             _ => {
-                assert_eq!(found, [("WRONG_SLOT".to_string(), Some(6u8))]);
+                assert_eq!(found, [("WRONG_SLOT".to_string(), Some(4u8))]);
                 assert_eq!(status(&hw, 4), "MISSING");
                 assert_eq!(
                     signal(&hw, "LevelRaw").quality.as_deref(),
@@ -761,6 +761,23 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
             .text,
     )
     .unwrap();
+    // The file itself is format 2 and stores every module's stable id.
+    assert_eq!(future["formatVersion"], serde_json::json!(2));
+    let ids: Vec<&str> = future["station"]["modules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        ids,
+        edited
+            .station
+            .modules
+            .iter()
+            .map(|m| m.id.as_str())
+            .collect::<Vec<_>>()
+    );
     future["formatVersion"] = serde_json::json!(99);
     future["id"] = serde_json::json!("future");
     std::fs::write(dir.join("future.plclab"), future.to_string()).unwrap();
@@ -991,7 +1008,7 @@ fn a_large_station_keeps_the_hardware_view_bounded() {
         8 * 16 + 8 * 16 + 4 * 4 + 4 * 2
     );
     // Every extension is reported once as missing; the installed modules match.
-    assert_eq!(hw.findings.len(), 19, "{:?}", hw.findings);
+    assert_eq!(hw.findings.len(), 20, "{:?}", hw.findings);
     assert!(hw.findings.iter().all(|x| x.category == "MODULE_MISSING"));
     assert!(largest < 512 * 1024, "{largest} bytes per hardware view");
     assert!(checklist_bytes < 128 * 1024, "{checklist_bytes} bytes");
