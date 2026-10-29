@@ -535,6 +535,30 @@ try {
           !body.includes(secret),
           `visible before diagnosis: ${secret}`,
         );
+      // A safe edit in Advanced mode is a backend project save: the view then reports
+      // that the project differs from the PLC, and Discard restores it.
+      const mode = page.getByRole("group", { name: "Interface mode" });
+      await mode.getByRole("button", { name: "ADVANCED" }).click();
+      await views.getByRole("tab", { name: /^Compare/ }).click();
+      await page
+        .getByRole("list", { name: "Rack" })
+        .getByRole("button", { name: /^Slot 5/ })
+        .click();
+      await page
+        .getByRole("tablist", { name: "Module" })
+        .getByRole("tab", { name: "Configuration" })
+        .click();
+      await page.getByLabel("Move to slot").selectOption("7");
+      const differs = page.getByText(/differs from the one loaded in the PLC/);
+      await differs.waitFor({ timeout: 10_000 });
+      await views.getByRole("tab", { name: "Configured (project)" }).click();
+      await page
+        .getByRole("list", { name: "Configured station" })
+        .getByRole("button", { name: /^Slot 7 ao-r0s5/ })
+        .waitFor();
+      await page.getByRole("button", { name: "Discard changes" }).click();
+      await differs.waitFor({ state: "detached", timeout: 10_000 });
+      await mode.getByRole("button", { name: "BASIC" }).click();
       await page.getByRole("button", { name: "Pause" }).click();
       await page.screenshot({
         path: path.join(directory, "hardware-compare.png"),

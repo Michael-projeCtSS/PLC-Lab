@@ -81,9 +81,17 @@ are buttons) opens the inspector with Overview, Configuration, Channels (values,
 multimeter), Power (electronics and field supply) and Diagnostics (this module's findings
 and buffer entries). CPU and module LEDs are generic PLC Lab indicators.
 
-Advanced mode edits a draft of the station: add a module (type and free slot; a stable id
-and a first-fit start address are proposed), change a module type, move a module to a free
-slot (its id and mappings move along), remove a module (with its mappings), analog channel
-modes; network interface and Modbus connections in the Network tab. The draft is
-downloaded with the program through Build & Load; the backend validates it before
-anything changes and reports any remaining overlap as a finding.
+Advanced mode edits the project's station configuration: add a module (type and free
+slot; a stable id and a first-fit start address are proposed), change a module type, move
+a module to a free slot (its id and mappings move along), remove a module (with its
+mappings), analog channel modes and loop supply. Every edit is saved through the backend,
+which validates the station; the view shows the saved project. Start addresses are
+allocated first fit per image (inputs: DI and AI; outputs: DO and AO), digital modules
+from byte 0 and analog modules from byte 64. Download brings the project's configuration
+into the PLC; until then a banner says that project and PLC differ, and Compare shows the
+PLC's configuration against the detected hardware. Opening a project starts the PLC with
+the project's configuration. The network interface and Modbus connections are edited in
+the Network tab and downloaded there.
+
+Diagnostic entries carry typed `slot`, `channel` and `moduleId`; the module inspector
+selects a module's entries by that identity, never by parsing the display text.

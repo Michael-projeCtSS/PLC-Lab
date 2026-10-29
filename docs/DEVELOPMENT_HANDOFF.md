@@ -147,7 +147,9 @@ launcher smoke 11 steps).
   Compare, Configured (project), Actual (detected), Signals; inspector Overview,
   Configuration, Channels, Power, Diagnostics; module cards are keyboard-selectable
   buttons; Advanced mode adds, removes, moves and retypes modules (first-fit start
-  addresses from the catalog). CPU and module LEDs are labeled generic PLC Lab indicators.
+  addresses from the catalog), each edit a validated project save shown from the
+  backend's answer, downloaded explicitly. Diagnostic entries carry typed slot, channel
+  and module id. CPU and module LEDs are labeled generic PLC Lab indicators.
 - Content: `scene.hardware-station` (modular CPU, PS, DI16, DO16, AI4, AO2; tank skid with
   inlet valve and limit switches, high level switch, 2-wire LT-303, lamps; AO channel 0
   retransmits the level), six labs `hw.do-field-supply`, `hw.do-module-power`,

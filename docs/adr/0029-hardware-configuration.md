@@ -42,8 +42,13 @@ checklist compared configuration and installation with its own rules.
   drawn device and port, the device's own state). The UI shows Compare, Configured
   (project), Actual (detected) and Signals views and a module inspector (Overview,
   Configuration, Channels, Power, Diagnostics); module cards are buttons. Advanced mode
-  adds, removes, moves and retypes modules in the draft configuration; the backend
-  validates every download.
+  adds, removes, moves and retypes modules; every edit is a project save that the
+  backend validates, and the UI shows the returned project. The project's (offline)
+  configuration reaches the PLC on download; until then the view says it differs and
+  Compare shows the configuration loaded in the PLC.
+- **Typed diagnostic identity.** Diagnostic buffer entries carry `slot`, `channel` and
+  `moduleId` as structured data; the UI never recovers hardware identity from the
+  display text in `source`.
 - **Generic indicators.** CPU and module LEDs follow PLC Lab rules and are labeled as
   generic diagnostic indicators, not a vendor's LED behavior.
 
