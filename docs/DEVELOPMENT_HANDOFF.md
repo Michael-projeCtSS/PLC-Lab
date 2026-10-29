@@ -251,6 +251,10 @@ the root `PLC Lab.exe` and the relocated copy, 19 through the BAT).
   pruning, all logged), workflow (list, remove all, reset, reopen), UI (banner, list,
   removal, typed entry).
 
+Validated: `41f450bced90b4963782ef8496defbb6360b86f7`, CI run 40928237207 (Windows job
+123639422507 and Linux job 123639422092 PASS; native smoke 20 steps on the debug build,
+the root `PLC Lab.exe` and the relocated copy, 19 through the BAT).
+
 ## Checkpoint 7-E: diagnostic buffer
 
 - ADR-0034: the bounded CPU buffer also records single events (CPU operating state
