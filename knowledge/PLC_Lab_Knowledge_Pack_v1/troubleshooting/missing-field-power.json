@@ -48,6 +48,7 @@
     ],
     "explanation": "Output modules switch the field supply to the load; without it the electronics work but no current can flow to the actuators.",
     "simulatedIn": [
+      "hw.do-field-supply",
       "ts.outputs-dead"
     ]
   }

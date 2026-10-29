@@ -1,0 +1,70 @@
+{
+  "id": "troubleshooting.analog-mode-mismatch",
+  "kind": "troubleshooting",
+  "title": "Current transmitter on a voltage-configured channel",
+  "summary": "A 4-20 mA transmitter is connected to a channel configured for 0-10 V, so the reading is wrong without any wire-break diagnostic.",
+  "tags": [
+    "analog input",
+    "channel mode",
+    "4-20 mA",
+    "2-wire"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "With a 2-wire transmitter the voltage input does not supply the loop: the transmitter is dead and the channel reads 0 with good quality. With a 4-wire transmitter the reading is far off scale. The hardware comparison shows the mode against the drawing."
+    },
+    {
+      "heading": "Check",
+      "body": "Compare the channel mode with the drawing and the transmitter's nameplate. For a 2-wire transmitter configure a current input that supplies the loop, enable diagnostics, download, and compare the level with an independent reference. On real modules check the manual before connecting a current loop to a voltage input."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Generic modular station: configured and detected modules compared per slot, module electronics supply and field supply as separate conditions, channel modes against the drawing, process image addresses, wiring from devices to terminals"
+    ],
+    "approximated": [
+      "Module status and LEDs follow generic PLC Lab rules, not a vendor's indicator behavior",
+      "A module of the wrong type or in an unconfigured slot exchanges no data and its inputs hold substitute value 0"
+    ],
+    "omitted": [
+      "Vendor-specific module parameters, diagnostic codes and firmware",
+      "Hot swapping and module start-up times"
+    ]
+  },
+  "related": [
+    "fundamentals.transmitter-wiring",
+    "fundamentals.4-20ma"
+  ],
+  "troubleshooting": {
+    "faultId": "analog-mode-mismatch",
+    "area": "Hardware",
+    "target": "Analog channel configuration",
+    "effect": "The measurement is implausible but not flagged",
+    "symptoms": [
+      "Reading 0 with good quality",
+      "Mode mismatch against the drawing"
+    ],
+    "evidence": [
+      "Channel configuration",
+      "Drawing and nameplate",
+      "Independent level reference"
+    ],
+    "diagnosticMethod": [
+      "Compare the channel mode with the device",
+      "Measure the terminal"
+    ],
+    "repair": [
+      "Configure the channel for the device's signal and download"
+    ],
+    "explanation": "A voltage channel has no live zero: it cannot tell a dead loop from a zero reading.",
+    "simulatedIn": [
+      "hw.ai-mode"
+    ]
+  }
+}

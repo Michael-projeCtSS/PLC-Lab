@@ -1,0 +1,68 @@
+{
+  "id": "troubleshooting.signal-on-wrong-terminal",
+  "kind": "troubleshooting",
+  "title": "Field signal on another terminal than drawn",
+  "summary": "A working device is wired to a different terminal than the drawing shows, so its PLC symbol does not follow it.",
+  "tags": [
+    "wiring",
+    "terminal",
+    "signal mapping"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "The device works (it changes state), but its mapped channel and PLC symbol do not change. Another channel, often an unused one, changes instead."
+    },
+    {
+      "heading": "Check",
+      "body": "Operate the device and watch every channel LED of the module, not only the expected one. Compare the terminal with the drawing and land the wire as drawn."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Generic modular station: configured and detected modules compared per slot, module electronics supply and field supply as separate conditions, channel modes against the drawing, process image addresses, wiring from devices to terminals"
+    ],
+    "approximated": [
+      "Module status and LEDs follow generic PLC Lab rules, not a vendor's indicator behavior",
+      "A module of the wrong type or in an unconfigured slot exchanges no data and its inputs hold substitute value 0"
+    ],
+    "omitted": [
+      "Vendor-specific module parameters, diagnostic codes and firmware",
+      "Hot swapping and module start-up times"
+    ]
+  },
+  "related": [
+    "fundamentals.station-configuration",
+    "troubleshooting.commissioning-io-check"
+  ],
+  "troubleshooting": {
+    "faultId": "signal-on-wrong-terminal",
+    "area": "Hardware",
+    "target": "Wiring between device and terminal",
+    "effect": "A PLC symbol does not follow its device",
+    "symptoms": [
+      "Device changes state, its symbol does not",
+      "An unmapped channel follows the device"
+    ],
+    "evidence": [
+      "Channel LEDs while operating the device",
+      "Signal mapping: symbol, channel, drawn device"
+    ],
+    "diagnosticMethod": [
+      "Operate one device at a time",
+      "Find the channel that follows it"
+    ],
+    "repair": [
+      "Land the wire on the drawn terminal, then repeat the I/O test"
+    ],
+    "explanation": "The program only sees the channel the project maps; a wire on another terminal reaches nobody.",
+    "simulatedIn": [
+      "hw.sensor-channel"
+    ]
+  }
+}

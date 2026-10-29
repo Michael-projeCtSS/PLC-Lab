@@ -1,0 +1,335 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "hw.do-module-power",
+  "revision": 1,
+  "title": "Hardware: the valve ignores its command again",
+  "kind": "commissioning",
+  "difficulty": "intermediate",
+  "summary": "Same skid, a different day: after Start the tank does not fill and the valve stays closed. This time look closely at what the output module itself reports.",
+  "objectives": [
+    "Distinguish the module electronics supply from the field supply",
+    "Read module status from the CPU's point of view"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.hardware-station",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while not pressed. *)\n    LevelHigh : BOOL; (* High level switch LSH-305: TRUE when wet. *)\n    InletOpen : BOOL; (* Inlet valve XV-301 open limit switch. *)\n    InletClosed : BOOL; (* Inlet valve XV-301 closed limit switch. *)\n    LevelRaw : INT; (* LT-303, 4-20 mA, 2-wire: generic profile 0..10000 = 0..100 %. *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve XV-301 solenoid. *)\n    RunLamp : BOOL; (* Green lamp H1: filling with the inlet valve open. *)\n    FaultLamp : BOOL; (* Red lamp H2: level invalid or high level. *)\n    LevelOut : INT; (* Level retransmitted to the control room, 0..10000 = 0..100 %. *)\n    LevelPercent : REAL; (* Level from LT-303, 0..100 %. *)\nEND_VAR\nVAR\n    LevelValid : BOOL; (* The level measurement is plausible: above 2 % and within range. *)\n    Filling : BOOL; (* Fill request latch. *)\nEND_VAR\n(* The program passed its factory test; this lab is about the station hardware. *)\nLevelPercent := INT_TO_REAL(LevelRaw) / 100.0;\nLevelValid := (LevelRaw > 200) AND (LevelRaw <= 10000);\n(* Filling starts only from the valve's start position (closed and confirmed). *)\nFilling := ((StartPB AND InletClosed) OR Filling) AND StopPB AND NOT LevelHigh AND LevelValid AND LevelPercent < 80.0;\nInletValve := Filling;\nRunLamp := Filling AND InletOpen;\nFaultLamp := NOT LevelValid OR LevelHigh;\nLevelOut := LevelRaw;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletClosed",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelRaw",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "FaultLamp",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "LevelOut",
+      "type": "INT",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "The PLC runs the accepted program. Let the simulation run, press Start and confirm the symptom.",
+    "Open the Hardware tab: compare the configured (project) station with the detected one, then follow the signals.",
+    "Select a module for its channels, power and diagnostics; measure terminals with the multimeter.",
+    "Diagnose, repair (configuration labs: correct the configuration in Advanced mode and download it), then verify."
+  ],
+  "hints": [
+    "A module that answers and a module that is silent are different findings.",
+    "Compare the module's status LEDs with the previous output fault."
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "percent",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelPercent"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "component",
+        "component": "run",
+        "quantity": "lit"
+      }
+    },
+    {
+      "name": "level",
+      "source": {
+        "type": "component",
+        "component": "tank",
+        "quantity": "levelPermille"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "fill",
+      "title": "Start filling and reach the setpoint",
+      "durationMs": 14000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 1000,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 1300,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "measures",
+      "title": "The level measurement agrees with the tank",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 900,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            }
+          ]
+        }
+      },
+      "onFail": "LevelPercent was not about 20 % while the tank held 20 %."
+    },
+    {
+      "id": "runs",
+      "title": "The run lamp shows filling with the valve open",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 4500
+      },
+      "onFail": "The run lamp never lit: filling and an open inlet valve are both needed."
+    },
+    {
+      "id": "fills",
+      "title": "The tank fills to about 80 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "ge",
+          "value": 780
+        },
+        "byMs": 13500
+      },
+      "onFail": "The tank did not reach 78 %."
+    },
+    {
+      "id": "no-overfill",
+      "title": "The level stays below 90 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "le",
+          "value": 900
+        },
+        "fromMs": 0
+      },
+      "onFail": "The tank was filled above 90 %."
+    }
+  ],
+  "curriculumOrder": 71,
+  "troubleshooting": {
+    "symptom": "The tank does not fill. The valve stays closed and none of the lamps lights.",
+    "reportedBy": "Shift leader, tank skid T-300",
+    "faults": [
+      {
+        "id": "do-electronics",
+        "fault": {
+          "type": "modulePowerMissing",
+          "position": {
+            "rack": 0,
+            "slot": 3
+          }
+        }
+      }
+    ],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program is wrong"
+      },
+      {
+        "id": "do-field",
+        "label": "The output module has no 24 V field (load) supply"
+      },
+      {
+        "id": "do-electronics",
+        "label": "The output module's electronics are not supplied, so the module does not answer"
+      },
+      {
+        "id": "wrong-module",
+        "label": "The module in slot 4 is not the type the project configures"
+      },
+      {
+        "id": "wrong-slot",
+        "label": "The analog input module is mounted in another slot than configured"
+      },
+      {
+        "id": "closed-switch-terminal",
+        "label": "The valve's closed limit switch is wired to another input terminal"
+      },
+      {
+        "id": "lt-mode",
+        "label": "The level transmitter's channel is configured for the wrong signal type"
+      },
+      {
+        "id": "transmitter",
+        "label": "The level transmitter LT-303 is defective"
+      },
+      {
+        "id": "solenoid",
+        "label": "The inlet valve solenoid is defective"
+      }
+    ],
+    "rootCauses": [
+      "do-electronics"
+    ],
+    "repairs": [
+      {
+        "id": "fix-do-electronics",
+        "label": "Engage the output module's backplane connector so its electronics are supplied",
+        "clears": [
+          "do-electronics"
+        ]
+      },
+      {
+        "id": "fix-transmitter",
+        "label": "Replace LT-303 with a new transmitter",
+        "clears": []
+      },
+      {
+        "id": "fix-solenoid",
+        "label": "Replace the inlet valve solenoid",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "measures",
+      "runs",
+      "fills",
+      "no-overfill"
+    ],
+    "learningRefs": [
+      "fundamentals.station-configuration",
+      "fundamentals.plc-architecture",
+      "fundamentals.diagnostics"
+    ],
+    "debriefRefs": [
+      "troubleshooting.module-electronics-supply"
+    ],
+    "debrief": {
+      "rootCause": "The output module's electronics were not supplied: its backplane connector was not engaged. The module was physically present but could not answer the CPU, so the CPU treated it as unavailable and no output was switched.",
+      "evidence": [
+        "The output module's status LEDs were dark, and the CPU reported that the module at slot 3 does not answer.",
+        "Unlike a missing field supply, the module did not report any diagnostic of its own.",
+        "The input module and the analog modules worked normally."
+      ],
+      "repair": "Engage the output module's backplane connector, check that the module answers and its status LED is green, then repeat the fill test.",
+      "reasoning": "Every I/O module needs two supplies: the electronics supply (often through the backplane) to talk to the CPU, and the field supply to switch or read its channels. A silent module points to the electronics side; a module that answers and reports missing voltage points to the field side."
+    }
+  }
+}

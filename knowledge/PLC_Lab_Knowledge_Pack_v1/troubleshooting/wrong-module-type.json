@@ -1,0 +1,67 @@
+{
+  "id": "troubleshooting.wrong-module-type",
+  "kind": "troubleshooting",
+  "title": "Module of another type in a configured slot",
+  "summary": "A slot holds a different module type than the project configures, so the CPU exchanges no data with it.",
+  "tags": [
+    "module type",
+    "hardware configuration",
+    "replacement"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "The hardware comparison reports a type mismatch at one slot; every channel of that slot has bad quality and the inputs hold their substitute values. It typically appears after a module was replaced."
+    },
+    {
+      "heading": "Check",
+      "body": "Compare the module's type label with the project's configuration for that slot. Fit the configured type, or change the project deliberately if the design changed, and download it."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Generic modular station: configured and detected modules compared per slot, module electronics supply and field supply as separate conditions, channel modes against the drawing, process image addresses, wiring from devices to terminals"
+    ],
+    "approximated": [
+      "Module status and LEDs follow generic PLC Lab rules, not a vendor's indicator behavior",
+      "A module of the wrong type or in an unconfigured slot exchanges no data and its inputs hold substitute value 0"
+    ],
+    "omitted": [
+      "Vendor-specific module parameters, diagnostic codes and firmware",
+      "Hot swapping and module start-up times"
+    ]
+  },
+  "related": [
+    "fundamentals.station-configuration",
+    "troubleshooting.wrong-module-slot"
+  ],
+  "troubleshooting": {
+    "faultId": "wrong-module-type",
+    "area": "Hardware",
+    "target": "Module type in a slot",
+    "effect": "Every channel of the slot is invalid",
+    "symptoms": [
+      "Type mismatch at one slot",
+      "Module fault quality on all its channels"
+    ],
+    "evidence": [
+      "Hardware comparison: configured versus detected",
+      "Module type label"
+    ],
+    "diagnosticMethod": [
+      "Compare the detected station with the project"
+    ],
+    "repair": [
+      "Fit the configured module type, or correct the project deliberately"
+    ],
+    "explanation": "The CPU only exchanges data with a module whose type matches the configuration of its slot.",
+    "simulatedIn": [
+      "hw.wrong-module"
+    ]
+  }
+}

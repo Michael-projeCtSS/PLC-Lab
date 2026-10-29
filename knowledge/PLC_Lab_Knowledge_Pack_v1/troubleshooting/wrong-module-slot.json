@@ -43,6 +43,8 @@
       "Move the module to the configured slot or correct the configuration"
     ],
     "explanation": "The CPU checks each slot against the configuration; a mismatch keeps the module from exchanging data.",
-    "simulatedIn": []
+    "simulatedIn": [
+      "hw.wrong-slot"
+    ]
   }
 }

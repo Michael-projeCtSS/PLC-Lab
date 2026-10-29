@@ -1,0 +1,76 @@
+{
+  "id": "troubleshooting.module-electronics-supply",
+  "kind": "troubleshooting",
+  "title": "I/O module without electronics supply",
+  "summary": "A module is plugged in but cannot talk to the CPU, so none of its channels works.",
+  "tags": [
+    "module power",
+    "backplane",
+    "electronics supply",
+    "hardware"
+  ],
+  "sections": [
+    {
+      "heading": "Recognize it",
+      "body": "The module's status LEDs are dark and the CPU reports that the module does not answer. The module reports nothing itself: it cannot. Every channel of the module is affected at once."
+    },
+    {
+      "heading": "Tell it apart",
+      "body": "With a missing field (load) supply the module still answers and reports the missing voltage; with a missing electronics supply it is silent. The electronics supply often comes through the backplane or bus connector; on some systems it has its own terminals. Follow the module manual."
+    },
+    {
+      "heading": "Check",
+      "body": "Check that the module is fully engaged on the backplane or bus connector, then its electronics supply terminals if it has them. After the repair the module must answer and its status must be OK before you test channels."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "fidelity": {
+    "level": "APPROXIMATED_BEHAVIORAL",
+    "modeled": [
+      "Generic modular station: configured and detected modules compared per slot, module electronics supply and field supply as separate conditions, channel modes against the drawing, process image addresses, wiring from devices to terminals"
+    ],
+    "approximated": [
+      "Module status and LEDs follow generic PLC Lab rules, not a vendor's indicator behavior",
+      "A module of the wrong type or in an unconfigured slot exchanges no data and its inputs hold substitute value 0"
+    ],
+    "omitted": [
+      "Vendor-specific module parameters, diagnostic codes and firmware",
+      "Hot swapping and module start-up times"
+    ]
+  },
+  "related": [
+    "fundamentals.station-configuration",
+    "troubleshooting.missing-field-power"
+  ],
+  "troubleshooting": {
+    "faultId": "module-electronics-supply",
+    "area": "Hardware",
+    "target": "Electronics supply of an I/O module",
+    "effect": "The module does not answer; none of its channels works",
+    "symptoms": [
+      "Module status LEDs dark",
+      "CPU reports the module as not answering",
+      "All channels of one module dead at once"
+    ],
+    "evidence": [
+      "Module status in the hardware view",
+      "CPU diagnostics",
+      "Module seating and supply terminals"
+    ],
+    "diagnosticMethod": [
+      "Compare the module's state with its neighbours",
+      "Check the backplane connection and electronics supply"
+    ],
+    "repair": [
+      "Engage the module or restore its electronics supply",
+      "Verify the module answers, then test its channels"
+    ],
+    "explanation": "A module needs its electronics supply to exchange data with the CPU; the field supply alone does not make it answer.",
+    "simulatedIn": [
+      "hw.do-module-power"
+    ]
+  }
+}

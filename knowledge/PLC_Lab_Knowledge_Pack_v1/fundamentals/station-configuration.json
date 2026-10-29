@@ -1,0 +1,44 @@
+{
+  "id": "fundamentals.station-configuration",
+  "kind": "topic",
+  "title": "Station configuration: configured, detected and the signal path",
+  "summary": "How a PLC station is described in the project, how the CPU compares it with the installed modules, why modules need two supplies, and how to follow a signal from a PLC symbol to a field device.",
+  "tags": [
+    "hardware configuration",
+    "station",
+    "module",
+    "field supply",
+    "signal path"
+  ],
+  "sections": [
+    {
+      "heading": "Configured and detected hardware",
+      "body": "The project describes the station the program expects: which module type sits in which slot, its start address and its channel settings. The CPU detects what is actually plugged in and compares the two slot by slot. Only a module whose type matches its slot's configuration exchanges data. A missing module, a module of another type, a module in an unconfigured slot and a module in another slot are different findings, and each affects every channel of that module at once."
+    },
+    {
+      "heading": "Module identity, slots and addresses",
+      "body": "A configured module has an identity of its own, independent of the slot: if the module is moved in the project, its channel settings and the I/O mappings of its channels move with it. Each module occupies part of the process image from its start address on. Addresses are shown in a generic notation (for example %IX0.4 or %IW64); vendors use their own notations, but the idea of a start address and a channel offset is common."
+    },
+    {
+      "heading": "Electronics supply and field supply",
+      "body": "An I/O module needs two supplies. The electronics supply (often through the backplane) lets the module talk to the CPU. The field or load supply lets the module switch its outputs or supply its sensors. Without the electronics supply the module is silent and the CPU reports it as not answering; without the field supply it answers and reports the missing voltage, but its channels cannot work. The program can command an output perfectly while the terminal stays at 0 V."
+    },
+    {
+      "heading": "Following a signal",
+      "body": "A signal passes through several stages: PLC symbol, configured channel, channel value and quality, terminal, wire and field device. For an output: PLC tag, module command, field supply, terminal voltage, actuator, feedback. When something does not work, find the first stage where the expected state is missing. A device that works while its symbol does not change points to the wiring or the mapping; a symbol that changes while the terminal does not points to the module or its supply."
+    },
+    {
+      "heading": "Indicators in PLC Lab",
+      "body": "PLC Lab shows generic diagnostic indicators for the CPU (RUN, STOP, ERROR, I/O) and for every module and channel. They follow simple PLC Lab rules and do not reproduce the LED behavior of a particular vendor's hardware: on a real station, the module manual explains what each LED means."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.plc-architecture",
+    "fundamentals.addressing",
+    "fundamentals.diagnostics"
+  ]
+}

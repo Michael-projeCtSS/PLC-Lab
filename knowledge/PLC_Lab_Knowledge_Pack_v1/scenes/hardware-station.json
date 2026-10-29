@@ -1,0 +1,491 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.hardware-station",
+  "revision": 1,
+  "title": "Modular station: tank skid cabinet",
+  "summary": "A tank skid before handover, controlled from a modular cabinet: a modular CPU with a 24 V power supply module, a 16-channel digital input module, a 16-channel digital output module, a 4-channel analog input module and a 2-channel analog output module. The skid has an inlet valve with open and closed limit switches, a high level switch, a 2-wire 4-20 mA level transmitter, start and stop buttons and run and fault lamps. Analog output channel 0 retransmits the level (4-20 mA) to a control room display outside this scene.",
+  "components": [
+    {
+      "id": "start",
+      "label": "Start S1",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyOpen",
+        "color": "green"
+      }
+    },
+    {
+      "id": "stop",
+      "label": "Stop S2",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyClosed",
+        "color": "red"
+      }
+    },
+    {
+      "id": "inlet",
+      "label": "Inlet valve XV-301",
+      "kind": {
+        "type": "onOffValve",
+        "travelMs": 1500,
+        "flowMlPerS": 8000
+      }
+    },
+    {
+      "id": "tank",
+      "label": "Tank T-300",
+      "kind": {
+        "type": "tank",
+        "capacityMl": 100000,
+        "initialMl": 20000,
+        "highHighMl": 97000,
+        "lowLowMl": 5000
+      }
+    },
+    {
+      "id": "lsh",
+      "label": "High level switch LSH-305",
+      "kind": {
+        "type": "levelSwitch",
+        "tank": "tank",
+        "switchLevelMl": 95000,
+        "contact": "normallyOpen",
+        "output": "pnp"
+      }
+    },
+    {
+      "id": "lt",
+      "label": "Level transmitter LT-303",
+      "kind": {
+        "type": "levelTransmitter",
+        "tank": "tank",
+        "rangeMinMl": 0,
+        "rangeMaxMl": 100000,
+        "signal": "current4To20mA",
+        "wiring": "twoWire"
+      }
+    },
+    {
+      "id": "run",
+      "label": "Run lamp H1",
+      "kind": {
+        "type": "pilotLamp",
+        "color": "green"
+      }
+    },
+    {
+      "id": "fault",
+      "label": "Fault lamp H2",
+      "kind": {
+        "type": "pilotLamp",
+        "color": "red"
+      }
+    }
+  ],
+  "couplings": [
+    {
+      "type": "valveFillsTank",
+      "valve": "inlet",
+      "tank": "tank"
+    }
+  ],
+  "installation": {
+    "cpu": "cpu.modular",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "ps.24vdc"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "di16.24vdc.sink"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "do16.24vdc"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 4
+        },
+        "module": "ai4.ui"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 5
+        },
+        "module": "ao2.ui"
+      }
+    ],
+    "wiring": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "component": "start",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "component": "stop",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 2
+        },
+        "component": "lsh",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 3
+        },
+        "component": "inlet",
+        "port": "openSwitch"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 4
+        },
+        "component": "inlet",
+        "port": "closedSwitch"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "component": "inlet",
+        "port": "solenoid"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 1
+        },
+        "component": "run",
+        "port": "coil"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 2
+        },
+        "component": "fault",
+        "port": "coil"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 4,
+          "channel": 0
+        },
+        "component": "lt",
+        "port": "signal"
+      }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.modular",
+    "modules": [
+      {
+        "id": "ps-r0s1",
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "ps.24vdc",
+        "startAddress": 0
+      },
+      {
+        "id": "di-r0s2",
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "di16.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "id": "do-r0s3",
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "do16.24vdc",
+        "startAddress": 0
+      },
+      {
+        "id": "ai-r0s4",
+        "position": {
+          "rack": 0,
+          "slot": 4
+        },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA",
+            "diagnostics": true,
+            "loopSupply": true
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          },
+          {
+            "channel": 2,
+            "mode": "disabled"
+          },
+          {
+            "channel": 3,
+            "mode": "disabled"
+          }
+        ]
+      },
+      {
+        "id": "ao-r0s5",
+        "position": {
+          "rack": 0,
+          "slot": 5
+        },
+        "module": "ao2.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA"
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          }
+        ]
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 2
+        },
+        "tag": "LevelHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 3
+        },
+        "tag": "InletOpen"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 4
+        },
+        "tag": "InletClosed"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 1
+        },
+        "tag": "RunLamp"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 2
+        },
+        "tag": "FaultLamp"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 4,
+          "channel": 0
+        },
+        "tag": "LevelRaw"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 5,
+          "channel": 0
+        },
+        "tag": "LevelOut"
+      }
+    ]
+  },
+  "interface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Start button S1, normally open: TRUE while pressed."
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Stop button S2, normally closed: TRUE while NOT pressed."
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "High level switch LSH-305 (normally open): TRUE when wet."
+    },
+    {
+      "tag": "InletOpen",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Inlet valve XV-301 open limit switch: TRUE when fully open."
+    },
+    {
+      "tag": "InletClosed",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Inlet valve XV-301 closed limit switch: TRUE when fully closed."
+    },
+    {
+      "tag": "LevelRaw",
+      "type": "INT",
+      "direction": "input",
+      "description": "LT-303 hydrostatic level transmitter, 4-20 mA, 2-wire: raw value (generic profile 0..10000 = 0..100 %)."
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Inlet valve XV-301 solenoid: TRUE opens the valve."
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Green lamp H1: filling with the inlet valve open."
+    },
+    {
+      "tag": "FaultLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Red lamp H2: level measurement invalid or high level."
+    },
+    {
+      "tag": "LevelOut",
+      "type": "INT",
+      "direction": "output",
+      "description": "Level retransmitted to the control room display on AO channel 0, 4-20 mA (generic profile 0..10000 = 0..100 %). The receiving display is outside this scene: measure the terminal."
+    }
+  ],
+  "layout": [
+    {
+      "component": "inlet",
+      "x": 260,
+      "y": 90
+    },
+    {
+      "component": "tank",
+      "x": 420,
+      "y": 150,
+      "width": 220,
+      "height": 300
+    },
+    {
+      "component": "lsh",
+      "x": 660,
+      "y": 190
+    },
+    {
+      "component": "lt",
+      "x": 340,
+      "y": 330
+    },
+    {
+      "component": "start",
+      "x": 80,
+      "y": 470
+    },
+    {
+      "component": "stop",
+      "x": 170,
+      "y": 470
+    },
+    {
+      "component": "run",
+      "x": 260,
+      "y": 470
+    },
+    {
+      "component": "fault",
+      "x": 350,
+      "y": 470
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.station-configuration",
+    "fundamentals.plc-architecture",
+    "fundamentals.diagnostics"
+  ]
+}

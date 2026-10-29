@@ -1,0 +1,468 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "hw.ai-mode",
+  "revision": 1,
+  "title": "Hardware: the new configuration reads no level",
+  "kind": "commissioning",
+  "difficulty": "intermediate",
+  "summary": "The station configuration was rebuilt offline from a template. LT-303 reads 0 % although the tank is partly full, and the fault lamp is on. Check the configuration against the drawing.",
+  "objectives": [
+    "Match an analog channel's mode to the device",
+    "Explain why a 2-wire transmitter needs a supplied current input"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.hardware-station",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while not pressed. *)\n    LevelHigh : BOOL; (* High level switch LSH-305: TRUE when wet. *)\n    InletOpen : BOOL; (* Inlet valve XV-301 open limit switch. *)\n    InletClosed : BOOL; (* Inlet valve XV-301 closed limit switch. *)\n    LevelRaw : INT; (* LT-303, 4-20 mA, 2-wire: generic profile 0..10000 = 0..100 %. *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve XV-301 solenoid. *)\n    RunLamp : BOOL; (* Green lamp H1: filling with the inlet valve open. *)\n    FaultLamp : BOOL; (* Red lamp H2: level invalid or high level. *)\n    LevelOut : INT; (* Level retransmitted to the control room, 0..10000 = 0..100 %. *)\n    LevelPercent : REAL; (* Level from LT-303, 0..100 %. *)\nEND_VAR\nVAR\n    LevelValid : BOOL; (* The level measurement is plausible: above 2 % and within range. *)\n    Filling : BOOL; (* Fill request latch. *)\nEND_VAR\n(* The program passed its factory test; this lab is about the station hardware. *)\nLevelPercent := INT_TO_REAL(LevelRaw) / 100.0;\nLevelValid := (LevelRaw > 200) AND (LevelRaw <= 10000);\n(* Filling starts only from the valve's start position (closed and confirmed). *)\nFilling := ((StartPB AND InletClosed) OR Filling) AND StopPB AND NOT LevelHigh AND LevelValid AND LevelPercent < 80.0;\nInletValve := Filling;\nRunLamp := Filling AND InletOpen;\nFaultLamp := NOT LevelValid OR LevelHigh;\nLevelOut := LevelRaw;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletClosed",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelRaw",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "FaultLamp",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "LevelOut",
+      "type": "INT",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "The PLC runs the accepted program. Let the simulation run, press Start and confirm the symptom.",
+    "Open the Hardware tab: compare the configured (project) station with the detected one, then follow the signals.",
+    "Select a module for its channels, power and diagnostics; measure terminals with the multimeter.",
+    "Diagnose, repair (configuration labs: correct the configuration in Advanced mode and download it), then verify."
+  ],
+  "hints": [
+    "Which signal type does the drawing show for LT-303?",
+    "A voltage input cannot tell a dead loop from an empty tank."
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "percent",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelPercent"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "component",
+        "component": "run",
+        "quantity": "lit"
+      }
+    },
+    {
+      "name": "level",
+      "source": {
+        "type": "component",
+        "component": "tank",
+        "quantity": "levelPermille"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "fill",
+      "title": "Start filling and reach the setpoint",
+      "durationMs": 14000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 1000,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 1300,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "measures",
+      "title": "The level measurement agrees with the tank",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 900,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "percent",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            }
+          ]
+        }
+      },
+      "onFail": "LevelPercent was not about 20 % while the tank held 20 %."
+    },
+    {
+      "id": "runs",
+      "title": "The run lamp shows filling with the valve open",
+      "points": 20,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 4500
+      },
+      "onFail": "The run lamp never lit: filling and an open inlet valve are both needed."
+    },
+    {
+      "id": "fills",
+      "title": "The tank fills to about 80 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "ge",
+          "value": 780
+        },
+        "byMs": 13500
+      },
+      "onFail": "The tank did not reach 78 %."
+    },
+    {
+      "id": "no-overfill",
+      "title": "The level stays below 90 %",
+      "points": 30,
+      "scenario": "fill",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "level",
+          "layer": "process",
+          "op": "le",
+          "value": 900
+        },
+        "fromMs": 0
+      },
+      "onFail": "The tank was filled above 90 %."
+    }
+  ],
+  "starterStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.modular",
+    "modules": [
+      {
+        "id": "ps-r0s1",
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "ps.24vdc",
+        "startAddress": 0
+      },
+      {
+        "id": "di-r0s2",
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "di16.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "id": "do-r0s3",
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "do16.24vdc",
+        "startAddress": 0
+      },
+      {
+        "id": "ai-r0s4",
+        "position": {
+          "rack": 0,
+          "slot": 4
+        },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "voltage0To10V",
+            "diagnostics": true,
+            "loopSupply": false
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          },
+          {
+            "channel": 2,
+            "mode": "disabled"
+          },
+          {
+            "channel": 3,
+            "mode": "disabled"
+          }
+        ]
+      },
+      {
+        "id": "ao-r0s5",
+        "position": {
+          "rack": 0,
+          "slot": 5
+        },
+        "module": "ao2.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA"
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          }
+        ]
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 2
+        },
+        "tag": "LevelHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 3
+        },
+        "tag": "InletOpen"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 4
+        },
+        "tag": "InletClosed"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 1
+        },
+        "tag": "RunLamp"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 2
+        },
+        "tag": "FaultLamp"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 4,
+          "channel": 0
+        },
+        "tag": "LevelRaw"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 5,
+          "channel": 0
+        },
+        "tag": "LevelOut"
+      }
+    ]
+  },
+  "curriculumOrder": 74,
+  "troubleshooting": {
+    "symptom": "The tank does not fill and the fault lamp is on. LT-303 reads 0 %, but the sight glass shows about 20 %.",
+    "reportedBy": "Commissioning engineer, tank skid T-300",
+    "faults": [],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program is wrong"
+      },
+      {
+        "id": "do-field",
+        "label": "The output module has no 24 V field (load) supply"
+      },
+      {
+        "id": "do-electronics",
+        "label": "The output module's electronics are not supplied, so the module does not answer"
+      },
+      {
+        "id": "wrong-module",
+        "label": "The module in slot 4 is not the type the project configures"
+      },
+      {
+        "id": "wrong-slot",
+        "label": "The analog input module is mounted in another slot than configured"
+      },
+      {
+        "id": "closed-switch-terminal",
+        "label": "The valve's closed limit switch is wired to another input terminal"
+      },
+      {
+        "id": "lt-mode",
+        "label": "The level transmitter's channel is configured for the wrong signal type"
+      },
+      {
+        "id": "transmitter",
+        "label": "The level transmitter LT-303 is defective"
+      },
+      {
+        "id": "solenoid",
+        "label": "The inlet valve solenoid is defective"
+      }
+    ],
+    "rootCauses": [
+      "lt-mode"
+    ],
+    "repairs": [],
+    "verification": [
+      "measures",
+      "runs",
+      "fills",
+      "no-overfill"
+    ],
+    "learningRefs": [
+      "fundamentals.station-configuration",
+      "fundamentals.transmitter-wiring"
+    ],
+    "debriefRefs": [
+      "troubleshooting.analog-mode-mismatch"
+    ],
+    "debrief": {
+      "rootCause": "The LT-303 channel was configured as a 0-10 V voltage input, but LT-303 is a 2-wire 4-20 mA transmitter. A voltage input does not supply the loop, so the transmitter had no power, the input saw 0 V and reported a valid-looking 0 %. The program's plausibility check rejected the level and blocked filling.",
+      "evidence": [
+        "The drawing shows LT-303 as a 2-wire 4-20 mA transmitter.",
+        "The channel was configured for 0-10 V, and the Compare view reported the mode mismatch.",
+        "The input read 0 with good quality: a voltage input has no live zero to detect the dead loop."
+      ],
+      "repair": "Configure channel 0 of the analog input module for 4-20 mA with diagnostics and loop supply, download the configuration, then compare the level with the sight glass.",
+      "reasoning": "Configure every analog channel for the signal its device delivers, and for current inputs decide who powers the loop. A 4-20 mA live zero makes a dead loop visible; a 0-10 V channel cannot."
+    }
+  }
+}

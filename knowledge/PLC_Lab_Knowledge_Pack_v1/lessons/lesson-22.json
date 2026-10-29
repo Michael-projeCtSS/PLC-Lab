@@ -1,0 +1,98 @@
+{
+  "id": "lesson.station-configuration",
+  "number": 22,
+  "title": "Hardware configuration: configured versus detected",
+  "summary": "Read a station like the CPU does: configured and detected modules, two supplies per module, channel settings and the signal path from symbol to device.",
+  "level": "intermediate",
+  "minutes": 25,
+  "objectives": [
+    "Compare a configured station with the detected hardware",
+    "Distinguish a module's electronics supply from its field supply",
+    "Follow a signal from a PLC symbol to its field device"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Two descriptions of one station",
+      "body": "The **project** says which modules should be in which slots, with which settings. The **installation** is what is actually plugged in and wired. The CPU compares them slot by slot and exchanges data only with modules that match. Many commissioning problems are differences between the two descriptions, not defective devices."
+    },
+    {
+      "type": "visual",
+      "heading": "The output chain",
+      "body": "Check each link from left to right.",
+      "diagram": "  PLC tag --> module command --> field supply --> terminal --> wire --> actuator --> feedback\n   TRUE?        accepted?          24 V?           24 V?                  moves?      confirms?"
+    },
+    {
+      "type": "concept",
+      "heading": "Two supplies per module",
+      "body": "The **electronics supply** lets a module talk to the CPU; the **field supply** lets it switch outputs or supply sensors. A silent module with dark LEDs points to the electronics side. A module that answers but reports missing voltage points to the field side."
+    },
+    {
+      "type": "example",
+      "heading": "A worked example",
+      "body": "After a module swap the level reads 0 % and the fault lamp is on. The Compare view shows slot 4: configured analog input, detected digital input. The wiring is fine; the module type is not. Fitting the configured module restores the level."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Changing the configuration until the error disappears, for example configuring the slot for whatever module happens to be installed. The comparison then looks clean, but the station no longer matches the design and the program reads the wrong signals."
+    },
+    {
+      "type": "task",
+      "heading": "Try it",
+      "body": "Open the first hardware lab and follow the inlet valve's command from the PLC to the valve.",
+      "exercise": "hw.do-field-supply"
+    },
+    {
+      "type": "challenge",
+      "heading": "Next step",
+      "body": "Choose the most informative check.",
+      "question": {
+        "question": "A sensor changes state, but its PLC symbol never does. What do you check first?",
+        "options": [
+          "The PLC program",
+          "Which input channel follows the sensor",
+          "The power supply module"
+        ],
+        "answer": 1,
+        "explanation": "The device works; find the channel that follows it and compare it with the mapping and the drawing."
+      }
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "A module's status LEDs are dark and the CPU reports that it does not answer. Which supply is the likely problem?",
+      "options": [
+        "The field (load) supply",
+        "The electronics supply",
+        "The sensor supply"
+      ],
+      "answer": 1,
+      "explanation": "Without its electronics supply a module cannot talk to the CPU at all."
+    },
+    {
+      "question": "The program sets an output TRUE, the module answers, but the terminal measures 0 V. What do you check?",
+      "options": [
+        "The output module's field supply",
+        "The program",
+        "The I/O mapping"
+      ],
+      "answer": 0,
+      "explanation": "The command arrived; without load voltage the terminal cannot switch."
+    },
+    {
+      "question": "Why can a 0-10 V channel not detect a broken 2-wire loop?",
+      "options": [
+        "Voltage channels are slower",
+        "0 V is a valid value on a 0-10 V channel",
+        "2-wire transmitters have no output"
+      ],
+      "answer": 1,
+      "explanation": "Only a live zero (4 mA) makes a dead signal distinguishable from a low reading."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.station-configuration",
+    "fundamentals.plc-architecture"
+  ]
+}
