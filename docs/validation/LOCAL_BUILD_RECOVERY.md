@@ -1,9 +1,11 @@
 # Local Windows build recovery — 2026-10-29
 
-**LOCAL BUILD: BLOCKED.** The fail-fast build change is implemented, but the root
-`C:\Users\mjgom\Documents\PLC_Student\PLC Lab.exe` has not been created. No launch,
-resource, different-working-directory, single-instance or project-argument acceptance
-result is claimed.
+**LOCAL BUILD RECOVERY: PARTIAL.** After the user reported a Norton exception, the
+exact pinned Rust toolchain was recovered and the actual root Tauri release application
+was built, staged and successfully tested. The complete `BUILD_PLC_LAB_RELEASE.bat`
+validation remains blocked by Windows application-control error 4551 when launching
+generated test executables. It is not reported as passing. See the final section for
+current acceptance results; the earlier sections retain the initial failure evidence.
 
 ## Preserved repository state
 
@@ -12,7 +14,7 @@ Work started on clean `claude/product-development-v2` at
 buffer and online-detail work, remain intact. No product/runtime architecture changed.
 ADR-0030 continues to require the actual Tauri application in the repository root.
 
-## Toolchain and filesystem evidence
+## Initial toolchain and filesystem evidence
 
 | Check                                      | Result                                                                                                                     |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
@@ -67,11 +69,12 @@ active products, but its detection history has not been inspected and attributio
 not proven. Ordinary filesystem renames work. No ACL, antivirus or Windows security
 setting was changed. The partial Rust installation is left for recovery after review.
 
-**Required user action:** in Norton Security History, review the Rust 1.99.0 compiler
+**Initial required user action:** in Norton Security History, review the Rust 1.99.0 compiler
 detection for this `.tools\rustup\tmp` extraction and restore/allow only that specific
 official compiler file if the entry confirms it. Do not add a directory exclusion.
+The user subsequently reported creating a Norton exception and requested another try.
 
-## Validation and remaining acceptance
+## Initial validation and remaining acceptance
 
 - Real `BUILD_PLC_LAB_RELEASE.bat`, `PLC_LAB_NO_PAUSE=1`: exits 1 in about **0.6 seconds**,
   reports the missing pinned files and missing system pin, and starts no rustup process.
@@ -88,6 +91,78 @@ official compiler file if the entry confirms it. Do not add a directory exclusio
   only `"%~dp0PLC Lab.exe"`. Those source-level contracts are tested; a successful local
   release is pending.
 
-Next dependency: review the specific security detection, recover the exact pinned
-toolchain, run `BUILD_PLC_LAB_RELEASE.bat`, then verify the actual root executable and
-all native release smoke scenarios before resuming CP7 feature development.
+## Retry after the user-reported Norton exception
+
+The incomplete toolchain was moved, without deleting it, to
+`.tools/build-recovery/1.99.0-incomplete-1a60255c355b423fbfc1e7e3ef465ee0`.
+Both absolute move targets were verified beneath the repository's `.tools` directory.
+A fresh explicit installation of the exact pin, minimal profile, rustfmt and clippy
+completed successfully in about seven seconds, without a rename retry. Compiler,
+Cargo, formatter, clippy-driver and rustdoc health checks pass using project-local Rust.
+The agent did not change any security settings.
+
+The real release BAT passed formatting, TypeScript, ESLint/clippy, all **45 architecture
+tests** and **58 frontend tests**. Its Rust debug tests stopped when Windows refused to
+execute `target/debug/deps/st_frontend-2b6d4765cb3525b4.exe` with error **4551**
+(application-control policy blocked this file). No assertion failed in the executed
+tests. The documented release-profile alternative also reached a policy block at
+`target/release/deps/grading_causality-d78bc2c976eb0912.exe`. The targeted release
+`st-frontend --lib` invocation executed successfully, but that library target has no
+tests and is not treated as proof that the full frontend suite passed.
+
+The temporary release-only validation wiring used for that investigation was removed.
+The canonical BAT, npm validation gates, debug/release CI lanes and application source
+remain as committed in `3f0840b`. No test is skipped or converted into success.
+
+With the compiler healthy, the native build and staging were run separately to satisfy
+the physical executable requirement and verify application behavior. This does not
+turn the blocked complete validation into a pass.
+
+| Acceptance criterion                                                 | Result                                                                             |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Exact project-local pinned Rust and health check                     | PASS                                                                               |
+| Rustup installation retry loop                                       | FIXED; no retry during recovery                                                    |
+| `BUILD_PLC_LAB_RELEASE.bat`                                          | BLOCKED by Windows error 4551 in generated tests                                   |
+| `node scripts/native.mjs build --no-bundle -- --locked`              | PASS                                                                               |
+| `node scripts/stage-release.mjs` and `node scripts/distribution.mjs` | PASS                                                                               |
+| Root `PLC Lab.exe` exists                                            | YES, 16,394,752 bytes                                                              |
+| Actual AMD64 PE/Tauri application                                    | PASS; MZ/PE/AMD64 headers checked                                                  |
+| Byte identity with `target/release/plc-lab-desktop.exe`              | PASS                                                                               |
+| Wrapper or required second PLC application executable                | NO                                                                                 |
+| Root native smoke                                                    | PASS, 21 steps                                                                     |
+| Different working directory                                          | PASS; smoke starts the application from the Windows temporary directory            |
+| Home/navigation and Knowledge/resources                              | PASS, including knowledge search and loading from executable-relative `resources/` |
+| Second invocation/single instance                                    | PASS; exactly one application remains and answers                                  |
+| Project file argument and hand-over                                  | PASS                                                                               |
+| Clean close                                                          | PASS                                                                               |
+| Relocated distribution in a path with spaces                         | PASS, 21 steps                                                                     |
+| Fallback `RUN_PLC_LAB.bat`                                           | PASS, 20 steps; launches only root `PLC Lab.exe`                                   |
+| Legacy entry points and `releases/current` dependency                | ABSENT, verified by distribution check                                             |
+
+Root and compiled executable SHA-256:
+`1c0125a9b8889ba33c5c2749fb2e951e8b3742c0b7578c848d9c6cb5442a47b5`.
+
+Hosted [Canonical validation run 40962333885](https://github.com/Michael-projeCtSS/PLC-Lab/actions/runs/40962333885)
+completed with **PASS in both Windows and Linux lanes** for source commit
+`3f0840b4565ab8d51430d60c74d36081f8965715`. This includes the full debug/release tests
+and Windows native release/distribution smoke checks. Only this recovery document is
+changed after that validated application source.
+
+Local evidence:
+
+- `artifacts/build-recovery/rustup-repair-after-user-exception.log`
+- `artifacts/build-recovery/release-build-after-recovery.log` (canonical BAT error 4551)
+- `artifacts/build-recovery/release-build-release-validation.log` (release test error 4551)
+- `artifacts/release-smoke/result.json` and `final.png`
+- `artifacts/release-relocated-smoke/result.json`
+- `artifacts/release-bat-smoke/result.json`
+
+No product features or runtime architecture changed. Remaining limitation: the local
+Windows policy prevents complete execution of the generated debug/release test suites;
+do not disable that policy or report the complete BAT as successful. The application
+itself can be started by double-clicking the root `PLC Lab.exe`. CP7 feature development
+remains outside this recovery task.
+
+Next dependency: a Windows environment/policy-approved execution route for the blocked
+generated tests is needed before the full local BAT can be marked PASS. No additional
+Norton action is requested for the working application.
