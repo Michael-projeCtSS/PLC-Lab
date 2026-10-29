@@ -50,6 +50,25 @@ Validated: CI run 40753806573 (Windows and Linux lanes green, launcher-gui 11 st
 - Tests: `crates/lab-engine/tests/commissioning.rs`, the secrecy and verification workflow
   over all 13 fault-finding labs, UI tests, a native smoke step.
 
+Validated: CI run 40757889061 (both lanes green; native smoke 17 steps on every entry point).
+
+## Checkpoint 3: analog commissioning (P3)
+
+- Model: `TransmitterWiring` (2-wire / 4-wire) on level transmitters and `loopSupply` per
+  current input channel (contract field `ChannelConfigDto.loopSupply`, editable in the
+  Hardware view, Advanced mode). Generic loop rule in `hardware-model` (see
+  SIMULATION_FIDELITY).
+- Checklist: analog signal type and loop against the drawing, raw value with measured
+  current or voltage and condition, and the transmitter value against the sight glass.
+- Scene `scene.analog-commissioning` and five labs (`cm.ai-*`): broken loop, missing loop
+  supply, 0-10 V sensor on a current input, 0-20 versus 4-20 mA, zero offset. Guides
+  `troubleshooting.analog-loop-supply`, `troubleshooting.analog-calibration`; sections on
+  2-/4-wire transmitters (4-20 mA) and commissioning checks, zero/span and reversed ranges
+  (scaling).
+- Not covered by a lab yet: reversed range and wrong program scaling (taught in the
+  scaling article; a program-fix lab needs a verification path for student programs in the
+  secrecy workflow).
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
@@ -59,8 +78,8 @@ native smoke test run on hosted Windows CI, which is authoritative.
 
 ## Next checkpoints
 
-1. Checkpoint 3: P3 analog commissioning lab.
-2. Then P4 VFD, P5 network diagnostics, P6 hardware configuration, P7 watch
+1. Checkpoint 4: P4 drive commissioning (generic VFD behavioral model).
+2. Then P5 network diagnostics, P6 hardware configuration, P7 watch
    and force, P8 diagnostic buffer, P9 alarms and events, P10 startup and restart,
    P11 ST depth, P12 LAD readiness.
 

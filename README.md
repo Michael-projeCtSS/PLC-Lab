@@ -53,7 +53,9 @@ SmartScreen may refuse to start a locally built copy. See
    and from the tests you perform: operate every button and sensor, switch every output
    and watch the checks turn into results. Labs: missing input field supply, guard switch
    with the wrong contact type, swapped Start/Stop wiring, swapped output wiring, missing
-   contactor feedback, input module in the wrong slot.
+   contactor feedback, input module in the wrong slot. Analog labs on a buffer tank with
+   a 2-wire 4-20 mA transmitter and a 0-10 V cross-check sensor: broken loop, missing
+   loop supply, 0-10 V sensor on a current input, 0-20 versus 4-20 mA, zero offset.
 5. **TROUBLESHOOT** labs start from a fault report. Reproduce the symptom, collect
    evidence (inputs, outputs, LEDs, measurements, diagnostics, ping, drive display),
    submit a diagnosis, repair and verify. Labs: Stop contact replaced by NO, inverted

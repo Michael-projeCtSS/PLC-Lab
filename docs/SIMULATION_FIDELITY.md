@@ -54,6 +54,13 @@ parameters); deceleration is immediate.
   engineering units), NE 43 transmitter saturation at 3.8/20.5 mA, fixed digital
   thresholds, diagnostic texts.
 - **Not modeled**: module parameter sets of real products, hot swap, firmware versions.
+- **Current loop power (generic model)**: a level transmitter is 2-wire (loop-powered) or
+  4-wire (separately powered). A current input channel either supplies the loop
+  (`loopSupply`, default) or is passive. A 2-wire transmitter conducts only on a supplying
+  input and a 4-wire transmitter only on a passive one; the wrong combination carries
+  0 mA. Real modules differ (separate 2-/4-wire terminals, external loop supplies, and
+  possible damage when an active source meets a supplied input); the knowledge pack labels
+  this as generic and points to the module manuals.
 
 ## Commissioning checklist
 
