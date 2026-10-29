@@ -263,6 +263,7 @@ pub fn create(
                 .starter_station
                 .clone()
                 .unwrap_or_else(|| scene.reference_station.clone()),
+            downloaded_station: None,
             programs: vec![ProgramDocument {
                 id: identifier("main", "program")?,
                 name: "Main".into(),
@@ -307,6 +308,7 @@ pub fn create(
             platform: identifier(&platform, "platform")?,
             scene: scene.id.clone(),
             station: scene.reference_station.clone(),
+            downloaded_station: None,
             programs: vec![ProgramDocument {
                 id: identifier("main", "program")?,
                 name: "Main".into(),

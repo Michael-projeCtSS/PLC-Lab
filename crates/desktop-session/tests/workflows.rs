@@ -839,7 +839,7 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
     )
     .unwrap();
     // The file itself is the current format and stores every module's stable id.
-    assert_eq!(future["formatVersion"], serde_json::json!(3));
+    assert_eq!(future["formatVersion"], serde_json::json!(4));
     let ids: Vec<&str> = future["station"]["modules"]
         .as_array()
         .unwrap()
@@ -1097,6 +1097,108 @@ fn project_plc_and_physical_station_stay_three_layers() {
         channel_signal(&loaded.signals, "io.ao-r0s5.ch0"),
         (ao_signal, "R0/S7/CH0".to_owned())
     );
+}
+
+#[test]
+fn saved_and_downloaded_configurations_survive_reopen_and_restart() {
+    let f = fixture("saved-downloaded");
+    let (project, w) = open(
+        &f.app,
+        ProjectCreateRequest {
+            contract_version: V,
+            name: "Saved and downloaded".into(),
+            exercise: None,
+            scene: Some("scene.hardware-station".into()),
+            platform: None,
+        },
+    );
+    let reopen = |app: &DesktopApp| {
+        let w = app
+            .open_workspace(WorkspaceOpenRequest {
+                contract_version: V,
+                project_id: project.id.clone(),
+            })
+            .unwrap();
+        let request = WorkspaceRequest {
+            contract_version: V,
+            workspace_id: w.workspace_id,
+        };
+        let hw = app.hardware(request.clone()).unwrap();
+        app.close_workspace(request).unwrap();
+        let saved = app
+            .project(IdRequest {
+                contract_version: V,
+                id: project.id.clone(),
+            })
+            .unwrap();
+        (saved.station, hw.station)
+    };
+    // Save an edit without downloading it: the analog output module moves to slot 7.
+    let mut edited = project.clone();
+    let ao = edited
+        .station
+        .modules
+        .iter_mut()
+        .find(|m| m.id == "ao-r0s5")
+        .unwrap();
+    ao.position.slot = 7;
+    for mapping in edited.station.io_map.iter_mut() {
+        if mapping.channel.slot == 5 {
+            mapping.channel.slot = 7;
+        }
+    }
+    edited.station.modules.sort_by_key(|m| m.position.slot);
+    f.app
+        .save_project(ProjectSaveRequest {
+            contract_version: V,
+            project: edited.clone(),
+        })
+        .unwrap();
+    f.app
+        .close_workspace(WorkspaceRequest {
+            contract_version: V,
+            workspace_id: w.workspace_id,
+        })
+        .unwrap();
+    // Reopened: the project expects slot 7, the PLC still has what was downloaded.
+    let (expected, plc) = reopen(&f.app);
+    assert_eq!(expected, edited.station);
+    assert_eq!(
+        plc, project.station,
+        "a saved edit is not downloaded by reopening"
+    );
+    // Download it, then reopen in a restarted application: the PLC has the new one.
+    let w = f
+        .app
+        .open_workspace(WorkspaceOpenRequest {
+            contract_version: V,
+            project_id: project.id.clone(),
+        })
+        .unwrap();
+    load(
+        &f.app,
+        w.workspace_id,
+        &project.programs[0].source,
+        1,
+        Some(edited.station.clone()),
+    );
+    f.app
+        .close_workspace(WorkspaceRequest {
+            contract_version: V,
+            workspace_id: w.workspace_id,
+        })
+        .unwrap();
+    let restarted = DesktopApp::new(paths(&f.dir), info());
+    let (expected, plc) = reopen(&restarted);
+    assert_eq!((expected, plc), (edited.station.clone(), edited.station));
+    let file = restarted
+        .export_project(IdRequest {
+            contract_version: V,
+            id: project.id.clone(),
+        })
+        .unwrap()
+        .text;
+    assert!(file.contains("\"downloadedStation\""), "{file}");
 }
 
 #[test]

@@ -110,14 +110,18 @@ fn session_config(project: &Project) -> SessionConfig {
 impl Workspace {
     pub fn open(
         id: u64,
-        project: Project,
+        mut project: Project,
         scene: SceneDefinition,
         profile: PlatformProfile,
         exercise: Option<ExerciseDefinition>,
     ) -> AppResult<Self> {
+        // The PLC starts with the configuration last downloaded, not with saved edits that
+        // were never downloaded; from now on the project records it explicitly.
+        let plc_station = project.plc_station().clone();
+        project.downloaded_station = Some(plc_station.clone());
         let mut session = LabSession::new(
             scene.clone(),
-            project.station.clone(),
+            plc_station,
             profile.clone(),
             session_config(&project),
         )?;
@@ -228,7 +232,10 @@ impl Workspace {
                 if let Some(main) = self.project.main_program_mut() {
                     main.source = source.to_owned();
                 }
+                // A downloaded configuration is what the PLC has and what the project
+                // expects from now on.
                 if let Some(station) = station {
+                    self.project.downloaded_station = Some(station.clone());
                     self.project.station = station;
                 }
                 let issues = report.warnings.iter().map(binding_issue).collect();

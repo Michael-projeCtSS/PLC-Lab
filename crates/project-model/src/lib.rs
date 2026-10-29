@@ -15,8 +15,9 @@ use std::{
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Project file format. 2: configured modules carry a stable `id`. 3: watch entries name
-/// I/O channels by module id (`io.<moduleId>.ch<n>`) instead of position.
-pub const FORMAT_VERSION: u32 = 3;
+/// I/O channels by module id (`io.<moduleId>.ch<n>`) instead of position. 4: the station
+/// configuration last downloaded into the PLC is stored apart from the expected one.
+pub const FORMAT_VERSION: u32 = 4;
 /// Progress file format, versioned independently of projects.
 pub const PROGRESS_FORMAT_VERSION: u32 = 1;
 /// Recent-projects list format, versioned independently of projects.
@@ -116,7 +117,13 @@ pub struct Project {
     pub kind: ProjectKind,
     pub platform: Identifier,
     pub scene: Identifier,
+    /// The station configuration the project expects (edited and saved offline).
     pub station: StationConfig,
+    /// The station configuration last downloaded into the PLC. Reopening the project
+    /// starts the PLC with it, so a saved but not downloaded edit stays pending; `None`
+    /// (no download recorded yet) means the PLC starts with `station`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub downloaded_station: Option<StationConfig>,
     pub programs: Vec<ProgramDocument>,
     #[serde(default)]
     pub watch: Vec<String>,
@@ -168,7 +175,17 @@ impl Project {
                 "cycle time must be 10..1000 ms and speed 10..1000 %".into(),
             ));
         }
-        validate_station(&self.station).map_err(|e| ProjectError::Invalid(e.to_string()))
+        validate_station(&self.station).map_err(|e| ProjectError::Invalid(e.to_string()))?;
+        if let Some(downloaded) = &self.downloaded_station {
+            validate_station(downloaded).map_err(|e| {
+                ProjectError::Invalid(format!("the downloaded station configuration: {e}"))
+            })?;
+        }
+        Ok(())
+    }
+    /// The station configuration the PLC starts with when the project is opened.
+    pub fn plc_station(&self) -> &StationConfig {
+        self.downloaded_station.as_ref().unwrap_or(&self.station)
     }
 }
 
@@ -192,6 +209,9 @@ pub fn parse(text: &str) -> Result<Project, ProjectError> {
     }
     if version <= 2 {
         value = migrate_v2(value)?;
+    }
+    if version <= 3 {
+        value = migrate_v3(value)?;
     }
     let project: Project =
         serde_json::from_value(value).map_err(|e| ProjectError::Parse(e.to_string()))?;
@@ -263,6 +283,16 @@ fn migrate_v2(mut value: serde_json::Value) -> Result<serde_json::Value, Project
         }
     }
     object.insert("formatVersion".into(), serde_json::json!(3));
+    Ok(value)
+}
+
+/// Format 3 recorded no downloaded configuration: such a project opens with the PLC holding
+/// the expected configuration, as before.
+fn migrate_v3(mut value: serde_json::Value) -> Result<serde_json::Value, ProjectError> {
+    value
+        .as_object_mut()
+        .ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?
+        .insert("formatVersion".into(), serde_json::json!(4));
     Ok(value)
 }
 
@@ -676,10 +706,10 @@ mod tests {
             "process.tank.levelMl",
         ];
         let p = parse(&v2(&legacy)).unwrap();
-        assert_eq!(p.format_version, 3);
+        assert_eq!(p.format_version, FORMAT_VERSION);
         assert_eq!(p.watch, mapped);
         let back = parse(&to_json(&p).unwrap()).unwrap();
-        assert_eq!(back, p, "format 3 round-trips");
+        assert_eq!(back, p, "the current format round-trips");
         // No module at that position, or no such channel: refused, never guessed.
         for stale in ["io.R0/S9/CH0", "io.R0/S1/CH8"] {
             let refused = parse(&v2(&[stale])).unwrap_err();
@@ -688,6 +718,28 @@ mod tests {
                 "{refused}"
             );
         }
+    }
+
+    #[test]
+    fn the_downloaded_station_is_kept_apart_from_the_expected_one() {
+        // Format 3 had none: the PLC starts with the expected configuration.
+        let mut p = parse(&project_json(3)).unwrap();
+        assert_eq!(p.downloaded_station, None);
+        assert_eq!(p.plc_station(), &p.station);
+        assert!(!to_json(&p).unwrap().contains("downloadedStation"));
+        // A saved edit after a download: the PLC keeps what was downloaded.
+        let downloaded = p.station.clone();
+        p.downloaded_station = Some(downloaded.clone());
+        p.station.name = "PLC_2".into();
+        let back = parse(&to_json(&p).unwrap()).unwrap();
+        assert_eq!(back, p, "both configurations round-trip");
+        assert_eq!(back.plc_station(), &downloaded);
+        assert_eq!(back.station.name, "PLC_2");
+        // An invalid downloaded configuration is refused like the expected one.
+        let text = to_json(&p).unwrap();
+        let mut broken: serde_json::Value = serde_json::from_str(&text).unwrap();
+        broken["downloadedStation"]["cpu"] = serde_json::json!("di8.24vdc.sink");
+        assert!(parse(&broken.to_string()).is_err());
     }
 
     #[test]
@@ -705,8 +757,8 @@ mod tests {
             "PROGRAM Old END_PROGRAM"
         );
         assert_eq!(
-            parse(&project_json(4)),
-            Err(ProjectError::UnsupportedVersion(4))
+            parse(&project_json(5)),
+            Err(ProjectError::UnsupportedVersion(5))
         );
         assert!(parse(&project_json(1).replace("\"name\":\"My lab\"", "\"name\":\"\"")).is_err());
         assert!(parse("{not json").is_err());
