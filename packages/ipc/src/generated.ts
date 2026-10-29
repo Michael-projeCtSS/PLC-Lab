@@ -361,9 +361,17 @@ severity: "info" | "warning" | "error", text: string, source: string | null, };
 
 export type EventsPageDto = { events: Array<EventDto>, gap: boolean, dropped: ExactU64, latest: ExactU64 | null, };
 
-export type ChannelViewDto = { channel: number, mode: string, tag: string | null, address: string, value: SignalValueDto | null, quality: string | null, output: boolean | null, led: boolean, };
+export type ChannelViewDto = { channel: number, 
+/**
+ * Stable channel identity `<moduleId>.ch<n>` (configured modules only).
+ */
+channelId: string | null, mode: string, tag: string | null, address: string, value: SignalValueDto | null, quality: string | null, output: boolean | null, led: boolean, };
 
-export type ModuleViewDto = { position: SlotRefDto, configured: string | null, installed: string | null, configuredName: string | null, installedName: string | null, product: string | null, 
+export type ModuleViewDto = { 
+/**
+ * Stable id of the configured module at this position.
+ */
+moduleId: string | null, position: SlotRefDto, configured: string | null, installed: string | null, configuredName: string | null, installedName: string | null, product: string | null, 
 /**
  * "OK" | "MISSING" | "MISMATCH" | "NO_FIELD_POWER" | "NO_MODULE_POWER" | "UNCONFIGURED"
  */
@@ -403,7 +411,33 @@ export type CommissioningDto = { categories: Array<CheckCategoryDto>,
  */
 feedbackWaitS: number, };
 
-export type HardwareDto = { station: StationDto, cpu: string, cpuName: string, cpuProduct: string | null, cpuLeds: Array<LedDto>, modules: Array<ModuleViewDto>, diagnostics: Array<DiagnosticEntryDto>, catalog: Array<ModuleTypeDto>, };
+export type HardwareFindingDto = { 
+/**
+ * "MODULE_MISSING" | "UNEXPECTED_MODULE" | "WRONG_MODULE_TYPE" | "WRONG_SLOT" |
+ * "MODULE_POWER_MISSING" | "FIELD_POWER_MISSING" | "CHANNEL_MODE_MISMATCH" |
+ * "LOOP_SUPPLY_MISMATCH" | "ADDRESS_OVERLAP" | "SIGNAL_BINDING_MISMATCH"
+ */
+category: string, 
+/**
+ * "warning" | "error"
+ */
+severity: "warning" | "error", slot: SlotRefDto | null, channel: ChannelRefDto | null, moduleId: string | null, expected: string | null, detected: string | null, message: string, };
+
+export type SignalMapRowDto = { tag: string, channel: ChannelRefDto, channelId: string | null, address: string, value: SignalValueDto | null, quality: string | null, output: boolean | null, 
+/**
+ * The device and port connected to this channel on the drawing.
+ */
+drawnDevice: string | null, drawnPort: string | null, 
+/**
+ * The drawn device's own state.
+ */
+deviceState: string | null, };
+
+export type HardwareDto = { station: StationDto, cpu: string, cpuName: string, cpuProduct: string | null, cpuLeds: Array<LedDto>, modules: Array<ModuleViewDto>, diagnostics: Array<DiagnosticEntryDto>, catalog: Array<ModuleTypeDto>, 
+/**
+ * Configured against actual against drawing, derived by the backend.
+ */
+findings: Array<HardwareFindingDto>, signals: Array<SignalMapRowDto>, };
 
 export type ScanViewDto = { id: string, server: string, unitId: number, status: string, connected: boolean, requests: ExactU64, responses: ExactU64, timeouts: ExactU64, exceptions: ExactU64, lastRoundTripUs: ExactU64 | null, registers: Array<number>, 
 /**

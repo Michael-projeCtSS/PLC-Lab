@@ -386,6 +386,30 @@ pub fn quality(q: Quality) -> &'static str {
     }
 }
 
+pub fn hardware_finding(f: hardware_model::HardwareFinding) -> HardwareFindingDto {
+    HardwareFindingDto {
+        category: f.category.code().into(),
+        severity: match f.severity {
+            hardware_model::FindingSeverity::Warning => "warning",
+            hardware_model::FindingSeverity::Error => "error",
+        }
+        .into(),
+        slot: f.slot.map(|s| SlotRefDto {
+            rack: s.rack,
+            slot: s.slot,
+        }),
+        channel: f.channel.map(|c| ChannelRefDto {
+            rack: c.rack,
+            slot: c.slot,
+            channel: c.channel,
+        }),
+        module_id: f.module_id,
+        expected: f.expected,
+        detected: f.detected,
+        message: f.message,
+    }
+}
+
 pub fn module_status(s: ModuleStatus) -> &'static str {
     match s {
         ModuleStatus::Ok => "OK",

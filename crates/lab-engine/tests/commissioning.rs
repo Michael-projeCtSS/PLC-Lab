@@ -180,7 +180,12 @@ fn a_correct_installation_passes_every_check_after_the_io_tests() {
 #[test]
 fn each_installation_fault_shows_where_a_commissioning_engineer_finds_it() {
     let expected: [(&str, &str, CheckState, &str); 6] = [
-        ("power", "io-supply", CheckState::Fault, "no 24 V field"),
+        (
+            "power",
+            "io-supply",
+            CheckState::Fault,
+            "the module answers, but its 24 V field (load) supply is missing",
+        ),
         (
             "inputs",
             "contact-type",
@@ -204,7 +209,7 @@ fn each_installation_fault_shows_where_a_commissioning_engineer_finds_it() {
             "hardware",
             "slot-order",
             CheckState::Fault,
-            "no module found",
+            "which is empty; a Digital input 16 x 24 V DC (sinking) is installed at rack 0 slot 3",
         ),
     ];
     for (index, (category, item, want, text)) in expected.into_iter().enumerate() {
@@ -356,10 +361,18 @@ fn each_analog_fault_shows_in_the_analog_checks() {
         (
             "analog-signal",
             CheckState::Fault,
-            "2-wire transmitter, but",
+            "needs a loop supplied by the input (2-wire), the channel is configured as passive input",
         ),
-        ("analog-signal", CheckState::Fault, "drawn 0-10 V"),
-        ("analog-signal", CheckState::Fault, "drawn 4-20 mA"),
+        (
+            "analog-signal",
+            CheckState::Fault,
+            "configured 4-20 mA, the drawing shows Level sensor LT-204 with a 0-10 V signal",
+        ),
+        (
+            "analog-signal",
+            CheckState::Fault,
+            "configured 0-20 mA, the drawing shows Level transmitter LT-203 with a 4-20 mA signal",
+        ),
         ("scaling", CheckState::Attention, "differs by 10000 ml"),
     ];
     for (index, (item, want, text)) in expected.into_iter().enumerate() {

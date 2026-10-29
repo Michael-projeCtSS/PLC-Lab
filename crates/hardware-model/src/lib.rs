@@ -5,9 +5,11 @@
 
 pub mod address;
 pub mod analog;
+mod comparison;
 mod diagnostics;
 
 pub use analog::{AnalogCondition, AnalogRaw, AnalogReading};
+pub use comparison::{FindingCategory, FindingSeverity, HardwareFinding};
 pub use diagnostics::{
     DiagnosticBuffer, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource,
 };

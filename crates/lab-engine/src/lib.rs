@@ -17,7 +17,9 @@ mod signals;
 pub use assessment::{
     AssessmentError, AssessmentOutcome, AssessmentSetup, assess, interface_problems, run_scenario,
 };
-pub use commissioning::{CheckCategory, CheckItem, CheckState, Checklist, FEEDBACK_WAIT_US};
+pub use commissioning::{
+    CheckCategory, CheckItem, CheckState, Checklist, FEEDBACK_WAIT_US, SignalMapRow,
+};
 pub use error::{BindingIssue, EngineError};
 pub use plc::{BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile};
 pub use queries::{CauseEffect, Change, Effect, HistoryRow, TrendLayer, TrendSeries, VariableRow};

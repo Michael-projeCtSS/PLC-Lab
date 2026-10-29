@@ -1,6 +1,6 @@
 use hardware_model::{
-    ChannelValue, DiagnosticEvent, DiagnosticKind, HardwareFault, Measurement, ModuleStatus,
-    Quality, StationRuntime,
+    ChannelValue, DiagnosticEvent, DiagnosticKind, FindingCategory, HardwareFault, Measurement,
+    ModuleStatus, Quality, StationRuntime,
 };
 use lab_model::{
     hardware::{ChannelMode, ChannelRef, ModuleType, SlotRef, StationConfig},
@@ -568,5 +568,112 @@ fn module_electronics_power_and_field_power_are_different_conditions() {
     assert_eq!(
         bool_at(&mut station, &scene, ch(2, 1)),
         (true, Quality::Good)
+    );
+}
+
+fn categories(station: &StationRuntime, scene: &SceneRuntime) -> Vec<FindingCategory> {
+    station.compare(scene).iter().map(|f| f.category).collect()
+}
+
+#[test]
+fn comparing_project_installation_and_drawing_finds_each_difference() {
+    let (healthy_scene, healthy) = setup();
+    let findings = healthy.compare(&healthy_scene);
+    assert!(findings.is_empty(), "{findings:?}");
+    let s = |slot| SlotRef { rack: 0, slot };
+    let with = |fault: HardwareFault| {
+        let (scene, mut station) = setup();
+        station.apply_fault(fault, WorldTime::ZERO);
+        (scene, station)
+    };
+    let (sc, st) = with(HardwareFault::ModuleMissing(s(2)));
+    assert_eq!(categories(&st, &sc), [FindingCategory::ModuleMissing]);
+    let (sc, st) = with(HardwareFault::WrongModule(s(4), ModuleType::Di8Sinking));
+    let f = st.compare(&sc);
+    assert_eq!(f[0].category, FindingCategory::WrongModuleType);
+    assert_eq!(f[0].module_id.as_deref(), Some("ai-r0s4"));
+    assert_eq!(
+        f[0].detected.as_deref(),
+        Some(ModuleType::Di8Sinking.generic_name())
+    );
+    // A module moved to a free slot is one finding, not a missing plus an unexpected one.
+    let (sc, st) = with(HardwareFault::WrongSlot(s(2), s(7)));
+    assert_eq!(categories(&st, &sc), [FindingCategory::WrongSlot]);
+    let (sc, st) = with(HardwareFault::WrongModule(s(7), ModuleType::Do8));
+    assert_eq!(categories(&st, &sc), [FindingCategory::UnexpectedModule]);
+    let (sc, st) = with(HardwareFault::ModulePowerMissing(s(3)));
+    assert_eq!(categories(&st, &sc), [FindingCategory::ModulePowerMissing]);
+    let (sc, st) = with(HardwareFault::FieldPowerMissing(s(3)));
+    assert_eq!(categories(&st, &sc), [FindingCategory::FieldPowerMissing]);
+
+    // Configuration against the drawing: the transmitter is a 2-wire 4-20 mA device.
+    let configured = |edit: &dyn Fn(&mut StationConfig)| {
+        let scene_def = scene();
+        let mut config = scene_def.reference_station.clone();
+        edit(&mut config);
+        let runtime = SceneRuntime::new(&scene_def, 1).unwrap();
+        let station = StationRuntime::new(
+            config,
+            scene_def.installation.clone(),
+            profile(AnalogRepresentation::S7Nominal27648),
+        )
+        .unwrap();
+        (runtime, station)
+    };
+    let (sc, st) = configured(&|c| {
+        let m = c
+            .modules
+            .iter_mut()
+            .find(|m| m.module == ModuleType::Ai4)
+            .unwrap();
+        m.channels[0].mode = ChannelMode::Voltage0To10V;
+    });
+    assert_eq!(categories(&st, &sc), [FindingCategory::ChannelModeMismatch]);
+    let (sc, st) = configured(&|c| {
+        let m = c
+            .modules
+            .iter_mut()
+            .find(|m| m.module == ModuleType::Ai4)
+            .unwrap();
+        m.channels[0].loop_supply = false;
+    });
+    assert_eq!(categories(&st, &sc), [FindingCategory::LoopSupplyMismatch]);
+    let (sc, st) = configured(&|c| {
+        let m = c
+            .modules
+            .iter_mut()
+            .find(|m| m.module == ModuleType::Do8)
+            .unwrap();
+        m.start_address = 64;
+        let ai = c
+            .modules
+            .iter_mut()
+            .find(|m| m.module == ModuleType::Ao2)
+            .unwrap();
+        ai.start_address = 64;
+    });
+    assert_eq!(categories(&st, &sc), [FindingCategory::AddressOverlap]);
+    let (sc, st) = configured(&|c| {
+        // Validation already refuses duplicate tags; a tag on a disabled channel passes it.
+        let ai = c
+            .modules
+            .iter_mut()
+            .find(|m| m.module == ModuleType::Ai4)
+            .unwrap();
+        ai.channels.push(lab_model::hardware::ChannelConfig {
+            channel: 1,
+            mode: ChannelMode::Disabled,
+            diagnostics: false,
+            stop_behavior: Default::default(),
+            loop_supply: true,
+        });
+        c.io_map.push(lab_model::hardware::IoMapping {
+            channel: ch(4, 1),
+            tag: lab_model::ids::TagName::new("Spare").unwrap(),
+        });
+    });
+    assert_eq!(
+        categories(&st, &sc),
+        [FindingCategory::SignalBindingMismatch]
     );
 }

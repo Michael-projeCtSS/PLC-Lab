@@ -616,6 +616,7 @@ export const hardware = obj<G.HardwareDto>({
   cpuLeds: arr(led),
   modules: arr(
     obj<G.ModuleViewDto>({
+      moduleId: nullable(str),
       position: slotRef,
       configured: nullable(str),
       installed: nullable(str),
@@ -633,6 +634,7 @@ export const hardware = obj<G.HardwareDto>({
       statusLed: str,
       channels: arr(
         obj<G.ChannelViewDto>({
+          channelId: nullable(str),
           channel: u8,
           mode: str,
           tag: nullable(str),
@@ -662,6 +664,45 @@ export const hardware = obj<G.HardwareDto>({
       channels: u8,
       class: str,
     }),
+  ),
+  findings: arr(
+    obj<G.HardwareFindingDto>({
+      category: literal(
+        "MODULE_MISSING",
+        "UNEXPECTED_MODULE",
+        "WRONG_MODULE_TYPE",
+        "WRONG_SLOT",
+        "MODULE_POWER_MISSING",
+        "FIELD_POWER_MISSING",
+        "CHANNEL_MODE_MISMATCH",
+        "LOOP_SUPPLY_MISMATCH",
+        "ADDRESS_OVERLAP",
+        "SIGNAL_BINDING_MISMATCH",
+      ),
+      severity: literal("warning", "error"),
+      slot: nullable(slotRef),
+      channel: nullable(channelRef),
+      moduleId: nullable(str),
+      expected: nullable(str),
+      detected: nullable(str),
+      message: str,
+    }),
+    2_000,
+  ),
+  signals: arr(
+    obj<G.SignalMapRowDto>({
+      tag: str,
+      channel: channelRef,
+      channelId: nullable(str),
+      address: str,
+      value: nullable(signalValue),
+      quality: nullable(str),
+      output: nullable(bool),
+      drawnDevice: nullable(str),
+      drawnPort: nullable(str),
+      deviceState: nullable(str),
+    }),
+    4_096,
   ),
 });
 const checkState = literal(

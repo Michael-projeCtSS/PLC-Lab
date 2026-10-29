@@ -7,6 +7,21 @@ use lab_model::{
     profile::AddressingScheme,
 };
 
+/// The process image bytes a module occupies in a byte-oriented image: (input image?,
+/// byte range). Digital modules use one bit per channel, analog modules one word.
+pub fn image_range(module: ModuleType, start: u16) -> Option<(bool, std::ops::Range<u32>)> {
+    let channels = u32::from(module.channel_count());
+    let start = u32::from(start);
+    let (input, bytes) = match module.class() {
+        ModuleClass::DigitalInput { .. } => (true, channels.div_ceil(8)),
+        ModuleClass::DigitalOutput { .. } => (false, channels.div_ceil(8)),
+        ModuleClass::AnalogInput { .. } => (true, 2 * channels),
+        ModuleClass::AnalogOutput { .. } => (false, 2 * channels),
+        _ => return None,
+    };
+    Some((input, start..start + bytes))
+}
+
 pub fn format(
     scheme: AddressingScheme,
     module: ModuleType,

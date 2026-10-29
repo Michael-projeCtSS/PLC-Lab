@@ -8,9 +8,12 @@
 //! wiring and devices) where a commissioning engineer would compare it.
 
 use crate::{plc::PlcMode, session::LabSession};
-use hardware_model::{ChannelValue, DiagnosticKind, LedState, Measurement, ModuleStatus, Quality};
+use hardware_model::{
+    ChannelValue, DiagnosticKind, FindingCategory, FindingSeverity, HardwareFinding, LedState,
+    Measurement, Quality,
+};
 use lab_model::{
-    hardware::{ChannelMode, ChannelRef, ModuleClass, SlotRef},
+    hardware::{ChannelRef, ModuleClass, SlotRef},
     scene::{AnalogSignal, ComponentKind, ContactType, PortKind, PortRole, TransmitterWiring},
 };
 use network_core::ScanStatus;
@@ -189,16 +192,6 @@ fn signal_text(s: AnalogSignal) -> &'static str {
         AnalogSignal::Current4To20mA => "4-20 mA",
         AnalogSignal::Current0To20mA => "0-20 mA",
         AnalogSignal::Voltage0To10V => "0-10 V",
-    }
-}
-
-fn mode_text(m: ChannelMode) -> &'static str {
-    match m {
-        ChannelMode::Disabled => "disabled",
-        ChannelMode::Digital => "digital",
-        ChannelMode::Current4To20mA => "4-20 mA",
-        ChannelMode::Current0To20mA => "0-20 mA",
-        ChannelMode::Voltage0To10V => "0-10 V",
     }
 }
 
@@ -419,36 +412,46 @@ impl LabSession {
             .collect()
     }
 
+    /// Field supply findings and the number of I/O modules concerned.
     fn io_modules(&self, outputs_only: bool) -> (Vec<String>, usize) {
-        let mut problems = Vec::new();
-        let mut count = 0;
-        for view in self.station.module_views() {
-            let Some(module) = view.installed else {
-                continue;
-            };
-            let relevant = match module.class() {
-                ModuleClass::DigitalOutput { .. } | ModuleClass::AnalogOutput { .. } => true,
-                ModuleClass::DigitalInput { .. } | ModuleClass::AnalogInput { .. } => !outputs_only,
-                _ => false,
-            };
-            if !relevant {
-                continue;
-            }
-            count += 1;
-            if view.status == ModuleStatus::NoFieldPower {
-                problems.push(format!(
-                    "{} at {}: no 24 V field (load) supply",
-                    module.generic_name(),
-                    slot_text(view.position)
-                ));
-            }
-        }
-        (problems, count)
+        let relevant = |class: ModuleClass| match class {
+            ModuleClass::DigitalOutput { .. } | ModuleClass::AnalogOutput { .. } => true,
+            ModuleClass::DigitalInput { .. } | ModuleClass::AnalogInput { .. } => !outputs_only,
+            _ => false,
+        };
+        let modules = self
+            .station
+            .configuration()
+            .modules
+            .iter()
+            .filter(|m| relevant(m.module.class()))
+            .count();
+        let problems = self
+            .station
+            .compare(&self.scene)
+            .into_iter()
+            .filter(|f| f.category == FindingCategory::FieldPowerMissing)
+            .filter(|f| {
+                f.module_id
+                    .as_deref()
+                    .and_then(|id| self.station.configuration().module_by_id(id))
+                    .is_some_and(|m| relevant(m.module.class()))
+            })
+            .map(|f| f.message)
+            .collect();
+        (problems, modules)
     }
 
     fn power(&self) -> CheckCategory {
         let cpu = self.scene_def.installation.cpu.generic_name();
         let (supply, modules) = self.io_modules(false);
+        let electronics: Vec<String> = self
+            .station
+            .compare(&self.scene)
+            .into_iter()
+            .filter(|f| f.category == FindingCategory::ModulePowerMissing)
+            .map(|f| f.message)
+            .collect();
         let drives = self.drives_present();
         let drive_supply = if drives.is_empty() {
             item(
@@ -529,6 +532,21 @@ impl LabSession {
                     "Hardware view: CPU status LEDs.",
                 ),
                 item(
+                    "module-power",
+                    "Module electronics supply",
+                    if electronics.is_empty() {
+                        CheckState::Ok
+                    } else {
+                        CheckState::Fault
+                    },
+                    if electronics.is_empty() {
+                        vec!["Every configured module answers the CPU".into()]
+                    } else {
+                        electronics
+                    },
+                    "Hardware view: module status LEDs; a module without electronics supply does not answer.",
+                ),
+                item(
                     "io-supply",
                     "I/O field supply",
                     if supply.is_empty() {
@@ -553,35 +571,37 @@ impl LabSession {
         let configured = self.station.configuration().cpu;
         let installed = self.scene_def.installation.cpu;
         let views = self.station.module_views();
-        let mut types = Vec::new();
-        let mut slots = Vec::new();
-        let mut unconfigured = Vec::new();
+        let findings = self.station.compare(&self.scene);
+        let of = |categories: &[FindingCategory]| -> Vec<&HardwareFinding> {
+            findings
+                .iter()
+                .filter(|f| categories.contains(&f.category))
+                .collect()
+        };
+        let texts = |list: &[&HardwareFinding]| -> Vec<String> {
+            list.iter().map(|f| f.message.clone()).collect()
+        };
+        let types = texts(&of(&[FindingCategory::WrongModuleType]));
+        let slot_findings = of(&[
+            FindingCategory::ModuleMissing,
+            FindingCategory::WrongSlot,
+            FindingCategory::ModulePowerMissing,
+            FindingCategory::UnexpectedModule,
+        ]);
+        let slots_fault = slot_findings
+            .iter()
+            .any(|f| f.severity == FindingSeverity::Error);
+        let slots = texts(&slot_findings);
+        let consistency = texts(&of(&[
+            FindingCategory::AddressOverlap,
+            FindingCategory::SignalBindingMismatch,
+        ]));
         let mut leds = Vec::new();
         for view in &views {
             let name = view
                 .configured
                 .or(view.installed)
                 .map_or("module", |m| m.generic_name());
-            match view.status {
-                ModuleStatus::Mismatch(actual) => types.push(format!(
-                    "{}: project {name}, installed {}",
-                    slot_text(view.position),
-                    actual.generic_name()
-                )),
-                ModuleStatus::Missing => slots.push(format!(
-                    "{}: {name} configured, no module found",
-                    slot_text(view.position)
-                )),
-                ModuleStatus::Unconfigured => unconfigured.push(format!(
-                    "{}: {name} installed but not in the project",
-                    slot_text(view.position)
-                )),
-                ModuleStatus::NoModulePower => slots.push(format!(
-                    "{}: {name} installed but not answering (status LEDs dark)",
-                    slot_text(view.position)
-                )),
-                ModuleStatus::Ok | ModuleStatus::NoFieldPower => {}
-            }
             if view.status_led != LedState::Green {
                 leds.push(format!(
                     "{} {name}: status LED {}",
@@ -678,24 +698,38 @@ impl LabSession {
                     } else {
                         types.clone()
                     },
-                    "Hardware view: configured vs installed module.",
+                    "Hardware view (Compare): configured against detected modules.",
                 ),
                 item(
                     "slot-order",
-                    "Slot order",
-                    if !slots.is_empty() {
-                        CheckState::Fault
-                    } else if !unconfigured.is_empty() {
-                        CheckState::Attention
-                    } else {
+                    "Modules present in their slots",
+                    if slots.is_empty() {
                         CheckState::Ok
+                    } else if slots_fault {
+                        CheckState::Fault
+                    } else {
+                        CheckState::Attention
                     },
-                    if slots.is_empty() && unconfigured.is_empty() {
+                    if slots.is_empty() {
                         vec![format!("{} module position(s) as configured", views.len())]
                     } else {
-                        slots.iter().chain(&unconfigured).cloned().collect()
+                        slots
                     },
-                    "Hardware view: which module sits in which slot.",
+                    "Hardware view (Compare): configured against detected modules.",
+                ),
+                item(
+                    "configuration",
+                    "Addresses and I/O mapping",
+                    state(&consistency, CheckState::Fault),
+                    if consistency.is_empty() {
+                        vec![
+                            "No overlapping addresses; every mapping points to a usable channel"
+                                .into(),
+                        ]
+                    } else {
+                        consistency.clone()
+                    },
+                    "Hardware view: addresses and the signal mapping.",
                 ),
                 item(
                     "module-status",
@@ -1066,6 +1100,7 @@ impl LabSession {
     /// Analog inputs wired to transmitters: signal type and loop against the drawing, the
     /// raw value and its condition, and the transmitter value against the sight glass.
     fn analog_checks(&self) -> AnalogChecks {
+        let findings = self.station.compare(&self.scene);
         let mut signal = (Vec::new(), Vec::new());
         let mut raw = (Vec::new(), Vec::new());
         let mut scaling = (Vec::new(), Vec::new());
@@ -1086,43 +1121,21 @@ impl LabSession {
             };
             let label = &definition.label;
             let name = self.channel_name(wire.channel);
-            let config = self.station.configuration().channel_config(wire.channel);
-            let mode = config.map_or(ChannelMode::Disabled, |c| c.mode);
-            let supplied = config.is_none_or(|c| c.loop_supply);
             let current = matches!(
                 drawn,
                 AnalogSignal::Current4To20mA | AnalogSignal::Current0To20mA
             );
-            // Signal type and loop: the configuration against the drawing.
-            let expected_mode = match drawn {
-                AnalogSignal::Current4To20mA => ChannelMode::Current4To20mA,
-                AnalogSignal::Current0To20mA => ChannelMode::Current0To20mA,
-                AnalogSignal::Voltage0To10V => ChannelMode::Voltage0To10V,
-            };
+            // Signal type and loop: the station comparison against the drawing.
             let two_wire = *wiring == TransmitterWiring::TwoWire;
-            let (state, finding) = if mode != expected_mode {
-                (
-                    CheckState::Fault,
-                    format!(
-                        "{label}: drawn {}, {name} configured {}",
-                        signal_text(*drawn),
-                        mode_text(mode)
-                    ),
-                )
-            } else if current && two_wire && !supplied {
-                (
-                    CheckState::Fault,
-                    format!(
-                        "{label}: 2-wire transmitter, but {name} is a passive input: nothing supplies the loop"
-                    ),
-                )
-            } else if current && !two_wire && supplied {
-                (
-                    CheckState::Fault,
-                    format!(
-                        "{label}: 4-wire transmitter on an input that supplies the loop (needs a passive input)"
-                    ),
-                )
+            let mismatch = findings.iter().find(|f| {
+                f.channel == Some(wire.channel)
+                    && matches!(
+                        f.category,
+                        FindingCategory::ChannelModeMismatch | FindingCategory::LoopSupplyMismatch
+                    )
+            });
+            let (state, finding) = if let Some(f) = mismatch {
+                (CheckState::Fault, f.message.clone())
             } else {
                 let power = match (current, two_wire) {
                     (true, true) => "2-wire, loop supplied by the input",
@@ -1791,6 +1804,104 @@ impl LabSession {
                     "Process view and Diagnostics: alarm conditions.",
                 ),
             ],
+        }
+    }
+}
+
+/// One mapped PLC signal followed through the installation: the symbol, its configured
+/// channel (stable id and address), what the channel reads or drives, and the device the
+/// drawing connects to that channel with that device's own state.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SignalMapRow {
+    pub tag: String,
+    pub channel: ChannelRef,
+    /// `<moduleId>.ch<n>`, `None` where no module is configured.
+    pub channel_id: Option<String>,
+    pub address: String,
+    pub reading: Option<hardware_model::ChannelReading>,
+    pub output: Option<bool>,
+    /// The device and port connected to this channel on the drawing.
+    pub drawn_device: Option<String>,
+    pub drawn_port: Option<String>,
+    /// What the drawn device does right now (actuated, commanded, contact closed, signal).
+    pub device_state: Option<String>,
+}
+
+impl LabSession {
+    /// The configured I/O mappings with their evidence, in mapping order.
+    pub fn signal_map(&self) -> Vec<SignalMapRow> {
+        let config = self.station.configuration();
+        config
+            .io_map
+            .iter()
+            .map(|mapping| {
+                let wire = self
+                    .scene_def
+                    .installation
+                    .wiring
+                    .iter()
+                    .find(|w| w.channel == mapping.channel);
+                let device = wire.and_then(|w| {
+                    let index = self.scene.index_of_str(w.component.as_str()).ok()?;
+                    Some((index, w))
+                });
+                SignalMapRow {
+                    tag: mapping.tag.to_string(),
+                    channel: mapping.channel,
+                    channel_id: config.channel_id(mapping.channel),
+                    address: self.channel_address(mapping.channel),
+                    reading: self.station.reading(mapping.channel),
+                    output: self.station.output(mapping.channel),
+                    drawn_device: device.map(|(i, _)| self.scene_def.components[i].label.clone()),
+                    drawn_port: wire.map(|w| w.port.clone()),
+                    device_state: device.map(|(i, w)| self.device_state(i, &w.port)),
+                }
+            })
+            .collect()
+    }
+
+    /// A device's own state at one of its ports, as seen at the device.
+    fn device_state(&self, index: usize, port: &str) -> String {
+        let kind = &self.scene_def.components[index].kind;
+        match kind.port_role(port) {
+            Some(PortRole::Sensor) => {
+                let actuated =
+                    match actuation(kind, port).and_then(|q| self.scene.quantity(index, q)) {
+                        Some(Quantity::Integer(p)) => port_position(kind, port) == Some(p),
+                        other => is_on(other),
+                    };
+                if actuated { "actuated" } else { "not actuated" }.into()
+            }
+            Some(PortRole::Command) => {
+                let on = kind
+                    .command_quantity(port)
+                    .is_some_and(|q| is_on(self.scene.quantity(index, q)));
+                if on { "energized" } else { "not energized" }.into()
+            }
+            Some(PortRole::Feedback | PortRole::Status) => {
+                let closed = self
+                    .scene
+                    .digital_output(index, port)
+                    .is_ok_and(|f| f.conducting);
+                if closed {
+                    "contact closed"
+                } else {
+                    "contact open"
+                }
+                .into()
+            }
+            Some(PortRole::Measurement) => match self.scene.analog_output(index, port) {
+                Ok(f) => match f.unit {
+                    process_simulation::AnalogUnit::Microamp => {
+                        format!("sends {}.{:02} mA", f.value / 1000, (f.value % 1000) / 10)
+                    }
+                    process_simulation::AnalogUnit::Millivolt => {
+                        format!("sends {}.{:02} V", f.value / 1000, (f.value % 1000) / 10)
+                    }
+                },
+                Err(_) => "no signal".into(),
+            },
+            None => "unknown".into(),
         }
     }
 }

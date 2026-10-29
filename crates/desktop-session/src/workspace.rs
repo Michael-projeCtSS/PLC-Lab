@@ -952,6 +952,10 @@ impl Workspace {
                 .module_views()
                 .into_iter()
                 .map(|m| ModuleViewDto {
+                    module_id: station
+                        .configuration()
+                        .module_at(m.position)
+                        .map(|c| c.id.to_string()),
                     position: SlotRefDto {
                         rack: m.position.rack,
                         slot: m.position.slot,
@@ -967,6 +971,13 @@ impl Workspace {
                         .channels
                         .into_iter()
                         .map(|c| ChannelViewDto {
+                            channel_id: station.configuration().channel_id(
+                                lab_model::hardware::ChannelRef {
+                                    rack: m.position.rack,
+                                    slot: m.position.slot,
+                                    channel: c.channel,
+                                },
+                            ),
                             channel: c.channel,
                             mode: convert::channel_mode(c.mode).into(),
                             tag: c.tag,
@@ -989,6 +1000,31 @@ impl Workspace {
                     product: profile.product_name(*t).map(str::to_owned),
                     channels: t.channel_count(),
                     class: convert::module_class(*t).into(),
+                })
+                .collect(),
+            findings: station
+                .compare(s.scene())
+                .into_iter()
+                .map(convert::hardware_finding)
+                .collect(),
+            signals: s
+                .signal_map()
+                .into_iter()
+                .map(|r| SignalMapRowDto {
+                    tag: r.tag,
+                    channel: ChannelRefDto {
+                        rack: r.channel.rack,
+                        slot: r.channel.slot,
+                        channel: r.channel.channel,
+                    },
+                    channel_id: r.channel_id,
+                    address: r.address,
+                    value: r.reading.map(|v| convert::value(channel_value(v.value))),
+                    quality: r.reading.map(|v| convert::quality(v.quality).into()),
+                    output: r.output,
+                    drawn_device: r.drawn_device,
+                    drawn_port: r.drawn_port,
+                    device_state: r.device_state,
                 })
                 .collect(),
         })

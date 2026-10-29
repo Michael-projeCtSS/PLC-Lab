@@ -440,6 +440,8 @@ pub struct EventsPageDto {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ChannelViewDto {
     pub channel: u8,
+    /// Stable channel identity `<moduleId>.ch<n>` (configured modules only).
+    pub channel_id: Option<String>,
     pub mode: String,
     pub tag: Option<String>,
     pub address: String,
@@ -451,6 +453,8 @@ pub struct ChannelViewDto {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ModuleViewDto {
+    /// Stable id of the configured module at this position.
+    pub module_id: Option<String>,
     pub position: SlotRefDto,
     pub configured: Option<String>,
     pub installed: Option<String>,
@@ -516,6 +520,42 @@ pub struct CommissioningDto {
     pub feedback_wait_s: u32,
 }
 
+/// A difference between the project, the installation and the drawing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HardwareFindingDto {
+    /// "MODULE_MISSING" | "UNEXPECTED_MODULE" | "WRONG_MODULE_TYPE" | "WRONG_SLOT" |
+    /// "MODULE_POWER_MISSING" | "FIELD_POWER_MISSING" | "CHANNEL_MODE_MISMATCH" |
+    /// "LOOP_SUPPLY_MISMATCH" | "ADDRESS_OVERLAP" | "SIGNAL_BINDING_MISMATCH"
+    pub category: String,
+    /// "warning" | "error"
+    #[ts(type = "\"warning\" | \"error\"")]
+    pub severity: String,
+    pub slot: Option<SlotRefDto>,
+    pub channel: Option<ChannelRefDto>,
+    pub module_id: Option<String>,
+    pub expected: Option<String>,
+    pub detected: Option<String>,
+    pub message: String,
+}
+/// A mapped PLC signal followed through the installation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SignalMapRowDto {
+    pub tag: String,
+    pub channel: ChannelRefDto,
+    pub channel_id: Option<String>,
+    pub address: String,
+    pub value: Option<SignalValueDto>,
+    pub quality: Option<String>,
+    pub output: Option<bool>,
+    /// The device and port connected to this channel on the drawing.
+    pub drawn_device: Option<String>,
+    pub drawn_port: Option<String>,
+    /// The drawn device's own state.
+    pub device_state: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct HardwareDto {
@@ -527,6 +567,9 @@ pub struct HardwareDto {
     pub modules: Vec<ModuleViewDto>,
     pub diagnostics: Vec<DiagnosticEntryDto>,
     pub catalog: Vec<ModuleTypeDto>,
+    /// Configured against actual against drawing, derived by the backend.
+    pub findings: Vec<HardwareFindingDto>,
+    pub signals: Vec<SignalMapRowDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -755,7 +798,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticEntryDto, ModuleTypeDto,
-        CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
+        CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareFindingDto, SignalMapRowDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,
         CriterionResultDto, DebriefDto, GradeReportDto, ExecutionWakeDto
     )
