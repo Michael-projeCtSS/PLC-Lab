@@ -43,8 +43,7 @@ Tauri host (commands, pacing, trusted paths) ─> packages/ipc (strict validator
 | `project-model`      | `.plclab` project format, migrations, atomic store, learner progress                                           |
 | `app-contract`       | IPC v8 transport DTOs only (serde, ts-rs); generates TypeScript declarations                                   |
 | `desktop-session`    | Application adapter: use cases over engine, library and projects                                               |
-| `plc-lab-desktop`    | Tauri host: lifecycle, trusted paths, command adapters, pacing loop                                            |
-| `plc-lab-launcher`   | Root `Launcher.exe` window and the `PLC Lab.exe` alias (ADR-0026)                                              |
+| `plc-lab-desktop`    | Tauri host, staged as the root `PLC Lab.exe`: lifecycle, trusted paths, command adapters, pacing (ADR-0030)    |
 
 Dependency rules are enforced by `tests/architecture/boundaries.test.mjs` against the real
 `cargo metadata` graph: semantic crates never depend on the contract, adapter, host or
@@ -101,8 +100,9 @@ a drift between Rust and TypeScript fails compilation and the generated-file dri
 
 ## Host
 
-The Tauri host resolves trusted locations: knowledge packs next to the executable
-(`knowledge-packs/`), in the user's application data folder, and (development builds only)
+The Tauri host resolves trusted locations from its own executable, never the working
+directory: knowledge packs in `resources/knowledge-packs/` next to it, in the user's
+application data folder, and (development builds only)
 the repository's `knowledge/` folder; projects and progress in the application data
 folder (overridable with `PLC_LAB_DATA_DIR` for tests and portable use). The web view
 has only event listen/unlisten permissions; there is no shell, filesystem, HTTP or
@@ -129,7 +129,7 @@ simulation); it refreshes on backend wake events with at most one read in flight
 
 ## Distribution
 
-`BUILD_PLC_LAB_RELEASE.bat` runs validation, builds the Tauri release, builds the
-launcher and stages `releases/current/` (application, DLL audit, knowledge pack,
-manifest with SHA-256 hashes) before installing the root `PLC Lab.exe`. See
-[build and run](BUILD_AND_RUN.md) and ADR-0025.
+`BUILD_PLC_LAB_RELEASE.bat` runs validation, builds the Tauri release and stages it as
+the root `PLC Lab.exe`, the one application executable, with `resources/` (knowledge
+pack, `product.json` with the DLL audit and SHA-256 hashes). See
+[build and run](BUILD_AND_RUN.md) and ADR-0030.

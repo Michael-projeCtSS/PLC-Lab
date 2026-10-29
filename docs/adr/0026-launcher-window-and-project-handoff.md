@@ -1,6 +1,7 @@
 # ADR-0026: Launcher window and typed project hand-over
 
-- Status: Accepted for 0.2.0-dev
+- Status: Launcher window superseded by ADR-0030; the typed project hand-over lives on in
+  the application (`PLC Lab.exe "<file.plclab>"`). Previously accepted for 0.2.0-dev.
 - Date: 2026-10-28
 - Amends: ADR-0025 (root launcher)
 

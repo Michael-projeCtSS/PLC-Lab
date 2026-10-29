@@ -1,25 +1,27 @@
 # Human testing on Windows
 
-Routine testing needs no typed commands. Keep the terminal window of a BAT launcher open
+Routine testing needs no typed commands. Keep the terminal window of a BAT helper open
 while testing; it explains what runs and preserves errors.
 
 ## Start the release
 
-Double-click **Launcher.exe** in the repository root and press **Start PLC Lab**
-(**PLC Lab.exe** and **RUN_PLC_LAB.bat** start the release directly). All of them start
-`releases/current/PLC Lab Desktop.exe`, the last successfully staged release, which may be
-older than the current source. If no release exists:
+Double-click **PLC Lab.exe** in the repository root. It is the application itself (the
+last successfully staged release, which may be older than the current source); it reads
+its knowledge pack from `resources\` next to it. **RUN_PLC_LAB.bat** is only a fallback
+that starts `PLC Lab.exe`. If no release exists, the BAT reports:
 
 ```text
-No local PLC Lab release exists. Run BUILD_PLC_LAB_RELEASE.bat first.
+PLC Lab.exe was not found next to this file. Run BUILD_PLC_LAB_RELEASE.bat first.
 ```
 
 ## Build the release
 
 Double-click **BUILD_PLC_LAB_RELEASE.bat**. It runs the complete validation, builds the
-optimized Tauri application, builds the root launcher and stages `releases/current/`
-(application, knowledge pack, manifest with hashes). A failure never reports a new
-release and leaves the previous one untouched. Close running PLC Lab windows first.
+optimized Tauri application and stages it as `PLC Lab.exe` in the repository root with
+its `resources\` folder (knowledge pack, `product.json` with hashes), then checks that the
+distribution contains exactly one application executable. A failure never reports a new
+release. Close running PLC Lab windows first: `PLC Lab.exe` cannot be replaced while it
+runs.
 
 ## Development application
 
@@ -37,8 +39,8 @@ otherwise.
 ## Prerequisites and errors
 
 Node.js 24 with npm, the pinned Rust toolchain, Visual Studio C++ build tools with the
-Windows SDK, and WebView2. Launchers work from any working directory and with spaces in
-paths and never change the system PATH. Never change Windows security settings to force a
+Windows SDK, and WebView2. `PLC Lab.exe` and the BAT helpers work from any working
+directory and with spaces in paths and never change the system PATH. Never change Windows security settings to force a
 blocked executable to run; report the exact error (see
 [development](DEVELOPMENT.md#windows-smart-app-control)).
 

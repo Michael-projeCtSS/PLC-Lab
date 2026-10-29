@@ -1,7 +1,9 @@
 # ADR-0025: Portable release staging and root launcher
 
-- Status: Accepted for the product rebuild; amended by ADR-0026 (`Launcher.exe` is the
-  primary entry point, native message boxes through `winsafe`)
+- Status: Superseded by ADR-0030 (the root `PLC Lab.exe` is now the application itself;
+  there is no launcher and no `releases/current/`). Previously accepted for the product
+  rebuild and amended by ADR-0026 (`Launcher.exe` as the primary entry point, native
+  message boxes through `winsafe`).
 - Date: 2026-10-27
 
 ## Context

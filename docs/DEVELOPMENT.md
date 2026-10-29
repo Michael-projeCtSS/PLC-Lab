@@ -12,8 +12,7 @@
 ## Repository layout
 
 ```
-apps/desktop/            Vite entry and Tauri host (src-tauri)
-apps/launcher/           root Launcher.exe window and PLC Lab.exe alias
+apps/desktop/            Vite entry and Tauri host (src-tauri), staged as the root PLC Lab.exe
 crates/                  Rust core (see docs/PRODUCT_ARCHITECTURE.md)
 languages/st/            Structured Text frontend
 packages/ipc/            generated contract, strict validators, typed client

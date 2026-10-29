@@ -13,24 +13,24 @@ React user interface only displays authoritative state and sends operator action
 
 ## Start PLC Lab
 
-| What you want                       | Do this                                                                |
-| ----------------------------------- | ---------------------------------------------------------------------- |
-| Use the application                 | Double-click **`Launcher.exe`** in this folder, then **Start PLC Lab** |
-| Open a project file                 | **Open Project...** in the launcher, or `Launcher.exe "<file.plclab>"` |
-| Build the release from source first | Double-click `BUILD_PLC_LAB_RELEASE.bat`, then start `Launcher.exe`    |
-| Develop with hot reload             | `RUN_PLC_LAB_DEV.bat` or `npm run dev`                                 |
-| Run every check                     | `RUN_ALL_CHECKS.bat` or `npm run validate`                             |
+| What you want                       | Do this                                                      |
+| ----------------------------------- | ------------------------------------------------------------ |
+| Use the application                 | Double-click **`PLC Lab.exe`** in this folder                |
+| Open a project file                 | `PLC Lab.exe "<file.plclab>"`, or **FREE LAB → Import**      |
+| Build the release from source first | Double-click `BUILD_PLC_LAB_RELEASE.bat`, then `PLC Lab.exe` |
+| Develop with hot reload             | `RUN_PLC_LAB_DEV.bat` or `npm run dev`                       |
+| Run every check                     | `RUN_ALL_CHECKS.bat` or `npm run validate`                   |
 
-`Launcher.exe` is a small native window that shows whether the installation is ready
-(application, knowledge pack, WebView2, project folder), the most recent project and a
-diagnostics report you can copy. It starts the staged release in `releases/current/` and
-closes. It is created by the release build and is not stored in Git. It finds the release
-next to itself, so the folder may be moved or copied anywhere, including paths with
-spaces, as long as `Launcher.exe` and `releases/current/` stay together. `PLC Lab.exe`
-and `RUN_PLC_LAB.bat` start the release directly. Only one PLC Lab window runs at a
-time: starting it again, or opening a project, brings the open window to the front.
+`PLC Lab.exe` is the application itself, not a launcher: double-click it and PLC Lab
+opens. It is created by the release build together with the `resources/` folder it reads
+(knowledge pack and build manifest) and is not stored in Git. It finds its data next to
+itself, so it works from any working directory and the folder may be moved or copied
+anywhere, including paths with spaces, as long as `PLC Lab.exe` and `resources/` stay
+together. `RUN_PLC_LAB.bat` is only an optional fallback that starts `PLC Lab.exe`. Only
+one PLC Lab window runs at a time: starting it again brings the open window to the front,
+and starting it with a project file opens that project in the running window.
 Requirements: Windows 10/11 x64 with the Microsoft Edge WebView2 Runtime (preinstalled on
-current Windows). The executables are not code-signed; Windows Smart App Control or
+current Windows). The executable is not code-signed; Windows Smart App Control or
 SmartScreen may refuse to start a locally built copy. See
 [build and run](docs/BUILD_AND_RUN.md).
 
@@ -100,7 +100,7 @@ retyped; a moved module keeps its id, settings and mappings.
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | Projects (`.plclab`)                 | `%APPDATA%\dev.plclab.desktop\projects\`                                                               |
 | Progress                             | `%APPDATA%\dev.plclab.desktop\progress.json`                                                           |
-| Knowledge packs shipped with the app | `releases\current\knowledge-packs\`                                                                    |
+| Knowledge packs shipped with the app | `resources\knowledge-packs\` next to `PLC Lab.exe`                                                     |
 | Additional knowledge packs you add   | `%APPDATA%\dev.plclab.desktop\knowledge-packs\` (one folder per pack)                                  |
 | Knowledge pack archive               | [`releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip`](releases/knowledge/PLC_Lab_Knowledge_Pack_v1.zip) |
 

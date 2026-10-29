@@ -60,7 +60,7 @@ Rust is the source of DTO definitions. [ts-rs](https://docs.rs/ts-rs/latest/ts_r
 
 The command obtains the desktop version from its Cargo package and the core version from plc-runtime's Cargo package. The latter identifies the reserved core crate version and does not claim a VM is implemented. Serde rejects malformed requests and unknown fields. An unsupported well-formed contractVersion returns APP-IPC-001. No time, source evaluation, or hidden mutable state is involved.
 
-buildContext is derived from the actual Rust debug_assertions build configuration, not UI settings or manually duplicated version values. Debug/native development builds report development; the standard optimized release profile reports release. The required new field advances this transport contract to version 2; old version 1 requests are explicitly rejected. No Canonical PLC IR semantics are involved. Human launchers reuse this command and expose context in the existing Diagnostics detail line.
+buildContext is derived from the actual Rust debug_assertions build configuration, not UI settings or manually duplicated version values. Debug/native development builds report development; the standard optimized release profile reports release. The required new field advances this transport contract to version 2; old version 1 requests are explicitly rejected. No Canonical PLC IR semantics are involved. The Diagnostics detail line shows this context.
 
 ## Failure behavior
 

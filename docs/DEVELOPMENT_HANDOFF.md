@@ -179,12 +179,31 @@ identity requirement was added. All Rust of this checkpoint was compiled and tes
 on hosted CI: the local Rust toolchain could not be reinstalled (`rustc.exe` refused with
 access denied, see Local machine limits).
 
+## Checkpoint 7-A: root single-executable distribution
+
+- The root `PLC Lab.exe` is the Tauri application itself (ADR-0030), staged from
+  `target/release/plc-lab-desktop.exe`; its data lives in `resources/` beside it
+  (`knowledge-packs/` from the verified archive, `product.json` with the DLL audit and
+  SHA-256 of the executable and every file). The distribution has exactly one application
+  executable (`scripts/distribution.mjs`, CI stage `release-distribution`).
+- The application finds `resources/` from `current_exe()`; a release without its
+  knowledge pack, an unusable data folder or a window that cannot be created (WebView2
+  hint) is reported in a native message box (`winsafe`). `PLC Lab.exe "<file.plclab>"`
+  opens a project; a second launch hands it to the running instance.
+- Retired: `apps/launcher` (`Launcher.exe`, the alias), `releases/current/`, the launcher
+  smoke and stages. Staging removes old `Launcher.exe` and `releases/current/`.
+  `RUN_PLC_LAB.bat` only starts `"%~dp0PLC Lab.exe"`.
+- Windows CI: native smoke of the root `PLC Lab.exe` from another working directory, of
+  a copy of the distribution in a folder with spaces, and through the BAT; each checks
+  the distribution, the knowledge source in `resources/`, single instance, the project
+  file hand-over (not through the BAT) and a clean close.
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
-the development machine (os error 4551). It is never disabled or bypassed. The launcher
-release binaries themselves run locally; the full Tauri release build, staging and every
-native smoke test run on hosted Windows CI, which is authoritative. On 2026-10-29 the
+the development machine (os error 4551). It is never disabled or bypassed. The full Tauri
+release build, staging and every native smoke test run on hosted Windows CI, which is
+authoritative. On 2026-10-29 the
 local `rustc.exe` disappeared and reinstalling the pinned toolchain fails because Windows
 refuses to create `rustc.exe` (os error 5, no Defender or Code Integrity event; Norton
 360 is the active antivirus). Until that is resolved by the machine owner, Rust is
@@ -193,7 +212,9 @@ agent.
 
 ## Next checkpoints
 
-1. Checkpoint 7: watch and force, diagnostic buffer (P7, P8).
+1. Checkpoint 7 (after 7-A): B saved-versus-downloaded configuration across reopen,
+   C watch tables, D forcing, E diagnostic buffer, F online variable detail and the
+   native engineering smoke.
 2. Checkpoint 8: alarms and events, startup and restart, sequence diagnostics (P9, P10).
 3. Checkpoint 9: ST depth, multiple POUs and FB instances (P11), then LAD readiness.
 
