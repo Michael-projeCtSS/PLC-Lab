@@ -111,10 +111,7 @@ mod tests {
         );
         let pack = shipped_packs(&dir).join("PLC_Lab_Knowledge_Pack_v1");
         std::fs::create_dir_all(&pack).unwrap();
-        assert!(
-            check_resources(&dir).is_err(),
-            "a folder without pack.json"
-        );
+        assert!(check_resources(&dir).is_err(), "a folder without pack.json");
         std::fs::write(pack.join("pack.json"), "{}").unwrap();
         assert_eq!(check_resources(&dir), Ok(()));
         std::fs::remove_dir_all(&dir).unwrap();
