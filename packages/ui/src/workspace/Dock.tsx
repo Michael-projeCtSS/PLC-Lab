@@ -82,6 +82,8 @@ function ForceCell({
         </button>
       </span>
     );
+  if (valueType === "INT" || valueType === "REAL")
+    return <NumericForce valueType={valueType} force={force} />;
   if (valueType !== "BOOL") return null;
   return (
     <span className="row" style={{ gap: 2 }}>
@@ -98,6 +100,47 @@ function ForceCell({
         onClick={() => force({ type: "BOOL", value: false })}
       >
         F0
+      </button>
+    </span>
+  );
+}
+
+/** Force an INT or REAL tag to a typed value; the backend checks the type and range. */
+export function NumericForce({
+  valueType,
+  force,
+}: {
+  valueType: "INT" | "REAL";
+  force: (value: SignalValueDto) => void;
+}) {
+  const [text, setText] = useState("");
+  const number = Number(text);
+  const valid =
+    text.trim() !== "" &&
+    Number.isFinite(number) &&
+    (valueType === "REAL" ||
+      (Number.isInteger(number) && number >= -32768 && number <= 32767));
+  return (
+    <span className="row" style={{ gap: 2 }}>
+      <input
+        className="input mono"
+        style={{ width: 70, height: 22 }}
+        aria-label={`Force value (${valueType})`}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <button
+        className="btn btn-sm btn-ghost"
+        disabled={!valid}
+        onClick={() =>
+          force(
+            valueType === "INT"
+              ? { type: "INT", value: number }
+              : { type: "REAL", value: number },
+          )
+        }
+      >
+        Force
       </button>
     </span>
   );

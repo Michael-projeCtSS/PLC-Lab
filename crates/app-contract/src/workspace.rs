@@ -332,6 +332,22 @@ pub struct ForceRequest {
     pub signal: u32,
     pub value: Option<SignalValueDto>,
 }
+/// An active force: the signal, what it replaces and the forced value.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ForceEntryDto {
+    pub signal: u32,
+    pub path: String,
+    pub label: String,
+    #[ts(type = "\"INPUT_IMAGE\" | \"OUTPUT_IMAGE\"")]
+    pub target: String,
+    pub value: SignalValueDto,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ForceListDto {
+    pub forces: Vec<ForceEntryDto>,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct FrameRequest {
@@ -838,7 +854,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SceneDto, LedDto, PlcStatusDto, QuantityDto, ComponentStateDto, WatchValueDto, EffectDto, ChangeDto,
         CauseEffectDto, AlarmDto, SimulationStatusDto, TraceStatsDto, LiveFrameDto, WorkspaceDto, CompileRequest,
         DeclarationDto, CompileResultDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
-        SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, FrameRequest, CycleRequest,
+        SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticEntryDto, ModuleTypeDto,
         CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareFindingDto, SignalMapRowDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,

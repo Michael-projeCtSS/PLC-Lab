@@ -1334,6 +1334,88 @@ fn watch_rows_come_from_the_runtime_for_every_kind_of_canonical_signal() {
 }
 
 #[test]
+fn forces_are_listed_removed_and_end_with_the_session_or_a_memory_reset() {
+    let f = fixture("forces");
+    let (project, w) = open(
+        &f.app,
+        ProjectCreateRequest {
+            contract_version: V,
+            name: "Forces".into(),
+            exercise: None,
+            scene: Some("scene.hardware-station".into()),
+            platform: None,
+        },
+    );
+    let id = w.workspace_id;
+    let (loaded, _) = f
+        .app
+        .build_and_load(BuildLoadRequest {
+            contract_version: V,
+            workspace_id: id,
+            source: project.programs[0].source.clone(),
+            revision: ExactU64(1),
+            station: None,
+            run_after_load: false,
+        })
+        .unwrap();
+    assert_eq!(loaded.outcome, "LOADED", "{:?}", loaded.message);
+    let signal = |path: &str| {
+        let found = loaded.signals.iter().find(|s| s.path == path);
+        found.unwrap().id
+    };
+    let request = || WorkspaceRequest {
+        contract_version: V,
+        workspace_id: id,
+    };
+    let force = |signal: u32, value: Option<SignalValueDto>| {
+        f.app.force(ForceRequest {
+            contract_version: V,
+            workspace_id: id,
+            signal,
+            value,
+        })
+    };
+    let (raw, valve) = (signal("plc.LevelRaw"), signal("plc.InletValve"));
+    let on = Some(SignalValueDto::Bool { value: true });
+    let off = Some(SignalValueDto::Bool { value: false });
+    let level = Some(SignalValueDto::Int { value: 1234 });
+    force(raw, level).unwrap();
+    force(valve, on).unwrap();
+    // The tag's type decides what a force may hold.
+    assert!(force(raw, on).is_err());
+    let listed = f.app.forces(request()).unwrap().forces;
+    let targets: Vec<(&str, &str)> = listed
+        .iter()
+        .map(|x| (x.path.as_str(), x.target.as_str()))
+        .collect();
+    let input = ("plc.LevelRaw", "INPUT_IMAGE");
+    let output = ("plc.InletValve", "OUTPUT_IMAGE");
+    assert!(
+        targets.contains(&input) && targets.contains(&output),
+        "{targets:?}"
+    );
+    let frame = f.app.remove_all_forces(request()).unwrap();
+    assert_eq!(frame.plc.forces, 0);
+    let remaining = f.app.forces(request()).unwrap().forces;
+    assert!(remaining.is_empty());
+    // A memory reset removes forces too.
+    force(valve, off).unwrap();
+    let reset = f.app.plc_reset(request()).unwrap();
+    assert_eq!(reset.plc.forces, 0);
+    // Forces belong to the session: a reopened workspace starts without any.
+    force(valve, on).unwrap();
+    f.app.close_workspace(request()).unwrap();
+    let reopened = f
+        .app
+        .open_workspace(WorkspaceOpenRequest {
+            contract_version: V,
+            project_id: project.id.clone(),
+        })
+        .unwrap();
+    assert_eq!(reopened.frame.plc.forces, 0);
+}
+
+#[test]
 fn a_large_station_keeps_the_hardware_view_bounded() {
     let f = fixture("large-station");
     let (project, w) = open(

@@ -591,6 +591,18 @@ export const variables = obj<G.VariablesDto>({
     500,
   ),
 });
+export const forces = obj<G.ForceListDto>({
+  forces: arr(
+    obj<G.ForceEntryDto>({
+      signal: u32,
+      path: str,
+      label: str,
+      target: literal("INPUT_IMAGE", "OUTPUT_IMAGE"),
+      value: signalValue,
+    }),
+    4096,
+  ),
+});
 export const watch = obj<G.WatchDto>({
   worldTimeUs: u64,
   cycle: u64,

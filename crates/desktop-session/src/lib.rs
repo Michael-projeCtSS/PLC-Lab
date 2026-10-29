@@ -688,6 +688,25 @@ impl DesktopApp {
         })())
     }
 
+    pub fn forces(&self, request: WorkspaceRequest) -> Result<ForceListDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            Ok(state.workspace(request.workspace_id)?.forces())
+        })())
+    }
+
+    /// Remove every active force in one request; returns the frame without them.
+    pub fn remove_all_forces(&self, request: WorkspaceRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            w.remove_all_forces()?;
+            Ok(w.frame(&[]))
+        })())
+    }
+
     // ---- observation -----------------------------------------------------------------------
 
     pub fn frame(&self, request: FrameRequest) -> Result<LiveFrameDto, IpcError> {

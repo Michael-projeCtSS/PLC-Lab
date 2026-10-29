@@ -12,7 +12,8 @@ use crate::{
 use app_contract::*;
 use hardware_model::Measurement;
 use lab_engine::{
-    CycleOutcome, EngineError, LabSession, OperatorAction, SessionConfig, SignalId, TrendLayer,
+    CycleOutcome, EngineError, ForceTarget, LabSession, OperatorAction, SessionConfig, SignalId,
+    TrendLayer,
 };
 use lab_model::{
     exercise::{ExerciseDefinition, PlcModeRequest},
@@ -409,6 +410,34 @@ impl Workspace {
             })
             .transpose()?;
         self.engine(|s| s.force(SignalId(signal), value))
+    }
+
+    /// Every active force with what it replaces.
+    pub fn forces(&self) -> ForceListDto {
+        let s = &self.session;
+        let forces = s
+            .active_forces()
+            .into_iter()
+            .filter_map(|f| {
+                let descriptor = s.signals().get(f.signal)?;
+                let target = match f.target {
+                    ForceTarget::InputImage => "INPUT_IMAGE",
+                    ForceTarget::OutputImage => "OUTPUT_IMAGE",
+                };
+                Some(ForceEntryDto {
+                    signal: f.signal.0,
+                    path: descriptor.path.clone(),
+                    label: descriptor.label.clone(),
+                    target: target.into(),
+                    value: convert::value(f.value),
+                })
+            })
+            .collect();
+        ForceListDto { forces }
+    }
+
+    pub fn remove_all_forces(&mut self) -> AppResult<usize> {
+        self.engine(LabSession::remove_all_forces)
     }
 
     pub fn note_evidence(&mut self, evidence: &str) -> AppResult<()> {

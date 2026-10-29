@@ -54,6 +54,8 @@ commands! {
     force(ForceRequest) -> LiveFrameDto => force;
     frame(FrameRequest) -> LiveFrameDto => frame;
     cycle(CycleRequest) -> Option<CauseEffectDto> => cycle;
+    forces(WorkspaceRequest) -> ForceListDto => forces;
+    remove_all_forces(WorkspaceRequest) -> LiveFrameDto => remove_all_forces;
     variables(VariablesRequest) -> VariablesDto => variables;
     watch(WatchRequest) -> WatchDto => watch;
     trend(TrendRequest) -> TrendDto => trend;

@@ -24,9 +24,9 @@ pub use error::{BindingIssue, EngineError};
 pub use plc::{BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile};
 pub use queries::{CauseEffect, Change, Effect, HistoryRow, TrendLayer, TrendSeries, VariableRow};
 pub use session::{
-    CycleHeader, CycleObservation, CycleOutcome, DownloadReport, LAYER_APPLIED, LAYER_COMMITTED,
-    LAYER_INPUTS, LAYER_NEXT, LAYER_PROCESS, LAYERS, LabEvent, LabEventKind, LabSession, Layer,
-    ModeReason, OperatorAction, SessionConfig,
+    ActiveForce, CycleHeader, CycleObservation, CycleOutcome, DownloadReport, ForceTarget,
+    LAYER_APPLIED, LAYER_COMMITTED, LAYER_INPUTS, LAYER_NEXT, LAYER_PROCESS, LAYERS, LabEvent,
+    LabEventKind, LabSession, Layer, ModeReason, OperatorAction, SessionConfig,
 };
 pub use signals::{SignalDescriptor, SignalId, SignalKind, SignalRegistry, SignalValue, ValueType};
 

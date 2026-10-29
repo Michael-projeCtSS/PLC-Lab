@@ -12,6 +12,7 @@ import { DiagnosticsTab } from "./DiagnosticsTab";
 import { CommissioningTab } from "./CommissioningTab";
 import { Inspector } from "./Inspector";
 import { Dock } from "./Dock";
+import { ForceBanner } from "./ForceBanner";
 
 export type CenterTab =
   | "program"
@@ -82,6 +83,7 @@ export function WorkspacePage({
           )
         }
       />
+      <ForceBanner lab={lab} />
       <div className="ws-body">
         <aside className="ws-left" aria-label="Project">
           <ProjectTree

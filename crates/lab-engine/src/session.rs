@@ -108,6 +108,22 @@ pub enum OperatorAction {
     SetPresence { component: String, present: bool },
 }
 
+/// What a force replaces (only the two the runtime models correctly).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ForceTarget {
+    /// The PLC input image: the program reads the forced value instead of the channel's.
+    InputImage,
+    /// The PLC output image: the module receives the forced value instead of the program's.
+    OutputImage,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ActiveForce {
+    pub signal: SignalId,
+    pub value: SignalValue,
+    pub target: ForceTarget,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum LabEventKind {
     ModeChanged {
@@ -866,6 +882,8 @@ impl LabSession {
     pub fn reset_plc(&mut self) -> Result<PlcMode, EngineError> {
         let before = self.plc.mode;
         self.plc.memory_reset();
+        // A memory reset returns the CPU to a clean state: no force survives it.
+        self.clear_forces();
         let settled = self.plc.settle_mode();
         let to = settled.map_or(self.plc.mode, |(_, to)| to);
         if before != to {
@@ -955,7 +973,25 @@ impl LabSession {
                     | SignalKind::BlockOutput
             ) && !keep.contains(&d.id)
         });
-        self.plc.forces.retain(|signal, _| keep.contains(signal));
+        // Forces of symbols the new program no longer has end, each one logged.
+        let dropped: Vec<SignalId> = self
+            .plc
+            .forces
+            .keys()
+            .filter(|s| !keep.contains(s))
+            .copied()
+            .collect();
+        for signal in dropped {
+            self.plc.forces.remove(&signal);
+            self.events.append(LabEvent {
+                time_us: now.as_micros(),
+                cycle: self.cycle,
+                kind: LabEventKind::Force {
+                    signal,
+                    value: None,
+                },
+            });
+        }
         let before = self.plc.mode;
         let name = compiled.program_name().to_owned();
         self.plc.program = Some(LoadedProgram {
@@ -1076,6 +1112,53 @@ impl LabSession {
         });
         self.sample()?;
         self.drive()
+    }
+
+    /// Remove every active force in one request; each removal is logged like a single one.
+    pub fn remove_all_forces(&mut self) -> Result<usize, EngineError> {
+        let removed = self.clear_forces();
+        self.sample()?;
+        self.drive()?;
+        Ok(removed)
+    }
+
+    fn clear_forces(&mut self) -> usize {
+        let signals: Vec<SignalId> = self.plc.forces.keys().copied().collect();
+        for signal in &signals {
+            self.plc.forces.remove(signal);
+            self.events.append(LabEvent {
+                time_us: self.now().as_micros(),
+                cycle: self.cycle,
+                kind: LabEventKind::Force {
+                    signal: *signal,
+                    value: None,
+                },
+            });
+        }
+        signals.len()
+    }
+
+    /// Every active force with what it replaces: the PLC input image (the program reads
+    /// the forced value instead of the channel) or the output image (the module receives
+    /// the forced value instead of the program's).
+    pub fn active_forces(&self) -> Vec<ActiveForce> {
+        self.plc
+            .forces
+            .iter()
+            .filter_map(|(signal, value)| {
+                let tag = self.plc.tags().iter().find(|t| t.signal == *signal)?;
+                let target = match tag.role {
+                    TagRole::Input => ForceTarget::InputImage,
+                    TagRole::Output => ForceTarget::OutputImage,
+                    TagRole::Local => return None,
+                };
+                Some(ActiveForce {
+                    signal: *signal,
+                    value: *value,
+                    target,
+                })
+            })
+            .collect()
     }
 
     pub fn inject_fault(&mut self, injection: &FaultInjection) -> Result<(), EngineError> {

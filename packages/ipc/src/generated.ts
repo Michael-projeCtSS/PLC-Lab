@@ -333,6 +333,10 @@ export type OperateRequest = { contractVersion: number, workspaceId: ExactU64, c
 
 export type ForceRequest = { contractVersion: number, workspaceId: ExactU64, signal: number, value: SignalValueDto | null, };
 
+export type ForceEntryDto = { signal: number, path: string, label: string, target: "INPUT_IMAGE" | "OUTPUT_IMAGE", value: SignalValueDto, };
+
+export type ForceListDto = { forces: Array<ForceEntryDto>, };
+
 export type FrameRequest = { contractVersion: number, workspaceId: ExactU64, watch: Array<number>, };
 
 export type CycleRequest = { contractVersion: number, workspaceId: ExactU64, cycle: ExactU64, };

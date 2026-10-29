@@ -44,6 +44,8 @@ export const COMMANDS = [
   "set_speed",
   "operate",
   "force",
+  "forces",
+  "remove_all_forces",
   "frame",
   "cycle",
   "variables",
@@ -175,6 +177,10 @@ export const api = {
     call("operate", { ...w, component, action }, V.frame),
   force: (w: Ws, signal: number, value: G.SignalValueDto | null) =>
     call("force", { ...w, signal, value }, V.frame),
+  /** Every active force with what it replaces. */
+  forces: (w: Ws) => call("forces", { ...w }, V.forces),
+  /** Remove every active force; returns the frame without them. */
+  removeAllForces: (w: Ws) => call("remove_all_forces", { ...w }, V.frame),
   frame: (w: Ws, watch: number[] = []) =>
     call("frame", { ...w, watch }, V.frame),
   cycle: (w: Ws, cycle: string) =>

@@ -1,7 +1,7 @@
 //! Engine integration tests over the product scenes in the knowledge pack.
 use lab_engine::{
-    CycleOutcome, EngineError, LabEventKind, LabSession, OperatorAction, PlcMode, SessionConfig,
-    SignalId, SignalKind, SignalValue,
+    CycleOutcome, EngineError, ForceTarget, LabEventKind, LabSession, OperatorAction, PlcMode,
+    SessionConfig, SignalId, SignalKind, SignalValue,
 };
 use lab_model::{
     exercise::PlcModeRequest,
@@ -543,4 +543,66 @@ fn applied_layer_follows_port_metadata_not_names() {
             "{path}"
         );
     }
+}
+
+#[test]
+fn forces_are_typed_survive_stop_and_run_and_end_with_a_memory_reset() {
+    let mut s = session(TANK);
+    s.download(TANK_FILL, 1, None).unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    let raw = signal(&s, "plc.LevelRaw");
+    let valve = signal(&s, "plc.InletValve");
+    s.force(raw, Some(SignalValue::Int(1234))).unwrap();
+    s.force(valve, Some(SignalValue::Bool(false))).unwrap();
+    assert!(
+        s.force(raw, Some(SignalValue::Bool(true))).is_err(),
+        "a force keeps the tag's type"
+    );
+    s.step_cycle().unwrap();
+    let scanned = |s: &LabSession| s.variables(Some("LevelRaw"), 0, 10).1[0].scan_value;
+    assert_eq!(scanned(&s), Some(SignalValue::Int(1234)));
+    let mut targets: Vec<_> = s
+        .active_forces()
+        .iter()
+        .map(|f| (f.signal, f.target))
+        .collect();
+    targets.sort_by_key(|(signal, _)| *signal);
+    let mut expected = vec![
+        (raw, ForceTarget::InputImage),
+        (valve, ForceTarget::OutputImage),
+    ];
+    expected.sort_by_key(|(signal, _)| *signal);
+    assert_eq!(targets, expected);
+    // STOP and RUN keep the forces.
+    s.set_plc_switch(PlcModeRequest::Stop).unwrap();
+    s.step_cycle().unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    s.step_cycle().unwrap();
+    assert_eq!(s.active_forces().len(), 2);
+    // A memory reset removes every force, and the event log says so.
+    let removal = |kind: &LabEventKind| matches!(kind, LabEventKind::Force { value: None, .. });
+    let removals = |s: &LabSession| {
+        let events = s.events().iter();
+        events.filter(|(_, e)| removal(&e.kind)).count()
+    };
+    s.reset_plc().unwrap();
+    assert!(s.forces().is_empty());
+    assert_eq!(removals(&s), 2);
+    // Remove all forces in one request.
+    s.force(raw, Some(SignalValue::Int(5))).unwrap();
+    s.force(valve, Some(SignalValue::Bool(true))).unwrap();
+    assert_eq!(s.remove_all_forces().unwrap(), 2);
+    assert!(s.active_forces().is_empty());
+    assert_eq!(removals(&s), 4);
+    // A download without the forced symbol ends its force.
+    s.force(valve, Some(SignalValue::Bool(true))).unwrap();
+    s.download(
+        "PROGRAM Main VAR_INPUT LevelRaw : INT; END_VAR VAR_OUTPUT DrainPump : BOOL; END_VAR
+         DrainPump := FALSE; END_PROGRAM",
+        2,
+        None,
+    )
+    .unwrap();
+    assert!(s.forces().is_empty());
+    assert_eq!(removals(&s), 5);
 }
