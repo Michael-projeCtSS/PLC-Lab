@@ -130,6 +130,14 @@ it("compares configured and detected hardware and follows signals", async () => 
   });
   expect(within(findings).getByText("Wrong module type")).toBeInTheDocument();
   expect(within(findings).getByText("DO 8")).toBeInTheDocument();
+  // Module cards are buttons, so a module can be selected from the keyboard.
+  const card = within(screen.getByRole("list", { name: "Rack" })).getByRole(
+    "button",
+    { name: /^Slot 1/ },
+  );
+  expect(card).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(card);
+  expect(select).toHaveBeenCalledWith({ kind: "module", rack: 0, slot: 1 });
   // The detected station shows what is installed, the project what is configured.
   fireEvent.click(screen.getByRole("tab", { name: "Actual (detected)" }));
   expect(

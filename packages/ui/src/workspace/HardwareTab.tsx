@@ -239,12 +239,16 @@ export function HardwareTab({
                   })
                 }
               >
-                <div className="module-head">
-                  <div className="slot">Slot {m.position.slot}</div>
+                <button
+                  type="button"
+                  className="module-head"
+                  aria-pressed={selected?.position.slot === m.position.slot}
+                >
+                  <span className="slot">Slot {m.position.slot}</span>
                   <strong style={{ fontSize: 11 }}>{m.id}</strong>
-                  <div className="dim">{type?.name ?? m.module}</div>
-                  <div className="dim">start address {m.startAddress}</div>
-                </div>
+                  <span className="dim">{type?.name ?? m.module}</span>
+                  <span className="dim">start address {m.startAddress}</span>
+                </button>
               </div>
             );
           })}
@@ -261,11 +265,15 @@ export function HardwareTab({
             role="listitem"
             onClick={() => select(null)}
           >
-            <div className="module-head">
-              <div className="slot">Slot 0</div>
+            <button
+              type="button"
+              className="module-head"
+              aria-pressed={selection === null}
+            >
+              <span className="slot">Slot 0</span>
               <strong>CPU</strong>
-              <div className="dim">{data.cpuProduct ?? data.cpuName}</div>
-            </div>
+              <span className="dim">{data.cpuProduct ?? data.cpuName}</span>
+            </button>
             <div className="module-channels">
               {data.cpuLeds.map((l) => (
                 <div key={l.name} className="channel">
@@ -293,15 +301,19 @@ export function HardwareTab({
                   });
                 }}
               >
-                <div className="module-head">
-                  <div className="row slot">
+                <button
+                  type="button"
+                  className="module-head"
+                  aria-pressed={isSelected}
+                >
+                  <span className="row slot">
                     Slot {m.position.slot}
                     <span className="spacer" />
                     <span
                       className={LED_CLASS[m.statusLed] ?? "dot"}
                       title={`Status ${m.status}`}
                     />
-                  </div>
+                  </span>
                   <strong style={{ fontSize: 11 }}>
                     {view === "actual"
                       ? m.status === "MISSING"
@@ -310,16 +322,16 @@ export function HardwareTab({
                       : (m.configured ?? m.installed ?? "").toUpperCase()}
                   </strong>
                   {view === "compare" && m.moduleId && (
-                    <div className="dim">{m.moduleId}</div>
+                    <span className="dim">{m.moduleId}</span>
                   )}
-                  {m.product && <div className="dim">{m.product}</div>}
+                  {m.product && <span className="dim">{m.product}</span>}
                   {view === "compare" &&
                     data.findings.some(
                       (f) =>
                         f.slot?.rack === m.position.rack &&
                         f.slot.slot === m.position.slot,
                     ) && <Badge kind="warning">finding</Badge>}
-                </div>
+                </button>
                 <div className="module-channels">
                   {m.channels.map((c) => (
                     <div key={c.channel} className="channel" title={c.address}>

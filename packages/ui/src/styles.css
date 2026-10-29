@@ -1078,9 +1078,27 @@ textarea.input {
   border-color: #8e2b26;
 }
 .module-head {
+  /* A button: the card is selectable from the keyboard (Tab, Enter or Space). */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
   padding: 6px 8px;
+  background: none;
+  border: 0;
   border-bottom: 1px solid var(--line-strong);
+  color: inherit;
+  font: inherit;
   font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.module-head .row.slot {
+  width: 100%;
+}
+.module-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 .module-head .slot {
   color: var(--text-3);
