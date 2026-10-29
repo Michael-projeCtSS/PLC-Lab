@@ -29,6 +29,17 @@ const CATEGORY_LABEL: Record<string, string> = {
   SIGNAL_BINDING_MISMATCH: "Signal mapping",
 };
 
+/** A finding's identity: its category and the typed hardware it is about. */
+function findingKey(f: HardwareFindingDto): string {
+  return [
+    f.category,
+    f.moduleId ?? "",
+    f.slot ? `${f.slot.rack}/${f.slot.slot}` : "",
+    f.channel ? `${f.channel.channel}` : "",
+    f.message,
+  ].join("|");
+}
+
 export function FindingsPanel({
   findings,
 }: {
@@ -60,8 +71,8 @@ export function FindingsPanel({
             </tr>
           </thead>
           <tbody>
-            {findings.map((f, i) => (
-              <tr key={i}>
+            {findings.map((f) => (
+              <tr key={findingKey(f)}>
                 <td>
                   <Badge kind={f.severity === "error" ? "fault" : "warning"}>
                     {f.severity}
@@ -268,9 +279,9 @@ export function ModuleDiagnostics({
           No finding and no diagnostic for this module.
         </p>
       )}
-      {here.map((f, i) => (
+      {here.map((f) => (
         <div
-          key={i}
+          key={findingKey(f)}
           className={`notice ${f.severity === "error" ? "error" : "warning"}`}
         >
           <strong>{CATEGORY_LABEL[f.category] ?? f.category}:</strong>{" "}
