@@ -1,0 +1,379 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "cm.vfd-trip",
+  "revision": 1,
+  "title": "Drive commissioning: the drive stays faulted",
+  "kind": "commissioning",
+  "difficulty": "intermediate",
+  "summary": "During the first test run the conveyor stopped and the fault lamp lit. Pressing Reset does not help.",
+  "objectives": [
+    "Work through a drive's ready chain",
+    "Use the drive display and relays as evidence"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.drive-commissioning",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1, normally open. *)\n    StopPB : BOOL; (* Stop button S2, normally closed: TRUE while not pressed. *)\n    ResetPB : BOOL; (* Fault reset button S3. *)\n    FastSelected : BOOL; (* Speed selector S4 in position Fast. *)\n    DriveReady : BOOL; (* Drive ready relay. *)\n    DriveRunning : BOOL; (* Drive running relay. *)\n    DriveRemote : BOOL; (* Drive in remote (terminal) control. *)\n    DriveFault : BOOL; (* Drive fault relay. *)\nEND_VAR\nVAR_OUTPUT\n    DriveRun : BOOL; (* Run command terminal. *)\n    DriveEnable : BOOL; (* Run enable terminal. *)\n    DriveReset : BOOL; (* Fault acknowledge terminal. *)\n    DriveFast : BOOL; (* Preset speed terminal. *)\n    RunLamp : BOOL; (* Run lamp H1. *)\n    FaultLamp : BOOL; (* Fault lamp H2. *)\nEND_VAR\nVAR\n    Running : BOOL; (* Start/stop latch. *)\nEND_VAR\n(* The program passed its factory test; this lab is about the drive installation. *)\nRunning := (StartPB OR Running) AND StopPB AND NOT DriveFault;\nDriveEnable := StopPB;\nDriveRun := Running;\nDriveReset := ResetPB;\nDriveFast := FastSelected;\nRunLamp := DriveRunning;\nFaultLamp := DriveFault;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "ResetPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "FastSelected",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "DriveReady",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "DriveRunning",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "DriveRemote",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "DriveFault",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "DriveRun",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DriveEnable",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DriveReset",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DriveFast",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "FaultLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "The PLC runs the accepted program. Press Start (and Fault reset if the fault lamp is lit) and confirm the symptom.",
+    "Open the Commissioning tab: work through Power and Drives first.",
+    "Compare what the PLC sends with what the drive shows on its display and relays.",
+    "Diagnose, repair, then verify."
+  ],
+  "hints": [
+    "The drive model is generic: ready needs supply, no fault and the run enable.",
+    "The drive display shows control place, state and speed reference."
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "command",
+      "source": {
+        "type": "plcTag",
+        "tag": "DriveRun"
+      }
+    },
+    {
+      "name": "ready",
+      "source": {
+        "type": "plcTag",
+        "tag": "DriveReady"
+      }
+    },
+    {
+      "name": "running",
+      "source": {
+        "type": "component",
+        "component": "drive",
+        "quantity": "running"
+      }
+    },
+    {
+      "name": "speed",
+      "source": {
+        "type": "component",
+        "component": "drive",
+        "quantity": "speedPermille"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "verify",
+      "title": "Acknowledge, start slow, switch to fast, stop",
+      "durationMs": 7000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 200,
+          "action": {
+            "type": "press",
+            "component": "reset"
+          }
+        },
+        {
+          "atMs": 400,
+          "action": {
+            "type": "release",
+            "component": "reset"
+          }
+        },
+        {
+          "atMs": 600,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 900,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 3000,
+          "action": {
+            "type": "setSelector",
+            "component": "speed",
+            "position": 1
+          }
+        },
+        {
+          "atMs": 5500,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 5800,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "runs",
+      "title": "The drive runs after Start",
+      "points": 30,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "byMs": 1500
+      },
+      "onFail": "The drive did not run after Start."
+    },
+    {
+      "id": "slow",
+      "title": "Slow runs at the 50 % preset",
+      "points": 25,
+      "scenario": "verify",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2900,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "speed",
+              "layer": "process",
+              "op": "ge",
+              "value": 450
+            },
+            {
+              "type": "compare",
+              "signal": "speed",
+              "layer": "process",
+              "op": "le",
+              "value": 550
+            }
+          ]
+        }
+      },
+      "onFail": "The drive was not at about 50 % speed in position Slow."
+    },
+    {
+      "id": "fast",
+      "title": "Fast reaches full speed",
+      "points": 25,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "speed",
+          "layer": "process",
+          "op": "ge",
+          "value": 950
+        },
+        "byMs": 5000
+      },
+      "onFail": "The drive did not reach full speed in position Fast."
+    },
+    {
+      "id": "stops",
+      "title": "Stop stops the drive",
+      "points": 20,
+      "scenario": "verify",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": false
+        },
+        "byMs": 6900
+      },
+      "onFail": "The drive kept running after Stop."
+    }
+  ],
+  "curriculumOrder": 51,
+  "troubleshooting": {
+    "symptom": "The conveyor stopped, the fault lamp is lit and Fault reset has no effect.",
+    "reportedBy": "Commissioning engineer, conveyor line 2",
+    "faults": [
+      {
+        "id": "drive-trip",
+        "fault": {
+          "type": "driveTrip",
+          "component": "drive"
+        }
+      }
+    ],
+    "diagnosisOptions": [
+      {
+        "id": "program",
+        "label": "The PLC program does not command the drive"
+      },
+      {
+        "id": "drive-local",
+        "label": "The drive is in local (keypad) control"
+      },
+      {
+        "id": "drive-trip",
+        "label": "The drive has tripped and the cause is still present"
+      },
+      {
+        "id": "enable-wire",
+        "label": "The run enable signal does not reach the drive"
+      },
+      {
+        "id": "keypad-reference",
+        "label": "The drive takes its speed reference from the keypad"
+      },
+      {
+        "id": "no-supply",
+        "label": "The drive has no mains supply"
+      },
+      {
+        "id": "motor",
+        "label": "The motor is defective"
+      }
+    ],
+    "rootCauses": [
+      "drive-trip"
+    ],
+    "repairs": [
+      {
+        "id": "fix-drive-trip",
+        "label": "Free the jammed conveyor belt",
+        "clears": [
+          "drive-trip"
+        ]
+      },
+      {
+        "id": "fix-motor",
+        "label": "Replace the motor",
+        "clears": []
+      },
+      {
+        "id": "fix-parameters",
+        "label": "Restore the drive's factory parameters",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "runs",
+      "slow",
+      "fast",
+      "stops"
+    ],
+    "learningRefs": [
+      "fundamentals.drives-basics",
+      "fundamentals.commissioning"
+    ],
+    "debriefRefs": [
+      "troubleshooting.drive-trip-acknowledge"
+    ],
+    "debrief": {
+      "rootCause": "The drive tripped because the conveyor belt was jammed. As long as the cause was present, acknowledging the fault had no effect. After the jam was removed, the trip stayed latched until it was acknowledged with Fault reset.",
+      "evidence": [
+        "The fault relay was closed and the drive was not ready.",
+        "Fault reset did not clear the fault while the belt was jammed.",
+        "Power, enable and control place were in order."
+      ],
+      "repair": "Remove the cause (free the belt), then acknowledge the fault and verify start, both speeds and stop.",
+      "reasoning": "A latched trip has two steps: remove the cause, then acknowledge. Resetting repeatedly without removing the cause hides the problem and can damage the machine."
+    }
+  }
+}

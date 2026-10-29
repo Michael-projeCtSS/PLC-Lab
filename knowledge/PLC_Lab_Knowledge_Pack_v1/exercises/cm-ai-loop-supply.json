@@ -411,8 +411,8 @@
       "no-overfill"
     ],
     "learningRefs": [
-      "fundamentals.4-20ma",
-      "fundamentals.analog-io"
+      "fundamentals.transmitter-wiring",
+      "fundamentals.4-20ma"
     ],
     "debriefRefs": [
       "troubleshooting.analog-loop-supply"

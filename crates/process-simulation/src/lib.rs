@@ -124,6 +124,12 @@ pub enum ComponentFault {
     MotorOverload,
     /// The drive is in local (keypad) control and ignores its run terminal.
     DriveLocalControl,
+    /// Latched drive trip; the cause persists until the fault is cleared.
+    DriveTrip,
+    /// The speed reference comes from the keypad instead of the terminals.
+    DriveKeypadReference,
+    /// No mains supply: the drive is not ready.
+    DriveNoSupply,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -215,13 +221,59 @@ enum State {
         style: OutputStyle,
         present: bool,
     },
-    Drive {
-        ramp: u64,
-        rated_ma: u32,
-        run: bool,
-        local: bool,
-        started: Option<u64>,
-    },
+    Drive(Drive),
+}
+
+/// Generic VFD behavioral model: terminals, ready chain, latched trip and a speed ramp.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Drive {
+    ramp: u64,
+    rated_ma: u32,
+    enable_terminal: bool,
+    speed: u32,
+    preset_speed: Option<u32>,
+    keypad_speed: u32,
+    run: bool,
+    enabled: bool,
+    reset: bool,
+    preset: bool,
+    local: bool,
+    keypad: bool,
+    supplied: bool,
+    tripped: bool,
+    trip_cause: bool,
+    /// Running since (time, speed per mille at that time).
+    started: Option<(u64, u32)>,
+}
+
+impl Drive {
+    fn ready(&self) -> bool {
+        self.supplied && !self.tripped && (!self.enable_terminal || self.enabled)
+    }
+    fn reference(&self) -> u32 {
+        if self.keypad {
+            self.keypad_speed
+        } else if self.preset {
+            self.preset_speed.unwrap_or(self.speed)
+        } else {
+            self.speed
+        }
+        .min(1000)
+    }
+    fn speed_at(&self, now: u64) -> u32 {
+        self.started.map_or(0, |(since, from)| {
+            let ramped = u64::from(from) + (now - since) * 1000 / self.ramp;
+            u32::try_from(ramped.min(u64::from(self.reference()))).unwrap_or(0)
+        })
+    }
+    /// Apply a change of terminals, faults or reference at `now`, then start or stop.
+    /// The ramp continues from the speed reached before the change.
+    fn change(&mut self, now: u64, change: impl FnOnce(&mut Self)) {
+        let speed = self.speed_at(now);
+        change(self);
+        self.started =
+            (self.run && !self.local && self.ready()).then(|| (now, speed.min(self.reference())));
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -351,13 +403,29 @@ impl SceneRuntime {
                 ComponentKind::VariableFrequencyDrive {
                     ramp_ms,
                     rated_current_ma,
-                } => State::Drive {
+                    enable_terminal,
+                    speed_permille,
+                    preset_permille,
+                    keypad_permille,
+                    ..
+                } => State::Drive(Drive {
                     ramp: ms(*ramp_ms).max(1),
                     rated_ma: *rated_current_ma,
+                    enable_terminal: *enable_terminal,
+                    speed: *speed_permille,
+                    preset_speed: *preset_permille,
+                    keypad_speed: *keypad_permille,
                     run: false,
+                    enabled: false,
+                    reset: false,
+                    preset: false,
                     local: false,
+                    keypad: false,
+                    supplied: true,
+                    tripped: false,
+                    trip_cause: false,
                     started: None,
-                },
+                }),
             });
         }
         let mut fills = Vec::new();
@@ -720,21 +788,19 @@ impl SceneRuntime {
                 }
             }
             (State::Pump { command, .. }, "motor") => *command = energized,
-            (
-                State::Drive {
-                    run,
-                    local,
-                    started,
-                    ..
-                },
-                "run",
-            ) => {
-                *run = energized;
-                if !energized || *local {
-                    *started = None;
-                } else if started.is_none() {
-                    *started = Some(now);
-                }
+            (State::Drive(d), "run" | "enable" | "reset" | "preset") => {
+                d.change(now, |d| match port {
+                    "run" => d.run = energized,
+                    "enable" => d.enabled = energized,
+                    "preset" => d.preset = energized,
+                    _ => {
+                        // A rising edge acknowledges a trip whose cause is gone.
+                        if energized && !d.reset && !d.trip_cause {
+                            d.tripped = false;
+                        }
+                        d.reset = energized;
+                    }
+                });
             }
             _ => {
                 return Err(SceneError::UnknownPort {
@@ -807,13 +873,22 @@ impl SceneRuntime {
             ComponentFault::FeedbackMissing(port) => {
                 f.feedback_missing.insert(port);
             }
-            ComponentFault::DriveLocalControl => {
-                if let State::Drive { local, started, .. } = &mut self.states[component] {
-                    *local = true;
-                    *started = None;
-                } else {
+            ComponentFault::DriveLocalControl
+            | ComponentFault::DriveTrip
+            | ComponentFault::DriveKeypadReference
+            | ComponentFault::DriveNoSupply => {
+                let State::Drive(d) = &mut self.states[component] else {
                     return Err(SceneError::NotOperable(id.to_string()));
-                }
+                };
+                d.change(self.now, |d| match fault {
+                    ComponentFault::DriveLocalControl => d.local = true,
+                    ComponentFault::DriveTrip => {
+                        d.trip_cause = true;
+                        d.tripped = true;
+                    }
+                    ComponentFault::DriveKeypadReference => d.keypad = true,
+                    _ => d.supplied = false,
+                });
             }
             ComponentFault::MotorOverload => {
                 if let State::Starter {
@@ -881,18 +956,18 @@ impl SceneRuntime {
             ComponentFault::FeedbackMissing(port) => {
                 f.feedback_missing.remove(port);
             }
-            ComponentFault::DriveLocalControl => {
-                if let State::Drive {
-                    run,
-                    local,
-                    started,
-                    ..
-                } = &mut self.states[component]
-                {
-                    *local = false;
-                    if *run && started.is_none() {
-                        *started = Some(now);
-                    }
+            ComponentFault::DriveLocalControl
+            | ComponentFault::DriveTrip
+            | ComponentFault::DriveKeypadReference
+            | ComponentFault::DriveNoSupply => {
+                if let State::Drive(d) = &mut self.states[component] {
+                    d.change(now, |d| match fault {
+                        ComponentFault::DriveLocalControl => d.local = false,
+                        // The cause is gone; the trip stays latched until acknowledged.
+                        ComponentFault::DriveTrip => d.trip_cause = false,
+                        ComponentFault::DriveKeypadReference => d.keypad = false,
+                        _ => d.supplied = true,
+                    });
                 }
             }
             ComponentFault::MotorOverload => {
@@ -1006,11 +1081,10 @@ impl SceneRuntime {
                 },
                 "output",
             ) => (contact(*c, *present), *style),
-            (State::Drive { .. }, "ready") => (true, OutputStyle::DryContact),
-            (State::Drive { started, .. }, "running") => {
-                (started.is_some(), OutputStyle::DryContact)
-            }
-            (State::Drive { local, .. }, "remote") => (!*local, OutputStyle::DryContact),
+            (State::Drive(d), "ready") => (d.ready(), OutputStyle::DryContact),
+            (State::Drive(d), "running") => (d.started.is_some(), OutputStyle::DryContact),
+            (State::Drive(d), "remote") => (!d.local, OutputStyle::DryContact),
+            (State::Drive(d), "fault") => (d.tripped, OutputStyle::DryContact),
             _ => return Err(unknown()),
         };
         let conducting = if f.feedback_missing.contains(port) {
@@ -1220,27 +1294,32 @@ impl SceneRuntime {
                     ("conducting", Quantity::Bool(conducting)),
                 ]
             }
-            State::Drive {
-                ramp,
-                rated_ma,
-                run,
-                local,
-                started,
-            } => {
-                let speed = started.map_or(0, |since| ((now - since) * 1000 / ramp).min(1000));
+            State::Drive(d) => {
+                let speed = i64::from(d.speed_at(now));
                 vec![
-                    ("command", Quantity::Bool(*run)),
-                    ("running", Quantity::Bool(started.is_some())),
-                    ("speedPermille", Quantity::Integer(speed as i64)),
+                    ("command", Quantity::Bool(d.run)),
+                    ("running", Quantity::Bool(d.started.is_some())),
+                    ("speedPermille", Quantity::Integer(speed)),
                     (
                         "currentMa",
-                        Quantity::Integer(if started.is_some() {
-                            i64::from(*rated_ma) * (200 + speed as i64 * 8 / 10) / 1000
+                        Quantity::Integer(if d.started.is_some() {
+                            i64::from(d.rated_ma) * (200 + speed * 8 / 10) / 1000
                         } else {
                             0
                         }),
                     ),
-                    ("remote", Quantity::Bool(!*local)),
+                    ("remote", Quantity::Bool(!d.local)),
+                    ("ready", Quantity::Bool(d.ready())),
+                    ("enableCommand", Quantity::Bool(d.enabled)),
+                    ("resetCommand", Quantity::Bool(d.reset)),
+                    ("presetCommand", Quantity::Bool(d.preset)),
+                    ("tripped", Quantity::Bool(d.tripped)),
+                    ("supplied", Quantity::Bool(d.supplied)),
+                    ("keypadReference", Quantity::Bool(d.keypad)),
+                    (
+                        "referencePermille",
+                        Quantity::Integer(i64::from(d.reference())),
+                    ),
                 ]
             }
         }

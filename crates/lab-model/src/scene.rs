@@ -168,13 +168,38 @@ pub enum ComponentKind {
         output: OutputStyle,
         contact: ContactType,
     },
-    /// Variable frequency drive with motor. Ports: `run` (run command terminal), `ready`,
-    /// `running` and `remote` (relay outputs). In local control the drive ignores the
-    /// run terminal. Speed ramps linearly; deceleration is immediate (approximation).
+    /// Generic VFD behavioral model with motor (not a specific product). Ports: `run`
+    /// (run command terminal), `ready`, `running` and `remote` (relay outputs); optional
+    /// `enable` (run enable terminal), `reset` (fault acknowledge terminal) and `fault`
+    /// (fault relay), and `preset` (selects the preset speed). In local control the drive
+    /// ignores the run terminal. Speed ramps linearly to the reference over `ramp_ms` for
+    /// 0..100 %; deceleration is immediate (approximation).
     VariableFrequencyDrive {
         ramp_ms: u32,
         rated_current_ma: u32,
+        /// The drive is ready only while its run enable terminal is energized.
+        #[serde(default)]
+        enable_terminal: bool,
+        /// Fault relay output and fault acknowledge terminal.
+        #[serde(default)]
+        fault_terminals: bool,
+        /// Speed reference when running from the terminals, per mille of rated speed.
+        #[serde(default = "full_speed")]
+        speed_permille: u32,
+        /// Second speed selected by the `preset` terminal.
+        #[serde(default)]
+        preset_permille: Option<u32>,
+        /// Speed when the reference source is set to the keypad, per mille.
+        #[serde(default = "keypad_speed")]
+        keypad_permille: u32,
     },
+}
+
+fn full_speed() -> u32 {
+    1000
+}
+fn keypad_speed() -> u32 {
+    300
 }
 
 impl ComponentKind {
@@ -200,12 +225,30 @@ impl ComponentKind {
                 vec![("contact", PortKind::DigitalSource)]
             }
             Self::PresenceSensor { .. } => vec![("output", PortKind::DigitalSource)],
-            Self::VariableFrequencyDrive { .. } => vec![
-                ("run", PortKind::DigitalSink),
-                ("ready", PortKind::DigitalSource),
-                ("running", PortKind::DigitalSource),
-                ("remote", PortKind::DigitalSource),
-            ],
+            Self::VariableFrequencyDrive {
+                enable_terminal,
+                fault_terminals,
+                preset_permille,
+                ..
+            } => {
+                let mut ports = vec![
+                    ("run", PortKind::DigitalSink),
+                    ("ready", PortKind::DigitalSource),
+                    ("running", PortKind::DigitalSource),
+                    ("remote", PortKind::DigitalSource),
+                ];
+                if *enable_terminal {
+                    ports.push(("enable", PortKind::DigitalSink));
+                }
+                if *fault_terminals {
+                    ports.push(("reset", PortKind::DigitalSink));
+                    ports.push(("fault", PortKind::DigitalSource));
+                }
+                if preset_permille.is_some() {
+                    ports.push(("preset", PortKind::DigitalSink));
+                }
+                ports
+            }
             Self::SelectorSwitch { positions, .. } => {
                 const NAMES: [&str; 4] = ["position0", "position1", "position2", "position3"];
                 NAMES
@@ -242,10 +285,13 @@ impl ComponentKind {
         }
         Some(match self {
             Self::PilotLamp { .. } => "lit",
-            Self::MotorStarter { .. }
-            | Self::OnOffValve { .. }
-            | Self::Pump { .. }
-            | Self::VariableFrequencyDrive { .. } => "command",
+            Self::VariableFrequencyDrive { .. } => match port {
+                "enable" => "enableCommand",
+                "reset" => "resetCommand",
+                "preset" => "presetCommand",
+                _ => "command",
+            },
+            Self::MotorStarter { .. } | Self::OnOffValve { .. } | Self::Pump { .. } => "command",
             Self::PushButton { .. }
             | Self::SelectorSwitch { .. }
             | Self::Tank { .. }

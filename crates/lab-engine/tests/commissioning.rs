@@ -370,3 +370,106 @@ fn each_analog_fault_shows_in_the_analog_checks() {
         assert!(found.contains(text), "lab {index}: {found}");
     }
 }
+
+const DRIVE_SCENE: &str =
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/scenes/drive-commissioning.json");
+const DRIVE_LABS: [&str; 5] = [
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-local.json"),
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-trip.json"),
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-enable.json"),
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-keypad.json"),
+    include_str!("../../../knowledge/PLC_Lab_Knowledge_Pack_v1/exercises/cm-vfd-no-supply.json"),
+];
+
+/// The drive bench in RUN after Start was pressed, with a lab's faults (or none).
+fn drive_bench(faulty: Option<usize>) -> LabSession {
+    let scene: SceneDefinition = parse_json(DRIVE_SCENE).unwrap();
+    let station = scene.reference_station.clone();
+    let exercise: ExerciseDefinition = parse_json(DRIVE_LABS[faulty.unwrap_or(0)]).unwrap();
+    let mut s = LabSession::new(
+        scene,
+        station,
+        PlatformProfile::generic(),
+        SessionConfig::default(),
+    )
+    .unwrap();
+    if let Some(t) = faulty.and(exercise.troubleshooting.as_ref()) {
+        for f in &t.faults {
+            s.inject_fault(&FaultInjection {
+                id: f.id.clone(),
+                fault: f.fault.clone(),
+            })
+            .unwrap();
+        }
+    }
+    s.download(&exercise.starter_program, 1, None).unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    press(&mut s, "start");
+    run(&mut s, 3_000);
+    s
+}
+
+#[test]
+fn a_correct_drive_installation_passes_the_drive_checks() {
+    let list = drive_bench(None).commissioning();
+    for item in [
+        "ready",
+        "control-place",
+        "enable",
+        "fault",
+        "run-command",
+        "reference",
+        "speed",
+    ] {
+        assert_eq!(
+            state(&list, "drives", item),
+            CheckState::Ok,
+            "{item}: {}",
+            findings(&list, "drives", item)
+        );
+    }
+    assert!(findings(&list, "drives", "speed").contains("running at 50.0 % speed"));
+    assert!(findings(&list, "drives", "reference").contains("50.0 % from the terminals"));
+}
+
+#[test]
+fn each_drive_fault_shows_in_the_drive_checks() {
+    let expected: [(&str, &str, CheckState, &str); 5] = [
+        (
+            "drives",
+            "control-place",
+            CheckState::Attention,
+            "local control",
+        ),
+        (
+            "drives",
+            "fault",
+            CheckState::Fault,
+            "faulted (fault relay closed)",
+        ),
+        (
+            "drives",
+            "ready",
+            CheckState::Fault,
+            "not ready (run enable missing); the run command is active",
+        ),
+        (
+            "drives",
+            "reference",
+            CheckState::Attention,
+            "30.0 % from the keypad",
+        ),
+        (
+            "power",
+            "drive-supply",
+            CheckState::Fault,
+            "no mains supply",
+        ),
+    ];
+    for (index, (category, item, want, text)) in expected.into_iter().enumerate() {
+        let list = drive_bench(Some(index)).commissioning();
+        let found = findings(&list, category, item);
+        assert_eq!(state(&list, category, item), want, "lab {index}: {found}");
+        assert!(found.contains(text), "lab {index}: {found}");
+    }
+}

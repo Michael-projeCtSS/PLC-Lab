@@ -1,0 +1,491 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.drive-commissioning",
+  "revision": 1,
+  "title": "Drive commissioning bench",
+  "summary": "A conveyor driven by a variable frequency drive (generic VFD behavioral model): run, run enable, fault acknowledge and preset speed terminals from the PLC; ready, running, remote and fault relays back; Start, Stop and Reset buttons, a Slow/Fast speed selector, a run lamp and a fault lamp.",
+  "components": [
+    {
+      "id": "start",
+      "label": "Start S1",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyOpen",
+        "color": "green"
+      }
+    },
+    {
+      "id": "stop",
+      "label": "Stop S2",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyClosed",
+        "color": "red"
+      }
+    },
+    {
+      "id": "reset",
+      "label": "Fault reset S3",
+      "kind": {
+        "type": "pushButton",
+        "contact": "normallyOpen",
+        "color": "blue"
+      }
+    },
+    {
+      "id": "speed",
+      "label": "Speed selector S4",
+      "kind": {
+        "type": "selectorSwitch",
+        "positions": [
+          "Slow",
+          "Fast"
+        ],
+        "initial": 0
+      }
+    },
+    {
+      "id": "drive",
+      "label": "Conveyor drive U1 / motor M1",
+      "kind": {
+        "type": "variableFrequencyDrive",
+        "rampMs": 2000,
+        "ratedCurrentMa": 3800,
+        "enableTerminal": true,
+        "faultTerminals": true,
+        "speedPermille": 500,
+        "presetPermille": 1000,
+        "keypadPermille": 300
+      }
+    },
+    {
+      "id": "lamp",
+      "label": "Run lamp H1",
+      "kind": {
+        "type": "pilotLamp",
+        "color": "green"
+      }
+    },
+    {
+      "id": "fault-lamp",
+      "label": "Fault lamp H2",
+      "kind": {
+        "type": "pilotLamp",
+        "color": "red"
+      }
+    }
+  ],
+  "installation": {
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc"
+      }
+    ],
+    "wiring": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "component": "start",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "component": "stop",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "component": "reset",
+        "port": "contact"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "component": "speed",
+        "port": "position1"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 4
+        },
+        "component": "drive",
+        "port": "ready"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 5
+        },
+        "component": "drive",
+        "port": "running"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 6
+        },
+        "component": "drive",
+        "port": "remote"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 7
+        },
+        "component": "drive",
+        "port": "fault"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "component": "drive",
+        "port": "run"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "component": "drive",
+        "port": "enable"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 2
+        },
+        "component": "drive",
+        "port": "reset"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 3
+        },
+        "component": "drive",
+        "port": "preset"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 4
+        },
+        "component": "lamp",
+        "port": "coil"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 5
+        },
+        "component": "fault-lamp",
+        "port": "coil"
+      }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "ResetPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "tag": "FastSelected"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 4
+        },
+        "tag": "DriveReady"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 5
+        },
+        "tag": "DriveRunning"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 6
+        },
+        "tag": "DriveRemote"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 7
+        },
+        "tag": "DriveFault"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "DriveRun"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "DriveEnable"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 2
+        },
+        "tag": "DriveReset"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 3
+        },
+        "tag": "DriveFast"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 4
+        },
+        "tag": "RunLamp"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 5
+        },
+        "tag": "FaultLamp"
+      }
+    ]
+  },
+  "interface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Start button S1, normally open: TRUE while pressed."
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Stop button S2, normally closed: TRUE while NOT pressed."
+    },
+    {
+      "tag": "ResetPB",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Fault reset button S3, normally open: TRUE while pressed."
+    },
+    {
+      "tag": "FastSelected",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Speed selector S4: TRUE in position Fast."
+    },
+    {
+      "tag": "DriveReady",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Drive U1 ready relay: supplied, not faulted, run enable present."
+    },
+    {
+      "tag": "DriveRunning",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Drive U1 running relay."
+    },
+    {
+      "tag": "DriveRemote",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Drive U1 in remote (terminal) control."
+    },
+    {
+      "tag": "DriveFault",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Drive U1 fault relay: TRUE while the drive is faulted."
+    },
+    {
+      "tag": "DriveRun",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Drive U1 run command terminal."
+    },
+    {
+      "tag": "DriveEnable",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Drive U1 run enable terminal."
+    },
+    {
+      "tag": "DriveReset",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Drive U1 fault acknowledge terminal (rising edge)."
+    },
+    {
+      "tag": "DriveFast",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Drive U1 preset speed terminal: TRUE selects the fast speed."
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Green run lamp H1."
+    },
+    {
+      "tag": "FaultLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Red fault lamp H2."
+    }
+  ],
+  "layout": [
+    {
+      "component": "start",
+      "x": 100,
+      "y": 440
+    },
+    {
+      "component": "stop",
+      "x": 200,
+      "y": 440
+    },
+    {
+      "component": "reset",
+      "x": 300,
+      "y": 440
+    },
+    {
+      "component": "speed",
+      "x": 100,
+      "y": 330
+    },
+    {
+      "component": "lamp",
+      "x": 400,
+      "y": 440
+    },
+    {
+      "component": "fault-lamp",
+      "x": 480,
+      "y": 440
+    },
+    {
+      "component": "drive",
+      "x": 560,
+      "y": 220,
+      "width": 300,
+      "height": 170
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.drives-basics",
+    "fundamentals.commissioning"
+  ]
+}

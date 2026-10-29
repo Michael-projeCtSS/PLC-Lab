@@ -64,6 +64,15 @@ pub(crate) fn apply(
         FaultSpec::DriveLocalControl { component: c } => {
             on_component(session, c, ComponentFault::DriveLocalControl)
         }
+        FaultSpec::DriveTrip { component: c } => {
+            on_component(session, c, ComponentFault::DriveTrip)
+        }
+        FaultSpec::DriveKeypadReference { component: c } => {
+            on_component(session, c, ComponentFault::DriveKeypadReference)
+        }
+        FaultSpec::DriveNoSupply { component: c } => {
+            on_component(session, c, ComponentFault::DriveNoSupply)
+        }
         FaultSpec::MotorOverloadTrip { component: c } => {
             on_component(session, c, ComponentFault::MotorOverload)
         }

@@ -1,0 +1,31 @@
+{
+  "id": "fundamentals.transmitter-wiring",
+  "kind": "topic",
+  "title": "2-wire and 4-wire transmitters",
+  "summary": "Who powers a current loop: loop-powered 2-wire transmitters need a supplied loop, separately powered 4-wire transmitters need a passive input.",
+  "tags": [
+    "2-wire",
+    "4-wire",
+    "loop supply",
+    "transmitter",
+    "current loop"
+  ],
+  "sections": [
+    {
+      "heading": "Loop-powered and separately powered",
+      "body": "A **2-wire** (loop-powered) transmitter has only the two loop wires. It takes its own power from the loop and regulates the loop current between 4 and 20 mA, which is why 4 mA is the lowest valid signal. Something must drive that current: an analog input that supplies the loop, or an external loop supply in series.\n\nA **4-wire** transmitter has a separate power supply and drives the loop current itself, so it needs a **passive** input that only measures. (A 3-wire device shares one conductor between supply and signal.)"
+    },
+    {
+      "heading": "In PLC Lab and on real modules",
+      "body": "In PLC Lab's generic model a current input either supplies the loop (for 2-wire devices) or is passive (for 4-wire devices), set per channel in the hardware configuration; the wrong combination carries no valid loop current. Real modules solve this differently: some provide separate terminals for 2-wire and 4-wire devices, some need an external loop supply, and connecting an active source to a supplied input can damage the transmitter or the module. Always follow the module and transmitter manuals."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.4-20ma",
+    "fundamentals.analog-io"
+  ]
+}

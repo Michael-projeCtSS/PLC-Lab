@@ -407,7 +407,10 @@ fn fault_component(fault: &FaultSpec) -> Option<&Identifier> {
         | FaultSpec::ValveStuck { component, .. }
         | FaultSpec::FeedbackMissing { component, .. }
         | FaultSpec::MotorOverloadTrip { component }
-        | FaultSpec::DriveLocalControl { component } => Some(component),
+        | FaultSpec::DriveLocalControl { component }
+        | FaultSpec::DriveTrip { component }
+        | FaultSpec::DriveKeypadReference { component }
+        | FaultSpec::DriveNoSupply { component } => Some(component),
         _ => None,
     }
 }

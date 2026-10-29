@@ -625,9 +625,20 @@ function Symbol({
       const w = l.width ?? 240;
       const h = l.height ?? 160;
       const speed = n(q, "speedPermille");
+      // Generic VFD behavioral model: display state as the drive shows it.
+      const state = !b(q, "supplied")
+        ? "OFF"
+        : b(q, "tripped")
+          ? "FLT"
+          : running
+            ? "RUN"
+            : b(q, "ready")
+              ? "RDY"
+              : "---";
+      const reference = n(q, "referencePermille");
       return (
         <g
-          aria-label={`${c.label}: ${running ? "running" : "stopped"}, ${remote ? "remote" : "local"} control`}
+          aria-label={`${c.label}: ${running ? "running" : "stopped"}, ${remote ? "remote" : "local"} control, ${b(q, "tripped") ? "faulted" : b(q, "ready") ? "ready" : "not ready"}`}
         >
           <rect
             x={l.x}
@@ -652,7 +663,7 @@ function Symbol({
             className="value-text"
             style={{ fontSize: 11, fill: "#8fe0b8" }}
           >
-            {remote ? "REM" : "LOC"} {running ? "RUN" : "RDY"}
+            {remote ? "REM" : "LOC"} {state}
           </text>
           <text
             x={l.x + 16}
@@ -660,7 +671,9 @@ function Symbol({
             className="value-text"
             style={{ fontSize: 11, fill: "#8fe0b8" }}
           >
-            {((speed * 50) / 1000).toFixed(1)} Hz
+            {((speed * 50) / 1000).toFixed(1)} Hz · ref{" "}
+            {((reference * 50) / 1000).toFixed(1)}
+            {b(q, "keypadReference") ? " KP" : ""}
           </text>
           <text
             x={l.x + 10}

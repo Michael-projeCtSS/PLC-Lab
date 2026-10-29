@@ -453,20 +453,17 @@ impl LabSession {
             let mut findings = Vec::new();
             let mut states = Vec::new();
             for &index in &drives {
-                let ready = self
-                    .scene
-                    .digital_output(index, "ready")
-                    .is_ok_and(|f| f.conducting);
+                let supplied = is_on(self.scene.quantity(index, "supplied"));
                 let label = &self.scene_def.components[index].label;
-                states.push(if ready {
+                states.push(if supplied {
                     CheckState::Ok
                 } else {
-                    CheckState::Attention
+                    CheckState::Fault
                 });
-                findings.push(if ready {
-                    format!("{label}: powered, ready relay closed")
+                findings.push(if supplied {
+                    format!("{label}: mains supply on")
                 } else {
-                    format!("{label}: ready relay open")
+                    format!("{label}: no mains supply (display dark, not ready)")
                 });
             }
             item(
@@ -474,7 +471,7 @@ impl LabSession {
                 "Drive supply",
                 worst(states),
                 findings,
-                "Look at the drive's display and its ready relay input.",
+                "Drive display; measure the mains supply only with qualified, safe equipment.",
             )
         };
         let devices = self.network.device_views();
@@ -1405,60 +1402,165 @@ impl LabSession {
     }
 
     fn drives(&self) -> CheckCategory {
+        const ITEMS: [(&str, &str, &str); 7] = [
+            (
+                "ready",
+                "Ready",
+                "Drive display and ready relay: supply, fault and enable.",
+            ),
+            (
+                "control-place",
+                "Local / remote",
+                "Drive display: control place.",
+            ),
+            (
+                "enable",
+                "Run enable",
+                "Watch the enable output and the drive's enable terminal.",
+            ),
+            (
+                "fault",
+                "Fault",
+                "Drive display and fault relay; acknowledge after removing the cause.",
+            ),
+            (
+                "run-command",
+                "Run command",
+                "Command the drive from the PLC and watch its run input.",
+            ),
+            (
+                "reference",
+                "Speed reference",
+                "Drive display: reference source and value.",
+            ),
+            (
+                "speed",
+                "Speed and feedback",
+                "Process view: drive speed; Watch: the running feedback.",
+            ),
+        ];
         let drives = self.drives_present();
         if drives.is_empty() {
-            let none = |id, title| {
-                item(
-                    id,
-                    title,
-                    CheckState::NotApplicable,
-                    vec!["This machine has no drive.".into()],
-                    "",
-                )
-            };
             return CheckCategory {
                 id: "drives",
                 title: "Drives",
-                items: vec![
-                    none("ready", "Ready"),
-                    none("control-place", "Local / remote"),
-                    none("run-command", "Run command"),
-                    none("speed", "Speed and feedback"),
-                ],
+                items: ITEMS
+                    .iter()
+                    .map(|(id, title, _)| {
+                        item(
+                            id,
+                            title,
+                            CheckState::NotApplicable,
+                            vec!["This machine has no drive.".into()],
+                            "",
+                        )
+                    })
+                    .collect(),
             };
         }
-        let mut ready = (Vec::new(), Vec::new());
-        let mut place = (Vec::new(), Vec::new());
-        let mut run = (Vec::new(), Vec::new());
-        let mut speed = (Vec::new(), Vec::new());
+        let mut results: Vec<(Vec<CheckState>, Vec<String>)> = vec![Default::default(); 7];
+        let mut add = |index: usize, state: CheckState, finding: String| {
+            results[index].0.push(state);
+            results[index].1.push(finding);
+        };
         for index in drives {
-            let label = self.scene_def.components[index].label.clone();
-            let id = self.scene_def.components[index].id.as_str();
-            let is_ready = self
-                .scene
-                .digital_output(index, "ready")
-                .is_ok_and(|f| f.conducting);
-            ready.0.push(if is_ready {
-                CheckState::Ok
-            } else {
-                CheckState::Attention
-            });
-            ready.1.push(format!(
-                "{label}: {}",
-                if is_ready { "ready" } else { "not ready" }
-            ));
-            let remote = is_on(self.scene.quantity(index, "remote"));
-            place.0.push(if remote {
-                CheckState::Ok
-            } else {
-                CheckState::Attention
-            });
-            place.1.push(if remote {
-                format!("{label}: remote (follows the PLC)")
-            } else {
-                format!("{label}: local control, the PLC run command is ignored")
-            });
-            let commanded = is_on(self.scene.quantity(index, "command"));
+            let definition = &self.scene_def.components[index];
+            let label = &definition.label;
+            let enable_terminal = matches!(
+                definition.kind,
+                ComponentKind::VariableFrequencyDrive {
+                    enable_terminal: true,
+                    ..
+                }
+            );
+            let q = |name| is_on(self.scene.quantity(index, name));
+            let permille = |name| match self.scene.quantity(index, name) {
+                Some(Quantity::Integer(p)) => p,
+                _ => 0,
+            };
+            let percent = |p: i64| format!("{}.{} %", p / 10, p % 10);
+            let (ready, tripped, commanded) = (q("ready"), q("tripped"), q("command"));
+            let mut reasons = Vec::new();
+            if !q("supplied") {
+                reasons.push("no mains supply");
+            }
+            if tripped {
+                reasons.push("faulted");
+            }
+            if enable_terminal && !q("enableCommand") {
+                reasons.push("run enable missing");
+            }
+            add(
+                0,
+                if ready {
+                    CheckState::Ok
+                } else if commanded {
+                    CheckState::Fault
+                } else {
+                    CheckState::Attention
+                },
+                if ready {
+                    format!("{label}: ready")
+                } else {
+                    format!(
+                        "{label}: not ready ({}){}",
+                        reasons.join(", "),
+                        if commanded {
+                            "; the run command is active"
+                        } else {
+                            ""
+                        }
+                    )
+                },
+            );
+            let remote = q("remote");
+            add(
+                1,
+                if remote {
+                    CheckState::Ok
+                } else {
+                    CheckState::Attention
+                },
+                if remote {
+                    format!("{label}: remote (follows the PLC)")
+                } else {
+                    format!("{label}: local control, the PLC run command is ignored")
+                },
+            );
+            add(
+                2,
+                match (enable_terminal, q("enableCommand")) {
+                    (false, _) => CheckState::NotApplicable,
+                    (true, true) => CheckState::Ok,
+                    (true, false) => CheckState::Attention,
+                },
+                if enable_terminal {
+                    format!(
+                        "{label}: run enable terminal {}",
+                        if q("enableCommand") {
+                            "energized"
+                        } else {
+                            "not energized"
+                        }
+                    )
+                } else {
+                    format!("{label}: no run enable terminal")
+                },
+            );
+            add(
+                3,
+                if tripped {
+                    CheckState::Fault
+                } else {
+                    CheckState::Ok
+                },
+                if tripped {
+                    format!("{label}: faulted (fault relay closed)")
+                } else {
+                    format!("{label}: no fault")
+                },
+            );
+            let id = definition.id.as_str();
             let seen = self
                 .scene_def
                 .installation
@@ -1471,67 +1573,68 @@ impl LabSession {
                         .get(&w.channel)
                         .is_some_and(|t| t.received)
                 });
-            run.0.push(if seen {
-                CheckState::Ok
-            } else {
-                CheckState::Untested
-            });
-            run.1.push(format!(
-                "{label}: run command {}",
-                if commanded { "present" } else { "absent" }
-            ));
-            let running = is_on(self.scene.quantity(index, "running"));
-            let permille = match self.scene.quantity(index, "speedPermille") {
-                Some(Quantity::Integer(p)) => p,
-                _ => 0,
-            };
-            speed.0.push(if commanded && !running {
-                CheckState::Attention
-            } else if seen {
-                CheckState::Ok
-            } else {
-                CheckState::Untested
-            });
-            speed.1.push(format!(
-                "{label}: {} at {}.{}% speed",
-                if running { "running" } else { "stopped" },
-                permille / 10,
-                permille % 10
-            ));
+            add(
+                4,
+                if seen {
+                    CheckState::Ok
+                } else {
+                    CheckState::Untested
+                },
+                format!(
+                    "{label}: run command {}",
+                    if commanded { "present" } else { "absent" }
+                ),
+            );
+            let keypad = q("keypadReference");
+            add(
+                5,
+                if keypad {
+                    CheckState::Attention
+                } else {
+                    CheckState::Ok
+                },
+                format!(
+                    "{label}: reference {} from {}",
+                    percent(permille("referencePermille")),
+                    if keypad {
+                        "the keypad"
+                    } else {
+                        "the terminals"
+                    }
+                ),
+            );
+            let running = q("running");
+            add(
+                6,
+                if commanded && remote && ready && !running {
+                    CheckState::Attention
+                } else if seen {
+                    CheckState::Ok
+                } else {
+                    CheckState::Untested
+                },
+                format!(
+                    "{label}: {} at {} speed",
+                    if running { "running" } else { "stopped" },
+                    percent(permille("speedPermille"))
+                ),
+            );
         }
         CheckCategory {
             id: "drives",
             title: "Drives",
-            items: vec![
-                item(
-                    "ready",
-                    "Ready",
-                    worst(ready.0),
-                    ready.1,
-                    "Drive display and ready relay.",
-                ),
-                item(
-                    "control-place",
-                    "Local / remote",
-                    worst(place.0),
-                    place.1,
-                    "Drive display: control place.",
-                ),
-                item(
-                    "run-command",
-                    "Run command",
-                    worst(run.0),
-                    run.1,
-                    "Command the drive from the PLC and watch its run input.",
-                ),
-                item(
-                    "speed",
-                    "Speed and feedback",
-                    worst(speed.0),
-                    speed.1,
-                    "Process view: drive speed; Watch: the running feedback.",
-                ),
-            ],
+            items: ITEMS
+                .iter()
+                .zip(results)
+                .map(|((id, title, how), (states, findings))| {
+                    let state = if states.iter().all(|s| *s == CheckState::NotApplicable) {
+                        CheckState::NotApplicable
+                    } else {
+                        worst(states)
+                    };
+                    item(id, title, state, findings, how)
+                })
+                .collect(),
         }
     }
 

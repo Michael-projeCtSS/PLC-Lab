@@ -1,0 +1,55 @@
+{
+  "id": "troubleshooting.drive-not-ready",
+  "kind": "troubleshooting",
+  "title": "Drive commanded but not ready",
+  "summary": "A drive starts only when it is ready: supplied, not faulted and enabled. A present run command is not enough.",
+  "tags": [
+    "drive",
+    "VFD",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "The ready chain",
+      "body": "Ready usually needs the mains supply, no active fault and the run enable (often from a safety or interlock circuit). Each drive family adds its own conditions; check the manual."
+    },
+    {
+      "heading": "Find the missing link",
+      "body": "Compare what the PLC sends with what the drive receives at its terminals, and read the drive display: no display points to the supply, a fault code to a trip, a missing enable to the enable path."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.drives-basics"
+  ],
+  "troubleshooting": {
+    "faultId": "drive-not-ready",
+    "area": "Drives",
+    "target": "Drive ready chain",
+    "effect": "The drive ignores the run command",
+    "symptoms": [
+      "Run command present, drive not ready",
+      "Display dark or showing a missing enable"
+    ],
+    "evidence": [
+      "PLC enable output switched",
+      "Drive enable terminal not energized",
+      "Supply and fault state"
+    ],
+    "diagnosticMethod": [
+      "Check supply, fault and enable in that order",
+      "Measure where the signal is lost"
+    ],
+    "repair": [
+      "Restore the missing condition, then verify"
+    ],
+    "explanation": "Ready is a chain of conditions; a single open link keeps the drive from running.",
+    "simulatedIn": [
+      "cm.vfd-enable",
+      "cm.vfd-no-supply"
+    ]
+  }
+}

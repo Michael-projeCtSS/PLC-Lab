@@ -588,7 +588,12 @@ fn long_runs_of_large_programs_keep_every_response_bounded() {
     assert!(events.events.len() <= 200 && event_bytes < 128 * 1024);
 }
 
-const LABS: [&str; 18] = [
+const LABS: [&str; 23] = [
+    "cm.vfd-local",
+    "cm.vfd-trip",
+    "cm.vfd-enable",
+    "cm.vfd-keypad",
+    "cm.vfd-no-supply",
     "cm.ai-loop-break",
     "cm.ai-loop-supply",
     "cm.ai-voltage-as-current",

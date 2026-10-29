@@ -155,7 +155,7 @@ fn installed_pack_is_discovered_indexed_searchable_and_resolvable() {
             .iter()
             .map(|r| r.id.as_str())
             .collect::<Vec<_>>(),
-        ["ts.vfd-local"]
+        ["cm.vfd-local", "ts.vfd-local"]
     );
     for r in vfd.related.iter().chain(&t.simulated_in) {
         assert!(!r.title.is_empty(), "vfd -> {}", r.id);

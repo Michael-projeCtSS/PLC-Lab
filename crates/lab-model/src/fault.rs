@@ -82,6 +82,19 @@ pub enum FaultSpec {
     DriveLocalControl {
         component: Identifier,
     },
+    /// The drive trips (latched fault, for example after a mechanical jam). The cause stays
+    /// until repaired; the trip must then be acknowledged at the drive.
+    DriveTrip {
+        component: Identifier,
+    },
+    /// The drive takes its speed reference from the keypad instead of the terminals.
+    DriveKeypadReference {
+        component: Identifier,
+    },
+    /// The drive's mains supply is off: it is not ready.
+    DriveNoSupply {
+        component: Identifier,
+    },
     OpenCircuit {
         channel: ChannelRef,
     },
@@ -131,9 +144,11 @@ impl FaultSpec {
             | Self::AnalogNoise { .. }
             | Self::LoopBreak { .. } => FaultCategory::AnalogIo,
             Self::ValveStuck { .. } | Self::FeedbackMissing { .. } => FaultCategory::Process,
-            Self::MotorOverloadTrip { .. } | Self::DriveLocalControl { .. } => {
-                FaultCategory::Drives
-            }
+            Self::MotorOverloadTrip { .. }
+            | Self::DriveLocalControl { .. }
+            | Self::DriveTrip { .. }
+            | Self::DriveKeypadReference { .. }
+            | Self::DriveNoSupply { .. } => FaultCategory::Drives,
             Self::OpenCircuit { .. } | Self::ShortToSupply { .. } | Self::SwappedWires { .. } => {
                 FaultCategory::Wiring
             }

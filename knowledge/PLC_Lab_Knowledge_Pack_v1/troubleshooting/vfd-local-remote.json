@@ -52,6 +52,7 @@
     ],
     "explanation": "Drives can be controlled locally for maintenance. A forgotten local mode is not a fault for the drive, so it raises no alarm. PLC Lab simulates this case with a terminal-controlled drive (run terminal, ready, running and remote relay outputs); speed references and drive parameters are not simulated.",
     "simulatedIn": [
+      "cm.vfd-local",
       "ts.vfd-local"
     ]
   }

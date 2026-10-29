@@ -1,6 +1,6 @@
 use lab_model::{
     fault::StuckPosition,
-    scene::{ContactType, OutputStyle, SceneDefinition},
+    scene::{ComponentKind, ContactType, OutputStyle, SceneDefinition},
     validate_scene,
 };
 use process_simulation::{AnalogUnit, ComponentFault, ProcessEventKind, Quantity, SceneRuntime};
@@ -343,4 +343,80 @@ fn commanded_quantities_come_from_sink_port_direction() {
     assert!(!runtime.is_commanded_quantity(drive, "running"));
     assert!(!runtime.is_commanded_quantity(drive, "remote"));
     assert!(runtime.is_commanded_quantity(drive, "command"));
+}
+
+/// The scene's drive with every optional terminal of the generic VFD model.
+fn full_drive_scene() -> SceneRuntime {
+    let mut scene = scene();
+    for c in &mut scene.components {
+        if let ComponentKind::VariableFrequencyDrive {
+            enable_terminal,
+            fault_terminals,
+            speed_permille,
+            preset_permille,
+            keypad_permille,
+            ..
+        } = &mut c.kind
+        {
+            *enable_terminal = true;
+            *fault_terminals = true;
+            *speed_permille = 500;
+            *preset_permille = Some(1000);
+            *keypad_permille = 300;
+        }
+    }
+    validate_scene(&scene).unwrap();
+    SceneRuntime::new(&scene, 1).unwrap()
+}
+
+#[test]
+fn the_generic_drive_needs_enable_follows_its_reference_and_latches_trips() {
+    let mut s = full_drive_scene();
+    let drive = s.index_of_str("drive").unwrap();
+    let relay = |s: &SceneRuntime, port: &str| s.digital_output(drive, port).unwrap().conducting;
+    // Without run enable the drive is not ready and ignores the run command.
+    s.set_coil(drive, "run", true).unwrap();
+    s.advance_to(at(500)).unwrap();
+    assert!(!relay(&s, "ready") && !relay(&s, "running"));
+    s.set_coil(drive, "enable", true).unwrap();
+    assert!(relay(&s, "ready"));
+    s.advance_to(at(2500)).unwrap();
+    // Ramp 0..100 % in 2 s, limited to the 50 % terminal reference.
+    assert_eq!(q(&s, "drive", "speedPermille"), Quantity::Integer(500));
+    // The preset selects 100 %; the ramp continues from 50 %.
+    s.set_coil(drive, "preset", true).unwrap();
+    s.advance_to(at(3000)).unwrap();
+    assert_eq!(q(&s, "drive", "speedPermille"), Quantity::Integer(750));
+    s.advance_to(at(4000)).unwrap();
+    assert_eq!(q(&s, "drive", "referencePermille"), Quantity::Integer(1000));
+    assert_eq!(q(&s, "drive", "speedPermille"), Quantity::Integer(1000));
+    // Keypad reference overrides the terminals.
+    s.apply_fault(drive, ComponentFault::DriveKeypadReference)
+        .unwrap();
+    assert_eq!(q(&s, "drive", "speedPermille"), Quantity::Integer(300));
+    s.clear_fault(drive, &ComponentFault::DriveKeypadReference)
+        .unwrap();
+    // A trip stops the drive and closes the fault relay; reset is refused while the cause
+    // persists and acknowledges it afterwards.
+    s.apply_fault(drive, ComponentFault::DriveTrip).unwrap();
+    assert!(relay(&s, "fault") && !relay(&s, "ready") && !relay(&s, "running"));
+    s.set_coil(drive, "reset", true).unwrap();
+    s.set_coil(drive, "reset", false).unwrap();
+    assert!(relay(&s, "fault"), "the cause is still there");
+    s.clear_fault(drive, &ComponentFault::DriveTrip).unwrap();
+    assert!(
+        relay(&s, "fault"),
+        "a trip stays latched until acknowledged"
+    );
+    s.set_coil(drive, "reset", true).unwrap();
+    assert!(!relay(&s, "fault") && relay(&s, "ready") && relay(&s, "running"));
+    // Losing the enable or the mains supply stops the drive.
+    s.set_coil(drive, "enable", false).unwrap();
+    assert!(!relay(&s, "running"));
+    s.set_coil(drive, "enable", true).unwrap();
+    s.apply_fault(drive, ComponentFault::DriveNoSupply).unwrap();
+    assert!(!relay(&s, "ready") && !relay(&s, "running"));
+    s.clear_fault(drive, &ComponentFault::DriveNoSupply)
+        .unwrap();
+    assert!(relay(&s, "running"));
 }

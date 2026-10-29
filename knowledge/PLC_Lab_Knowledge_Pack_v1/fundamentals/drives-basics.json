@@ -34,6 +34,10 @@
     {
       "heading": "In PLC Lab",
       "body": "The simulated drive has a run terminal and three relay outputs (ready, running, remote). It ramps linearly to full speed, shows LOC or REM, the output frequency based on a 50 Hz rated frequency and an approximate motor current on its display. Speed references, drive trips and parameters are not simulated. This is a **simulation approximation** intended for control and troubleshooting practice."
+    },
+    {
+      "heading": "The generic VFD behavioral model",
+      "body": "PLC Lab's drive is a generic behavioral model, not a specific product. It shows the concepts most drives share: **control place** (local keypad or remote terminals), a **ready** chain (mains supply, no fault, run enable), a **run command**, a latched **fault** with a **fault reset** (acknowledge after removing the cause), a **speed reference** from the terminals (two preset speeds) or the keypad, a linear acceleration ramp and the **ready**, **running**, **remote** and **fault** relays. Real drives name, number and combine these differently, use other fault codes and add many parameters; the vendor manual decides."
     }
   ],
   "facts": [

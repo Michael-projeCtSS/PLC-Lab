@@ -1,0 +1,53 @@
+{
+  "id": "troubleshooting.drive-reference-source",
+  "kind": "troubleshooting",
+  "title": "Drive ignores the speed command",
+  "summary": "A running drive that ignores speed commands is usually set to another reference source.",
+  "tags": [
+    "drive",
+    "VFD",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "Reference sources",
+      "body": "Drives can take their speed reference from terminals (analog or preset inputs), a fieldbus or the keypad. Only the selected source counts; commands on the other sources are ignored."
+    },
+    {
+      "heading": "Check",
+      "body": "Read the reference source on the drive display and compare the speed with the commanded preset."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.drives-basics"
+  ],
+  "troubleshooting": {
+    "faultId": "drive-reference-source",
+    "area": "Drives",
+    "target": "Drive speed reference",
+    "effect": "The drive runs at the wrong speed",
+    "symptoms": [
+      "Speed does not follow the selector",
+      "Speed fixed at a keypad value"
+    ],
+    "evidence": [
+      "Preset terminal follows the command",
+      "Display shows the keypad as source"
+    ],
+    "diagnosticMethod": [
+      "Read the reference source",
+      "Compare commanded and actual speed"
+    ],
+    "repair": [
+      "Select the documented reference source"
+    ],
+    "explanation": "Configuration decides which command a drive obeys; wiring alone does not.",
+    "simulatedIn": [
+      "cm.vfd-keypad"
+    ]
+  }
+}

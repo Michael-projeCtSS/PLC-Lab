@@ -1,0 +1,75 @@
+{
+  "id": "lesson.drive-commissioning",
+  "number": 21,
+  "title": "Commissioning a variable frequency drive",
+  "summary": "Bring a drive into service: control place, ready chain, run command, fault handling and speed reference.",
+  "level": "intermediate",
+  "minutes": 20,
+  "objectives": [
+    "Check a drive's ready chain in order",
+    "Distinguish control place, fault and reference source problems"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "What a drive needs to run",
+      "body": "A drive runs when it is **ready** (supplied, not faulted, enabled), in **remote** control, and receives a **run command**. Its speed follows the selected **reference source**. Each condition has its own indication: display, relays and LEDs."
+    },
+    {
+      "type": "visual",
+      "heading": "The ready chain",
+      "body": "Work from left to right.",
+      "diagram": "  mains --> no fault --> run enable --> READY --> remote? --> run command --> RUNNING --> speed = reference"
+    },
+    {
+      "type": "example",
+      "heading": "A worked example",
+      "body": "The PLC commands RUN, the drive reports READY but nothing turns: the display shows LOC. The drive is in local control and ignores its terminals. Switching it to remote solves it; changing the program would not."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Pressing Reset again and again on a tripped drive. A latched trip clears only after the cause is removed; find the cause first, then acknowledge."
+    },
+    {
+      "type": "challenge",
+      "heading": "Next step",
+      "body": "Try the drive commissioning labs in COMMISSION.",
+      "question": {
+        "question": "The run command is present but the drive is not ready. What do you check first?",
+        "options": [
+          "The speed reference",
+          "Supply, fault and run enable",
+          "The motor bearings"
+        ],
+        "answer": 1,
+        "explanation": "Not ready means a condition of the ready chain is missing."
+      }
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "Which setting makes a ready drive ignore its run terminal?",
+      "options": [
+        "Local control",
+        "A low ramp time",
+        "A preset speed"
+      ],
+      "answer": 0,
+      "explanation": "In local control the keypad, not the terminals, starts the drive."
+    },
+    {
+      "question": "How do you clear a latched trip?",
+      "options": [
+        "Reset repeatedly",
+        "Remove the cause, then acknowledge",
+        "Switch the PLC to STOP"
+      ],
+      "answer": 1,
+      "explanation": "Acknowledging only works once the cause is gone."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.drives-basics"
+  ]
+}

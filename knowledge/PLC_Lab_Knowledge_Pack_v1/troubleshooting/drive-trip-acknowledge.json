@@ -1,0 +1,54 @@
+{
+  "id": "troubleshooting.drive-trip-acknowledge",
+  "kind": "troubleshooting",
+  "title": "Drive trip that cannot be reset",
+  "summary": "A latched drive trip is cleared in two steps: remove the cause, then acknowledge.",
+  "tags": [
+    "drive",
+    "VFD",
+    "commissioning"
+  ],
+  "sections": [
+    {
+      "heading": "Why reset does nothing",
+      "body": "While the cause (for example a jam or overload) is present, most drives refuse to acknowledge the fault. Resetting again and again does not help and can stress the machine."
+    },
+    {
+      "heading": "Order of work",
+      "body": "Read the fault, remove the cause, acknowledge, then verify the function. Note the fault for the commissioning report."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.drives-basics"
+  ],
+  "troubleshooting": {
+    "faultId": "drive-trip-acknowledge",
+    "area": "Drives",
+    "target": "Drive fault",
+    "effect": "The drive stays faulted",
+    "symptoms": [
+      "Fault lamp lit",
+      "Reset has no effect"
+    ],
+    "evidence": [
+      "Fault relay closed",
+      "The cause is still present"
+    ],
+    "diagnosticMethod": [
+      "Read the fault",
+      "Remove the cause",
+      "Acknowledge"
+    ],
+    "repair": [
+      "Remove the cause, then acknowledge the fault"
+    ],
+    "explanation": "Acknowledging a fault is not a repair; it only confirms that the cause has been removed.",
+    "simulatedIn": [
+      "cm.vfd-trip"
+    ]
+  }
+}
