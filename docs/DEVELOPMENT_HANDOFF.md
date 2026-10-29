@@ -102,6 +102,25 @@ crash (exit 0xC0000409) before any project code ran.
 - Not done: communication timeout of a fieldbus-controlled drive (needs the network work of
   P5).
 
+## Checkpoint 5: network diagnostics (P5)
+
+- Network projection (ADR-0028, contract 8 additive): per connection the downloaded
+  request, backend-decoded values and last request/response times; `traffic` (newest 60
+  structured events); device subnet membership. The text list of recent messages was
+  removed in favor of `traffic`.
+- Network view: nodes, connections, inspector (request, 4xxxx notation, raw words,
+  decoded values), Modbus traffic with standard exception names, ping.
+- Content: `scene.network-commissioning` (LT-401 direct, LI-402 behind gateway GW-402 with
+  unit ID 5, REAL, 40 ms processing), six labs `cm.net-*` (wrong IP, unit ID, timeout, word
+  order, register 40101 vs 101, device offline), guides `modbus-wrong-address`,
+  `modbus-unit-id`, `modbus-timeout`, `modbus-word-order`, `modbus-device-offline` with
+  fidelity; `modbus-wrong-register` now also simulated in `cm.net-register`.
+- Tests: projection test (request, values, paired traffic, exception 02, bound), per-lab
+  network evidence, secrecy and verification over all 30 fault-finding labs, Network
+  view UI test, native smoke step (gateway exception in the traffic).
+- Not done: a fieldbus-controlled drive with communication monitoring (P4 follow-up), write
+  functions.
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
@@ -111,8 +130,8 @@ native smoke test run on hosted Windows CI, which is authoritative.
 
 ## Next checkpoints
 
-1. Checkpoint 5: P5 network diagnostics (and the fieldbus drive timeout).
-2. Then P6 hardware configuration, P7 watch
+1. Checkpoint 6: P6 hardware configuration / station building.
+2. Then P7 watch
    and force, P8 diagnostic buffer, P9 alarms and events, P10 startup and restart,
    P11 ST depth, P12 LAD readiness.
 

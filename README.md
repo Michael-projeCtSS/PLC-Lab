@@ -59,7 +59,11 @@ SmartScreen may refuse to start a locally built copy. See
    labs on a conveyor with a generic VFD behavioral model (run, run enable, fault reset,
    preset speed; ready, running, remote and fault relays): local control, a latched trip,
    missing run enable, keypad speed reference, no mains supply, run command not reaching
-   the drive.
+   the drive. Network labs on a tank whose level arrives only over Modbus TCP (a direct
+   transmitter and an indicator behind a serial gateway): wrong server address, wrong
+   unit ID, timeout shorter than the gateway needs, wrong word order of a REAL, register
+   40101 entered as address 101, device switched off. The Network view shows nodes,
+   connections, the selected connection's request and response and the Modbus traffic.
 5. **TROUBLESHOOT** labs start from a fault report. Reproduce the symptom, collect
    evidence (inputs, outputs, LEDs, measurements, diagnostics, ping, drive display),
    submit a diagnosis, repair and verify. Labs: Stop contact replaced by NO, inverted

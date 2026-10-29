@@ -105,8 +105,12 @@ Not a specific product. Rules (also in `process-simulation` `Drive`):
 Modbus TCP is behavioral (`APPROXIMATED_BEHAVIORAL`): FC03/FC04 polling, transaction
 identifiers, zero-based addressing, int16/float32 with word order, exception codes
 01/02/0B, unit identifier handling, subnet and gateway rules, ARP resolution, duplicate
-addresses, connection refused, timeouts, fixed latency. TCP segmentation, write function
-codes, security and performance are not modeled. PROFINET, PROFIBUS DP, EtherNet/IP,
+addresses, connection refused, timeouts, device processing time against the configured
+timeout, fixed latency. The Network view shows the requests, responses and results as
+the PLC's stack observes them (bounded to the newest 60) and the 4xxxx / 3xxxx
+documentation notation as a labeled convention. TCP segmentation and handshakes, write
+function codes, serial bus timing behind gateways, security and performance are not
+modeled. PROFINET, PROFIBUS DP, EtherNet/IP,
 EtherCAT, OPC UA, CANopen, IO-Link and Modbus RTU are knowledge only (`NOT_IMPLEMENTED`).
 
 ## Vendor platforms
