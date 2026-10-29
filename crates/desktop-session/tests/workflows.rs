@@ -1452,11 +1452,7 @@ fn the_diagnostic_buffer_classifies_pairs_filters_and_pages_its_entries() {
     let cpu = page(None, Some("CPU"), None);
     assert!(cpu.entries.iter().all(|e| e.category == "CPU"));
     assert!(cpu.entries.iter().any(|e| e.kind == "ProgramDownloaded"));
-    let started = cpu
-        .entries
-        .iter()
-        .find(|e| e.kind == "ModeChange")
-        .unwrap();
+    let started = cpu.entries.iter().find(|e| e.kind == "ModeChange").unwrap();
     assert_eq!(
         (started.event.as_str(), started.severity.as_str()),
         ("EVENT", "info")

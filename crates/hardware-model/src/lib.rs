@@ -436,12 +436,7 @@ impl StationRuntime {
     }
 
     /// Record a single event (a mode change or a download) in the diagnostic buffer.
-    pub fn record_event(
-        &mut self,
-        source: DiagnosticSource,
-        kind: DiagnosticKind,
-        now: WorldTime,
-    ) {
+    pub fn record_event(&mut self, source: DiagnosticSource, kind: DiagnosticKind, now: WorldTime) {
         self.buffer.push(DiagnosticEntry {
             time: now,
             source,

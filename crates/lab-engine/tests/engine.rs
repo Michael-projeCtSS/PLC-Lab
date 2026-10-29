@@ -632,7 +632,8 @@ fn mode_changes_and_downloads_are_recorded_in_the_cpu_diagnostic_buffer() {
         to: CpuState::Stop,
     };
     assert_eq!(
-        events, [DiagnosticKind::ProgramDownloaded, run, stop],
+        events,
+        [DiagnosticKind::ProgramDownloaded, run, stop],
         "single events, oldest first"
     );
     // Single events are not active conditions.

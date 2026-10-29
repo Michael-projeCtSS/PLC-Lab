@@ -44,7 +44,10 @@ pub enum DiagnosticKind {
     PlcFault,
     ForceActive,
     /// The CPU changed its operating state (a single event).
-    ModeChange { from: CpuState, to: CpuState },
+    ModeChange {
+        from: CpuState,
+        to: CpuState,
+    },
     /// A program was downloaded into the CPU (a single event).
     ProgramDownloaded,
     /// A hardware configuration was downloaded into the CPU (a single event).
