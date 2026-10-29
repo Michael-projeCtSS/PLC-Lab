@@ -69,8 +69,10 @@ Validated: CI run 40757889061 (both lanes green; native smoke 17 steps on every 
   scaling article; a program-fix lab needs a verification path for student programs in the
   secrecy workflow).
 
-Validated: CI run 40830883517 (attempt 2; attempt 1 lost the Windows job to an `npm ci`
-process crash, exit 0xC0000409, before any project code ran).
+Validated: `2b6b8779106c9bf167214a12a4dbc338dfe1ac92`, CI run 40830883517 attempt 2 (Windows
+job 123306737809 and Linux job 123306740081 PASS; native smoke 17 steps on every entry
+point, launcher smoke 11 steps). Attempt 1 lost the Windows job to an `npm ci` process
+crash (exit 0xC0000409) before any project code ran.
 
 ## Checkpoint 4: drive commissioning (P4)
 
