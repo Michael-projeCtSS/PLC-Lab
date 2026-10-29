@@ -9,17 +9,19 @@ import { ProgressPage } from "./pages/ProgressPage";
 import { AboutPage } from "./pages/AboutPage";
 import { WorkspacePage } from "./workspace/WorkspacePage";
 import type { Navigate, Route } from "./route";
+import { PreferencesProvider, useInterface } from "./locale";
+import { Settings } from "./pages/Settings";
 
-const NAV: { page: Route["page"]; label: string }[] = [
-  { page: "home", label: "HOME" },
-  { page: "learn", label: "LEARN" },
-  { page: "practice", label: "PRACTICE" },
-  { page: "commission", label: "COMMISSION" },
-  { page: "troubleshoot", label: "TROUBLESHOOT" },
-  { page: "freelab", label: "FREE LAB" },
-  { page: "knowledge", label: "KNOWLEDGE" },
-  { page: "progress", label: "PROGRESS" },
-];
+const NAV = [
+  "home",
+  "learn",
+  "practice",
+  "commission",
+  "troubleshoot",
+  "freelab",
+  "knowledge",
+  "progress",
+] as const;
 
 function initial(page: Route["page"]): Route {
   switch (page) {
@@ -35,6 +37,16 @@ function initial(page: Route["page"]): Route {
 }
 
 export function App() {
+  return (
+    <PreferencesProvider>
+      <Application />
+    </PreferencesProvider>
+  );
+}
+
+function Application() {
+  const { t, preferences } = useInterface();
+  const [settings, setSettings] = useState(false);
   const [route, setRoute] = useState<Route>({ page: "home" });
   const navigate: Navigate = useCallback((next) => setRoute(next), []);
   const [openProblem, setOpenProblem] = useState<string | null>(null);
@@ -71,7 +83,11 @@ export function App() {
   }, []);
   const active = route.page === "workspace" ? route.section : route.page;
   return (
-    <div className="app">
+    <div
+      className="app"
+      data-density={preferences.density}
+      data-explanations={preferences.explanations}
+    >
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">
@@ -79,38 +95,46 @@ export function App() {
           </span>
           PLC Lab
         </div>
-        <nav className="nav" aria-label="Main">
+        <nav className="nav" aria-label={t("nav.main")}>
           {NAV.map((n) => (
             <button
-              key={n.page}
-              aria-current={active === n.page ? "page" : undefined}
-              onClick={() => navigate(initial(n.page))}
+              key={n}
+              aria-current={active === n ? "page" : undefined}
+              onClick={() => navigate(initial(n))}
             >
-              {n.label}
+              {t(`nav.${n}`)}
             </button>
           ))}
         </nav>
         <div className="topbar-right">
           {!api.available() && (
-            <span className="badge warning">Preview without desktop core</span>
+            <span className="badge warning">{t("common.preview")}</span>
           )}
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => navigate({ page: "about" })}
           >
-            About
+            {t("common.about")}
+          </button>
+          <button
+            className="btn btn-ghost settings-button"
+            aria-label={t("settings.title")}
+            onClick={() => setSettings(true)}
+          >
+            <span aria-hidden="true">⚙</span>
+            <span>{t("settings.title")}</span>
           </button>
         </div>
       </header>
       <main className="page" id="main">
         {openProblem && (
           <div className="notice error" role="alert" style={{ margin: 16 }}>
-            The project could not be opened: {openProblem}{" "}
+            {t("common.openProblem")} {openProblem}{" "}
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setOpenProblem(null)}
             >
-              Dismiss
+              {t("common.dismiss")}
             </button>
           </div>
         )}
@@ -146,6 +170,7 @@ export function App() {
           />
         )}
       </main>
+      {settings && <Settings onClose={() => setSettings(false)} />}
     </div>
   );
 }

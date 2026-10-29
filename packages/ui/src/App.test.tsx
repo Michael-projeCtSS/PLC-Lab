@@ -16,6 +16,8 @@ import {
 
 const fake = vi.hoisted(() => ({
   available: () => true,
+  coreInfo: vi.fn(),
+  knowledgeStatus: vi.fn(),
   library: vi.fn(),
   projects: vi.fn(),
   project: vi.fn(),
@@ -49,7 +51,149 @@ vi.mock("@plc-lab/ipc", async (original) => ({
 
 import { App } from "./App";
 
+it("Settings switches PL/EN immediately and preserves language and UI preferences across a restart", async () => {
+  const first = render(<App />);
+  const trigger = screen.getByRole("button", { name: "Settings" });
+  trigger.focus();
+  fireEvent.click(trigger);
+  expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Language")).toHaveFocus();
+  fireEvent.change(screen.getByLabelText("Language"), {
+    target: { value: "pl" },
+  });
+  expect(screen.getByRole("button", { name: "START" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "LABORATORIUM" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Ustawienia" }),
+  ).toBeInTheDocument();
+  expect(document.documentElement.lang).toBe("pl");
+  fireEvent.change(screen.getByLabelText("Gęstość interfejsu"), {
+    target: { value: "compact" },
+  });
+  fireEvent.click(screen.getByLabelText("Objaśnienia dla początkujących"));
+  first.unmount();
+  render(<App />);
+  expect(screen.getByRole("button", { name: "START" })).toBeInTheDocument();
+  expect(document.querySelector(".app")).toHaveAttribute(
+    "data-density",
+    "compact",
+  );
+  expect(document.querySelector(".app")).toHaveAttribute(
+    "data-explanations",
+    "false",
+  );
+  const savedTrigger = screen.getByRole("button", { name: "Ustawienia" });
+  savedTrigger.focus();
+  fireEvent.click(savedTrigger);
+  fireEvent.change(screen.getByLabelText("Język"), { target: { value: "en" } });
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(savedTrigger).toHaveFocus();
+  expect(screen.getByRole("button", { name: "HOME" })).toBeInTheDocument();
+});
+
+it("Settings reports failed persistence instead of pretending preferences were saved", () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  const save = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("Quota");
+  });
+  fireEvent.change(screen.getByLabelText("Language"), {
+    target: { value: "pl" },
+  });
+  expect(screen.getByRole("alert")).toHaveTextContent("Nie udało się zapisać");
+  save.mockRestore();
+});
+
+it("Basic Free Lab discloses engineering tools through Advanced while retaining PLC and simulation controls", async () => {
+  fake.openWorkspace.mockResolvedValue({ ...workspace(), exercise: null });
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  await screen.findByRole("tab", { name: "Program" });
+  for (const name of [
+    "Hardware",
+    "Network",
+    "Diagnostics",
+    "Commissioning",
+    "Watch",
+    "Waveforms",
+    "Events",
+    "Properties",
+  ])
+    expect(screen.queryByRole("tab", { name })).toBeNull();
+  expect(screen.getByRole("tab", { name: "Process" })).toBeInTheDocument();
+  expect(screen.getByRole("tab", { name: "Variables" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("tab", { name: "Cause & effect" }),
+  ).toBeInTheDocument();
+  const plc = screen.getByRole("group", { name: "PLC" });
+  expect(
+    within(plc).getByRole("button", { name: "RUN" }),
+  ).toHaveAccessibleDescription(/PLC mode switch RUN/);
+  const simulation = screen.getByRole("group", {
+    name: "Simulation",
+  });
+  expect(
+    within(simulation).getByRole("button", { name: "Step" }),
+  ).toHaveAccessibleDescription(/exactly one PLC cycle/);
+  fireEvent.click(screen.getByRole("button", { name: "ADVANCED" }));
+  for (const name of [
+    "Hardware",
+    "Diagnostics",
+    "Commissioning",
+    "Watch",
+    "Waveforms",
+    "Events",
+    "Properties",
+  ])
+    expect(screen.getByRole("tab", { name })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("tab", { name: "Hardware" }));
+  fireEvent.click(screen.getByRole("button", { name: "BASIC" }));
+  expect(screen.getByRole("tab", { name: "Program" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+
+it("offline variable monitoring offers an explanation and the real Build & Load action", async () => {
+  fake.frame.mockResolvedValue(
+    frame({ plc: { ...frame().plc, programName: null } }),
+  );
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  const heading = await screen.findByRole("heading", {
+    name: "No online data",
+  });
+  const empty = heading.closest(".empty");
+  expect(empty).not.toBeNull();
+  fireEvent.click(
+    within(empty as HTMLElement).getByRole("button", {
+      name: "Build & Load to PLC",
+    }),
+  );
+  await waitFor(() => expect(fake.buildAndLoad).toHaveBeenCalled());
+});
+
 beforeEach(() => {
+  localStorage.clear();
+  fake.coreInfo.mockResolvedValue({
+    appVersion: "0.2.0-dev",
+    buildContext: "development",
+    coreVersion: "0.2.0-dev",
+    contractVersion: 8,
+    execution: "manual-and-continuous",
+  });
+  fake.knowledgeStatus.mockResolvedValue({
+    packs: [],
+    searchPaths: [],
+    indexedItems: 0,
+  });
   fake.library.mockResolvedValue(library);
   fake.projects.mockResolvedValue({
     projects: [

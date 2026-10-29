@@ -1,4 +1,5 @@
 /** Design-system primitives shared by pages and the workspace. */
+import { useInterface } from "./locale";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export function Badge({
@@ -28,9 +29,20 @@ export function SimulationBadge({
 }: {
   state: "RUNNING" | "PAUSED" | "STOPPED";
 }) {
+  const { t } = useInterface();
   const kind =
     state === "RUNNING" ? "active" : state === "PAUSED" ? "warning" : "normal";
-  return <Badge kind={kind}>Sim {state.toLowerCase()}</Badge>;
+  return (
+    <Badge kind={kind}>
+      {t(
+        state === "RUNNING"
+          ? "status.running"
+          : state === "PAUSED"
+            ? "status.paused"
+            : "status.stopped",
+      )}
+    </Badge>
+  );
 }
 
 export function Tabs<T extends string>({
@@ -78,6 +90,7 @@ export function ErrorNotice({
   error: unknown;
   onDismiss?: () => void;
 }) {
+  const { t } = useInterface();
   if (!error) return null;
   const message = error instanceof Error ? error.message : String(error);
   return (
@@ -85,7 +98,7 @@ export function ErrorNotice({
       <span className="grow">{message}</span>
       {onDismiss && (
         <button className="btn btn-ghost btn-sm" onClick={onDismiss}>
-          Dismiss
+          {t("common.dismiss")}
         </button>
       )}
     </div>
@@ -159,17 +172,61 @@ export function Modal({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const dialog = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef(
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null,
+  );
+  const close = useRef(onClose);
   useEffect(() => {
-    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
+    close.current = onClose;
   }, [onClose]);
+  useEffect(() => {
+    const previous = previousFocus.current;
+    const focusable = () =>
+      Array.from(
+        dialog.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]',
+        ) ?? [],
+      );
+    focusable()[0]?.focus();
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close.current();
+      }
+      if (e.key === "Tab") {
+        const items = focusable();
+        const first = items[0],
+          last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("keydown", key);
+      previous?.focus();
+    };
+  }, []);
   return (
     <div
       className="modal-backdrop"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="modal" role="dialog" aria-modal="true" aria-label={title}>
+      <div
+        ref={dialog}
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <h2>{title}</h2>
         {children}
       </div>

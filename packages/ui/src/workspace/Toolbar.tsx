@@ -1,24 +1,10 @@
+import { useState } from "react";
+import { useInterface } from "../locale";
 import { api } from "@plc-lab/ipc";
 import { seconds } from "../format";
 import { Badge, PlcModeBadge, SimulationBadge } from "../ui";
 import { isFaultFinding } from "../route";
 import type { Lab } from "./useLab";
-
-/** Explanations of the two separate control groups (also the buttons' accessible descriptions). */
-const HELP = {
-  plcRun:
-    "PLC mode switch RUN: the PLC executes its program once in every PLC cycle while simulated time passes.",
-  plcStop:
-    "PLC mode switch STOP: the program is not executed and the outputs go to their configured stop state (normally off). The simulated machine keeps running.",
-  simRun:
-    "Simulation Run: let simulated time pass. The machine moves and, with the PLC in RUN, the PLC scans every cycle. Does not change the PLC mode switch.",
-  simPause:
-    "Simulation Pause: freeze the simulated world. Nothing changes until Run or Step.",
-  simStep:
-    "Simulation Step: advance the simulated world by exactly one PLC cycle, then stay paused.",
-  simStop:
-    "Simulation Stop: return the machine to its initial state and power-cycle the PLC (program, hardware configuration and mode switch are kept; PLC variables restart). This is not the PLC STOP switch.",
-} as const;
 
 const SPEEDS = [25, 50, 100, 200, 500, 1000];
 
@@ -33,18 +19,28 @@ export function Toolbar({
   setMode: (m: "basic" | "advanced") => void;
   onBack: () => void;
 }) {
+  const { t, preferences } = useInterface();
+  const [feedback, setFeedback] = useState<"loaded" | "failed" | null>(null);
+  const HELP = {
+    plcRun: t("help.plcRun"),
+    plcStop: t("help.plcStop"),
+    simRun: t("help.simRun"),
+    simPause: t("help.simPause"),
+    simStep: t("help.simStep"),
+    simStop: t("help.simStop"),
+  };
   const { frame, ws, workspace, project } = lab;
   if (!frame || !ws || !workspace || !project) return null;
   const running = frame.simulation.state === "RUNNING";
   const busy = lab.busy !== null;
   const exercise = workspace.exercise;
   return (
-    <div className="ws-toolbar" role="toolbar" aria-label="Workspace controls">
+    <div className="ws-toolbar" role="toolbar" aria-label={t("ws.controls")}>
       <div className="group">
         <button
           className="btn btn-ghost btn-sm"
           onClick={onBack}
-          aria-label="Back"
+          aria-label={t("common.back")}
         >
           ←
         </button>
@@ -56,18 +52,18 @@ export function Toolbar({
         </div>
       </div>
       <div className="group">
-        <div className="segmented" role="group" aria-label="Interface mode">
+        <div className="segmented" role="group" aria-label={t("ws.mode")}>
           <button
             aria-pressed={mode === "basic"}
             onClick={() => setMode("basic")}
           >
-            BASIC
+            {t("ws.basic")}
           </button>
           <button
             aria-pressed={mode === "advanced"}
             onClick={() => setMode("advanced")}
           >
-            ADVANCED
+            {t("ws.advanced")}
           </button>
         </div>
       </div>
@@ -76,10 +72,22 @@ export function Toolbar({
           <button
             className="btn btn-primary"
             disabled={busy}
-            onClick={() => void lab.buildAndLoad(true)}
-            title="Compile, load into the PLC, switch the PLC to RUN and start the simulation"
+            onClick={() => {
+              setFeedback(null);
+              void lab
+                .buildAndLoad(true)
+                .then(
+                  (r) =>
+                    r &&
+                    setFeedback(r.outcome === "LOADED" ? "loaded" : "failed"),
+                );
+            }}
+            title={
+              preferences.explanations ? t("control.buildHelp") : undefined
+            }
+            aria-description={t("control.buildHelp")}
           >
-            Build &amp; Load to PLC
+            {t("control.build")}
           </button>
         ) : (
           <>
@@ -106,31 +114,45 @@ export function Toolbar({
                   })
               }
             >
-              Compile
+              {t("control.compile")}
             </button>
             <button
               className="btn btn-primary"
               disabled={busy}
               onClick={() => void lab.buildAndLoad(false)}
-              title="Download the program to the PLC without changing the mode switch"
+              title={t("control.downloadHelp")}
             >
-              Download
+              {t("control.download")}
             </button>
           </>
         )}
       </div>
+      {feedback && (
+        <div
+          className={`build-feedback ${feedback === "failed" ? "error" : "success"}`}
+          role={feedback === "failed" ? "alert" : "status"}
+        >
+          {t(feedback === "failed" ? "control.failed" : "control.loaded")}
+        </div>
+      )}
       <div
-        className="group"
+        className="group control-group"
+        role="group"
         aria-label="PLC"
-        title="The PLC's own mode switch. It decides whether the program runs; the simulation controls decide whether time passes."
+        title={t("help.plcGroup")}
       >
         <span className="label">PLC</span>
         <PlcModeBadge mode={frame.plc.mode} />
-        <div className="segmented" role="group" aria-label="PLC mode switch">
+        <div
+          className="segmented"
+          role="group"
+          aria-label={t("control.plcGroup")}
+        >
           <button
             aria-pressed={frame.plc.switch === "RUN"}
             disabled={busy}
-            title={HELP.plcRun}
+            title={preferences.explanations ? HELP.plcRun : undefined}
+            aria-description={HELP.plcRun}
             onClick={() =>
               void lab.act(
                 "mode",
@@ -144,7 +166,8 @@ export function Toolbar({
           <button
             aria-pressed={frame.plc.switch === "STOP"}
             disabled={busy}
-            title={HELP.plcStop}
+            title={preferences.explanations ? HELP.plcStop : undefined}
+            aria-description={HELP.plcStop}
             onClick={() =>
               void lab.act(
                 "mode",
@@ -167,9 +190,9 @@ export function Toolbar({
                 (f) => f,
               )
             }
-            title="Memory reset: clears the fault and non-retentive data"
+            title={t("help.reset")}
           >
-            Reset PLC
+            {t("control.reset")}
           </button>
         )}
         {frame.plc.forces > 0 && (
@@ -177,17 +200,19 @@ export function Toolbar({
         )}
       </div>
       <div
-        className="group"
-        aria-label="Simulation"
-        title="The simulated world: whether time passes for the machine and the PLC. Separate from the PLC mode switch."
+        className="group control-group"
+        aria-label={t("control.simulation")}
+        role="group"
+        title={t("help.simGroup")}
       >
-        <span className="label">Simulation</span>
+        <span className="label">{t("control.simulation")}</span>
         <SimulationBadge state={frame.simulation.state} />
         {running ? (
           <button
             className="btn btn-sm"
             disabled={busy}
-            title={HELP.simPause}
+            title={preferences.explanations ? HELP.simPause : undefined}
+            aria-description={HELP.simPause}
             onClick={() =>
               void lab.act(
                 "sim",
@@ -196,13 +221,14 @@ export function Toolbar({
               )
             }
           >
-            Pause
+            {t("control.pause")}
           </button>
         ) : (
           <button
             className="btn btn-sm"
             disabled={busy}
-            title={HELP.simRun}
+            title={preferences.explanations ? HELP.simRun : undefined}
+            aria-description={HELP.simRun}
             onClick={() =>
               void lab.act(
                 "sim",
@@ -211,7 +237,7 @@ export function Toolbar({
               )
             }
           >
-            Run
+            {t("control.run")}
           </button>
         )}
         <button
@@ -224,9 +250,10 @@ export function Toolbar({
               (f) => f,
             )
           }
-          title={HELP.simStep}
+          title={preferences.explanations ? HELP.simStep : undefined}
+          aria-description={HELP.simStep}
         >
-          Step
+          {t("control.step")}
         </button>
         <button
           className="btn btn-sm"
@@ -238,14 +265,15 @@ export function Toolbar({
               (f) => f,
             )
           }
-          title={HELP.simStop}
+          title={preferences.explanations ? HELP.simStop : undefined}
+          aria-description={HELP.simStop}
         >
-          Stop
+          {t("control.stop")}
         </button>
         <select
           className="input"
           style={{ height: 24, width: 76 }}
-          aria-label="Simulation speed"
+          aria-label={t("control.speed")}
           value={frame.simulation.speedPercent}
           onChange={(e) =>
             void lab.act(
@@ -261,10 +289,10 @@ export function Toolbar({
             </option>
           ))}
         </select>
-        <span className="mono muted" title="Simulation time (world time)">
+        <span className="mono muted" title={t("control.time")}>
           {seconds(frame.worldTimeUs)}
         </span>
-        <span className="mono dim" title="Completed PLC cycles">
+        <span className="mono dim" title={t("control.cycles")}>
           #{frame.cycle}
         </span>
       </div>
@@ -274,13 +302,13 @@ export function Toolbar({
             className="btn btn-primary"
             disabled={busy}
             onClick={() => void lab.check()}
-            title="Run the exercise checks in an isolated simulation"
+            title={t("help.check")}
           >
             {lab.busy === "check"
-              ? "Checking…"
+              ? t("control.checking")
               : isFaultFinding(exercise.kind)
-                ? "Verify repair"
-                : "Check solution"}
+                ? t("control.verify")
+                : t("control.check")}
           </button>
         </div>
       )}

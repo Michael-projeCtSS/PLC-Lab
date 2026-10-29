@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 import { useState } from "react";
 import { api, type ProjectSummaryDto } from "@plc-lab/ipc";
 import { Badge, Empty, ErrorNotice, Modal } from "../ui";
@@ -5,6 +6,7 @@ import { useLoad } from "../useLoad";
 import type { Navigate } from "../route";
 
 export function FreeLabPage({ navigate }: { navigate: Navigate }) {
+  const { t } = useInterface();
   const data = useLoad(
     async () => ({
       library: await api.library(),
@@ -24,8 +26,7 @@ export function FreeLabPage({ navigate }: { navigate: Navigate }) {
   const run = (work: Promise<unknown>) =>
     work.then(() => data.reload(), setError);
   const importFile = async (file: File) => {
-    if (file.size > 4 * 1024 * 1024)
-      throw new Error("The project file is larger than 4 MiB.");
+    if (file.size > 4 * 1024 * 1024) throw new Error(t("lab.fileLarge"));
     const project = await api.importProject(await file.text());
     navigate({ page: "workspace", projectId: project.id, section: "freelab" });
   };
@@ -44,15 +45,12 @@ export function FreeLabPage({ navigate }: { navigate: Navigate }) {
     <div className="page-inner">
       <div className="page-header">
         <div>
-          <h1>Free lab</h1>
-          <p>
-            Choose a machine and a PLC platform profile, then program, wire, run
-            and diagnose freely. Projects are saved automatically.
-          </p>
+          <h1>{t("lab.title")}</h1>
+          <p>{t("lab.intro")}</p>
         </div>
         <span className="spacer" />
         <label className="btn">
-          Import .plclab
+          {t("lab.import")}
           <input
             type="file"
             accept=".plclab,application/json"
@@ -69,7 +67,7 @@ export function FreeLabPage({ navigate }: { navigate: Navigate }) {
           onClick={() => setCreating(true)}
           disabled={!library}
         >
-          New project
+          {t("lab.new")}
         </button>
       </div>
       <ErrorNotice
@@ -78,11 +76,21 @@ export function FreeLabPage({ navigate }: { navigate: Navigate }) {
       />
       {projects && projects.problems.length > 0 && (
         <div className="notice warning" style={{ marginBottom: 12 }}>
-          Some project files could not be read: {projects.problems.join("; ")}
+          {t("lab.readProblem")} {projects.problems.join("; ")}
         </div>
       )}
       {projects && projects.projects.length === 0 && (
-        <Empty>No projects yet. Create a free lab or start an exercise.</Empty>
+        <Empty>
+          <h3>{t("lab.emptyTitle")}</h3>
+          <p>{t("lab.empty")}</p>
+          <button
+            className="btn btn-primary"
+            disabled={!library}
+            onClick={() => setCreating(true)}
+          >
+            {t("lab.new")}
+          </button>
+        </Empty>
       )}
       {projects && projects.projects.length > 0 && (
         <div className="list">
@@ -91,12 +99,13 @@ export function FreeLabPage({ navigate }: { navigate: Navigate }) {
               <div className="grow">
                 <strong>{p.name}</strong>{" "}
                 {p.kind === "exercise" ? (
-                  <Badge>Exercise</Badge>
+                  <Badge>{t("lab.exercise")}</Badge>
                 ) : (
-                  <Badge kind="auto">Free lab</Badge>
+                  <Badge kind="auto">{t("lab.title")}</Badge>
                 )}
                 <div className="muted" style={{ fontSize: 12 }}>
-                  {sceneTitle(p.scene)} · {platformName(p.platform)} · saved{" "}
+                  {sceneTitle(p.scene)} · {platformName(p.platform)} ·{" "}
+                  {t("lab.saved")}{" "}
                   {p.updatedAt.replace("T", " ").replace("Z", " UTC")}
                 </div>
               </div>
@@ -110,29 +119,25 @@ export function FreeLabPage({ navigate }: { navigate: Navigate }) {
                   })
                 }
               >
-                Open
+                {t("common.open")}
               </button>
               <button className="btn btn-sm" onClick={() => setRenaming(p)}>
-                Save as…
+                {t("lab.saveAs")}
               </button>
               <button
                 className="btn btn-sm"
                 onClick={() => exportProject(p).catch(setError)}
               >
-                Export
+                {t("common.export")}
               </button>
               <button
                 className="btn btn-sm btn-danger"
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      `Delete project “${p.name}”? This cannot be undone.`,
-                    )
-                  )
+                  if (window.confirm(t("lab.deleteConfirm", { name: p.name })))
                     run(api.deleteProject(p.id));
                 }}
               >
-                Delete
+                {t("common.delete")}
               </button>
             </div>
           ))}
@@ -140,7 +145,7 @@ export function FreeLabPage({ navigate }: { navigate: Navigate }) {
       )}
       {projects && (
         <p className="dim" style={{ marginTop: 10, fontSize: 12 }}>
-          Project folder: {projects.directory}
+          {t("lab.folder")} {projects.directory}
         </p>
       )}
       {creating && library && (
@@ -162,7 +167,7 @@ export function FreeLabPage({ navigate }: { navigate: Navigate }) {
         />
       )}
       {renaming && (
-        <Modal title="Save project as" onClose={() => setRenaming(null)}>
+        <Modal title={t("lab.saveTitle")} onClose={() => setRenaming(null)}>
           <SaveAs
             initial={`${renaming.name} (copy)`}
             onSave={(name) => {
@@ -184,11 +189,12 @@ function SaveAs({
   initial: string;
   onSave: (name: string) => void;
 }) {
+  const { t } = useInterface();
   const [name, setName] = useState(initial);
   return (
     <>
       <label className="field">
-        New name
+        {t("lab.newName")}
         <input
           className="input"
           value={name}
@@ -204,7 +210,7 @@ function SaveAs({
           disabled={!name.trim()}
           onClick={() => onSave(name.trim())}
         >
-          Save copy
+          {t("lab.saveCopy")}
         </button>
       </div>
     </>
@@ -227,15 +233,16 @@ function NewProject({
   onClose: () => void;
   onCreate: (name: string, scene: string, platform: string) => void;
 }) {
+  const { t } = useInterface();
   const [name, setName] = useState("");
   const [scene, setScene] = useState(scenes[0]?.id ?? "");
   const [platform, setPlatform] = useState("generic.iec");
   const selected = scenes.find((s) => s.id === scene);
   const profile = platforms.find((p) => p.id === platform);
   return (
-    <Modal title="New free lab project" onClose={onClose}>
+    <Modal title={t("lab.newTitle")} onClose={onClose}>
       <label className="field">
-        Project name
+        {t("lab.name")}
         <input
           className="input"
           value={name}
@@ -246,7 +253,7 @@ function NewProject({
         />
       </label>
       <label className="field">
-        Machine (scene)
+        {t("lab.scene")}
         <select
           className="input"
           value={scene}
@@ -265,7 +272,7 @@ function NewProject({
         </p>
       )}
       <label className="field">
-        PLC platform profile
+        {t("lab.profile")}
         <select
           className="input"
           value={platform}
@@ -280,25 +287,24 @@ function NewProject({
       </label>
       {profile && (
         <p className="muted" style={{ fontSize: 12 }}>
-          Simulation fidelity:{" "}
+          {t("lab.fidelity")}{" "}
           <strong>
             {profile.fidelity.level.replaceAll("_", " ").toLowerCase()}
           </strong>
-          . Platform profiles change addressing, analog representation and
-          product names; PLC Lab does not emulate vendor firmware.
+          . {t("lab.profileHelp")}
         </p>
       )}
       <div className="row">
         <span className="spacer" />
         <button className="btn" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           className="btn btn-primary"
           disabled={!scene}
           onClick={() => onCreate(name.trim(), scene, platform)}
         >
-          Create and open
+          {t("lab.create")}
         </button>
       </div>
     </Modal>

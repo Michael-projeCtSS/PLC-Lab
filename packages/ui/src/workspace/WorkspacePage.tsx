@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 import { useState } from "react";
 import { ErrorNotice, Empty, Splitter, Tabs, Badge } from "../ui";
 import { isFaultFinding, type Navigate, type Section } from "../route";
@@ -31,6 +32,7 @@ export function WorkspacePage({
   navigate: Navigate;
   back: Section;
 }) {
+  const { t, preferences } = useInterface();
   const lab = useLab(projectId);
   const [tab, setTab] = useState<CenterTab>("program");
   const [selection, setSelection] = useState<Selection>(null);
@@ -38,6 +40,13 @@ export function WorkspacePage({
   const [dockHeight, setDockHeight] = useState(240);
   const [mode, setMode] = useState<"basic" | "advanced">("basic");
   const troubleshooting = isFaultFinding(lab.workspace?.exercise?.kind);
+  const simple = mode === "basic" && !lab.workspace?.exercise;
+  const alarms =
+    (lab.frame?.alarms.length ?? 0) + (lab.frame?.activeDiagnostics ?? 0);
+  const visibleTab =
+    simple && tab !== "process" && !(tab === "diagnostics" && alarms > 0)
+      ? "program"
+      : tab;
   if (lab.fatal)
     return (
       <div className="page-inner">
@@ -54,21 +63,20 @@ export function WorkspacePage({
             )
           }
         >
-          Back
+          {t("common.back")}
         </button>
       </div>
     );
   if (!lab.workspace || !lab.frame || !lab.project)
-    return <Empty>Opening the lab…</Empty>;
+    return <Empty>{t("ws.opening")}</Empty>;
   const select = (s: Selection) => {
     setSelection(s);
     if (s?.kind === "component") setTab("process");
     if (s?.kind === "module") setTab("hardware");
     if (s?.kind === "device") setTab("network");
   };
-  const alarms = lab.frame.alarms.length + lab.frame.activeDiagnostics;
   return (
-    <div className="ws">
+    <div className={`ws${simple ? " ws-basic" : ""}`}>
       <Toolbar
         lab={lab}
         mode={mode}
@@ -83,47 +91,70 @@ export function WorkspacePage({
           )
         }
       />
+      {simple && preferences.explanations && (
+        <p className="student-hint">{t("ws.advancedHint")}</p>
+      )}
       <ForceBanner lab={lab} />
       <div className="ws-body">
-        <aside className="ws-left" aria-label="Project">
-          <ProjectTree
-            lab={lab}
-            tab={tab}
-            setTab={setTab}
-            selection={selection}
-            select={select}
-          />
-        </aside>
+        {!simple && (
+          <aside className="ws-left" aria-label={t("ws.project")}>
+            <ProjectTree
+              lab={lab}
+              tab={tab}
+              setTab={setTab}
+              selection={selection}
+              select={select}
+            />
+          </aside>
+        )}
         <div className="ws-main">
           <div
             className="row"
             style={{ flex: 1, minHeight: 0, alignItems: "stretch", gap: 0 }}
           >
-            <section className="ws-center grow" aria-label="Editor">
+            <section className="ws-center grow" aria-label={t("ws.editor")}>
               <Tabs<CenterTab>
-                label="Workspace views"
-                active={tab}
+                label={t("ws.views")}
+                active={visibleTab}
                 onSelect={setTab}
                 tabs={[
-                  { id: "program", label: "Program" },
-                  { id: "hardware", label: "Hardware" },
-                  { id: "process", label: "Process" },
-                  ...(lab.workspace.scene.hasNetwork
-                    ? [{ id: "network" as const, label: "Network" }]
+                  { id: "program", label: t("ws.program") },
+                  ...(!simple
+                    ? [{ id: "hardware" as const, label: t("ws.hardware") }]
                     : []),
-                  {
-                    id: "diagnostics",
-                    label: "Diagnostics",
-                    ...(alarms > 0
-                      ? { badge: <Badge kind="warning">{alarms}</Badge> }
-                      : {}),
-                  },
-                  { id: "commissioning", label: "Commissioning" },
+                  ...(simple && alarms > 0
+                    ? [
+                        {
+                          id: "diagnostics" as const,
+                          label: t("ws.diagnostics"),
+                          badge: <Badge kind="warning">{alarms}</Badge>,
+                        },
+                      ]
+                    : []),
+                  { id: "process", label: t("ws.process") },
+                  ...(!simple && lab.workspace.scene.hasNetwork
+                    ? [{ id: "network" as const, label: t("ws.network") }]
+                    : []),
+                  ...(!simple
+                    ? [
+                        {
+                          id: "diagnostics" as const,
+                          label: t("ws.diagnostics"),
+                          ...(alarms > 0
+                            ? { badge: <Badge kind="warning">{alarms}</Badge> }
+                            : {}),
+                        },
+                        {
+                          id: "commissioning" as const,
+                          label: t("ws.commissioning"),
+                        },
+                      ]
+                    : []),
                 ]}
               />
               <div className="ws-center-body">
-                {tab === "program" && <ProgramTab lab={lab} />}
-                {tab === "process" && (
+                {visibleTab === "program" && <ProgramTab lab={lab} />}
+                {visibleTab === "process" && (
                   <ProcessTab
                     lab={lab}
                     selection={selection}
@@ -131,7 +162,7 @@ export function WorkspacePage({
                     troubleshooting={troubleshooting}
                   />
                 )}
-                {tab === "hardware" && (
+                {visibleTab === "hardware" && (
                   <HardwareTab
                     lab={lab}
                     selection={selection}
@@ -139,11 +170,13 @@ export function WorkspacePage({
                     advanced={mode === "advanced"}
                   />
                 )}
-                {tab === "network" && (
+                {visibleTab === "network" && (
                   <NetworkTab lab={lab} advanced={mode === "advanced"} />
                 )}
-                {tab === "diagnostics" && <DiagnosticsTab lab={lab} />}
-                {tab === "commissioning" && <CommissioningTab lab={lab} />}
+                {visibleTab === "diagnostics" && <DiagnosticsTab lab={lab} />}
+                {visibleTab === "commissioning" && (
+                  <CommissioningTab lab={lab} />
+                )}
               </div>
             </section>
             <Splitter
@@ -157,9 +190,14 @@ export function WorkspacePage({
             <aside
               className="ws-right"
               style={{ width: rightWidth }}
-              aria-label="Inspector"
+              aria-label={t("ws.inspector")}
             >
-              <Inspector lab={lab} selection={selection} navigate={navigate} />
+              <Inspector
+                lab={lab}
+                selection={selection}
+                navigate={navigate}
+                simple={simple}
+              />
             </aside>
           </div>
           <Splitter
@@ -171,7 +209,7 @@ export function WorkspacePage({
             onResize={setDockHeight}
           />
           <div className="ws-dock" style={{ height: dockHeight }}>
-            <Dock lab={lab} select={select} />
+            <Dock lab={lab} select={select} advanced={!simple} />
           </div>
         </div>
       </div>

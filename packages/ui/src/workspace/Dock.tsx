@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
@@ -18,42 +19,65 @@ type DockTab = "variables" | "watch" | "waves" | "events" | "messages";
 export function Dock({
   lab,
   select = () => undefined,
+  advanced = true,
 }: {
+  advanced?: boolean;
   lab: Lab;
   select?: (s: Selection) => void;
 }) {
+  const { t } = useInterface();
   const [tab, setTab] = useState<DockTab>("variables");
+  const [shownError, setShownError] = useState<number | null>(null);
+  const latestError =
+    [...lab.messages].reverse().find((m) => m.kind === "error")?.id ?? null;
+  if (latestError !== shownError) {
+    setShownError(latestError);
+    if (latestError !== null) setTab("messages");
+  }
+  const activeTab = !advanced && tab !== "messages" ? "variables" : tab;
   const errors = lab.messages.filter((m) => m.kind === "error").length;
   return (
     <>
       <Tabs<DockTab>
-        label="Monitoring"
-        active={tab}
+        label={t("dock.monitoring")}
+        active={activeTab}
         onSelect={setTab}
         tabs={[
-          { id: "variables", label: "Variables" },
-          {
-            id: "watch",
-            label: "Watch",
-            ...(lab.watch.length
-              ? { badge: <span className="dim">{lab.watch.length}</span> }
-              : {}),
-          },
-          { id: "waves", label: "Waveforms" },
-          { id: "events", label: "Events" },
-          {
-            id: "messages",
-            label: "Messages",
-            ...(errors ? { badge: <Badge kind="fault">{errors}</Badge> } : {}),
-          },
+          { id: "variables", label: t("dock.variables") },
+          ...(advanced
+            ? [
+                {
+                  id: "watch" as const,
+                  label: t("dock.watch"),
+                  ...(lab.watch.length
+                    ? { badge: <span className="dim">{lab.watch.length}</span> }
+                    : {}),
+                },
+                { id: "waves" as const, label: t("dock.waves") },
+                { id: "events" as const, label: t("dock.events") },
+              ]
+            : []),
+          ...(advanced || lab.messages.length > 0
+            ? [
+                {
+                  id: "messages" as const,
+                  label: t("dock.messages"),
+                  ...(errors
+                    ? { badge: <Badge kind="fault">{errors}</Badge> }
+                    : {}),
+                },
+              ]
+            : []),
         ]}
       />
       <div className="ws-dock-body">
-        {tab === "variables" && <Variables lab={lab} select={select} />}
-        {tab === "watch" && <WatchTables lab={lab} select={select} />}
-        {tab === "waves" && <Waveforms lab={lab} />}
-        {tab === "events" && <Events lab={lab} />}
-        {tab === "messages" && <Messages lab={lab} />}
+        {activeTab === "variables" && (
+          <Variables lab={lab} select={select} advanced={advanced} />
+        )}
+        {activeTab === "watch" && <WatchTables lab={lab} select={select} />}
+        {activeTab === "waves" && <Waveforms lab={lab} />}
+        {activeTab === "events" && <Events lab={lab} />}
+        {activeTab === "messages" && <Messages lab={lab} />}
       </div>
     </>
   );
@@ -72,6 +96,7 @@ export function ForceCell({
   valueType: string;
   forced: SignalValueDto | null;
 }) {
+  const { t } = useInterface();
   const ws = lab.ws;
   if (!ws || (kind !== "PLC_INPUT" && kind !== "PLC_OUTPUT")) return null;
   const force = (value: SignalValueDto | null) =>
@@ -85,7 +110,7 @@ export function ForceCell({
       <span className="row" style={{ gap: 4 }}>
         <Badge kind="forced">F {formatValue(forced)}</Badge>
         <button className="btn btn-sm btn-ghost" onClick={() => force(null)}>
-          Unforce
+          {t("dock.unforce")}
         </button>
       </span>
     );
@@ -96,14 +121,16 @@ export function ForceCell({
     <span className="row" style={{ gap: 2 }}>
       <button
         className="btn btn-sm btn-ghost"
-        title="Force TRUE"
+        title={`${t("dock.force")} TRUE`}
+        aria-description={t("help.force")}
         onClick={() => force({ type: "BOOL", value: true })}
       >
         F1
       </button>
       <button
         className="btn btn-sm btn-ghost"
-        title="Force FALSE"
+        title={`${t("dock.force")} FALSE`}
+        aria-description={t("help.force")}
         onClick={() => force({ type: "BOOL", value: false })}
       >
         F0
@@ -156,10 +183,13 @@ export function NumericForce({
 function Variables({
   lab,
   select,
+  advanced,
 }: {
+  advanced: boolean;
   lab: Lab;
   select: (s: Selection) => void;
 }) {
+  const { t } = useInterface();
   const [filter, setFilter] = useState("");
   const [detail, setDetail] = useState(false);
   const ws = lab.ws;
@@ -181,49 +211,57 @@ function Variables({
       <div className="row" style={{ padding: "4px 8px" }}>
         <input
           className="input"
-          placeholder="Filter variables"
+          placeholder={t("dock.filter")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          aria-label="Filter variables"
+          aria-label={t("dock.filter")}
           style={{ width: 220 }}
         />
-        <label className="row muted" style={{ fontSize: 12 }}>
-          <input
-            type="checkbox"
-            checked={detail}
-            onChange={(e) => setDetail(e.target.checked)}
-          />{" "}
-          Show I/O source and quality
-        </label>
+        {advanced && (
+          <label className="row muted" style={{ fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={detail}
+              onChange={(e) => setDetail(e.target.checked)}
+            />{" "}
+            {t("dock.details")}
+          </label>
+        )}
         <span className="spacer" />
         <span className="dim" style={{ fontSize: 11 }}>
-          {vars.data ? `${vars.data.total} variables` : ""}
+          {vars.data ? t("dock.count", { count: vars.data.total }) : ""}
         </span>
       </div>
       <div style={{ flex: 1, overflow: "auto" }}>
         {!lab.frame?.plc.programName ? (
           <div className="empty">
-            Load a program into the PLC to monitor its variables.
+            <h3>{t("dock.emptyTitle")}</h3>
+            <p>{t("dock.empty")}</p>
+            <button
+              className="btn btn-primary"
+              disabled={lab.busy !== null}
+              onClick={() => void lab.buildAndLoad(true)}
+            >
+              {t("control.build")}
+            </button>
           </div>
         ) : (
           <table className="table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Kind</th>
-                <th title="The input image the PLC used in its last scan">
-                  Scan input
-                </th>
-                <th title="The value the last scan committed (outputs, variables, block outputs)">
-                  Committed
-                </th>
-                <th title="The input sampled at the end of the cycle, used by the next scan">
-                  Next input
-                </th>
-                {detail && <th>I/O</th>}
-                {detail && <th>Quality</th>}
-                <th>Force</th>
-                <th />
+                <th>{t("dock.name")}</th>
+                <th>{t("dock.kind")}</th>
+                <th title={t("dock.scanHelp")}>{t("dock.scan")}</th>
+                <th title={t("dock.committedHelp")}>{t("dock.committed")}</th>
+                <th title={t("dock.nextHelp")}>{t("dock.next")}</th>
+                {advanced && detail && <th>I/O</th>}
+                {advanced && detail && <th>{t("dock.quality")}</th>}
+                {advanced && (
+                  <>
+                    <th>{t("dock.force")}</th>
+                    <th />
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -233,22 +271,28 @@ function Variables({
                 return (
                   <tr key={r.signal}>
                     <td className="mono">
-                      <button
-                        className="btn btn-sm btn-ghost mono"
-                        title="Show the online detail of this variable"
-                        onClick={() => select({ kind: "signal", id: r.signal })}
-                      >
-                        {r.name}
-                      </button>
+                      {advanced ? (
+                        <button
+                          className="btn btn-sm btn-ghost mono"
+                          title="Show the online detail of this variable"
+                          onClick={() =>
+                            select({ kind: "signal", id: r.signal })
+                          }
+                        >
+                          {r.name}
+                        </button>
+                      ) : (
+                        <span>{r.name}</span>
+                      )}
                     </td>
                     <td className="dim">
                       {r.kind === "PLC_INPUT"
-                        ? "input"
+                        ? t("dock.input")
                         : r.kind === "PLC_OUTPUT"
-                          ? "output"
+                          ? t("dock.output")
                           : r.kind === "BLOCK_OUTPUT"
-                            ? "block"
-                            : "local"}
+                            ? t("dock.block")
+                            : t("dock.local")}
                     </td>
                     <td className={valueClass(r.scanValue)}>
                       {r.kind === "PLC_INPUT" ? formatValue(r.scanValue) : ""}
@@ -266,8 +310,10 @@ function Variables({
                     >
                       {r.kind === "PLC_INPUT" ? formatValue(r.staged) : ""}
                     </td>
-                    {detail && <td className="mono dim">{r.source ?? ""}</td>}
-                    {detail && (
+                    {advanced && detail && (
+                      <td className="mono dim">{r.source ?? ""}</td>
+                    )}
+                    {advanced && detail && (
                       <td>
                         {r.quality && r.quality !== "GOOD" ? (
                           <Badge kind="bad">
@@ -278,31 +324,35 @@ function Variables({
                         )}
                       </td>
                     )}
-                    <td>
-                      <ForceCell
-                        lab={lab}
-                        signal={r.signal}
-                        kind={r.kind}
-                        valueType={s?.valueType ?? ""}
-                        forced={r.forced}
-                      />
-                    </td>
-                    <td>
-                      {s && (
-                        <button
-                          className="btn btn-sm btn-ghost"
-                          onClick={() =>
-                            lab.setWatch(
-                              watched
-                                ? lab.watch.filter((p) => p !== s.path)
-                                : [...lab.watch, s.path].slice(0, 64),
-                            )
-                          }
-                        >
-                          {watched ? "Unwatch" : "Watch"}
-                        </button>
-                      )}
-                    </td>
+                    {advanced && (
+                      <>
+                        <td>
+                          <ForceCell
+                            lab={lab}
+                            signal={r.signal}
+                            kind={r.kind}
+                            valueType={s?.valueType ?? ""}
+                            forced={r.forced}
+                          />
+                        </td>
+                        <td>
+                          {s && (
+                            <button
+                              className="btn btn-sm btn-ghost"
+                              onClick={() =>
+                                lab.setWatch(
+                                  watched
+                                    ? lab.watch.filter((p) => p !== s.path)
+                                    : [...lab.watch, s.path].slice(0, 64),
+                                )
+                              }
+                            >
+                              {watched ? "Unwatch" : "Watch"}
+                            </button>
+                          )}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 );
               })}
@@ -576,18 +626,15 @@ function Events({ lab }: { lab: Lab }) {
 }
 
 function Messages({ lab }: { lab: Lab }) {
+  const { t } = useInterface();
   if (lab.messages.length === 0)
-    return (
-      <div className="empty">
-        Build, download and check results appear here.
-      </div>
-    );
+    return <div className="empty">{t("dock.messagesEmpty")}</div>;
   return (
     <div style={{ padding: 8 }} className="col">
       <div className="row">
         <span className="spacer" />
         <button className="btn btn-sm btn-ghost" onClick={lab.clearMessages}>
-          Clear
+          {t("common.clear")}
         </button>
       </div>
       {[...lab.messages].reverse().map((m) => (

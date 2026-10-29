@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 import { useState } from "react";
 import { api, type ExerciseSummaryDto } from "@plc-lab/ipc";
 import { Badge, Empty, ErrorNotice } from "../ui";
@@ -11,20 +12,20 @@ import {
 
 const LEVELS = ["beginner", "intermediate", "advanced"] as const;
 
-const INTRO: Record<ExerciseKind, { title: string; text: string }> = {
+const INTRO = {
   practice: {
-    title: "Practice",
-    text: "Write a PLC program for a real machine. Your program is checked by running it against scripted scenarios in an isolated simulation.",
+    title: "ex.practice",
+    text: "ex.practiceIntro",
   },
   commissioning: {
-    title: "Commissioning labs",
-    text: "A newly installed machine does not work yet. Work through the commissioning checklist: power, hardware, network, inputs, outputs, drives and process. Test every device, find the installation fault, repair it and prove the machine works.",
+    title: "ex.commissioning",
+    text: "ex.commissioningIntro",
   },
   troubleshooting: {
-    title: "Troubleshooting labs",
-    text: "Something is wrong with a working machine. Reproduce the symptom, collect evidence, name the root cause, repair it and prove the repair.",
+    title: "ex.troubleshooting",
+    text: "ex.troubleshootingIntro",
   },
-};
+} as const;
 
 export function ExercisesPage({
   kind,
@@ -33,6 +34,7 @@ export function ExercisesPage({
   kind: ExerciseKind;
   navigate: Navigate;
 }) {
+  const { t } = useInterface();
   const library = useLoad(() => api.library(), []);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -49,25 +51,27 @@ export function ExercisesPage({
     <div className="page-inner">
       <div className="page-header">
         <div>
-          <h1>{INTRO[kind].title}</h1>
-          <p>{INTRO[kind].text}</p>
+          <h1>{t(INTRO[kind].title)}</h1>
+          <p>{t(INTRO[kind].text)}</p>
         </div>
       </div>
       <ErrorNotice
         error={library.error ?? error}
         onDismiss={() => setError(null)}
       />
-      {!library.loading && items.length === 0 && (
-        <Empty>No {kind} exercises are installed.</Empty>
-      )}
+      {!library.loading && items.length === 0 && <Empty>{t("ex.empty")}</Empty>}
       {LEVELS.map((level) => {
         const group = items.filter((e) => e.difficulty === level);
         if (group.length === 0) return null;
         return (
           <section key={level}>
             <div className="section-title">
-              <h2 style={{ textTransform: "capitalize" }}>{level}</h2>
-              <span className="muted">{group.length} exercises</span>
+              <h2 style={{ textTransform: "capitalize" }}>
+                {t(`ex.${level}`)}
+              </h2>
+              <span className="muted">
+                {t("ex.count", { count: group.length })}
+              </span>
             </div>
             <div className="tiles">
               {group.map((e) => (
@@ -76,11 +80,13 @@ export function ExercisesPage({
                   className="tile"
                   onClick={() => start(e)}
                   disabled={busy !== null}
-                  aria-label={`Start ${e.title}`}
+                  aria-label={t("ex.start", { title: e.title })}
                 >
                   <h3>
                     {e.title}
-                    {e.passed && <Badge kind="active">Passed</Badge>}
+                    {e.passed && (
+                      <Badge kind="active">{t("common.passed")}</Badge>
+                    )}
                   </h3>
                   <p>{e.summary}</p>
                   <div className="tile-meta">
@@ -94,10 +100,10 @@ export function ExercisesPage({
                     <span className="spacer" />
                     <span>
                       {busy === e.id
-                        ? "Opening…"
+                        ? t("common.opening")
                         : e.attempts > 0
-                          ? "Continue"
-                          : "Start"}
+                          ? t("common.continue")
+                          : t("common.start")}
                     </span>
                   </div>
                 </button>

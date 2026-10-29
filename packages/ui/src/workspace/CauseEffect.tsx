@@ -4,6 +4,7 @@
  * received by the field devices → process response → inputs staged for the next scan.
  * Nothing is recomputed here.
  */
+import { useInterface } from "../locale";
 import type { CauseEffectDto, EffectDto, SignalDto } from "@plc-lab/ipc";
 import { formatValue, seconds, valueClass } from "../format";
 
@@ -46,39 +47,56 @@ export function CauseEffect({
   ce: CauseEffectDto | null;
   signals: SignalDto[];
 }) {
+  const { t, preferences } = useInterface();
   if (!ce)
     return (
-      <p className="muted">
-        Run or step the simulation to see what the PLC read, decided and caused
-        in each cycle.
-      </p>
+      <div className="cause-empty">
+        <h3>{t("cause.title")}</h3>
+        <p>{t("cause.empty")}</p>
+        {preferences.explanations && (
+          <ol>
+            {(
+              [
+                "cause.read",
+                "cause.decided",
+                "cause.command",
+                "cause.process",
+                "cause.next",
+              ] as const
+            ).map((key) => (
+              <li key={key}>{t(key).replace(/^\d · /, "")}</li>
+            ))}
+          </ol>
+        )}
+      </div>
     );
   const map = new Map(signals.map((s) => [s.id, s]));
   const scanned = ce.outcome === "SCANNED" || ce.outcome === "FAULTED";
   return (
-    <div className="ce" aria-label={`Cycle ${ce.cycle}`}>
+    <div className="ce" aria-label={t("cause.cycle", { cycle: ce.cycle })}>
       <div className="row muted" style={{ fontSize: 11, marginBottom: 4 }}>
-        Cycle #{ce.cycle} · {seconds(ce.startUs)} → {seconds(ce.endUs)}
+        {t("cause.cycle", { cycle: ce.cycle })} · {seconds(ce.startUs)} →{" "}
+        {seconds(ce.endUs)}
         <span className="spacer" />
         {ce.outcome === "SCANNED"
-          ? "PLC scanned"
+          ? t("cause.scanned")
           : ce.outcome === "FAULTED"
             ? "PLC FAULT"
             : ce.outcome === "NOT_SCANNED_FAULT"
-              ? "PLC in FAULT: no scan"
-              : "PLC in STOP: no scan"}
+              ? t("cause.fault")
+              : t("cause.stop")}
       </div>
       <div className="ce-step">
         <h5>
-          1 · PLC read <span>input image</span>
+          {t("cause.read")} <span>{t("cause.inputImage")}</span>
         </h5>
-        <Items items={ce.saw} signals={map} empty="No inputs declared." />
+        <Items items={ce.saw} signals={map} empty={t("cause.noInputs")} />
       </div>
-      <div className="ce-arrow">▼ program logic</div>
+      <div className="ce-arrow">{t("cause.logic")}</div>
       <div className="ce-step">
         <h5>
-          2 · PLC logic result{" "}
-          <span>{scanned ? "committed" : "outputs held off"}</span>
+          {t("cause.decided")}{" "}
+          <span>{scanned ? t("cause.committed") : t("cause.held")}</span>
         </h5>
         {ce.fault ? (
           <div className="notice error">
@@ -88,28 +106,24 @@ export function CauseEffect({
           <Items
             items={ce.decided}
             signals={map}
-            empty="No outputs or variables."
+            empty={t("cause.noOutputs")}
           />
         )}
       </div>
-      <div className="ce-arrow">▼ output modules switch the field devices</div>
+      <div className="ce-arrow">{t("cause.modules")}</div>
       <div className="ce-step">
         <h5>
-          3 · Output command <span>received by the devices</span>
+          {t("cause.command")} <span>{t("cause.received")}</span>
         </h5>
-        <Items
-          items={ce.applied}
-          signals={map}
-          empty="No actuator in this machine."
-        />
+        <Items items={ce.applied} signals={map} empty={t("cause.noActuator")} />
       </div>
-      <div className="ce-arrow">▼ the machine runs for one cycle</div>
+      <div className="ce-arrow">{t("cause.machine")}</div>
       <div className="ce-step">
         <h5>
-          4 · Process <span>physical change</span>
+          {t("cause.process")} <span>{t("cause.physical")}</span>
         </h5>
         {ce.process.length === 0 ? (
-          <div className="dim">No physical change in this cycle.</div>
+          <div className="dim">{t("cause.noChange")}</div>
         ) : (
           ce.process.map((c) => {
             const s = map.get(c.signal);
@@ -125,12 +139,12 @@ export function CauseEffect({
           })
         )}
       </div>
-      <div className="ce-arrow">▼ sensors sampled at the end of the cycle</div>
+      <div className="ce-arrow">{t("cause.sensors")}</div>
       <div className="ce-step">
         <h5>
-          5 · Next PLC input <span>staged for the next scan</span>
+          {t("cause.next")} <span>{t("cause.staged")}</span>
         </h5>
-        <Items items={ce.next} signals={map} empty="No inputs declared." />
+        <Items items={ce.next} signals={map} empty={t("cause.noInputs")} />
       </div>
     </div>
   );

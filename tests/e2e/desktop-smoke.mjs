@@ -199,6 +199,52 @@ try {
       { command, request },
     );
 
+  const changeLanguage = async (language) => {
+    await page.getByRole("button", { name: /^(Settings|Ustawienia)$/ }).click();
+    await page
+      .getByRole("combobox", { name: /Language|Język/ })
+      .selectOption(language);
+    await page
+      .getByRole("button", {
+        name: language === "pl" ? "Zamknij" : "Close",
+        exact: true,
+      })
+      .click();
+  };
+  await step(
+    "Settings language and preferences persist after reloading the application",
+    async () => {
+      await changeLanguage("pl");
+      await page.getByRole("button", { name: "START", exact: true }).waitFor();
+      await page.screenshot({ path: path.join(directory, "home-pl.png") });
+      await page
+        .getByRole("button", { name: "Ustawienia", exact: true })
+        .click();
+      await page.getByLabel("Gęstość interfejsu").selectOption("compact");
+      await page.getByLabel("Objaśnienia dla początkujących").uncheck();
+      await page.screenshot({ path: path.join(directory, "settings-pl.png") });
+      await page.reload();
+      await page.getByRole("button", { name: "START", exact: true }).waitFor();
+      assert.equal(
+        await page.locator(".app").getAttribute("data-density"),
+        "compact",
+      );
+      assert.equal(
+        await page.locator(".app").getAttribute("data-explanations"),
+        "false",
+      );
+      await page
+        .getByRole("button", { name: "Ustawienia", exact: true })
+        .click();
+      await page.getByLabel("Gęstość interfejsu").selectOption("comfortable");
+      await page.getByLabel("Objaśnienia dla początkujących").check();
+      await page.getByLabel("Język").selectOption("en");
+      await page.getByRole("button", { name: "Close", exact: true }).click();
+      await page.reload();
+      await page.getByRole("button", { name: "HOME", exact: true }).waitFor();
+    },
+  );
+
   await step("shell renders with primary navigation", async () => {
     await page
       .getByRole("navigation", { name: "Main" })
@@ -267,6 +313,7 @@ try {
       .getByRole("button", { name: /Start Motor start\/stop with seal-in/ })
       .click();
     await page
+      .getByRole("toolbar")
       .getByRole("button", { name: "Build & Load to PLC" })
       .waitFor({ timeout: 30_000 });
     await page
@@ -283,7 +330,10 @@ try {
       await page.keyboard.press("Control+A");
       await page.keyboard.press("Delete");
       await page.keyboard.insertText(SOLUTION);
-      await page.getByRole("button", { name: "Build & Load to PLC" }).click();
+      await page
+        .getByRole("toolbar")
+        .getByRole("button", { name: "Build & Load to PLC" })
+        .click();
       await page
         .getByText("Sim running", { exact: true })
         .waitFor({ timeout: 15_000 });
@@ -599,8 +649,10 @@ try {
         .selectOption("scene.hardware-station");
       await page.getByRole("button", { name: "Create and open" }).click();
       await page
+        .getByRole("toolbar")
         .getByRole("button", { name: "Build & Load to PLC" })
         .click({ timeout: 30_000 });
+      await page.getByRole("button", { name: "ADVANCED", exact: true }).click();
       const monitoring = page.getByRole("tablist", { name: "Monitoring" });
       // A watch table row of a canonical signal and its online detail.
       await monitoring.getByRole("tab", { name: /^Watch/ }).click();
@@ -700,8 +752,26 @@ try {
         .selectOption("scene.conveyor-drive");
       await page.getByRole("button", { name: "Create and open" }).click();
       await page
+        .getByRole("toolbar")
         .getByRole("button", { name: "Build & Load to PLC" })
         .waitFor({ timeout: 30_000 });
+      await changeLanguage("pl");
+      assert.equal(
+        await page.getByRole("tab", { name: "Sprzęt", exact: true }).count(),
+        0,
+      );
+      assert.equal(
+        await page.getByRole("tab", { name: "Przebiegi", exact: true }).count(),
+        0,
+      );
+      await page
+        .getByRole("button", { name: "ZAAWANSOWANY", exact: true })
+        .click();
+      await page.getByRole("tab", { name: "Sprzęt", exact: true }).waitFor();
+      await page.getByRole("tab", { name: "Przebiegi", exact: true }).waitFor();
+      await page
+        .getByRole("button", { name: "PODSTAWOWY", exact: true })
+        .click();
       const cdp = await page.context().newCDPSession(page);
       for (const [width, height] of [
         [1366, 768],
@@ -723,9 +793,9 @@ try {
           return {
             scrollWidth: document.documentElement.scrollWidth,
             clientWidth: document.documentElement.clientWidth,
-            toolbar: box('[role="toolbar"][aria-label="Workspace controls"]'),
+            toolbar: box('[role="toolbar"]'),
             editor: box('[data-testid="st-editor"]'),
-            inspector: box('[role="tablist"][aria-label="Inspector"]'),
+            inspector: box(".ws-right"),
           };
         });
         assert.ok(
@@ -745,6 +815,7 @@ try {
       }
       await cdp.send("Emulation.clearDeviceMetricsOverride");
       await cdp.detach();
+      await changeLanguage("en");
       await page.getByRole("tab", { name: "Process" }).click();
       await page
         .locator('[aria-label^="Conveyor drive U1 / motor M1:"]')
@@ -873,6 +944,7 @@ try {
           .first()
           .waitFor({ timeout: 15_000 });
         await page
+          .getByRole("toolbar")
           .getByRole("button", { name: "Build & Load to PLC" })
           .waitFor({ timeout: 30_000 });
       },
@@ -912,6 +984,107 @@ try {
       assert.equal(application.exitCode, 0, `${image} exit code`);
     }
   });
+
+  if (!values.bat)
+    await step(
+      "language and density survive closing and restarting the real application",
+      async () => {
+        for (const expected of ["en", "pl"]) {
+          const restarted = spawn(target, [], {
+            cwd: os.tmpdir(),
+            env: environment,
+            windowsHide: true,
+            stdio: "ignore",
+          });
+          let startError;
+          restarted.once("error", (error) => {
+            startError = error;
+          });
+          const exited = new Promise((resolve) =>
+            restarted.once("exit", resolve),
+          );
+          let current;
+          try {
+            const deadline = Date.now() + 30_000;
+            while (true) {
+              if (startError) throw startError;
+              if (restarted.exitCode !== null)
+                throw new Error(`Restart exited ${restarted.exitCode}`);
+              try {
+                const response = await fetch(
+                  `http://127.0.0.1:${port}/json/version`,
+                  { signal: AbortSignal.timeout(1000) },
+                );
+                if (response.ok) break;
+              } catch {
+                /* WebView starts asynchronously. */
+              }
+              if (Date.now() > deadline)
+                throw new Error("Restarted WebView did not become ready");
+              await delay(100);
+            }
+            current = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+            const view = current.contexts().flatMap((c) => c.pages())[0];
+            assert.ok(view);
+            await view
+              .getByRole("button", {
+                name: expected === "en" ? "HOME" : "START",
+                exact: true,
+              })
+              .waitFor();
+            if (expected === "pl") {
+              assert.equal(
+                await view.locator(".app").getAttribute("data-density"),
+                "compact",
+              );
+              assert.equal(
+                await view.locator(".app").getAttribute("data-explanations"),
+                "false",
+              );
+            }
+            await view
+              .getByRole("button", {
+                name: expected === "en" ? "Settings" : "Ustawienia",
+                exact: true,
+              })
+              .click();
+            await view
+              .getByRole("combobox", { name: /Language|Język/ })
+              .selectOption(expected === "en" ? "pl" : "en");
+            await view
+              .getByLabel(
+                expected === "en" ? "Gęstość interfejsu" : "UI density",
+              )
+              .selectOption(expected === "en" ? "compact" : "comfortable");
+            await view
+              .getByLabel(
+                expected === "en"
+                  ? "Objaśnienia dla początkujących"
+                  : "Beginner explanations",
+              )
+              .setChecked(expected !== "en");
+            await current.close();
+            current = undefined;
+            const close = spawnSync(
+              "taskkill",
+              ["/PID", String(restarted.pid)],
+              { encoding: "utf8" },
+            );
+            assert.equal(close.status, 0, close.stderr);
+            const code = await Promise.race([
+              exited,
+              delay(10_000).then(() => {
+                throw new Error("Restarted app did not close");
+              }),
+            ]);
+            assert.equal(code, 0);
+          } finally {
+            await current?.close().catch(() => undefined);
+            if (restarted.exitCode === null) restarted.kill();
+          }
+        }
+      },
+    );
 
   await result("PASS");
   console.log(

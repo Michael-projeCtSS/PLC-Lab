@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 import { useState } from "react";
 import {
   api,
@@ -20,25 +21,28 @@ export function Inspector({
   lab,
   selection,
   navigate,
+  simple = false,
 }: {
+  simple?: boolean;
   lab: Lab;
   selection: Selection;
   navigate: Navigate;
 }) {
+  const { t } = useInterface();
   const exercise = lab.workspace?.exercise ?? null;
   const [tab, setTab] = useState<Tab>(exercise ? "task" : "cause");
   // Choosing a variable anywhere shows its online detail (state adjusted while rendering).
   const signal = selection?.kind === "signal" ? selection.id : null;
   const [shown, setShown] = useState<number | null>(null);
-  if (signal !== null && signal !== shown) {
+  if (!simple && signal !== null && signal !== shown) {
     setShown(signal);
     setTab("properties");
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <Tabs<Tab>
-        label="Inspector"
-        active={tab}
+        label={t("ws.inspector")}
+        active={simple ? "cause" : tab}
         onSelect={setTab}
         tabs={[
           ...(exercise
@@ -46,13 +50,15 @@ export function Inspector({
                 {
                   id: "task" as const,
                   label: isFaultFinding(exercise.kind)
-                    ? "Investigation"
-                    : "Task",
+                    ? t("cause.investigation")
+                    : t("cause.task"),
                 },
               ]
             : []),
-          { id: "cause", label: "Cause & effect" },
-          { id: "properties", label: "Properties" },
+          { id: "cause", label: t("cause.title") },
+          ...(!simple
+            ? [{ id: "properties" as const, label: t("cause.properties") }]
+            : []),
         ]}
       />
       <div style={{ flex: 1, overflow: "auto" }}>
@@ -67,7 +73,7 @@ export function Inspector({
               navigate={navigate}
             />
           ))}
-        {tab === "cause" && (
+        {(simple || tab === "cause") && (
           <div className="inspector-section">
             <CauseEffect
               ce={lab.frame?.causeEffect ?? null}
@@ -75,7 +81,9 @@ export function Inspector({
             />
           </div>
         )}
-        {tab === "properties" && <Properties lab={lab} selection={selection} />}
+        {!simple && tab === "properties" && (
+          <Properties lab={lab} selection={selection} />
+        )}
       </div>
     </div>
   );

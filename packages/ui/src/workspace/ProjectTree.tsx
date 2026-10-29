@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 import type { CenterTab } from "./WorkspacePage";
 import type { Lab } from "./useLab";
 
@@ -21,12 +22,13 @@ export function ProjectTree({
   selection: Selection;
   select: (s: Selection) => void;
 }) {
+  const { t } = useInterface();
   const { workspace, project } = lab;
   if (!workspace || !project) return null;
   const station = project.station;
   return (
     <div className="tree">
-      <div className="tree-title">Program</div>
+      <div className="tree-title">{t("ws.program")}</div>
       <button
         aria-current={tab === "program"}
         onClick={() => setTab("program")}
@@ -35,7 +37,7 @@ export function ProjectTree({
         <span className="dim">(ST)</span>
       </button>
       <div className="tree-title" style={{ marginTop: 8 }}>
-        Hardware
+        {t("ws.hardware")}
       </div>
       <button
         aria-current={tab === "hardware" && selection === null}
@@ -67,7 +69,7 @@ export function ProjectTree({
         </button>
       ))}
       <div className="tree-title" style={{ marginTop: 8 }}>
-        Process
+        {t("ws.process")}
       </div>
       <button
         aria-current={tab === "process" && selection === null}
@@ -93,7 +95,7 @@ export function ProjectTree({
       {workspace.scene.hasNetwork && (
         <>
           <div className="tree-title" style={{ marginTop: 8 }}>
-            Network
+            {t("ws.network")}
           </div>
           <button
             aria-current={tab === "network"}
@@ -122,7 +124,7 @@ export function ProjectTree({
         aria-current={tab === "diagnostics"}
         onClick={() => setTab("diagnostics")}
       >
-        ⚑ Diagnostics
+        ⚑ {t("ws.diagnostics")}
       </button>
     </div>
   );

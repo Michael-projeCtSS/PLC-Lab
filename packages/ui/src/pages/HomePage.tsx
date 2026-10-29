@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 import { api, type LibraryDto, type ProjectListDto } from "@plc-lab/ipc";
 import { ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
@@ -6,37 +7,38 @@ import type { Navigate } from "../route";
 const AREAS = [
   {
     page: "learn",
-    title: "Learn from zero",
-    text: "Twenty short lessons from “What is a PLC?” to commissioning and fault finding. No prior knowledge needed.",
+    title: "home.learn.title",
+    text: "home.learn.text",
   },
   {
     page: "practice",
-    title: "Practice",
-    text: "Write Structured Text for real machines, load it into the simulated PLC and get behavior-based feedback.",
+    title: "home.practice.title",
+    text: "home.practice.text",
   },
   {
     page: "troubleshoot",
-    title: "Troubleshooting labs",
-    text: "A machine has a fault. Collect evidence with LEDs, meters and diagnostics, find the root cause and repair it.",
+    title: "home.troubleshoot.title",
+    text: "home.troubleshoot.text",
   },
   {
     page: "freelab",
-    title: "Free lab",
-    text: "An engineering workspace with a PLC, I/O hardware, a process and a network to experiment freely.",
+    title: "home.freelab.title",
+    text: "home.freelab.text",
   },
   {
     page: "knowledge",
-    title: "Knowledge base",
-    text: "Fundamentals, PLC platforms from eight vendors, industrial protocols and troubleshooting guides with sources.",
+    title: "home.knowledge.title",
+    text: "home.knowledge.text",
   },
   {
     page: "progress",
-    title: "Progress",
-    text: "Completed lessons, exercise scores and troubleshooting results.",
+    title: "home.progress.title",
+    text: "home.progress.text",
   },
 ] as const;
 
 export function HomePage({ navigate }: { navigate: Navigate }) {
+  const { t } = useInterface();
   const data = useLoad(
     async () => ({
       library: await api.library(),
@@ -60,13 +62,9 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
       ))}
       <section className="hero">
         <div className="hero-main">
-          <h1>Learn industrial automation by doing</h1>
-          <p>
-            Program a PLC, watch the machine respond, and learn to find faults
-            the way commissioning engineers do. Every exercise runs on a
-            deterministic simulation of the PLC, its I/O hardware and the
-            process.
-          </p>
+          <p className="eyebrow">{t("home.next")}</p>
+          <h1>{t("home.title")}</h1>
+          <p>{t("home.intro")}</p>
           <div className="row" style={{ marginTop: 16 }}>
             {next ? (
               <button
@@ -74,28 +72,28 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                 onClick={() => navigate({ page: "learn", lesson: next.id })}
               >
                 {done === 0
-                  ? "Start lesson 1"
-                  : `Continue: lesson ${next.number}`}
+                  ? t("home.first")
+                  : t("home.continue", { number: next.number })}
               </button>
             ) : (
               <button
                 className="btn btn-primary btn-lg"
                 onClick={() => navigate({ page: "practice" })}
               >
-                Practice
+                {t("home.practice.title")}
               </button>
             )}
             <button
               className="btn btn-lg"
               onClick={() => navigate({ page: "freelab" })}
             >
-              Open free lab
+              {t("home.openLab")}
             </button>
           </div>
         </div>
         <div className="panel">
           <div className="panel-head">
-            <h3>Continue</h3>
+            <h3>{t("common.continue")}</h3>
           </div>
           <div className="panel-body col">
             {next && (
@@ -108,7 +106,9 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                 <span className="grow">
                   <strong>{next.title}</strong>
                   <br />
-                  <span className="muted">{next.minutes} min lesson</span>
+                  <span className="muted">
+                    {t("home.minutes", { minutes: next.minutes })}
+                  </span>
                 </span>
               </button>
             )}
@@ -128,16 +128,13 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                   <strong>{recent.name}</strong>
                   <br />
                   <span className="muted">
-                    Last project, saved{" "}
+                    {t("home.recent")}{" "}
                     {recent.updatedAt.replace("T", " ").replace("Z", " UTC")}
                   </span>
                 </span>
               </button>
             ) : (
-              <p className="muted">
-                Your projects appear here once you start an exercise or a free
-                lab.
-              </p>
+              <p className="muted">{t("home.empty")}</p>
             )}
             {total > 0 && (
               <div>
@@ -145,8 +142,8 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                   className="row muted"
                   style={{ fontSize: 12, marginBottom: 4 }}
                 >
-                  Curriculum <span className="spacer" /> {done} / {total}{" "}
-                  lessons
+                  {t("home.curriculum")} <span className="spacer" /> {done} /{" "}
+                  {total} {t("home.lessons")}
                 </div>
                 <div className="progress-bar">
                   <div style={{ width: `${(100 * done) / total}%` }} />
@@ -171,8 +168,8 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
               )
             }
           >
-            <h3>{a.title}</h3>
-            <p>{a.text}</p>
+            <h3>{t(a.title)}</h3>
+            <p>{t(a.text)}</p>
           </button>
         ))}
       </div>

@@ -1,45 +1,43 @@
+import { useInterface } from "../locale";
 import { api } from "@plc-lab/ipc";
 import { Badge, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
 
 /** Product information and developer diagnostics (versions, contract, knowledge packs). */
 export function AboutPage() {
+  const { t } = useInterface();
   const info = useLoad(() => api.coreInfo(), []);
   const status = useLoad(() => api.knowledgeStatus(), []);
   return (
     <div className="page-inner">
       <div className="page-header">
         <div>
-          <h1>About PLC Lab</h1>
-          <p>
-            An educational simulator for PLC programming, I/O hardware, process
-            behavior, industrial communication and fault finding. PLC Lab is not
-            affiliated with any PLC vendor and does not emulate vendor firmware.
-          </p>
+          <h1>{t("about.title")}</h1>
+          <p>{t("about.intro")}</p>
         </div>
       </div>
       <ErrorNotice error={info.error ?? status.error} />
       <div className="tiles">
         <div className="panel">
           <div className="panel-head">
-            <h4>Application</h4>
+            <h4>{t("about.application")}</h4>
           </div>
           <dl className="kv panel-body">
-            <dt>Version</dt>
+            <dt>{t("about.version")}</dt>
             <dd>{info.data?.appVersion ?? "—"}</dd>
-            <dt>Build</dt>
+            <dt>{t("about.build")}</dt>
             <dd>{info.data?.buildContext ?? "—"}</dd>
-            <dt>Simulation core</dt>
+            <dt>{t("about.core")}</dt>
             <dd>{info.data?.coreVersion ?? "—"}</dd>
-            <dt>Desktop contract</dt>
+            <dt>{t("about.contract")}</dt>
             <dd>{info.data ? `v${info.data.contractVersion}` : "—"}</dd>
-            <dt>Execution</dt>
+            <dt>{t("about.execution")}</dt>
             <dd>{info.data?.execution ?? "—"}</dd>
           </dl>
         </div>
         <div className="panel">
           <div className="panel-head">
-            <h4>Knowledge packs</h4>
+            <h4>{t("about.packs")}</h4>
             <span className="spacer" />
             {status.data && (
               <span className="muted">
@@ -49,7 +47,7 @@ export function AboutPage() {
           </div>
           <div className="panel-body col">
             {status.data?.packs.length === 0 && (
-              <p className="muted">No knowledge pack was found.</p>
+              <p className="muted">{t("about.noPacks")}</p>
             )}
             {status.data?.packs.map((p) => (
               <div key={p.path} className="source-card">
@@ -97,7 +95,7 @@ export function AboutPage() {
             ))}
             {status.data && (
               <div className="muted" style={{ fontSize: 12 }}>
-                Search locations:
+                {t("about.locations")}
                 <ul>
                   {status.data.searchPaths.map((p) => (
                     <li

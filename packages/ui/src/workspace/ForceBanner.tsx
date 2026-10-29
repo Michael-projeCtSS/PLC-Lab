@@ -1,3 +1,4 @@
+import { useInterface } from "../locale";
 /**
  * The persistent warning while any force is active, with the list of forces, what each
  * one replaces, and Remove / Remove all. Forces belong to the backend's runtime; this view
@@ -16,6 +17,7 @@ const TARGET: Record<string, string> = {
 };
 
 export function ForceBanner({ lab }: { lab: Lab }) {
+  const { t } = useInterface();
   const ws = lab.ws;
   const count = lab.frame?.plc.forces ?? 0;
   const [open, setOpen] = useState(false);
@@ -29,22 +31,20 @@ export function ForceBanner({ lab }: { lab: Lab }) {
     <div
       className="notice warning"
       role="alert"
-      aria-label="Forces active"
+      aria-label={t("force.title")}
       style={{ margin: "4px 8px" }}
     >
       <div className="row wrap" style={{ gap: 8 }}>
-        <strong>FORCES ACTIVE</strong>
+        <strong>{t("force.active")}</strong>
         <span className="grow">
-          {count} signal{count === 1 ? " is" : "s are"} forced. A forced value
-          replaces the process or program value in the simulation until it is
-          removed, the PLC memory is reset or this workspace is closed.
+          {t(count === 1 ? "force.explainOne" : "force.explain", { count })}
         </span>
         <button
           className="btn btn-sm"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          {open ? "Hide forces" : "Show forces"}
+          {open ? t("force.hide") : t("force.show")}
         </button>
         <button
           className="btn btn-sm btn-primary"
@@ -57,7 +57,7 @@ export function ForceBanner({ lab }: { lab: Lab }) {
             )
           }
         >
-          Remove all forces
+          {t("force.removeAll")}
         </button>
       </div>
       {open && list.data && (
@@ -92,7 +92,7 @@ export function ForceBanner({ lab }: { lab: Lab }) {
                       )
                     }
                   >
-                    Remove force
+                    {t("force.remove")}
                   </button>
                 </td>
               </tr>
