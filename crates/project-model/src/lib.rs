@@ -14,8 +14,9 @@ use std::{
 };
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-/// Project file format. 2: configured modules carry a stable `id`.
-pub const FORMAT_VERSION: u32 = 2;
+/// Project file format. 2: configured modules carry a stable `id`. 3: watch entries name
+/// I/O channels by module id (`io.<moduleId>.ch<n>`) instead of position.
+pub const FORMAT_VERSION: u32 = 3;
 /// Progress file format, versioned independently of projects.
 pub const PROGRESS_FORMAT_VERSION: u32 = 1;
 /// Recent-projects list format, versioned independently of projects.
@@ -189,6 +190,9 @@ pub fn parse(text: &str) -> Result<Project, ProjectError> {
     if version <= 1 {
         value = migrate_v1(value)?;
     }
+    if version <= 2 {
+        value = migrate_v2(value)?;
+    }
     let project: Project =
         serde_json::from_value(value).map_err(|e| ProjectError::Parse(e.to_string()))?;
     project.validate()?;
@@ -220,6 +224,58 @@ fn migrate_v1(mut value: serde_json::Value) -> Result<serde_json::Value, Project
         .ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?
         .insert("formatVersion".into(), serde_json::json!(2));
     Ok(value)
+}
+
+/// Format 2 watch entries named I/O channels by position (`io.R0/S2/CH0`). Format 3 names
+/// them by the configured module's stable id, resolved through the project's own station.
+/// An entry whose position has no configured channel cannot be mapped without guessing and
+/// is refused with the entry named.
+fn migrate_v2(mut value: serde_json::Value) -> Result<serde_json::Value, ProjectError> {
+    let station: lab_model::hardware::StationConfig = value
+        .get("station")
+        .cloned()
+        .map(serde_json::from_value)
+        .transpose()
+        .map_err(|e| ProjectError::Parse(e.to_string()))?
+        .ok_or_else(|| ProjectError::Parse("the project has no station".into()))?;
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?;
+    if let Some(watch) = object
+        .get_mut("watch")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for entry in watch.iter_mut() {
+            let Some(channel) = entry.as_str().and_then(legacy_channel_path) else {
+                continue;
+            };
+            let mapped = station
+                .module_at(channel.slot_ref())
+                .filter(|m| channel.channel < m.module.channel_count())
+                .map(|m| format!("io.{}", m.channel_id(channel.channel)));
+            let Some(mapped) = mapped else {
+                return Err(ProjectError::Invalid(format!(
+                    "watch entry '{}' names I/O channel {channel} by its position, and no configured module has that channel; remove the entry or restore the module",
+                    entry.as_str().unwrap_or_default()
+                )));
+            };
+            *entry = serde_json::Value::String(mapped);
+        }
+    }
+    object.insert("formatVersion".into(), serde_json::json!(3));
+    Ok(value)
+}
+
+/// A format 2 I/O channel path `io.R<rack>/S<slot>/CH<channel>`.
+fn legacy_channel_path(path: &str) -> Option<lab_model::hardware::ChannelRef> {
+    let rest = path.strip_prefix("io.R")?;
+    let (rack, rest) = rest.split_once("/S")?;
+    let (slot, channel) = rest.split_once("/CH")?;
+    Some(lab_model::hardware::ChannelRef {
+        rack: rack.parse().ok()?,
+        slot: slot.parse().ok()?,
+        channel: channel.parse().ok()?,
+    })
 }
 
 pub fn to_json(project: &Project) -> Result<String, ProjectError> {
@@ -565,7 +621,7 @@ mod tests {
         })
         .to_string();
         let mut p = parse(&v1).unwrap();
-        assert_eq!(p.format_version, 2);
+        assert_eq!(p.format_version, FORMAT_VERSION);
         let ids: Vec<&str> = p.station.modules.iter().map(|m| m.id.as_str()).collect();
         assert_eq!(ids, ["di-r0s1", "ai-r0s2"]);
         // Moving a module keeps its identity and moves its I/O mappings.
@@ -591,6 +647,50 @@ mod tests {
     }
 
     #[test]
+    fn version_two_watch_entries_follow_module_ids_or_are_refused() {
+        let v2 = |watch: &[&str]| {
+            serde_json::json!({
+                "format": "plclab-project", "formatVersion": 2, "id": "p-2", "name": "My lab",
+                "createdAt": "x", "updatedAt": "x", "kind": {"type": "freeLab"},
+                "platform": "generic.iec", "scene": "scene.io-basics",
+                "station": {"name": "PLC_1", "cpu": "cpu.modular", "modules": [
+                    {"id": "di-r0s1", "position": {"rack": 0, "slot": 1}, "module": "di8.24vdc.sink", "startAddress": 0},
+                    {"id": "ai-r0s2", "position": {"rack": 0, "slot": 5}, "module": "ai4.ui", "startAddress": 64}
+                ], "ioMap": []},
+                "programs": [{"id": "main", "name": "Main", "language": "ST", "source": "PROGRAM Main END_PROGRAM"}],
+                "watch": watch
+            })
+            .to_string()
+        };
+        // The moved analog module (id ai-r0s2, now in slot 5) keeps its identity.
+        let legacy = [
+            "plc.LevelRaw",
+            "io.R0/S1/CH3",
+            "io.R0/S5/CH0",
+            "process.tank.levelMl",
+        ];
+        let mapped = [
+            "plc.LevelRaw",
+            "io.di-r0s1.ch3",
+            "io.ai-r0s2.ch0",
+            "process.tank.levelMl",
+        ];
+        let p = parse(&v2(&legacy)).unwrap();
+        assert_eq!(p.format_version, 3);
+        assert_eq!(p.watch, mapped);
+        let back = parse(&to_json(&p).unwrap()).unwrap();
+        assert_eq!(back, p, "format 3 round-trips");
+        // No module at that position, or no such channel: refused, never guessed.
+        for stale in ["io.R0/S9/CH0", "io.R0/S1/CH8"] {
+            let refused = parse(&v2(&[stale])).unwrap_err();
+            assert!(
+                matches!(&refused, ProjectError::Invalid(m) if m.contains(stale)),
+                "{refused}"
+            );
+        }
+    }
+
+    #[test]
     fn version_zero_migrates_and_future_versions_are_rejected() {
         let v0 = serde_json::json!({
             "format": "plclab-project", "formatVersion": 0, "id": "p-0", "name": "Old",
@@ -605,8 +705,8 @@ mod tests {
             "PROGRAM Old END_PROGRAM"
         );
         assert_eq!(
-            parse(&project_json(3)),
-            Err(ProjectError::UnsupportedVersion(3))
+            parse(&project_json(4)),
+            Err(ProjectError::UnsupportedVersion(4))
         );
         assert!(parse(&project_json(1).replace("\"name\":\"My lab\"", "\"name\":\"\"")).is_err());
         assert!(parse("{not json").is_err());

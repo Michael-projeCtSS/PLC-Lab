@@ -5,7 +5,7 @@ A project is one JSON file `<id>.plclab` (`project-model`, ADR-0023).
 ```json
 {
   "format": "plclab-project",
-  "formatVersion": 2,
+  "formatVersion": 3,
   "id": "p-1793140000-0",
   "name": "Tank test bench",
   "createdAt": "2026-10-27T10:00:00Z",
@@ -46,10 +46,13 @@ deterministic session.
 
 ## Versioning and migration
 
-`formatVersion` 2 is current: configured modules carry a stable `id` (ADR-0029).
-Version 1 files are migrated on load by giving every module its default id
-`<class>-r<rack>s<slot>`; version 0 files (single `source` field) are migrated through
-version 1. Progress and recent-project files have their own format versions. Newer versions are rejected with a message asking to update PLC Lab. Unknown fields
+`formatVersion` 3 is current (ADR-0029): configured modules carry a stable `id`, and
+watch entries name I/O channels by it (`io.<moduleId>.ch<n>`), never by position.
+Version 2 watch entries `io.R<rack>/S<slot>/CH<channel>` are migrated through the
+project's own station; an entry whose position has no configured channel makes the file
+invalid with that entry named, instead of being guessed. Version 1 files first get every
+module's default id `<class>-r<rack>s<slot>`; version 0 files (single `source` field) are
+migrated through version 1. Progress and recent-project files have their own format versions. Newer versions are rejected with a message asking to update PLC Lab. Unknown fields
 are errors. Validation limits: name 1..120 characters, 1..32 Structured Text programs of
 at most 256 KiB, at most 64 watch entries, cycle 10..1000 ms, speed 10..1000 %, a valid
 station, files up to 4 MiB.

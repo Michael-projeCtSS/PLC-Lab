@@ -136,7 +136,9 @@ launcher smoke 11 steps).
   module electronics supply separate from field supply (`NO_MODULE_POWER`, fault
   `modulePowerMissing`); analog outputs bound to `INT`/`REAL`, driven in RUN only,
   measurable; project format 2 with migration from 1 (progress and recent lists keep
-  their own versions).
+  their own versions); canonical I/O signal identity `io.<moduleId>.ch<n>` (position only
+  as label, a moved module keeps its signal ids) with project format 3 migrating stored
+  watch entries.
 - Diagnostics: `StationRuntime::compare` derives typed findings (missing, unexpected,
   wrong type, wrong slot, module power, field power, channel mode and loop supply against
   the drawing, address overlap, mapping problems); the commissioning Power and Hardware

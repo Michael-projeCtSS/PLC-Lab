@@ -367,9 +367,13 @@ impl LabSession {
         }
     }
 
+    /// Channel signals are identified by the configured module's stable id
+    /// (`io.<moduleId>.ch<n>`), so a moved module keeps its signals; the rack/slot
+    /// position is only the display label. Channels that no longer exist are retired.
     fn register_channels(&mut self) {
         self.channels.clear();
         self.channel_values.clear();
+        self.signals.retire(|d| d.kind == SignalKind::Channel);
         let real = self.profile.analog == AnalogRepresentation::EngineeringUnits;
         let config = self.station.configuration().clone();
         for module in &config.modules {
@@ -393,7 +397,7 @@ impl LabSession {
                     channel,
                 };
                 let signal = self.signals.ensure(
-                    format!("io.{c}"),
+                    format!("io.{}", module.channel_id(channel)),
                     c.to_string(),
                     SignalKind::Channel,
                     value_type,

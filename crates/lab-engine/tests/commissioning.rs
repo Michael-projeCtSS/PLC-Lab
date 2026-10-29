@@ -2,6 +2,7 @@
 use lab_engine::{CheckState, Checklist, LabSession, OperatorAction, SessionConfig};
 use lab_model::{
     exercise::{ExerciseDefinition, PlcModeRequest},
+    hardware::{ChannelRef, ModuleType, SlotRef},
     fault::FaultInjection,
     parse_json,
     profile::PlatformProfile,
@@ -598,4 +599,52 @@ fn the_drive_moves_the_process_and_its_feedback_returns_through_the_scan() {
     assert!(command.is_some() && received.is_some());
     assert!(running.is_none() && lamp.is_none());
     assert!(speeds.iter().all(|v| *v == 0));
+}
+
+#[test]
+fn a_moved_module_keeps_its_canonical_channel_signals() {
+    let mut s = bench(None);
+    let program = lab(0).starter_program;
+    let input = s
+        .signals()
+        .by_path("io.di-r0s1.ch0")
+        .expect("channels are identified by module id");
+    assert_eq!(s.signals().get(input).unwrap().label, "R0/S1/CH0");
+    assert!(
+        s.signals().by_path("io.R0/S1/CH0").is_none(),
+        "a position is not an identity"
+    );
+    // Move the module from slot 1 to slot 5: same module, same channel, same signal.
+    let mut moved = s.station().configuration().clone();
+    moved
+        .move_module("di-r0s1", SlotRef { rack: 0, slot: 5 })
+        .unwrap();
+    s.download(&program, 2, Some(moved)).unwrap();
+    let after = s.signals().by_path("io.di-r0s1.ch0").unwrap();
+    assert_eq!(after, input, "the same logical signal");
+    let descriptor = s.signals().get(after).unwrap();
+    assert!(descriptor.active);
+    assert_eq!(
+        descriptor.label, "R0/S5/CH0",
+        "only the display location changed"
+    );
+    let at = ChannelRef {
+        rack: 0,
+        slot: 5,
+        channel: 0,
+    };
+    assert_eq!(
+        s.station().configuration().channel_id(at).as_deref(),
+        Some("di-r0s1.ch0")
+    );
+    // Retyping the module (same id) to 8 channels retires the channels that are gone.
+    let mut retyped = s.station().configuration().clone();
+    retyped.modules[0].module = ModuleType::Di8Sinking;
+    s.download(&program, 3, Some(retyped)).unwrap();
+    assert_eq!(s.signals().by_path("io.di-r0s1.ch0"), Some(input));
+    let gone = s.signals().by_path("io.di-r0s1.ch12").unwrap();
+    assert!(
+        !s.signals().get(gone).unwrap().active,
+        "channel 12 no longer exists"
+    );
 }

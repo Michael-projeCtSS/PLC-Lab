@@ -21,7 +21,18 @@ checklist compared configuration and installation with its own rules.
   its channel settings and the I/O mappings of its channels. Files without ids are given
   `<class>-r<rack>s<slot>` deterministically (`default_module_id`).
 - **Project format 2.** `formatVersion` 2 adds module ids; version 1 files are migrated
-  on load (`migrate_v1`), version 0 through version 1. Progress and recent-project files
+  on load (`migrate_v1`), version 0 through version 1.
+- **Canonical I/O identity, project format 3.** Five concepts stay separate: the module
+  id (stable identity), the slot (current topology position), the process-image address
+  (runtime mapping), the display address (profile rendering such as `%IX0.4`) and the
+  signal id (runtime signal identity). I/O channel signals are registered under
+  `io.<moduleId>.ch<n>`; the rack/slot position is only their label, so a moved module
+  keeps its signal ids and every watch or force reference to them. Channel signals that
+  no longer exist after a download are retired. Format 3 stores watch entries in that
+  form; format 2 entries `io.R<r>/S<s>/CH<c>` are migrated through the project's own
+  station, and an entry whose position has no configured channel is refused with the
+  entry named instead of guessed (`migrate_v2`). Language editors (ST, LAD, FBD, SFC,
+  CFC, STL) reference these canonical signals; none of them owns hardware identity. Progress and recent-project files
   keep their own version constants, so the project bump does not discard them.
 - **Two supplies per module.** `InstalledModule.module_power` (electronics, default on)
   is separate from `field_power`. A module without electronics supply is present but does

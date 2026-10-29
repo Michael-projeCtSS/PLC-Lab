@@ -78,7 +78,8 @@ pub enum SignalKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignalDescriptor {
     pub id: SignalId,
-    /// Unique path, e.g. `plc.StartPB`, `plc.Delay.Q`, `process.tank.levelMl`, `io.R0/S2/CH0`.
+    /// Unique canonical path, e.g. `plc.StartPB`, `plc.Delay.Q`, `process.tank.levelMl`,
+    /// `io.di-r0s2.ch0` (I/O channels by stable module id, never by slot position).
     pub path: String,
     pub label: String,
     pub kind: SignalKind,
