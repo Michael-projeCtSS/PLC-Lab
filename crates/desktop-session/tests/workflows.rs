@@ -1025,6 +1025,81 @@ fn long_runs_of_large_programs_keep_every_response_bounded() {
 }
 
 #[test]
+fn project_plc_and_physical_station_stay_three_layers() {
+    let f = fixture("three-layers");
+    let (project, w) = open(
+        &f.app,
+        ProjectCreateRequest {
+            contract_version: V,
+            name: "Layers".into(),
+            exercise: None,
+            scene: Some("scene.hardware-station".into()),
+            platform: None,
+        },
+    );
+    let id = w.workspace_id;
+    let request = || WorkspaceRequest {
+        contract_version: V,
+        workspace_id: id,
+    };
+    let channel_signal = |signals: &[SignalDto], path: &str| -> (u32, String) {
+        let s = signals.iter().find(|s| s.path == path).unwrap();
+        (s.id, s.label.clone())
+    };
+    let (ao_signal, ao_label) = channel_signal(&w.signals, "io.ao-r0s5.ch0");
+    assert_eq!(ao_label, "R0/S5/CH0");
+    // The project expects the analog output module in slot 7: saved, not downloaded.
+    let mut edited = project.clone();
+    let ao = edited
+        .station
+        .modules
+        .iter_mut()
+        .find(|m| m.id == "ao-r0s5")
+        .unwrap();
+    ao.position.slot = 7;
+    for mapping in edited.station.io_map.iter_mut() {
+        if mapping.channel.slot == 5 {
+            mapping.channel.slot = 7;
+        }
+    }
+    edited.station.modules.sort_by_key(|m| m.position.slot);
+    let saved = f
+        .app
+        .save_project(ProjectSaveRequest {
+            contract_version: V,
+            project: edited.clone(),
+        })
+        .unwrap();
+    assert_eq!(saved.station, edited.station, "the project expects slot 7");
+    // The PLC still has the downloaded configuration, which matches the station.
+    let hw = f.app.hardware(request()).unwrap();
+    assert_eq!(hw.station, project.station);
+    assert!(hw.findings.is_empty(), "{:?}", hw.findings);
+    // Download: the PLC has the project's configuration; the module is still in slot 5.
+    let (loaded, _) = f
+        .app
+        .build_and_load(BuildLoadRequest {
+            contract_version: V,
+            workspace_id: id,
+            source: project.programs[0].source.clone(),
+            revision: ExactU64(1),
+            station: Some(saved.station.clone()),
+            run_after_load: false,
+        })
+        .unwrap();
+    assert_eq!(loaded.outcome, "LOADED", "{:?}", loaded.message);
+    let hw = f.app.hardware(request()).unwrap();
+    assert_eq!(hw.station, saved.station);
+    let found: Vec<&str> = hw.findings.iter().map(|x| x.category.as_str()).collect();
+    assert_eq!(found, ["WRONG_SLOT"]);
+    // The canonical channel signal is the same signal; only its location label moved.
+    assert_eq!(
+        channel_signal(&loaded.signals, "io.ao-r0s5.ch0"),
+        (ao_signal, "R0/S7/CH0".to_owned())
+    );
+}
+
+#[test]
 fn a_large_station_keeps_the_hardware_view_bounded() {
     let f = fixture("large-station");
     let (project, w) = open(
