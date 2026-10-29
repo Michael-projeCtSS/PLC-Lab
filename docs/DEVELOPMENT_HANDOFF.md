@@ -198,6 +198,12 @@ access denied, see Local machine limits).
   the distribution, the knowledge source in `resources/`, single instance, the project
   file hand-over (not through the BAT) and a clean close.
 
+Validated: `1bad6c3a993e6ebf970c616d732dcb0d66185ce3`, CI run 40916706482 (Windows job
+123598751308 and Linux job 123598750901 PASS; distribution check PASS with one application
+executable; native smoke of the root `PLC Lab.exe` 20 steps, of the relocated copy in
+`%TEMP%\PLC Lab Product Test With Spaces …` 20 steps, through the BAT 19 steps, debug
+build 20 steps).
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
