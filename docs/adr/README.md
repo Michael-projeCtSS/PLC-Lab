@@ -31,3 +31,7 @@ as history; their session, process and controller details are superseded as note
 | [0023](0023-project-format-and-persistence.md)       | `.plclab` format v1 and local persistence                            | Accepted                           |
 | [0024](0024-desktop-adapter-and-ipc-v8.md)           | Desktop application adapter, typed errors, IPC v8                    | Accepted                           |
 | [0025](0025-distribution-and-root-launcher.md)       | Release staging and root launcher                                    | Accepted                           |
+| [0026](0026-launcher-window-and-project-handoff.md)  | Launcher window and typed project handoff                            | Accepted                           |
+| [0027](0027-commissioning-checklist.md)              | Commissioning checklist evaluated by the engine                      | Accepted                           |
+| [0028](0028-network-diagnostics.md)                  | Network diagnostics from the deterministic network model             | Accepted                           |
+| [0029](0029-hardware-configuration.md)               | Hardware configuration, stable module identity, derived findings     | Accepted                           |

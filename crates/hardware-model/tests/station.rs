@@ -677,3 +677,118 @@ fn comparing_project_installation_and_drawing_finds_each_difference() {
         [FindingCategory::SignalBindingMismatch]
     );
 }
+
+/// A large station: 1 CPU, 8 DI16, 8 DO16, 4 AI4 and 4 AO2 (280 channels, each mapped).
+fn large_station() -> (StationConfig, lab_model::hardware::InstalledHardware) {
+    let mut configured = Vec::new();
+    let mut installed = Vec::new();
+    let mut io_map = Vec::new();
+    let mut slot = 1u8;
+    for (module, count, channels, bytes, base, mode) in [
+        ("di16.24vdc.sink", 8, 16u8, 2u16, 0u16, "digital"),
+        ("do16.24vdc", 8, 16, 2, 0, "digital"),
+        ("ai4.ui", 4, 4, 8, 64, "current4To20mA"),
+        ("ao2.ui", 4, 2, 4, 64, "current4To20mA"),
+    ] {
+        for n in 0..count {
+            let channel_configs: Vec<_> = (0..channels)
+                .map(|c| serde_json::json!({"channel": c, "mode": mode, "diagnostics": true}))
+                .collect();
+            configured.push(serde_json::json!({
+                "position": {"rack": 0, "slot": slot}, "module": module,
+                "startAddress": base + n * bytes, "channels": channel_configs,
+            }));
+            installed
+                .push(serde_json::json!({"position": {"rack": 0, "slot": slot}, "module": module}));
+            for c in 0..channels {
+                io_map.push(serde_json::json!({
+                    "channel": {"rack": 0, "slot": slot, "channel": c},
+                    "tag": format!("S{slot}C{c}"),
+                }));
+            }
+            slot += 1;
+        }
+    }
+    let configured: StationConfig = serde_json::from_value(serde_json::json!({
+        "name": "PLC_1", "cpu": "cpu.modular", "modules": configured, "ioMap": io_map,
+    }))
+    .unwrap();
+    let installed = serde_json::from_value(serde_json::json!({
+        "cpu": "cpu.modular", "modules": installed, "wiring": [],
+    }))
+    .unwrap();
+    (configured, installed)
+}
+
+/// Run the large station for `scans` cycles; returns the final views and findings.
+fn run_large_station(scans: u64) -> (Vec<hardware_model::ModuleView>, usize, usize) {
+    let (configured, installed) = large_station();
+    let mut scene = SceneRuntime::new(&scene(), 1).unwrap();
+    let mut station = StationRuntime::new(
+        configured.clone(),
+        installed,
+        profile(AnalogRepresentation::S7Nominal27648),
+    )
+    .unwrap();
+    let outputs: Vec<ChannelRef> = configured
+        .modules
+        .iter()
+        .filter(|m| m.module == ModuleType::Do16)
+        .flat_map(|m| (0..16).map(move |c| ch(m.position.slot, c)))
+        .collect();
+    let analog: Vec<ChannelRef> = configured
+        .modules
+        .iter()
+        .filter(|m| m.module == ModuleType::Ao2)
+        .flat_map(|m| (0..2).map(move |c| ch(m.position.slot, c)))
+        .collect();
+    let mut findings = 0;
+    for scan in 0..scans {
+        let now = WorldTime::from_micros(scan * 10_000);
+        let readings = station.sample_inputs(&scene, now).len();
+        assert_eq!(readings, 8 * 16 + 4 * 4, "every input channel is sampled");
+        let commands: BTreeMap<_, _> = outputs
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (*c, (scan + i as u64) % 3 == 0))
+            .collect();
+        station.drive_outputs(&commands, true, &mut scene).unwrap();
+        let setpoints: BTreeMap<_, _> = analog
+            .iter()
+            .enumerate()
+            .map(|(i, c)| {
+                let raw = ((scan * 97 + i as u64 * 1_000) % 27_648) as i16;
+                (*c, hardware_model::analog::AnalogRaw::Int(raw))
+            })
+            .collect();
+        station.drive_analog(&setpoints, true);
+        if scan % 10 == 0 {
+            findings = station.compare(&scene).len();
+        }
+    }
+    let diagnostics = station.diagnostics().entries().count();
+    (station.module_views(), findings, diagnostics)
+}
+
+#[test]
+fn a_large_station_scans_within_budget_and_deterministically() {
+    let started = std::time::Instant::now();
+    let (views, findings, diagnostics) = run_large_station(2_000);
+    let elapsed = started.elapsed();
+    println!("large station: 2000 scans in {elapsed:?}, {diagnostics} diagnostic entries");
+    assert_eq!(views.len(), 24);
+    assert_eq!(views.iter().map(|v| v.channels.len()).sum::<usize>(), 280);
+    assert!(
+        views.iter().all(|v| v.status == ModuleStatus::Ok),
+        "{views:?}"
+    );
+    // Healthy and consistent: no differences between project and installation.
+    assert_eq!(findings, 0);
+    // Unwired 4-20 mA inputs with diagnostics report wire breaks once, not every scan.
+    assert!(diagnostics <= 2 * 16, "{diagnostics} diagnostic entries");
+    // Debug builds on shared CI runners: a generous budget that still catches a
+    // per-scan blow-up (quadratic work over the channels of every module).
+    assert!(elapsed.as_secs() < 30, "2000 scans took {elapsed:?}");
+    // Determinism: the same scans give the same station state.
+    assert_eq!(run_large_station(2_000).0, views);
+}

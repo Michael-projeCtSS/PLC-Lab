@@ -479,6 +479,69 @@ try {
     },
   );
 
+  await step(
+    "hardware lab: configured versus detected, module inspector and signal mapping",
+    async () => {
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+      await page
+        .getByRole("button", { name: "COMMISSION", exact: true })
+        .click();
+      await page
+        .getByRole("button", {
+          name: /Start Hardware: the level measurement is invalid/,
+        })
+        .click();
+      await page
+        .getByRole("button", { name: "Run", exact: true })
+        .click({ timeout: 30_000 });
+      await page.getByRole("tab", { name: "Hardware", exact: true }).click();
+      const compare = page.getByRole("region", {
+        name: "Configured versus actual",
+      });
+      await compare.getByText("Wrong module type").waitFor({ timeout: 15_000 });
+      await compare
+        .getByText("Digital input 8 x 24 V DC (sinking)")
+        .first()
+        .waitFor();
+      // Select the module in slot 4 from the keyboard and open its diagnostics.
+      await page
+        .getByRole("list", { name: "Rack" })
+        .getByRole("button", { name: /^Slot 4/ })
+        .focus();
+      await page.keyboard.press("Enter");
+      await page
+        .getByRole("tablist", { name: "Module" })
+        .getByRole("tab", { name: "Diagnostics" })
+        .click();
+      await page.getByRole("region", { name: "Module diagnostics" }).waitFor();
+      const views = page.getByRole("tablist", { name: "Station views" });
+      await views.getByRole("tab", { name: "Actual (detected)" }).click();
+      await page
+        .getByRole("list", { name: "Detected station" })
+        .getByText("DI8.24VDC.SINK")
+        .waitFor();
+      await views.getByRole("tab", { name: "Signals" }).click();
+      const signals = page.getByRole("region", { name: "Signal mapping" });
+      await signals.getByText("LevelRaw", { exact: true }).waitFor();
+      await signals.getByText("module fault").first().waitFor();
+      const body = await page.locator("body").innerText();
+      for (const secret of [
+        "What was wrong",
+        "wrongModuleInstalled",
+        "Module of another type in a configured slot",
+        "Replace the module in slot 4",
+      ])
+        assert.ok(
+          !body.includes(secret),
+          `visible before diagnosis: ${secret}`,
+        );
+      await page.getByRole("button", { name: "Pause" }).click();
+      await page.screenshot({
+        path: path.join(directory, "hardware-compare.png"),
+      });
+    },
+  );
+
   await step("project round trip through the real backend", async () => {
     const created = await invoke("create_project", {
       contractVersion: 8,

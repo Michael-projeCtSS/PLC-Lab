@@ -125,6 +125,48 @@ launcher smoke 11 steps).
 - Not done: a fieldbus-controlled drive with communication monitoring (P4 follow-up), write
   functions.
 
+Validated: `4ffe42296ce28ea89738dcbf3c4e95bcecc57110`, CI run 40835722311 (Windows job
+123319920831 and Linux job 123319921115 PASS; native smoke 18 steps on every entry point,
+launcher smoke 11 steps).
+
+## Checkpoint 6: hardware configuration and station building (P6)
+
+- Model (ADR-0029): stable module ids (`<class>-r<rack>s<slot>`, unique, kept on move)
+  and channel ids `<moduleId>.ch<n>`; `StationConfig::move_module` moves the I/O mappings;
+  module electronics supply separate from field supply (`NO_MODULE_POWER`, fault
+  `modulePowerMissing`); analog outputs bound to `INT`/`REAL`, driven in RUN only,
+  measurable; project format 2 with migration from 1 (progress and recent lists keep
+  their own versions).
+- Diagnostics: `StationRuntime::compare` derives typed findings (missing, unexpected,
+  wrong type, wrong slot, module power, field power, channel mode and loop supply against
+  the drawing, address overlap, mapping problems); the commissioning Power and Hardware
+  categories consume them (items module electronics supply, modules present in their
+  slots, addresses and I/O mapping) instead of their own rules.
+- Projection and UI: hardware view with module/channel ids, findings and a signal map
+  (symbol, channel, address, value and quality, drawn device and its state). Hardware tab:
+  Compare, Configured (project), Actual (detected), Signals; inspector Overview,
+  Configuration, Channels, Power, Diagnostics; module cards are keyboard-selectable
+  buttons; Advanced mode adds, removes, moves and retypes modules (first-fit start
+  addresses from the catalog). CPU and module LEDs are labeled generic PLC Lab indicators.
+- Content: `scene.hardware-station` (modular CPU, PS, DI16, DO16, AI4, AO2; tank skid with
+  inlet valve and limit switches, high level switch, 2-wire LT-303, lamps; AO channel 0
+  retransmits the level), six labs `hw.do-field-supply`, `hw.do-module-power`,
+  `hw.wrong-module`, `hw.sensor-channel`, `hw.ai-mode` (configuration lab), `hw.wrong-slot`;
+  guides `module-electronics-supply`, `wrong-module-type`, `signal-on-wrong-terminal`,
+  `analog-mode-mismatch` (with fidelity); `missing-field-power` and `wrong-module-slot`
+  now also simulated in hardware labs; `fundamentals.station-configuration`; lesson 22.
+- Tests: hardware-model (AO, two supplies, comparison of project, installation and
+  drawing, large station 1 CPU + 8 DI + 8 DO + 4 AI + 4 AO over 2000 scans with a time
+  budget and determinism), project format v1 -> v2 migration, per-lab hardware evidence
+  and commissioning consistency, large-station hardware view bound, moved module id
+  survives save and reopen, secrecy and verification over every fault-finding lab of the
+  pack (36, now derived from the library and including the Hardware and Commissioning
+  views), Hardware tab and station editor UI tests, native smoke step (compare, keyboard
+  module selection, inspector diagnostics, detected station, signal mapping).
+- Not done: remote I/O and communication modules as configurable station members (only
+  the CPU interface exists); no scene device consumes an analog output yet (the AO
+  terminal is measured with the multimeter).
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on
@@ -134,10 +176,9 @@ native smoke test run on hosted Windows CI, which is authoritative.
 
 ## Next checkpoints
 
-1. Checkpoint 6: P6 hardware configuration / station building.
-2. Then P7 watch
-   and force, P8 diagnostic buffer, P9 alarms and events, P10 startup and restart,
-   P11 ST depth, P12 LAD readiness.
+1. Checkpoint 7: watch and force, diagnostic buffer (P7, P8).
+2. Checkpoint 8: alarms and events, startup and restart, sequence diagnostics (P9, P10).
+3. Checkpoint 9: ST depth, multiple POUs and FB instances (P11), then LAD readiness.
 
 ## How to continue
 

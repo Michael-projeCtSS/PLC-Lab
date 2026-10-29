@@ -404,6 +404,170 @@ fn each_network_lab_shows_its_own_evidence_in_the_network_view() {
 }
 
 #[test]
+fn each_hardware_lab_shows_its_own_evidence_in_the_hardware_view() {
+    let f = fixture("hardware-labs");
+    let request = |id| WorkspaceRequest {
+        contract_version: V,
+        workspace_id: id,
+    };
+    let measure = |id, slot, channel| {
+        f.app
+            .measure(MeasureRequest {
+                contract_version: V,
+                workspace_id: id,
+                channel: ChannelRefDto {
+                    rack: 0,
+                    slot,
+                    channel,
+                },
+            })
+            .unwrap()
+    };
+    let categories = |hw: &HardwareDto| -> Vec<(String, Option<u8>)> {
+        hw.findings
+            .iter()
+            .map(|x| (x.category.clone(), x.slot.map(|s| s.slot)))
+            .collect()
+    };
+    let status = |hw: &HardwareDto, slot: u8| -> String {
+        hw.modules
+            .iter()
+            .find(|m| m.position.slot == slot)
+            .map_or("ABSENT".into(), |m| m.status.clone())
+    };
+    let signal = |hw: &HardwareDto, tag: &str| -> SignalMapRowDto {
+        hw.signals.iter().find(|s| s.tag == tag).unwrap().clone()
+    };
+    for lab in [
+        "hw.do-field-supply",
+        "hw.do-module-power",
+        "hw.wrong-module",
+        "hw.sensor-channel",
+        "hw.ai-mode",
+        "hw.wrong-slot",
+    ] {
+        let (_, w) = exercise(&f.app, lab);
+        let id = w.workspace_id;
+        press(&f.app, id, "start");
+        step(&f.app, id, 30);
+        let hw = f.app.hardware(request(id)).unwrap();
+        let found = categories(&hw);
+        // The mapping always follows the project: symbol, stable channel id, drawn device.
+        let closed = signal(&hw, "InletClosed");
+        assert_eq!(closed.channel_id.as_deref(), Some("di-r0s2.ch4"), "{lab}");
+        assert_eq!(
+            closed.drawn_device.as_deref(),
+            Some("Inlet valve XV-301"),
+            "{lab}"
+        );
+        match lab {
+            "hw.do-field-supply" => {
+                assert_eq!(found, [("FIELD_POWER_MISSING".to_string(), Some(3u8))]);
+                assert_eq!(status(&hw, 3), "NO_FIELD_POWER");
+                // Commanded in the PLC, no voltage at the terminal, the valve stays shut.
+                let valve = signal(&hw, "InletValve");
+                assert_eq!(valve.output, Some(true), "{valve:?}");
+                assert_eq!(
+                    valve.device_state.as_deref(),
+                    Some("not energized"),
+                    "{valve:?}"
+                );
+                let terminal = measure(id, 3, 0);
+                assert_eq!((terminal.kind.as_str(), terminal.value), ("VOLTAGE", 0));
+                assert_eq!(
+                    closed.device_state.as_deref(),
+                    Some("contact closed"),
+                    "{closed:?}"
+                );
+            }
+            "hw.do-module-power" => {
+                assert_eq!(found, [("MODULE_POWER_MISSING".to_string(), Some(3u8))]);
+                assert_eq!(status(&hw, 3), "NO_MODULE_POWER");
+                assert_eq!(measure(id, 3, 0).value, 0);
+            }
+            "hw.wrong-module" => {
+                assert_eq!(found, [("WRONG_MODULE_TYPE".to_string(), Some(4u8))]);
+                assert_eq!(
+                    hw.findings[0].detected.as_deref(),
+                    Some("Digital input 8 x 24 V DC (sinking)")
+                );
+                let level = signal(&hw, "LevelRaw");
+                assert_eq!(level.quality.as_deref(), Some("MODULE_FAULT"), "{level:?}");
+            }
+            "hw.sensor-channel" => {
+                // Nothing in the project differs: only testing the inputs finds the wire.
+                assert!(found.is_empty(), "{found:?}");
+                assert_eq!(
+                    closed.device_state.as_deref(),
+                    Some("contact closed"),
+                    "{closed:?}"
+                );
+                assert_eq!(
+                    closed.value,
+                    Some(SignalValueDto::Bool { value: false }),
+                    "{closed:?}"
+                );
+                let di = hw.modules.iter().find(|m| m.position.slot == 2).unwrap();
+                let spare = di.channels.iter().find(|c| c.channel == 9).unwrap();
+                assert!(spare.tag.is_none() && spare.led, "{spare:?}");
+                // The analog output retransmits the level: 20 % of 4-20 mA is 7.2 mA.
+                let ao = measure(id, 5, 0);
+                assert_eq!(ao.kind, "CURRENT", "{ao:?}");
+                assert!((7_100..=7_300).contains(&ao.value), "{ao:?}");
+                let out = signal(&hw, "LevelOut");
+                assert_eq!(out.channel_id.as_deref(), Some("ao-r0s5.ch0"));
+                assert!(out.drawn_device.is_none(), "{out:?}");
+            }
+            "hw.ai-mode" => {
+                assert_eq!(found, [("CHANNEL_MODE_MISMATCH".to_string(), Some(4u8))]);
+                assert_eq!(hw.findings[0].channel.map(|c| c.channel), Some(0));
+                // A voltage input reads the unsupplied 2-wire loop as a valid 0.
+                let level = signal(&hw, "LevelRaw");
+                assert_eq!(
+                    level.value,
+                    Some(SignalValueDto::Int { value: 0 }),
+                    "{level:?}"
+                );
+                assert_eq!(level.quality.as_deref(), Some("GOOD"), "{level:?}");
+            }
+            _ => {
+                assert_eq!(found, [("WRONG_SLOT".to_string(), Some(6u8))]);
+                assert_eq!(status(&hw, 4), "MISSING");
+                assert_eq!(
+                    signal(&hw, "LevelRaw").quality.as_deref(),
+                    Some("MODULE_FAULT")
+                );
+            }
+        }
+        // Commissioning consumes the same findings instead of its own rules.
+        let checklist = f.app.commissioning(request(id)).unwrap();
+        let module_level = found.iter().any(|(c, _)| c != "CHANNEL_MODE_MISMATCH");
+        let hardware_ok = checklist
+            .categories
+            .iter()
+            .filter(|c| c.id == "power" || c.id == "hardware")
+            .flat_map(|c| &c.items)
+            .all(|i| i.state == "OK" || i.state == "NOT_APPLICABLE");
+        assert_eq!(
+            hardware_ok, !module_level,
+            "{lab}: {:?}",
+            checklist.categories
+        );
+        let mode_reported =
+            checklist.categories.iter().flat_map(|c| &c.items).any(|i| {
+                i.state == "FAULT" && i.findings.iter().any(|x| x.contains("ai-r0s4.ch0"))
+            });
+        assert_eq!(
+            mode_reported,
+            lab == "hw.ai-mode",
+            "{lab}: {:?}",
+            checklist.categories
+        );
+        f.app.close_workspace(request(id)).unwrap();
+    }
+}
+
+#[test]
 fn network_troubleshooting_lab_from_symptom_to_debrief() {
     let f = fixture("net-lab");
     let (project, w) = exercise(&f.app, "ts.remote-level-lost");
@@ -503,6 +667,19 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
     edited.programs[0].source = source.clone();
     edited.watch = vec!["plc.DriveRun".into(), "process.drive.speedPermille".into()];
     edited.station.network.interface = None;
+    // A moved module keeps its stable id and takes its mapped channels along, as the
+    // station editor does.
+    let moved = edited.station.modules[0].clone();
+    let free = 9;
+    edited.station.modules[0].position.slot = free;
+    for mapping in edited.station.io_map.iter_mut() {
+        if mapping.channel.rack == moved.position.rack
+            && mapping.channel.slot == moved.position.slot
+        {
+            mapping.channel.slot = free;
+        }
+    }
+    edited.station.modules.sort_by_key(|m| m.position.slot);
     edited.simulation.speed_percent = 50;
     f.app
         .save_project(ProjectSaveRequest {
@@ -528,6 +705,16 @@ fn projects_persist_source_watch_station_and_platform_and_reject_bad_files() {
     assert_eq!(reopened.programs[0].source, source);
     assert_eq!(reopened.watch, edited.watch);
     assert_eq!(reopened.station, edited.station);
+    let reopened_module = reopened
+        .station
+        .modules
+        .iter()
+        .find(|m| m.position.slot == free)
+        .unwrap();
+    assert_eq!(
+        reopened_module.id, moved.id,
+        "the module id survives the move"
+    );
     assert_eq!(reopened.platform, "siemens.s7-1500");
     assert_eq!(reopened.simulation.speed_percent, 50);
     let w = restarted
@@ -743,40 +930,92 @@ fn long_runs_of_large_programs_keep_every_response_bounded() {
     assert!(events.events.len() <= 200 && event_bytes < 128 * 1024);
 }
 
-const LABS: [&str; 30] = [
-    "cm.net-wrong-ip",
-    "cm.net-unit-id",
-    "cm.net-timeout",
-    "cm.net-word-order",
-    "cm.net-register",
-    "cm.net-device-offline",
-    "cm.vfd-run-wire",
-    "cm.vfd-local",
-    "cm.vfd-trip",
-    "cm.vfd-enable",
-    "cm.vfd-keypad",
-    "cm.vfd-no-supply",
-    "cm.ai-loop-break",
-    "cm.ai-loop-supply",
-    "cm.ai-voltage-as-current",
-    "cm.ai-zero-twenty",
-    "cm.ai-offset",
-    "cm.dio-input-supply",
-    "cm.dio-guard-contact",
-    "cm.dio-swapped-buttons",
-    "cm.dio-swapped-outputs",
-    "cm.dio-feedback",
-    "cm.dio-wrong-slot",
-    "ts.motor-wont-start",
-    "ts.outputs-dead",
-    "ts.part-sensor-inverted",
-    "ts.vfd-local",
-    "ts.tank-level-reads-high",
-    "ts.remote-level-lost",
-    "ts.remote-level-wrong",
-];
+#[test]
+fn a_large_station_keeps_the_hardware_view_bounded() {
+    let f = fixture("large-station");
+    let (project, w) = open(
+        &f.app,
+        ProjectCreateRequest {
+            contract_version: V,
+            name: "Large station".into(),
+            exercise: None,
+            scene: Some("scene.hardware-station".into()),
+            platform: None,
+        },
+    );
+    let id = w.workspace_id;
+    // 1 CPU, 8 DI16, 8 DO16, 4 AI4 and 4 AO2: the scene's modules plus configured
+    // extensions that are not installed (the worst case for the comparison).
+    let mut station = project.station.clone();
+    let mut slot = 6u8;
+    for (module, extra, bytes, base) in [
+        ("di16.24vdc.sink", 7, 2u16, 2u16),
+        ("do16.24vdc", 7, 2, 2),
+        ("ai4.ui", 3, 8, 72),
+        ("ao2.ui", 3, 4, 68),
+    ] {
+        for n in 0..extra {
+            station.modules.push(ConfiguredModuleDto {
+                id: format!("ext-s{slot}"),
+                position: SlotRefDto { rack: 0, slot },
+                module: module.into(),
+                start_address: base + n * bytes,
+                channels: Vec::new(),
+            });
+            slot += 1;
+        }
+    }
+    load(&f.app, id, &project.programs[0].source, 1, Some(station));
+    let request = || WorkspaceRequest {
+        contract_version: V,
+        workspace_id: id,
+    };
+    let started = std::time::Instant::now();
+    let mut largest = 0usize;
+    for _ in 0..50 {
+        step(&f.app, id, 10);
+        let hw = f.app.hardware(request()).unwrap();
+        largest = largest.max(serde_json::to_vec(&hw).unwrap().len());
+    }
+    let hw = f.app.hardware(request()).unwrap();
+    let checklist = f.app.commissioning(request()).unwrap();
+    let elapsed = started.elapsed();
+    let checklist_bytes = serde_json::to_vec(&checklist).unwrap().len();
+    println!(
+        "large station: 500 scans and 51 hardware views in {elapsed:?}; largest view {largest} bytes, checklist {checklist_bytes} bytes"
+    );
+    let configured = hw.modules.iter().filter(|m| m.configured.is_some()).count();
+    assert_eq!(configured, 25, "power supply and 24 I/O modules");
+    assert_eq!(
+        hw.modules.iter().map(|m| m.channels.len()).sum::<usize>(),
+        8 * 16 + 8 * 16 + 4 * 4 + 4 * 2
+    );
+    // Every extension is reported once as missing; the installed modules match.
+    assert_eq!(hw.findings.len(), 19, "{:?}", hw.findings);
+    assert!(hw.findings.iter().all(|x| x.category == "MODULE_MISSING"));
+    assert!(largest < 512 * 1024, "{largest} bytes per hardware view");
+    assert!(checklist_bytes < 128 * 1024, "{checklist_bytes} bytes");
+    assert!(elapsed.as_secs() < 60, "{elapsed:?}");
+}
 
-/// Everything the learner sees before the diagnosis: the workspace and the exercise page.
+/// Every fault-finding lab of the pack: the secrecy rules apply to all of them, including
+/// labs added later.
+fn fault_finding_labs(library: &knowledge_core::KnowledgeLibrary) -> Vec<String> {
+    let labs: Vec<String> = library
+        .exercises()
+        .filter(|e| e.troubleshooting.is_some())
+        .map(|e| e.id.to_string())
+        .collect();
+    // Digital, analog, drive, network, hardware and classic troubleshooting labs.
+    assert!(labs.len() >= 36, "only {} fault-finding labs", labs.len());
+    for family in ["cm.dio-", "cm.ai-", "cm.vfd-", "cm.net-", "hw.", "ts."] {
+        assert!(labs.iter().any(|l| l.starts_with(family)), "{family}");
+    }
+    labs
+}
+
+/// Everything the learner sees before the diagnosis: the workspace, the exercise page, and
+/// the Hardware and Commissioning views after the station has run.
 fn visible_before_diagnosis(app: &DesktopApp, w: &WorkspaceDto, id: &str) -> String {
     let page = app
         .exercise(IdRequest {
@@ -784,10 +1023,19 @@ fn visible_before_diagnosis(app: &DesktopApp, w: &WorkspaceDto, id: &str) -> Str
             id: id.into(),
         })
         .unwrap();
+    let request = || WorkspaceRequest {
+        contract_version: V,
+        workspace_id: w.workspace_id,
+    };
+    step(app, w.workspace_id, 20);
+    let hardware = app.hardware(request()).unwrap();
+    let commissioning = app.commissioning(request()).unwrap();
     format!(
-        "{}\n{}",
+        "{}\n{}\n{}\n{}",
         serde_json::to_string(w).unwrap(),
-        serde_json::to_string(&page).unwrap()
+        serde_json::to_string(&page).unwrap(),
+        serde_json::to_string(&hardware).unwrap(),
+        serde_json::to_string(&commissioning).unwrap()
     )
 }
 
@@ -798,7 +1046,8 @@ fn every_fault_finding_lab_hides_its_cause_until_verified() {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../knowledge")
         ]);
     let f = fixture("secrecy");
-    for id in LABS {
+    for id in fault_finding_labs(&library) {
+        let id = id.as_str();
         let lab = library.exercise(id).unwrap_or_else(|| panic!("{id}"));
         let t = lab.troubleshooting.as_ref().unwrap();
         let debrief = t.debrief.as_ref().unwrap();

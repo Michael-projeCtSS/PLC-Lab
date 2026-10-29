@@ -49,13 +49,25 @@ parameters); deceleration is immediate.
 ## I/O hardware
 
 - **Exact (model rules)**: configured vs installed modules per slot, missing/mismatched
-  modules, missing field power, wire break detection on live-zero inputs, channel modes,
-  output stop behavior, sinking/sourcing compatibility, terminal measurements.
+  modules, modules in another slot, missing field power and missing module electronics
+  supply as separate conditions, findings derived from project, installation and drawing
+  (ADR-0029), wire break detection on live-zero inputs, channel modes, output stop
+  behavior, sinking/sourcing compatibility, analog outputs (inverse conversion bands),
+  terminal measurements.
 - **Approximated**: analog conversion bands per profile (generic 0..10000; S7-style
   0..27648 with overrange to 32511 and overflow 32767; full-scale 0..32767; REAL
   engineering units), NE 43 transmitter saturation at 3.8/20.5 mA, fixed digital
   thresholds, diagnostic texts.
-- **Not modeled**: module parameter sets of real products, hot swap, firmware versions.
+- **Generic indicators**: CPU (RUN, STOP, ERROR, I/O, FORCE, LINK) and module/channel
+  LEDs follow PLC Lab rules (green OK, red flashing for a module or channel fault, dark
+  without electronics supply, green flashing for an unconfigured module). They are labeled
+  in the UI as generic PLC Lab indicators and do not reproduce any vendor's LED behavior.
+- **Approximated (station)**: a module of the wrong type, or in a slot the project does
+  not configure, exchanges no data and its inputs hold substitute value 0; module start-up
+  is instantaneous.
+- **Not modeled**: module parameter sets of real products, hot swap, firmware versions,
+  module start-up times, power supply module load and redundancy, vendor diagnostic
+  codes.
 - **Current loop power (generic model)**: a level transmitter is 2-wire (loop-powered) or
   4-wire (separately powered). A current input channel either supplies the loop
   (`loopSupply`, default) or is passive. A 2-wire transmitter conducts only on a supplying

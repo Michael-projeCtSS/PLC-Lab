@@ -38,7 +38,7 @@ SmartScreen may refuse to start a locally built copy. See
 
 1. **HOME** offers the next step: continue the course, practice, troubleshoot or open
    the Free Lab.
-2. **LEARN** has 21 short lessons from "What is a PLC?" to troubleshooting methodology.
+2. **LEARN** has 22 short lessons from "What is a PLC?" to troubleshooting methodology.
    Each lesson explains one idea, shows an example and a common mistake, asks a question
    and links an exercise.
 3. **PRACTICE** exercises give you a machine and a task. Write the program, press
@@ -64,6 +64,13 @@ SmartScreen may refuse to start a locally built copy. See
    unit ID, timeout shorter than the gateway needs, wrong word order of a REAL, register
    40101 entered as address 101, device switched off. The Network view shows nodes,
    connections, the selected connection's request and response and the Modbus traffic.
+   Hardware labs on a modular station (power supply, DI 16, DO 16, AI 4, AO 2 modules):
+   output module without field supply, output module without electronics supply, a
+   digital module fitted where the analog module belongs, the valve's closed limit switch
+   on another terminal, a 2-wire transmitter on a channel configured for 0-10 V, the
+   analog module in another slot. The Hardware tab compares the configured (project) and
+   the detected station, follows each PLC symbol through its channel to the device on the
+   drawing, and inspects a module's channels, supplies and diagnostics.
 5. **TROUBLESHOOT** labs start from a fault report. Reproduce the symptom, collect
    evidence (inputs, outputs, LEDs, measurements, diagnostics, ping, drive display),
    submit a diagnosis, repair and verify. Labs: Stop contact replaced by NO, inverted
@@ -78,12 +85,14 @@ SmartScreen may refuse to start a locally built copy. See
 ## Free Lab
 
 **FREE LAB → New project** creates an engineering project on one of the machines
-(I/O board, motor starter, conveyor with drive, tank, tank with Modbus transmitter) and a
-PLC platform profile. The workspace has the program editor, hardware rack, process view,
+(I/O board, motor starter, conveyor with drive, tank, tank with Modbus transmitter,
+modular tank skid station) and a PLC platform profile. The workspace has the program
+editor, hardware views (compare, configured, detected, signal mapping), process view,
 network view, diagnostics, variables (scan input, committed value, next input), watch,
 waveforms, events and cause & effect. In Advanced mode the hardware and network
 configuration can be edited and downloaded. Projects can be saved, copied, exported and
-imported as `.plclab` files.
+imported as `.plclab` files. In Advanced mode modules can be added, removed, moved and
+retyped; a moved module keeps its id, settings and mappings.
 
 ## Where things are stored
 
