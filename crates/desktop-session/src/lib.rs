@@ -720,7 +720,9 @@ impl DesktopApp {
                 )));
             }
             let mut state = self.lock()?;
-            Ok(state.workspace(request.workspace_id)?.watch(&request.signals))
+            Ok(state
+                .workspace(request.workspace_id)?
+                .watch(&request.signals))
         })())
     }
 
