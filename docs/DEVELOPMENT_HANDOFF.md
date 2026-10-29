@@ -214,6 +214,22 @@ build 20 steps).
   pending after reopen, a downloaded one survives an application restart, the exported
   file carries `downloadedStation`.
 
+## Checkpoint 7-C: watch tables
+
+- Project format 5 (ADR-0032): named `watchTables` (16 x 64 rows of canonical signal
+  paths with an integer display format) replace the flat watch list; format 4 lists
+  migrate into "Watch 1".
+- Typed `watch` query (IPC contract 8, additive): per signal the canonical path, label,
+  kind, type, unit, value, scan input, committed value, next input, source, quality and
+  force, for PLC tags, block outputs, process values and I/O channels; unknown ids are
+  left out; more than 64 are refused.
+- Watch panel: table tabs, new, rename, delete, find and add any signal (including I/O
+  channels), per-row format, configurable columns (per-viewer preference), rows that no
+  longer resolve shown as not available. The active table feeds the frame and waveforms.
+- Tests: project model (migration, round trip, limits), workflow (every signal kind, a
+  force, unknown ids, the 64 limit, a moved module's channel row still resolves),
+  persistence of watch tables, UI (values, quality, force, columns, editing).
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on

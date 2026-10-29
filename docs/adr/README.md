@@ -37,3 +37,4 @@ as history; their session, process and controller details are superseded as note
 | [0029](0029-hardware-configuration.md)               | Hardware configuration, stable module identity, derived findings     | Accepted                           |
 | [0030](0030-root-single-executable.md)               | The root `PLC Lab.exe` is the application (one executable)           | Accepted                           |
 | [0031](0031-saved-and-downloaded-configuration.md)   | Saved and downloaded station configuration survive reopen            | Accepted                           |
+| [0032](0032-watch-tables.md)                         | Watch tables over canonical runtime signals                          | Accepted                           |
