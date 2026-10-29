@@ -750,7 +750,7 @@ fn run_large_station(scans: u64) -> (Vec<hardware_model::ModuleView>, usize, usi
         let commands: BTreeMap<_, _> = outputs
             .iter()
             .enumerate()
-            .map(|(i, c)| (*c, (scan + i as u64) % 3 == 0))
+            .map(|(i, c)| (*c, (scan + i as u64).is_multiple_of(3)))
             .collect();
         station.drive_outputs(&commands, true, &mut scene).unwrap();
         let setpoints: BTreeMap<_, _> = analog
@@ -762,7 +762,7 @@ fn run_large_station(scans: u64) -> (Vec<hardware_model::ModuleView>, usize, usi
             })
             .collect();
         station.drive_analog(&setpoints, true);
-        if scan % 10 == 0 {
+        if scan.is_multiple_of(10) {
             findings = station.compare(&scene).len();
         }
     }
