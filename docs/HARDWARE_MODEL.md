@@ -90,7 +90,8 @@ allocated first fit per image (inputs: DI and AI; outputs: DO and AO), digital m
 from byte 0 and analog modules from byte 64. Download brings the project's configuration
 into the PLC; until then a banner says that project and PLC differ, and Compare shows the
 PLC's configuration against the detected hardware. Opening a project starts the PLC with
-the project's configuration. The network interface and Modbus connections are edited in
+the configuration last downloaded (ADR-0031), so a saved edit stays pending after a
+reopen or restart until it is downloaded. The network interface and Modbus connections are edited in
 the Network tab and downloaded there.
 
 Diagnostic entries carry typed `slot`, `channel` and `moduleId`; the module inspector

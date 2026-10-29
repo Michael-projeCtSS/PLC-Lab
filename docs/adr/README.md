@@ -36,3 +36,4 @@ as history; their session, process and controller details are superseded as note
 | [0028](0028-network-diagnostics.md)                  | Network diagnostics from the deterministic network model             | Accepted                           |
 | [0029](0029-hardware-configuration.md)               | Hardware configuration, stable module identity, derived findings     | Accepted                           |
 | [0030](0030-root-single-executable.md)               | The root `PLC Lab.exe` is the application (one executable)           | Accepted                           |
+| [0031](0031-saved-and-downloaded-configuration.md)   | Saved and downloaded station configuration survive reopen            | Accepted                           |

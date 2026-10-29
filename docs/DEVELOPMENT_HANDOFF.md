@@ -204,6 +204,16 @@ executable; native smoke of the root `PLC Lab.exe` 20 steps, of the relocated co
 `%TEMP%\PLC Lab Product Test With Spaces …` 20 steps, through the BAT 19 steps, debug
 build 20 steps).
 
+## Checkpoint 7-B: saved versus downloaded configuration across reopen
+
+- Project format 4 (ADR-0031): `downloadedStation` beside `station`. A workspace opens
+  with the PLC holding the last downloaded configuration and records it; a download sets
+  both; saving changes only the expected `station`. Format 3 migrates unchanged.
+- Tests: project-model (format 3 without, round trip with both, invalid downloaded
+  configuration refused, format 5 rejected); workflow: a saved, not downloaded edit stays
+  pending after reopen, a downloaded one survives an application restart, the exported
+  file carries `downloadedStation`.
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some test binaries on

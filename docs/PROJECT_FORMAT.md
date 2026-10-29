@@ -5,7 +5,7 @@ A project is one JSON file `<id>.plclab` (`project-model`, ADR-0023).
 ```json
 {
   "format": "plclab-project",
-  "formatVersion": 3,
+  "formatVersion": 4,
   "id": "p-1793140000-0",
   "name": "Tank test bench",
   "createdAt": "2026-10-27T10:00:00Z",
@@ -46,8 +46,12 @@ deterministic session.
 
 ## Versioning and migration
 
-`formatVersion` 3 is current (ADR-0029): configured modules carry a stable `id`, and
-watch entries name I/O channels by it (`io.<moduleId>.ch<n>`), never by position.
+`formatVersion` 4 is current. `station` is the configuration the project expects
+(Advanced edits are saved there); the optional `downloadedStation` is the configuration
+last downloaded into the PLC, which a reopened project starts the PLC with (ADR-0031).
+Format 3 files have no `downloadedStation` and open with the PLC holding `station`.
+Since format 3 (ADR-0029) configured modules carry a stable `id`, and watch entries name
+I/O channels by it (`io.<moduleId>.ch<n>`), never by position.
 Version 2 watch entries `io.R<rack>/S<slot>/CH<channel>` are migrated through the
 project's own station; an entry whose position has no configured channel makes the file
 invalid with that entry named, instead of being guessed. Version 1 files first get every
