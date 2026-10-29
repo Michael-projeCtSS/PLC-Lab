@@ -3,8 +3,8 @@
 
 use app_contract::*;
 use hardware_model::{
-    DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource, LedState, ModuleStatus,
-    Quality,
+    CpuState, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource, LedState,
+    ModuleStatus, Quality,
 };
 use lab_engine::{
     CauseEffect, CycleOutcome, LabEvent, LabEventKind, LabSession, ModeReason, OperatorAction,
@@ -496,6 +496,13 @@ pub fn diagnostic_text(session: &LabSession, kind: DiagnosticKind) -> String {
         DiagnosticKind::LinkDown => "Ethernet link down.".into(),
         DiagnosticKind::PlcFault => "CPU in FAULT: a runtime error stopped the program.".into(),
         DiagnosticKind::ForceActive => "Force job active: I/O values are overridden.".into(),
+        DiagnosticKind::ModeChange { from, to } => format!(
+            "CPU operating state changed from {} to {}.",
+            cpu_state_name(from),
+            cpu_state_name(to)
+        ),
+        DiagnosticKind::ProgramDownloaded => "Program downloaded into the CPU.".into(),
+        DiagnosticKind::HardwareDownloaded => "Hardware configuration downloaded into the CPU.".into(),
     }
 }
 
@@ -511,7 +518,47 @@ pub fn exception_name(code: u8) -> &'static str {
     }
 }
 
-pub fn diagnostic_entry(session: &LabSession, e: &DiagnosticEntry) -> DiagnosticEntryDto {
+/// Diagnostic buffer entries for the view (oldest first) with what the backend derives:
+/// severity, category, structured details and, for an incoming condition, whether it is
+/// still active or when it cleared.
+pub fn diagnostic_entries(
+    session: &LabSession,
+    entries: &[&DiagnosticEntry],
+) -> Vec<DiagnosticEntryDto> {
+    entries
+        .iter()
+        .enumerate()
+        .map(|(i, e)| {
+            let cleared = if e.event == DiagnosticEvent::Incoming {
+                entries[i + 1..]
+                    .iter()
+                    .find(|later| clears(later, e))
+                    .map(|later| later.time.as_micros())
+            } else {
+                None
+            };
+            let active = e.event == DiagnosticEvent::Incoming
+                && cleared.is_none()
+                && session
+                    .station()
+                    .active_diagnostics()
+                    .any(|(s, k)| *s == e.source && *k == e.kind);
+            diagnostic_entry(session, e, cleared, active)
+        })
+        .collect()
+}
+
+/// Whether `later` is the outgoing entry of the condition `e` raised.
+fn clears(later: &DiagnosticEntry, e: &DiagnosticEntry) -> bool {
+    later.event == DiagnosticEvent::Outgoing && later.source == e.source && later.kind == e.kind
+}
+
+fn diagnostic_entry(
+    session: &LabSession,
+    e: &DiagnosticEntry,
+    cleared_us: Option<u64>,
+    active: bool,
+) -> DiagnosticEntryDto {
     let (slot, channel) = match e.source {
         DiagnosticSource::Module(p) => (Some(p), None),
         DiagnosticSource::Channel(c) => (Some(c.slot_ref()), Some(c)),
@@ -528,6 +575,7 @@ pub fn diagnostic_entry(session: &LabSession, e: &DiagnosticEntry) -> Diagnostic
         event: match e.event {
             DiagnosticEvent::Incoming => "INCOMING",
             DiagnosticEvent::Outgoing => "OUTGOING",
+            DiagnosticEvent::Instant => "EVENT",
         }
         .into(),
         text: diagnostic_text(session, e.kind),
@@ -543,6 +591,85 @@ pub fn diagnostic_entry(session: &LabSession, e: &DiagnosticEntry) -> Diagnostic
         module_id: slot
             .and_then(|p| session.station().configuration().module_at(p))
             .map(|m| m.id.to_string()),
+        severity: diagnostic_severity(e).into(),
+        category: match e.source {
+            DiagnosticSource::Cpu => "CPU",
+            DiagnosticSource::Module(_) | DiagnosticSource::Channel(_) => "HARDWARE",
+            DiagnosticSource::Connection(_) | DiagnosticSource::Interface => "NETWORK",
+        }
+        .into(),
+        details: diagnostic_details(session, e),
+        active,
+        cleared_us: cleared_us.map(ExactU64),
+    }
+}
+
+/// Faults are errors while they are incoming; limits, forces and unconfigured modules are
+/// warnings; cleared conditions and single events are information.
+fn diagnostic_severity(e: &DiagnosticEntry) -> &'static str {
+    if e.event != DiagnosticEvent::Incoming {
+        return "info";
+    }
+    match e.kind {
+        DiagnosticKind::Overflow
+        | DiagnosticKind::Underflow
+        | DiagnosticKind::UnconfiguredModule
+        | DiagnosticKind::ModbusException(_)
+        | DiagnosticKind::ForceActive => "warning",
+        _ => "error",
+    }
+}
+
+fn diagnostic_details(session: &LabSession, e: &DiagnosticEntry) -> Vec<DiagnosticDetailDto> {
+    let detail = |name: &str, value: String| DiagnosticDetailDto {
+        name: name.into(),
+        value,
+    };
+    let mut out = Vec::new();
+    match e.source {
+        DiagnosticSource::Channel(c) => {
+            let config = session.station().configuration();
+            let id = config.channel_id(c).unwrap_or_else(|| c.to_string());
+            out.push(detail("channel", id));
+            out.push(detail("address", session.channel_address(c)));
+        }
+        DiagnosticSource::Module(p) => {
+            if let Some(m) = session.station().configuration().module_at(p) {
+                out.push(detail("module", m.id.to_string()));
+            }
+        }
+        _ => {}
+    }
+    match e.kind {
+        DiagnosticKind::ModeChange { from, to } => {
+            out.push(detail("from", cpu_state_name(from).into()));
+            out.push(detail("to", cpu_state_name(to).into()));
+        }
+        DiagnosticKind::ModuleMismatch {
+            configured,
+            installed,
+        } => {
+            let profile = session.profile();
+            let configured = match configured {
+                Some(c) => module_name(c, profile),
+                None => "none".into(),
+            };
+            out.push(detail("configured", configured));
+            out.push(detail("installed", module_name(installed, profile)));
+        }
+        DiagnosticKind::ModbusException(code) => {
+            out.push(detail("exception", format!("{code:02X}h")));
+        }
+        _ => {}
+    }
+    out
+}
+
+fn cpu_state_name(state: CpuState) -> &'static str {
+    match state {
+        CpuState::Run => "RUN",
+        CpuState::Stop => "STOP",
+        CpuState::Fault => "FAULT",
     }
 }
 

@@ -63,6 +63,11 @@ const hardware: HardwareDto = {
       slot: { rack: 0, slot: 1 },
       channel: null,
       moduleId: "di-r0s1",
+      severity: "error",
+      category: "HARDWARE",
+      details: [],
+      active: true,
+      clearedUs: null,
     },
     {
       timeUs: "0",
@@ -74,6 +79,11 @@ const hardware: HardwareDto = {
       slot: { rack: 0, slot: 10 },
       channel: null,
       moduleId: null,
+      severity: "error",
+      category: "HARDWARE",
+      details: [],
+      active: true,
+      clearedUs: null,
     },
   ],
   catalog: [

@@ -521,14 +521,21 @@ pub struct ModuleViewDto {
     pub status_led: String,
     pub channels: Vec<ChannelViewDto>,
 }
+/// A structured detail of a diagnostic entry (for example the mode before and after).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DiagnosticDetailDto {
+    pub name: String,
+    pub value: String,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DiagnosticEntryDto {
     pub time_us: ExactU64,
     pub source: String,
     pub kind: String,
-    /// "INCOMING" | "OUTGOING"
-    #[ts(type = "\"INCOMING\" | \"OUTGOING\"")]
+    /// "INCOMING" | "OUTGOING" | "EVENT"
+    #[ts(type = "\"INCOMING\" | \"OUTGOING\" | \"EVENT\"")]
     pub event: String,
     pub text: String,
     /// The module slot the entry is about (module and channel sources), as typed
@@ -538,6 +545,33 @@ pub struct DiagnosticEntryDto {
     pub channel: Option<ChannelRefDto>,
     /// Stable id of the configured module at `slot`.
     pub module_id: Option<String>,
+    #[ts(type = "\"error\" | \"warning\" | \"info\"")]
+    pub severity: String,
+    #[ts(type = "\"CPU\" | \"HARDWARE\" | \"NETWORK\"")]
+    pub category: String,
+    pub details: Vec<DiagnosticDetailDto>,
+    pub active: bool,
+    pub cleared_us: Option<ExactU64>,
+}
+/// The CPU diagnostic buffer, newest first, filtered and paged.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DiagnosticBufferRequest {
+    pub contract_version: u32,
+    pub workspace_id: ExactU64,
+    pub offset: u32,
+    pub limit: u16,
+    pub severity: Option<String>,
+    pub category: Option<String>,
+    pub module_id: Option<String>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DiagnosticBufferDto {
+    pub capacity: u32,
+    pub recorded: ExactU64,
+    pub matching: u32,
+    pub entries: Vec<DiagnosticEntryDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -856,7 +890,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         DeclarationDto, CompileResultDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
-        EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticEntryDto, ModuleTypeDto,
+        EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticDetailDto, DiagnosticEntryDto, DiagnosticBufferRequest, DiagnosticBufferDto, ModuleTypeDto,
         CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareFindingDto, SignalMapRowDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,
         CriterionResultDto, DebriefDto, GradeReportDto, ExecutionWakeDto

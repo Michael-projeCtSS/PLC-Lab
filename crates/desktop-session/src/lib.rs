@@ -688,6 +688,19 @@ impl DesktopApp {
         })())
     }
 
+    pub fn diagnostic_buffer(
+        &self,
+        request: DiagnosticBufferRequest,
+    ) -> Result<DiagnosticBufferDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            Ok(state
+                .workspace(request.workspace_id)?
+                .diagnostic_buffer(&request))
+        })())
+    }
+
     pub fn forces(&self, request: WorkspaceRequest) -> Result<ForceListDto, IpcError> {
         boundary((|| {
             version(request.contract_version)?;

@@ -44,6 +44,7 @@ export const COMMANDS = [
   "set_speed",
   "operate",
   "force",
+  "diagnostic_buffer",
   "forces",
   "remove_all_forces",
   "frame",
@@ -177,6 +178,17 @@ export const api = {
     call("operate", { ...w, component, action }, V.frame),
   force: (w: Ws, signal: number, value: G.SignalValueDto | null) =>
     call("force", { ...w, signal, value }, V.frame),
+  /** The CPU diagnostic buffer, newest first, filtered and paged. */
+  diagnosticBuffer: (
+    w: Ws,
+    page: {
+      offset: number;
+      limit: number;
+      severity: string | null;
+      category: string | null;
+      moduleId: string | null;
+    },
+  ) => call("diagnostic_buffer", { ...w, ...page }, V.diagnosticBuffer),
   /** Every active force with what it replaces. */
   forces: (w: Ws) => call("forces", { ...w }, V.forces),
   /** Remove every active force; returns the frame without them. */

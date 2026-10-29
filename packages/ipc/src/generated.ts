@@ -391,11 +391,13 @@ moduleId: string | null, position: SlotRefDto, configured: string | null, instal
  */
 status: "OK" | "MISSING" | "MISMATCH" | "NO_FIELD_POWER" | "NO_MODULE_POWER" | "UNCONFIGURED", statusLed: string, channels: Array<ChannelViewDto>, };
 
+export type DiagnosticDetailDto = { name: string, value: string, };
+
 export type DiagnosticEntryDto = { timeUs: ExactU64, source: string, kind: string, 
 /**
- * "INCOMING" | "OUTGOING"
+ * "INCOMING" | "OUTGOING" | "EVENT"
  */
-event: "INCOMING" | "OUTGOING", text: string, 
+event: "INCOMING" | "OUTGOING" | "EVENT", text: string, 
 /**
  * The module slot the entry is about (module and channel sources), as typed
  * identity: consumers never parse `source`.
@@ -408,7 +410,11 @@ channel: ChannelRefDto | null,
 /**
  * Stable id of the configured module at `slot`.
  */
-moduleId: string | null, };
+moduleId: string | null, severity: "error" | "warning" | "info", category: "CPU" | "HARDWARE" | "NETWORK", details: Array<DiagnosticDetailDto>, active: boolean, clearedUs: ExactU64 | null, };
+
+export type DiagnosticBufferRequest = { contractVersion: number, workspaceId: ExactU64, offset: number, limit: number, severity: string | null, category: string | null, moduleId: string | null, };
+
+export type DiagnosticBufferDto = { capacity: number, recorded: ExactU64, matching: number, entries: Array<DiagnosticEntryDto>, };
 
 export type ModuleTypeDto = { id: string, name: string, product: string | null, channels: number, class: string, };
 

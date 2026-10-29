@@ -244,6 +244,9 @@ fn diagnostic_text(kind: DiagnosticKind) -> String {
         DiagnosticKind::LinkDown => "network link down".into(),
         DiagnosticKind::PlcFault => "PLC fault".into(),
         DiagnosticKind::ForceActive => "force active".into(),
+        DiagnosticKind::ModeChange { .. } => "operating state changed".into(),
+        DiagnosticKind::ProgramDownloaded => "program downloaded".into(),
+        DiagnosticKind::HardwareDownloaded => "hardware configuration downloaded".into(),
     }
 }
 

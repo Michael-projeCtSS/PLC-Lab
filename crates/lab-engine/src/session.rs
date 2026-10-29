@@ -16,7 +16,7 @@ use crate::{
     plc::{self, InputSource, LoadedProgram, PlcMode, PlcParticipant, ScanOutcome, TagRole},
     signals::{SignalId, SignalKind, SignalRegistry, SignalValue, ValueType, unit_of},
 };
-use hardware_model::{ChannelValue, DiagnosticKind, DiagnosticSource, StationRuntime};
+use hardware_model::{ChannelValue, CpuState, DiagnosticKind, DiagnosticSource, StationRuntime};
 use lab_model::{
     Identifier,
     exercise::{PlcModeRequest, ScenarioAction},
@@ -698,11 +698,17 @@ impl LabSession {
 
     fn note_mode(&mut self, change: Option<(PlcMode, PlcMode)>, reason: ModeReason) {
         if let Some((from, to)) = change {
+            let now = self.now();
             self.events.append(LabEvent {
-                time_us: self.now().as_micros(),
+                time_us: now.as_micros(),
                 cycle: self.cycle,
                 kind: LabEventKind::ModeChanged { from, to, reason },
             });
+            let kind = DiagnosticKind::ModeChange {
+                from: cpu_state(from),
+                to: cpu_state(to),
+            };
+            self.station.record_event(DiagnosticSource::Cpu, kind, now);
         }
     }
 
@@ -952,6 +958,11 @@ impl LabSession {
                 cycle: self.cycle,
                 kind: LabEventKind::HardwareDownloaded,
             });
+            self.station.record_event(
+                DiagnosticSource::Cpu,
+                DiagnosticKind::HardwareDownloaded,
+                now,
+            );
         } else {
             self.signals = registry;
         }
@@ -1017,6 +1028,11 @@ impl LabSession {
                 revision,
             },
         });
+        self.station.record_event(
+            DiagnosticSource::Cpu,
+            DiagnosticKind::ProgramDownloaded,
+            self.now(),
+        );
         self.sample()?;
         self.drive()?;
         Ok(DownloadReport {
@@ -1228,4 +1244,12 @@ fn new_trace(bytes: usize) -> SignalTrace<CycleHeader, SignalValue> {
         byte_budget: bytes.max(64 * 1024),
         keyframe_interval: NonZeroUsize::new(64).expect("positive"),
     })
+}
+
+fn cpu_state(mode: PlcMode) -> CpuState {
+    match mode {
+        PlcMode::Run => CpuState::Run,
+        PlcMode::Stop => CpuState::Stop,
+        PlcMode::Fault => CpuState::Fault,
+    }
 }

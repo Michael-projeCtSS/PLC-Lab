@@ -158,6 +158,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             commands::set_speed,
             commands::operate,
             commands::force,
+            commands::diagnostic_buffer,
             commands::forces,
             commands::remove_all_forces,
             commands::frame,

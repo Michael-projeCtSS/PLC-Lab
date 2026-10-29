@@ -11,7 +11,7 @@ mod diagnostics;
 pub use analog::{AnalogCondition, AnalogRaw, AnalogReading};
 pub use comparison::{FindingCategory, FindingSeverity, HardwareFinding};
 pub use diagnostics::{
-    DiagnosticBuffer, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource,
+    CpuState, DiagnosticBuffer, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource,
 };
 
 use lab_model::{
@@ -433,6 +433,21 @@ impl StationRuntime {
                 });
             }
         }
+    }
+
+    /// Record a single event (a mode change or a download) in the diagnostic buffer.
+    pub fn record_event(
+        &mut self,
+        source: DiagnosticSource,
+        kind: DiagnosticKind,
+        now: WorldTime,
+    ) {
+        self.buffer.push(DiagnosticEntry {
+            time: now,
+            source,
+            kind,
+            event: DiagnosticEvent::Instant,
+        });
     }
 
     /// Raise or clear an externally owned diagnostic (for example a network connection).

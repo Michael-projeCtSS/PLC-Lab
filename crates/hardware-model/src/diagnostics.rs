@@ -1,4 +1,5 @@
-//! CPU diagnostic buffer: time-stamped incoming/outgoing diagnostic events, bounded.
+//! CPU diagnostic buffer: time-stamped incoming/outgoing diagnostic conditions and single
+//! events (mode changes, downloads), bounded.
 
 use lab_model::hardware::{ChannelRef, ModuleType, SlotRef};
 use simulation_core::WorldTime;
@@ -12,6 +13,14 @@ pub enum DiagnosticSource {
     /// A configured network connection, identified by its index in the station config.
     Connection(u16),
     Interface,
+}
+
+/// The CPU operating state as the diagnostic buffer records changes of it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum CpuState {
+    Run,
+    Stop,
+    Fault,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -34,12 +43,20 @@ pub enum DiagnosticKind {
     LinkDown,
     PlcFault,
     ForceActive,
+    /// The CPU changed its operating state (a single event).
+    ModeChange { from: CpuState, to: CpuState },
+    /// A program was downloaded into the CPU (a single event).
+    ProgramDownloaded,
+    /// A hardware configuration was downloaded into the CPU (a single event).
+    HardwareDownloaded,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiagnosticEvent {
     Incoming,
     Outgoing,
+    /// A single event without duration.
+    Instant,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,6 +98,9 @@ impl DiagnosticBuffer {
     }
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
+    }
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
     /// Total entries ever recorded, including overwritten ones.
     pub fn total(&self) -> u64 {

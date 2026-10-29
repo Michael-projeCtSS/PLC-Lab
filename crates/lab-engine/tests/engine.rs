@@ -606,3 +606,36 @@ fn forces_are_typed_survive_stop_and_run_and_end_with_a_memory_reset() {
     assert!(s.forces().is_empty());
     assert_eq!(removals(&s), 5);
 }
+
+#[test]
+fn mode_changes_and_downloads_are_recorded_in_the_cpu_diagnostic_buffer() {
+    use hardware_model::{CpuState, DiagnosticEvent, DiagnosticKind, DiagnosticSource};
+    let mut s = session(TANK);
+    s.download(TANK_FILL, 1, None).unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    s.step_cycle().unwrap();
+    s.set_plc_switch(PlcModeRequest::Stop).unwrap();
+    let events: Vec<DiagnosticKind> = s
+        .station()
+        .diagnostics()
+        .entries()
+        .filter(|e| e.event == DiagnosticEvent::Instant)
+        .inspect(|e| assert_eq!(e.source, DiagnosticSource::Cpu))
+        .map(|e| e.kind)
+        .collect();
+    let run = DiagnosticKind::ModeChange {
+        from: CpuState::Stop,
+        to: CpuState::Run,
+    };
+    let stop = DiagnosticKind::ModeChange {
+        from: CpuState::Run,
+        to: CpuState::Stop,
+    };
+    assert_eq!(
+        events, [DiagnosticKind::ProgramDownloaded, run, stop],
+        "single events, oldest first"
+    );
+    // Single events are not active conditions.
+    let active = s.station().active_diagnostics().count();
+    assert_eq!(active, 0);
+}

@@ -1416,6 +1416,85 @@ fn forces_are_listed_removed_and_end_with_the_session_or_a_memory_reset() {
 }
 
 #[test]
+fn the_diagnostic_buffer_classifies_pairs_filters_and_pages_its_entries() {
+    let library =
+        knowledge_core::KnowledgeLibrary::load(&[
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../knowledge")
+        ]);
+    let f = fixture("diagnostic-buffer");
+    let (_, w) = exercise(&f.app, "hw.do-field-supply");
+    let id = w.workspace_id;
+    step(&f.app, id, 5);
+    let page = |severity: Option<&str>, category: Option<&str>, module: Option<&str>| {
+        f.app
+            .diagnostic_buffer(DiagnosticBufferRequest {
+                contract_version: V,
+                workspace_id: id,
+                offset: 0,
+                limit: 50,
+                severity: severity.map(str::to_owned),
+                category: category.map(str::to_owned),
+                module_id: module.map(str::to_owned),
+            })
+            .unwrap()
+    };
+    // The missing field supply is an active hardware error of module do-r0s3.
+    let errors = page(Some("error"), Some("HARDWARE"), Some("do-r0s3"));
+    let supply = errors
+        .entries
+        .iter()
+        .find(|e| e.kind == "NoFieldPower")
+        .unwrap();
+    assert!(supply.active && supply.cleared_us.is_none(), "{supply:?}");
+    assert_eq!(supply.event, "INCOMING");
+    assert!(supply.details.iter().any(|d| d.value == "do-r0s3"));
+    // The installed program was downloaded and started: CPU events with details.
+    let cpu = page(None, Some("CPU"), None);
+    assert!(cpu.entries.iter().all(|e| e.category == "CPU"));
+    assert!(cpu.entries.iter().any(|e| e.kind == "ProgramDownloaded"));
+    let started = cpu
+        .entries
+        .iter()
+        .find(|e| e.kind == "ModeChange")
+        .unwrap();
+    assert_eq!(
+        (started.event.as_str(), started.severity.as_str()),
+        ("EVENT", "info")
+    );
+    let to: Vec<&str> = started
+        .details
+        .iter()
+        .filter(|d| d.name == "to")
+        .map(|d| d.value.as_str())
+        .collect();
+    assert_eq!(to, ["RUN"]);
+    // After the repair the condition is cleared, with its clearing time.
+    let setup = library
+        .exercise("hw.do-field-supply")
+        .and_then(|e| e.troubleshooting.as_ref())
+        .unwrap();
+    assert!(diagnose(&f.app, id, setup.root_causes[0].as_str()));
+    let fix = setup.repairs.iter().find(|r| !r.clears.is_empty());
+    repair(&f.app, id, fix.unwrap().id.as_str());
+    step(&f.app, id, 2);
+    let all = page(None, None, Some("do-r0s3"));
+    let raised = all
+        .entries
+        .iter()
+        .find(|e| e.kind == "NoFieldPower" && e.event == "INCOMING")
+        .unwrap();
+    assert!(!raised.active && raised.cleared_us.is_some(), "{raised:?}");
+    let mut outgoing = all.entries.iter().filter(|e| e.event == "OUTGOING");
+    assert!(outgoing.any(|e| e.kind == "NoFieldPower"));
+    // Newest first, bounded pages.
+    let everything = page(None, None, None);
+    let times: Vec<u64> = everything.entries.iter().map(|e| e.time_us.0).collect();
+    assert!(times.windows(2).all(|t| t[0] >= t[1]), "{times:?}");
+    assert!(everything.matching as usize >= everything.entries.len());
+    assert!(everything.capacity >= 200);
+}
+
+#[test]
 fn a_large_station_keeps_the_hardware_view_bounded() {
     let f = fixture("large-station");
     let (project, w) = open(

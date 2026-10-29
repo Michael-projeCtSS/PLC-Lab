@@ -101,6 +101,16 @@ pub struct Workspace {
     pub failure: Option<String>,
 }
 
+/// Whether a diagnostic buffer entry passes the request's filters.
+fn passes(r: &DiagnosticEntryDto, f: &DiagnosticBufferRequest) -> bool {
+    fn wanted(filter: &Option<String>, actual: Option<&str>) -> bool {
+        filter.as_deref().is_none_or(|v| actual == Some(v))
+    }
+    wanted(&f.severity, Some(&r.severity))
+        && wanted(&f.category, Some(&r.category))
+        && wanted(&f.module_id, r.module_id.as_deref())
+}
+
 fn session_config(project: &Project) -> SessionConfig {
     SessionConfig {
         cycle_us: u64::from(project.simulation.cycle_ms) * 1000,
@@ -410,6 +420,26 @@ impl Workspace {
             })
             .transpose()?;
         self.engine(|s| s.force(SignalId(signal), value))
+    }
+
+    /// The CPU diagnostic buffer, newest first, filtered and paged.
+    pub fn diagnostic_buffer(&self, filter: &DiagnosticBufferRequest) -> DiagnosticBufferDto {
+        let s = &self.session;
+        let buffer = s.station().diagnostics();
+        let all: Vec<_> = buffer.entries().collect();
+        let mut rows = convert::diagnostic_entries(s, &all);
+        rows.reverse();
+        let kept: Vec<_> = rows.into_iter().filter(|r| passes(r, filter)).collect();
+        DiagnosticBufferDto {
+            capacity: u32::try_from(buffer.capacity()).unwrap_or(u32::MAX),
+            recorded: ExactU64(buffer.total()),
+            matching: u32::try_from(kept.len()).unwrap_or(u32::MAX),
+            entries: kept
+                .into_iter()
+                .skip(filter.offset as usize)
+                .take(usize::from(filter.limit.clamp(1, 200)))
+                .collect(),
+        }
     }
 
     /// Every active force with what it replaces.
@@ -1015,14 +1045,9 @@ impl Workspace {
         let profile = s.profile();
         let station = s.station();
         let cpu = station.configuration().cpu;
-        let mut diagnostics: Vec<DiagnosticEntryDto> = station
-            .diagnostics()
-            .entries()
-            .rev()
-            .take(200)
-            .map(|e| convert::diagnostic_entry(s, e))
-            .collect();
-        diagnostics.reverse();
+        let mut recent: Vec<_> = station.diagnostics().entries().rev().take(200).collect();
+        recent.reverse();
+        let diagnostics = convert::diagnostic_entries(s, &recent);
         Ok(HardwareDto {
             station: convert::station_to_dto(station.configuration())
                 .map_err(|e| AppError::InvalidRequest(e.message))?,

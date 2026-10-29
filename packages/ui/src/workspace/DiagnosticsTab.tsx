@@ -1,15 +1,11 @@
-/** Online diagnostics: CPU state, active alarms and the CPU diagnostic buffer. */
-import { api, type HardwareDto } from "@plc-lab/ipc";
-import { seconds } from "../format";
-import { Badge, ErrorNotice, PlcModeBadge } from "../ui";
-import { useEvidence, useFrameQuery } from "./useFrameQuery";
+/** Online diagnostics: CPU state, active process alarms and the CPU diagnostic buffer. */
+import { Badge, PlcModeBadge } from "../ui";
+import { useEvidence } from "./useFrameQuery";
+import { DiagnosticBuffer } from "./DiagnosticBuffer";
 import type { Lab } from "./useLab";
 
 export function DiagnosticsTab({ lab }: { lab: Lab }) {
-  const { ws, frame, workspace } = lab;
-  const hw = useFrameQuery<HardwareDto>(lab, () =>
-    ws ? api.hardware(ws) : Promise.reject(new Error("No workspace")),
-  );
+  const { frame, workspace } = lab;
   useEvidence(lab, "diagnostic buffer");
   if (!frame || !workspace) return null;
   const byId = new Map(workspace.scene.components.map((c) => [c.id, c.label]));
@@ -18,7 +14,6 @@ export function DiagnosticsTab({ lab }: { lab: Lab }) {
       style={{ position: "absolute", inset: 0, overflow: "auto", padding: 16 }}
       className="col"
     >
-      <ErrorNotice error={hw.error} />
       <div className="row wrap" style={{ gap: 16 }}>
         <div className="panel" style={{ minWidth: 300 }}>
           <div className="panel-head">
@@ -79,45 +74,7 @@ export function DiagnosticsTab({ lab }: { lab: Lab }) {
           </div>
         </div>
       </div>
-      <div className="panel">
-        <div className="panel-head">
-          <h4>CPU diagnostic buffer</h4>
-          <span className="muted">
-            newest last · {frame.activeDiagnostics} active
-          </span>
-        </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Event</th>
-              <th>Source</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          <tbody>
-            {hw.data?.diagnostics.length === 0 && (
-              <tr>
-                <td colSpan={4} className="muted">
-                  The diagnostic buffer is empty.
-                </td>
-              </tr>
-            )}
-            {hw.data?.diagnostics.map((d, i) => (
-              <tr key={i}>
-                <td className="mono">{seconds(d.timeUs)}</td>
-                <td>
-                  <Badge kind={d.event === "INCOMING" ? "warning" : "normal"}>
-                    {d.event === "INCOMING" ? "incoming" : "outgoing"}
-                  </Badge>
-                </td>
-                <td>{d.source}</td>
-                <td style={{ whiteSpace: "normal" }}>{d.text}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DiagnosticBuffer lab={lab} />
     </div>
   );
 }

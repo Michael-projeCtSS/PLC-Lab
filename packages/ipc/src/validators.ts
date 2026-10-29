@@ -654,6 +654,27 @@ export const eventsPage = obj<G.EventsPageDto>({
   dropped: u64,
   latest: nullable(u64),
 });
+const diagnosticEntry = obj<G.DiagnosticEntryDto>({
+  timeUs: u64,
+  source: str,
+  kind: str,
+  event: literal("INCOMING", "OUTGOING", "EVENT"),
+  text: str,
+  slot: nullable(slotRef),
+  channel: nullable(channelRef),
+  moduleId: nullable(str),
+  severity: literal("error", "warning", "info"),
+  category: literal("CPU", "HARDWARE", "NETWORK"),
+  details: arr(obj<G.DiagnosticDetailDto>({ name: str, value: str }), 16),
+  active: bool,
+  clearedUs: nullable(u64),
+});
+export const diagnosticBuffer = obj<G.DiagnosticBufferDto>({
+  capacity: u32,
+  recorded: u64,
+  matching: u32,
+  entries: arr(diagnosticEntry, 200),
+});
 export const hardware = obj<G.HardwareDto>({
   station,
   cpu: str,
@@ -693,18 +714,7 @@ export const hardware = obj<G.HardwareDto>({
       ),
     }),
   ),
-  diagnostics: arr(
-    obj<G.DiagnosticEntryDto>({
-      timeUs: u64,
-      source: str,
-      kind: str,
-      event: literal("INCOMING", "OUTGOING"),
-      text: str,
-      slot: nullable(slotRef),
-      channel: nullable(channelRef),
-      moduleId: nullable(str),
-    }),
-  ),
+  diagnostics: arr(diagnosticEntry),
   catalog: arr(
     obj<G.ModuleTypeDto>({
       id: str,

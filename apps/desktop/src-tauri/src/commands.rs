@@ -54,6 +54,7 @@ commands! {
     force(ForceRequest) -> LiveFrameDto => force;
     frame(FrameRequest) -> LiveFrameDto => frame;
     cycle(CycleRequest) -> Option<CauseEffectDto> => cycle;
+    diagnostic_buffer(DiagnosticBufferRequest) -> DiagnosticBufferDto => diagnostic_buffer;
     forces(WorkspaceRequest) -> ForceListDto => forces;
     remove_all_forces(WorkspaceRequest) -> LiveFrameDto => remove_all_forces;
     variables(VariablesRequest) -> VariablesDto => variables;
