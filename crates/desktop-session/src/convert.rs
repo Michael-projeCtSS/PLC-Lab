@@ -4,12 +4,12 @@
 use app_contract::*;
 use hardware_model::{
     CpuState, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource, LedState,
-    ModuleStatus, Quality,
+    ModuleStatus, Quality, StartupKind,
 };
 use lab_engine::{
     AlarmCategory, AlarmEvent, AlarmPriority, AlarmState, AlarmStatus, AlarmTransition,
     CauseEffect, CycleOutcome, LabEvent, LabEventKind, LabSession, ModeReason, OperatorAction,
-    PlcMode, SignalKind, SignalValue,
+    PlcMode, SignalKind, SignalValue, StartKind,
 };
 use lab_model::network::{
     ModbusDataType, ModbusReadFunction, ModbusTcpScan, ModbusValueMapping, StationNetworkConfig,
@@ -504,6 +504,37 @@ pub fn diagnostic_text(session: &LabSession, kind: DiagnosticKind) -> String {
         ),
         DiagnosticKind::ProgramDownloaded => "Program downloaded into the CPU.".into(),
         DiagnosticKind::HardwareDownloaded => "Hardware configuration downloaded into the CPU.".into(),
+        DiagnosticKind::Startup {
+            kind: StartupKind::Warm,
+            retained,
+        } => format!(
+            "Warm restart: non-retentive data initialized, {retained} retentive variable(s) kept."
+        ),
+        DiagnosticKind::Startup {
+            kind: StartupKind::Cold,
+            ..
+        } => "Cold restart: all program data initialized, retentive variables included.".into(),
+        DiagnosticKind::FirstScan { kind } => format!(
+            "First program scan after the {} start executed.",
+            startup_name(kind)
+        ),
+        DiagnosticKind::MemoryReset => {
+            "Memory reset: all program data initialized and every force removed.".into()
+        }
+    }
+}
+
+pub fn start_kind(kind: StartKind) -> &'static str {
+    match kind {
+        StartKind::Warm => "WARM",
+        StartKind::Cold => "COLD",
+    }
+}
+
+pub fn startup_name(kind: StartupKind) -> &'static str {
+    match kind {
+        StartupKind::Warm => "warm",
+        StartupKind::Cold => "cold",
     }
 }
 
@@ -661,6 +692,13 @@ fn diagnostic_details(session: &LabSession, e: &DiagnosticEntry) -> Vec<Diagnost
         DiagnosticKind::ModbusException(code) => {
             out.push(detail("exception", format!("{code:02X}h")));
         }
+        DiagnosticKind::Startup { kind, retained } => {
+            out.push(detail("start", startup_name(kind).into()));
+            out.push(detail("retained", retained.to_string()));
+        }
+        DiagnosticKind::FirstScan { kind } => {
+            out.push(detail("start", startup_name(kind).into()));
+        }
         _ => {}
     }
     out
@@ -719,6 +757,8 @@ pub fn describe(
                     ModeReason::Download => " (download)",
                     ModeReason::MemoryReset => " (memory reset)",
                     ModeReason::WorldReset => " (simulation reset)",
+                    ModeReason::WarmRestart => " (warm restart)",
+                    ModeReason::ColdRestart => " (cold restart)",
                 }
             ),
             Some("CPU".into()),
@@ -896,6 +936,35 @@ pub fn describe(
         LabEventKind::Repair { label } => {
             ("REPAIR".into(), "info", format!("Repair: {label}"), None)
         }
+        LabEventKind::Started { kind, retained } => (
+            "PLC_START".into(),
+            "info",
+            match kind {
+                StartKind::Warm => format!(
+                    "Warm start: non-retentive data initialized, {retained} retentive variable(s) kept"
+                ),
+                StartKind::Cold => "Cold start: all program data initialized".into(),
+            },
+            Some("CPU".into()),
+        ),
+        LabEventKind::FirstScan { kind } => (
+            "PLC_FIRST_SCAN".into(),
+            "info",
+            format!(
+                "First scan after the {} start",
+                match kind {
+                    StartKind::Warm => "warm",
+                    StartKind::Cold => "cold",
+                }
+            ),
+            Some("CPU".into()),
+        ),
+        LabEventKind::MemoryReset => (
+            "PLC_MEMORY_RESET".into(),
+            "warning",
+            "Memory reset: program data initialized, forces removed".into(),
+            Some("CPU".into()),
+        ),
         LabEventKind::Alarm {
             message,
             priority,

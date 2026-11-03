@@ -49,6 +49,7 @@ commands! {
     compile(CompileRequest) -> CompileResultDto => compile;
     plc_mode(PlcModeRequest) -> LiveFrameDto => plc_mode;
     plc_reset(WorkspaceRequest) -> LiveFrameDto => plc_reset;
+    plc_restart(PlcRestartRequest) -> LiveFrameDto => plc_restart;
     set_speed(SpeedRequest) -> LiveFrameDto => set_speed;
     operate(OperateRequest) -> LiveFrameDto => operate;
     force(ForceRequest) -> LiveFrameDto => force;

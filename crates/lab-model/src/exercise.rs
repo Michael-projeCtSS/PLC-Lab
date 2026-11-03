@@ -170,6 +170,10 @@ pub enum ScenarioAction {
     ClearFault {
         id: Identifier,
     },
+    /// Warm restart of the running CPU (ADR-0038).
+    WarmRestart,
+    /// Cold restart of the running CPU (ADR-0038).
+    ColdRestart,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

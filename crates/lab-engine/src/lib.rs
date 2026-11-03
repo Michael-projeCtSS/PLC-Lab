@@ -27,6 +27,7 @@ pub use commissioning::{
 };
 pub use error::{BindingIssue, EngineError};
 pub use plc::{BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile};
+pub use plc_runtime::StartKind;
 pub use queries::{CauseEffect, Change, Effect, HistoryRow, TrendLayer, TrendSeries, VariableRow};
 pub use session::{
     ActiveForce, CycleHeader, CycleObservation, CycleOutcome, DownloadReport, ForceTarget,

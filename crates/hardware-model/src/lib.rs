@@ -12,6 +12,7 @@ pub use analog::{AnalogCondition, AnalogRaw, AnalogReading};
 pub use comparison::{FindingCategory, FindingSeverity, HardwareFinding};
 pub use diagnostics::{
     CpuState, DiagnosticBuffer, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource,
+    StartupKind,
 };
 
 use lab_model::{

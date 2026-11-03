@@ -16,6 +16,13 @@ pub enum DiagnosticSource {
 }
 
 /// The CPU operating state as the diagnostic buffer records changes of it.
+/// How a start initialized the program memory (ADR-0038).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum StartupKind {
+    Warm,
+    Cold,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CpuState {
     Run,
@@ -52,6 +59,17 @@ pub enum DiagnosticKind {
     ProgramDownloaded,
     /// A hardware configuration was downloaded into the CPU (a single event).
     HardwareDownloaded,
+    /// The CPU started: memory initialized by kind, `retained` values kept (a single event).
+    Startup {
+        kind: StartupKind,
+        retained: u32,
+    },
+    /// The first program scan after a start executed (a single event).
+    FirstScan {
+        kind: StartupKind,
+    },
+    /// A memory reset initialized all program memory and cleared every force.
+    MemoryReset,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -247,6 +247,9 @@ fn diagnostic_text(kind: DiagnosticKind) -> String {
         DiagnosticKind::ModeChange { .. } => "operating state changed".into(),
         DiagnosticKind::ProgramDownloaded => "program downloaded".into(),
         DiagnosticKind::HardwareDownloaded => "hardware configuration downloaded".into(),
+        DiagnosticKind::Startup { .. } => "CPU started".into(),
+        DiagnosticKind::FirstScan { .. } => "first scan executed".into(),
+        DiagnosticKind::MemoryReset => "memory reset".into(),
     }
 }
 

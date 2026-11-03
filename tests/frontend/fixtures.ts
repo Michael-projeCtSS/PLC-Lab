@@ -29,6 +29,9 @@ export function frame(overrides: Partial<LiveFrameDto> = {}): LiveFrameDto {
       fault: null,
       forces: 0,
       leds: [{ name: "RUN/STOP", state: "GREEN" }],
+      lastStart: "COLD",
+      retainedVariables: 0,
+      firstScanPending: false,
     },
     components: [
       {

@@ -13,7 +13,7 @@ use app_contract::*;
 use hardware_model::Measurement;
 use lab_engine::{
     CycleOutcome, EngineError, ForceTarget, LabSession, OperatorAction, SessionConfig, SignalId,
-    TrendLayer,
+    StartKind, TrendLayer, VariableRow,
 };
 use lab_model::{
     exercise::{ExerciseDefinition, PlcModeRequest},
@@ -775,6 +775,9 @@ impl Workspace {
                 fault: s.plc_fault().map(convert::diagnostic),
                 forces: u32::try_from(s.forces().len()).unwrap_or(u32::MAX),
                 leds: convert::cpu_leds(s),
+                last_start: s.last_start().map(|k| convert::start_kind(k).into()),
+                retained_variables: u32::try_from(s.retained_variables()).unwrap_or(u32::MAX),
+                first_scan_pending: s.first_scan_pending(),
             },
             components,
             watch: s
@@ -893,6 +896,19 @@ impl Workspace {
         }
     }
 
+    /// A warm or cold restart of the running CPU (ADR-0038).
+    pub fn restart(&mut self, kind: StartKind) -> AppResult<()> {
+        self.engine(|s| s.restart(kind)).map(|_| ())
+    }
+
+    /// What the latest start did to a variable of the program.
+    fn restart_effect(&self, row: &VariableRow) -> Option<String> {
+        let start = self.session.last_start()?;
+        row.initial?;
+        let kept = row.retained && start == StartKind::Warm;
+        Some(if kept { "KEPT" } else { "INITIALIZED" }.into())
+    }
+
     /// Alarms active or waiting for acknowledgment: highest priority, then newest first.
     pub fn alarm_list(&self) -> Vec<AlarmDto> {
         let mut alarms: Vec<_> = self
@@ -1007,6 +1023,9 @@ impl Workspace {
                     source,
                     quality: quality.map(|q| convert::quality(q).into()),
                     forced: row.and_then(|r| r.forced).map(convert::value),
+                    retained: row.is_some_and(|r| r.retained),
+                    initial: row.and_then(|r| r.initial).map(convert::value),
+                    restart_effect: row.and_then(|r| self.restart_effect(r)),
                 })
             })
             .collect();
@@ -1025,7 +1044,8 @@ impl Workspace {
             total: u32::try_from(total).unwrap_or(u32::MAX),
             rows: rows
                 .into_iter()
-                .map(|r| VariableRowDto {
+                .map(|r| (self.restart_effect(&r), r))
+                .map(|(restart_effect, r)| VariableRowDto {
                     signal: r.signal.0,
                     name: r.name,
                     kind: convert::signal_kind(r.kind).into(),
@@ -1035,6 +1055,9 @@ impl Workspace {
                     source: r.source,
                     quality: r.quality.map(|q| convert::quality(q).into()),
                     forced: r.forced.map(convert::value),
+                    retained: r.retained,
+                    initial: r.initial.map(convert::value),
+                    restart_effect,
                 })
                 .collect(),
         }

@@ -17,7 +17,9 @@ use crate::{
     signals::{SignalId, SignalKind, SignalRegistry, SignalValue, ValueType, unit_of},
 };
 use alarm_core::{AlarmEngine, AlarmEvent, AlarmPriority, AlarmState, AlarmTransition};
-use hardware_model::{ChannelValue, CpuState, DiagnosticKind, DiagnosticSource, StationRuntime};
+use hardware_model::{
+    ChannelValue, CpuState, DiagnosticKind, DiagnosticSource, StartupKind, StationRuntime,
+};
 use lab_model::{
     Identifier,
     exercise::{PlcModeRequest, ScenarioAction},
@@ -27,6 +29,7 @@ use lab_model::{
     scene::SceneDefinition,
 };
 use network_core::{NetworkEvent, NetworkRuntime, ScanStatus, ScanValue};
+use plc_runtime::StartKind;
 use plc_types::{PlcValue, diagnostics::Diagnostic};
 use process_simulation::{ProcessEventKind, Quantity, SceneRuntime};
 use simulation_core::{Phase, Scheduler, WorldTime};
@@ -99,6 +102,8 @@ pub enum ModeReason {
     Download,
     MemoryReset,
     WorldReset,
+    WarmRestart,
+    ColdRestart,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -161,6 +166,17 @@ pub enum LabEventKind {
     Repair {
         label: String,
     },
+    /// The CPU started: memory initialized by kind, `retained` values kept (ADR-0038).
+    Started {
+        kind: StartKind,
+        retained: u32,
+    },
+    /// The first program scan after a start executed.
+    FirstScan {
+        kind: StartKind,
+    },
+    /// A memory reset initialized all program memory and cleared every force.
+    MemoryReset,
     /// An alarm changed its state (activated, acknowledged, returned or withdrawn).
     Alarm {
         id: String,
@@ -239,6 +255,13 @@ pub struct LabSession {
     /// Plant alarms and the conditions behind them, in alarm id order.
     pub(crate) alarms: AlarmEngine,
     pub(crate) alarm_conditions: Vec<(String, crate::alarms::AlarmCondition)>,
+}
+
+fn startup_kind(kind: StartKind) -> StartupKind {
+    match kind {
+        StartKind::Warm => StartupKind::Warm,
+        StartKind::Cold => StartupKind::Cold,
+    }
 }
 
 fn quantity_value(q: Quantity) -> SignalValue {
@@ -717,7 +740,26 @@ impl LabSession {
         }
     }
 
+    /// Record a start that has initialized memory, once.
+    fn note_start(&mut self) {
+        let Some(kind) = self.plc.started.take() else {
+            return;
+        };
+        let retained = u32::try_from(self.plc.retained_variables()).unwrap_or(u32::MAX);
+        let now = self.now();
+        self.events.append(LabEvent {
+            time_us: now.as_micros(),
+            cycle: self.cycle,
+            kind: LabEventKind::Started { kind, retained },
+        });
+        let kind = startup_kind(kind);
+        let diagnostic = DiagnosticKind::Startup { kind, retained };
+        self.station
+            .record_event(DiagnosticSource::Cpu, diagnostic, now);
+    }
+
     fn note_mode(&mut self, change: Option<(PlcMode, PlcMode)>, reason: ModeReason) {
+        self.note_start();
         if let Some((from, to)) = change {
             let now = self.now();
             self.events.append(LabEvent {
@@ -815,12 +857,66 @@ impl LabSession {
         count
     }
 
+    /// A warm or cold restart of a running CPU (ADR-0038): the CPU passes through STOP and
+    /// starts again with one initialization of the given kind, using the program and
+    /// configuration already in the CPU. Forces stay. Refused in STOP and FAULT.
+    pub fn restart(&mut self, kind: StartKind) -> Result<PlcMode, EngineError> {
+        match self.plc.mode {
+            PlcMode::Fault => return Err(EngineError::PlcFaulted),
+            PlcMode::Stop => {
+                return Err(EngineError::InvalidAction(
+                    "A restart needs the CPU in RUN. In STOP, set the mode switch to RUN for a warm start, or use a memory reset before a cold start.".into(),
+                ));
+            }
+            PlcMode::Run => {}
+        }
+        let reason = match kind {
+            StartKind::Warm => ModeReason::WarmRestart,
+            StartKind::Cold => ModeReason::ColdRestart,
+        };
+        self.plc.mode = PlcMode::Stop;
+        self.note_mode(Some((PlcMode::Run, PlcMode::Stop)), reason);
+        self.plc.next_start = kind;
+        let change = self.plc.settle_mode();
+        self.note_mode(change, reason);
+        self.sample()?;
+        self.drive()?;
+        Ok(self.plc.mode)
+    }
+
+    /// How the latest start initialized memory, if the CPU has started.
+    pub fn last_start(&self) -> Option<StartKind> {
+        self.plc.last_start
+    }
+    /// Whether the next executed scan is the first after a start.
+    pub fn first_scan_pending(&self) -> bool {
+        self.plc
+            .program
+            .as_ref()
+            .is_some_and(|p| p.runtime.first_scan_pending())
+    }
+    pub fn retained_variables(&self) -> usize {
+        self.plc.retained_variables()
+    }
+
     /// Execute one PLC cycle and advance the world by one cycle period.
     pub fn step_cycle(&mut self) -> Result<CycleObservation, EngineError> {
         let start = self.now();
         let task_time = self.plc.task_time();
         let segment = self.plc.segment;
         let outcome = self.plc.scan()?;
+        if let Some(kind) = self.plc.first_scan_done.take() {
+            self.events.append(LabEvent {
+                time_us: start.as_micros(),
+                cycle: self.cycle,
+                kind: LabEventKind::FirstScan { kind },
+            });
+            let diagnostic = DiagnosticKind::FirstScan {
+                kind: startup_kind(kind),
+            };
+            self.station
+                .record_event(DiagnosticSource::Cpu, diagnostic, start);
+        }
         let (outcome, fault) = match outcome {
             ScanOutcome::Completed => (CycleOutcome::Scanned, None),
             ScanOutcome::Faulted(d) => {
@@ -940,6 +1036,12 @@ impl LabSession {
                 }
             }
             ScenarioAction::InjectFault { fault } => self.inject_fault(fault)?,
+            ScenarioAction::WarmRestart => {
+                self.restart(StartKind::Warm)?;
+            }
+            ScenarioAction::ColdRestart => {
+                self.restart(StartKind::Cold)?;
+            }
             ScenarioAction::ClearFault { id } => {
                 self.clear_fault(id)?;
             }
@@ -994,11 +1096,21 @@ impl LabSession {
         self.plc.memory_reset();
         // A memory reset returns the CPU to a clean state: no force survives it.
         self.clear_forces();
+        let now = self.now();
+        self.events.append(LabEvent {
+            time_us: now.as_micros(),
+            cycle: self.cycle,
+            kind: LabEventKind::MemoryReset,
+        });
+        self.station
+            .record_event(DiagnosticSource::Cpu, DiagnosticKind::MemoryReset, now);
         let settled = self.plc.settle_mode();
         let to = settled.map_or(self.plc.mode, |(_, to)| to);
         if before != to {
             self.note_mode(Some((before, to)), ModeReason::MemoryReset);
         }
+        // With the switch in RUN the CPU started again at once, cold (ADR-0038).
+        self.note_start();
         self.sample()?;
         self.drive()?;
         Ok(self.plc.mode)
@@ -1121,10 +1233,13 @@ impl LabSession {
         self.plc.fault = None;
         self.plc.mode = PlcMode::Stop;
         self.plc.segment += 1;
+        // A downloaded program starts cold (ADR-0038).
+        self.plc.next_start = StartKind::Cold;
         self.plc.settle_mode();
         if before != self.plc.mode {
             self.note_mode(Some((before, self.plc.mode)), ModeReason::Download);
         }
+        self.note_start();
         self.events.append(LabEvent {
             time_us: now.as_micros(),
             cycle: self.cycle,

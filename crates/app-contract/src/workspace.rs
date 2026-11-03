@@ -120,6 +120,13 @@ pub struct PlcStatusDto {
     pub fault: Option<DiagnosticDto>,
     pub forces: u32,
     pub leds: Vec<LedDto>,
+    /// How the latest start initialized program memory (ADR-0038): "WARM" | "COLD".
+    #[ts(type = "\"WARM\" | \"COLD\" | null")]
+    pub last_start: Option<String>,
+    /// Variables of the loaded program that a warm start keeps.
+    pub retained_variables: u32,
+    /// The next executed scan is the first after a start.
+    pub first_scan_pending: bool,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -260,6 +267,8 @@ pub struct DeclarationDto {
     pub name: String,
     pub data_type: String,
     pub role: String,
+    /// Declared in VAR RETAIN.
+    pub retained: bool,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -406,6 +415,13 @@ pub struct VariableRowDto {
     pub source: Option<String>,
     pub quality: Option<String>,
     pub forced: Option<SignalValueDto>,
+    /// Kept by a warm start (VAR RETAIN, ADR-0038).
+    pub retained: bool,
+    /// The value a start initializes the variable with.
+    pub initial: Option<SignalValueDto>,
+    /// What the latest start did to the variable: "KEPT" | "INITIALIZED".
+    #[ts(type = "\"KEPT\" | \"INITIALIZED\" | null")]
+    pub restart_effect: Option<String>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -441,6 +457,13 @@ pub struct WatchEntryDto {
     pub source: Option<String>,
     pub quality: Option<String>,
     pub forced: Option<SignalValueDto>,
+    /// Kept by a warm start (VAR RETAIN, ADR-0038).
+    pub retained: bool,
+    /// The value a start initializes the variable with.
+    pub initial: Option<SignalValueDto>,
+    /// What the latest start did to the variable: "KEPT" | "INITIALIZED".
+    #[ts(type = "\"KEPT\" | \"INITIALIZED\" | null")]
+    pub restart_effect: Option<String>,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -595,6 +618,15 @@ pub struct DiagnosticBufferDto {
     pub recorded: ExactU64,
     pub matching: u32,
     pub entries: Vec<DiagnosticEntryDto>,
+}
+/// A warm or cold restart of the running CPU (ADR-0038): "WARM" | "COLD".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PlcRestartRequest {
+    pub contract_version: u32,
+    pub workspace_id: ExactU64,
+    #[ts(type = "\"WARM\" | \"COLD\"")]
+    pub kind: String,
 }
 /// The plant's alarms (ADR-0037) and their history, newest first, in pages. The filters
 /// apply to both: a priority, a state (of an alarm, or the state a transition led to) and
@@ -987,7 +1019,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticDetailDto, DiagnosticEntryDto, DiagnosticBufferRequest, DiagnosticBufferDto,
-        AlarmsRequest, AlarmEventDto, AlarmsDto, AlarmAckRequest, AlarmAckResultDto, ModuleTypeDto,
+        PlcRestartRequest, AlarmsRequest, AlarmEventDto, AlarmsDto, AlarmAckRequest, AlarmAckResultDto, ModuleTypeDto,
         CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareFindingDto, SignalMapRowDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,
         CriterionResultDto, DebriefDto, GradeReportDto, ExecutionWakeDto

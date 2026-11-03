@@ -495,6 +495,9 @@ export const frame = obj<G.LiveFrameDto>({
     fault: nullable(diagnostic),
     forces: u32,
     leds: arr(led),
+    lastStart: nullable(literal("WARM", "COLD")),
+    retainedVariables: u32,
+    firstScanPending: bool,
   }),
   components: arr(
     obj<G.ComponentStateDto>({
@@ -572,7 +575,7 @@ export const compileResult = obj<G.CompileResultDto>({
   programName: nullable(str),
   diagnostics: arr(diagnostic),
   declarations: arr(
-    obj<G.DeclarationDto>({ name: str, dataType: str, role: str }),
+    obj<G.DeclarationDto>({ name: str, dataType: str, role: str, retained: bool }),
   ),
 });
 export const buildLoadResult = obj<G.BuildLoadResultDto>({
@@ -609,6 +612,9 @@ export const variables = obj<G.VariablesDto>({
       source: nullable(str),
       quality: nullable(str),
       forced: nullable(signalValue),
+      retained: bool,
+      initial: nullable(signalValue),
+      restartEffect: nullable(literal("KEPT", "INITIALIZED")),
     }),
     500,
   ),
@@ -644,6 +650,9 @@ export const watch = obj<G.WatchDto>({
       source: nullable(str),
       quality: nullable(str),
       forced: nullable(signalValue),
+      retained: bool,
+      initial: nullable(signalValue),
+      restartEffect: nullable(literal("KEPT", "INITIALIZED")),
     }),
     64,
   ),

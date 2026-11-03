@@ -257,7 +257,19 @@ mode: "RUN" | "STOP" | "FAULT",
 /**
  * Mode switch position: "RUN" | "STOP"
  */
-switch: string, programName: string | null, programRevision: ExactU64 | null, segment: number, scans: ExactU64, taskTimeUs: ExactU64, fault: DiagnosticDto | null, forces: number, leds: Array<LedDto>, };
+switch: string, programName: string | null, programRevision: ExactU64 | null, segment: number, scans: ExactU64, taskTimeUs: ExactU64, fault: DiagnosticDto | null, forces: number, leds: Array<LedDto>, 
+/**
+ * How the latest start initialized program memory (ADR-0038): "WARM" | "COLD".
+ */
+lastStart: "WARM" | "COLD" | null, 
+/**
+ * Variables of the loaded program that a warm start keeps.
+ */
+retainedVariables: number, 
+/**
+ * The next executed scan is the first after a start.
+ */
+firstScanPending: boolean, };
 
 export type QuantityDto = { name: string, value: SignalValueDto, };
 
@@ -328,7 +340,11 @@ export type WorkspaceDto = { workspaceId: ExactU64, projectId: string, scene: Sc
 
 export type CompileRequest = { contractVersion: number, source: string, };
 
-export type DeclarationDto = { name: string, dataType: string, role: string, };
+export type DeclarationDto = { name: string, dataType: string, role: string, 
+/**
+ * Declared in VAR RETAIN.
+ */
+retained: boolean, };
 
 export type CompileResultDto = { success: boolean, programName: string | null, diagnostics: Array<DiagnosticDto>, declarations: Array<DeclarationDto>, };
 
@@ -376,13 +392,37 @@ export type CycleRequest = { contractVersion: number, workspaceId: ExactU64, cyc
 
 export type VariablesRequest = { contractVersion: number, workspaceId: ExactU64, filter: string | null, offset: number, limit: number, };
 
-export type VariableRowDto = { signal: number, name: string, kind: string, scanValue: SignalValueDto | null, committed: SignalValueDto | null, staged: SignalValueDto | null, source: string | null, quality: string | null, forced: SignalValueDto | null, };
+export type VariableRowDto = { signal: number, name: string, kind: string, scanValue: SignalValueDto | null, committed: SignalValueDto | null, staged: SignalValueDto | null, source: string | null, quality: string | null, forced: SignalValueDto | null, 
+/**
+ * Kept by a warm start (VAR RETAIN, ADR-0038).
+ */
+retained: boolean, 
+/**
+ * The value a start initializes the variable with.
+ */
+initial: SignalValueDto | null, 
+/**
+ * What the latest start did to the variable: "KEPT" | "INITIALIZED".
+ */
+restartEffect: "KEPT" | "INITIALIZED" | null, };
 
 export type VariablesDto = { total: number, rows: Array<VariableRowDto>, };
 
 export type WatchRequest = { contractVersion: number, workspaceId: ExactU64, signals: Array<number>, };
 
-export type WatchEntryDto = { signal: number, path: string, label: string, kind: string, valueType: string, unit: string | null, active: boolean, value: SignalValueDto | null, scanValue: SignalValueDto | null, committed: SignalValueDto | null, staged: SignalValueDto | null, source: string | null, quality: string | null, forced: SignalValueDto | null, };
+export type WatchEntryDto = { signal: number, path: string, label: string, kind: string, valueType: string, unit: string | null, active: boolean, value: SignalValueDto | null, scanValue: SignalValueDto | null, committed: SignalValueDto | null, staged: SignalValueDto | null, source: string | null, quality: string | null, forced: SignalValueDto | null, 
+/**
+ * Kept by a warm start (VAR RETAIN, ADR-0038).
+ */
+retained: boolean, 
+/**
+ * The value a start initializes the variable with.
+ */
+initial: SignalValueDto | null, 
+/**
+ * What the latest start did to the variable: "KEPT" | "INITIALIZED".
+ */
+restartEffect: "KEPT" | "INITIALIZED" | null, };
 
 export type WatchDto = { worldTimeUs: ExactU64, cycle: ExactU64, rows: Array<WatchEntryDto>, };
 
@@ -448,6 +488,8 @@ moduleId: string | null, severity: "error" | "warning" | "info", category: "CPU"
 export type DiagnosticBufferRequest = { contractVersion: number, workspaceId: ExactU64, offset: number, limit: number, severity: string | null, category: string | null, moduleId: string | null, };
 
 export type DiagnosticBufferDto = { capacity: number, recorded: ExactU64, matching: number, entries: Array<DiagnosticEntryDto>, };
+
+export type PlcRestartRequest = { contractVersion: number, workspaceId: ExactU64, kind: "WARM" | "COLD", };
 
 export type AlarmsRequest = { contractVersion: number, workspaceId: ExactU64, offset: number, limit: number, priority: string | null, state: string | null, source: string | null, };
 

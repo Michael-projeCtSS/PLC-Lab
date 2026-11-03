@@ -62,6 +62,9 @@ const live: WatchDto = {
       source: "%IW64",
       quality: "WIRE_BREAK",
       forced: null,
+      retained: false,
+      initial: null,
+      restartEffect: null,
     },
     {
       signal: 2,
@@ -78,6 +81,9 @@ const live: WatchDto = {
       source: "%QX0.0",
       quality: "GOOD",
       forced: { type: "BOOL", value: true },
+      retained: false,
+      initial: null,
+      restartEffect: null,
     },
   ],
 };

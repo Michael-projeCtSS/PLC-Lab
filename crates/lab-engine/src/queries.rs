@@ -132,6 +132,10 @@ pub struct VariableRow {
     pub source: Option<String>,
     pub quality: Option<Quality>,
     pub forced: Option<SignalValue>,
+    /// Kept by a warm start (VAR RETAIN).
+    pub retained: bool,
+    /// The value a start initializes the variable with (not for inputs or block outputs).
+    pub initial: Option<SignalValue>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -260,6 +264,8 @@ impl LabSession {
                 source,
                 quality,
                 forced: self.forces().get(&tag.signal).copied(),
+                retained: tag.retained,
+                initial: (tag.role != TagRole::Input).then_some(tag.initial),
             });
         }
         for block in self.blocks() {
@@ -283,6 +289,8 @@ impl LabSession {
                     source: None,
                     quality: None,
                     forced: None,
+                    retained: false,
+                    initial: None,
                 });
             }
         }

@@ -18,7 +18,7 @@ pub use workspace::{RunLease, RunStart, TickOutcome};
 use app_contract::*;
 use error::AppResult;
 use knowledge_core::KnowledgeLibrary;
-use lab_engine::AssessmentOutcome;
+use lab_engine::{AssessmentOutcome, StartKind};
 use project_model::{ExerciseState, Progress, ProjectKind, ProjectStore, RecentProjects};
 use std::{
     path::{Path, PathBuf},
@@ -545,6 +545,7 @@ impl DesktopApp {
                             name: d.name.clone(),
                             data_type: d.type_name.clone(),
                             role: d.role.clone(),
+                            retained: d.retained,
                         })
                         .collect(),
                 },
@@ -698,6 +699,27 @@ impl DesktopApp {
             Ok(state
                 .workspace(request.workspace_id)?
                 .diagnostic_buffer(&request))
+        })())
+    }
+
+    /// A warm or cold restart of the running CPU with the program and configuration it
+    /// already holds (ADR-0038).
+    pub fn plc_restart(&self, request: PlcRestartRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let kind = match request.kind.as_str() {
+                "WARM" => StartKind::Warm,
+                "COLD" => StartKind::Cold,
+                other => {
+                    return Err(AppError::InvalidRequest(format!(
+                        "Unknown restart kind {other:?}; use WARM or COLD."
+                    )));
+                }
+            };
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            w.restart(kind)?;
+            Ok(w.frame(&[]))
         })())
     }
 

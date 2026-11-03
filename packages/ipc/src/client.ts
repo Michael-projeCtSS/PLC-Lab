@@ -40,6 +40,7 @@ export const COMMANDS = [
   "build_and_load",
   "plc_mode",
   "plc_reset",
+  "plc_restart",
   "simulation",
   "set_speed",
   "operate",
@@ -172,6 +173,9 @@ export const api = {
   plcMode: (w: Ws, mode: "RUN" | "STOP") =>
     call("plc_mode", { ...w, mode }, V.frame),
   plcReset: (w: Ws) => call("plc_reset", w, V.frame),
+  /** Warm or cold restart of the running CPU with the program it holds (ADR-0038). */
+  plcRestart: (w: Ws, kind: "WARM" | "COLD") =>
+    call("plc_restart", { ...w, kind }, V.frame),
   simulation: (w: Ws, command: "RUN" | "PAUSE" | "STEP" | "STOP") =>
     call("simulation", { ...w, command }, V.frame),
   setSpeed: (w: Ws, speedPercent: number) =>

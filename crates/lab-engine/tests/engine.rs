@@ -2,7 +2,7 @@
 use lab_engine::{
     AlarmPriority, AlarmState, AlarmTransition, CycleOutcome, EngineError, ForceTarget,
     LabEventKind, LabSession, OperatorAction, PlcMode, SessionConfig, SignalId, SignalKind,
-    SignalValue,
+    SignalValue, StartKind,
 };
 use lab_model::{
     exercise::PlcModeRequest,
@@ -632,9 +632,16 @@ fn mode_changes_and_downloads_are_recorded_in_the_cpu_diagnostic_buffer() {
         from: CpuState::Run,
         to: CpuState::Stop,
     };
+    // The first start of a downloaded program is cold; its first scan follows (ADR-0038).
+    let cold = hardware_model::StartupKind::Cold;
+    let started = DiagnosticKind::Startup {
+        kind: cold,
+        retained: 0,
+    };
+    let first = DiagnosticKind::FirstScan { kind: cold };
     assert_eq!(
         events,
-        [DiagnosticKind::ProgramDownloaded, run, stop],
+        [DiagnosticKind::ProgramDownloaded, started, run, first, stop],
         "single events, oldest first"
     );
     // Single events are not active conditions.
@@ -774,4 +781,194 @@ fn the_same_run_records_the_same_alarm_history() {
     let first = run();
     assert!(first.len() >= 6, "{first:?}");
     assert_eq!(first, run());
+}
+
+const RESTART: &str = "PROGRAM Main
+VAR_INPUT StartPB : BOOL; StopPB : BOOL; LevelLow : BOOL; LevelHigh : BOOL; InletOpen : BOOL; LevelRaw : INT; END_VAR
+VAR_OUTPUT InletValve : BOOL; DrainPump : BOOL; END_VAR
+VAR RETAIN Presses : INT := 0; END_VAR
+VAR Since : INT := 0; Starts : INT; Edge : R_TRIG; END_VAR
+Edge(CLK := StartPB);
+IF Edge.Q THEN Presses := Presses + 1; Since := Since + 1; END_IF;
+IF FIRST_SCAN THEN Starts := Starts + 1; END_IF;
+InletValve := Presses > 1;
+DrainPump := FALSE;
+END_PROGRAM";
+
+fn press(s: &mut LabSession) {
+    s.operate(OperatorAction::Press {
+        component: "start".into(),
+    })
+    .unwrap();
+    s.step_cycle().unwrap();
+    s.operate(OperatorAction::Release {
+        component: "start".into(),
+    })
+    .unwrap();
+    s.step_cycle().unwrap();
+}
+fn committed(s: &LabSession, name: &str) -> SignalValue {
+    let signal = signal(s, &format!("plc.{name}"));
+    let (_, rows) = s.variables(Some(name), 0, usize::MAX);
+    let row = rows.into_iter().find(|r| r.signal == signal).unwrap();
+    row.committed.unwrap()
+}
+fn startups(s: &LabSession) -> Vec<hardware_model::DiagnosticKind> {
+    use hardware_model::DiagnosticKind;
+    let entries = s.station().diagnostics().entries();
+    entries
+        .map(|e| e.kind)
+        .filter(|k| {
+            matches!(
+                k,
+                DiagnosticKind::Startup { .. }
+                    | DiagnosticKind::FirstScan { .. }
+                    | DiagnosticKind::MemoryReset
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn warm_and_cold_restarts_initialize_memory_once_and_report_the_first_scan() {
+    use hardware_model::{DiagnosticKind, StartupKind};
+    let mut s = session(TANK);
+    s.download(RESTART, 1, None).unwrap();
+    // A restart needs a running CPU.
+    assert!(matches!(
+        s.restart(StartKind::Warm),
+        Err(EngineError::InvalidAction(_))
+    ));
+    // In STOP the first scan is not consumed.
+    s.step_cycle().unwrap();
+    assert!(s.first_scan_pending());
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    assert_eq!(
+        s.last_start(),
+        Some(StartKind::Cold),
+        "a download starts cold"
+    );
+    s.step_cycle().unwrap();
+    assert!(!s.first_scan_pending());
+    press(&mut s);
+    press(&mut s);
+    assert_eq!(committed(&s, "Presses"), SignalValue::Int(2));
+    assert_eq!(committed(&s, "Since"), SignalValue::Int(2));
+    assert_eq!(committed(&s, "Starts"), SignalValue::Int(1));
+    assert_eq!(s.retained_variables(), 1);
+
+    // A forced output survives a restart and stays listed.
+    let valve = signal(&s, "plc.InletValve");
+    s.force(valve, Some(SignalValue::Bool(false))).unwrap();
+    // Warm restart: the retained count stays, the rest starts again.
+    assert_eq!(s.restart(StartKind::Warm).unwrap(), PlcMode::Run);
+    assert_eq!(s.last_start(), Some(StartKind::Warm));
+    assert!(s.first_scan_pending());
+    assert_eq!(committed(&s, "Presses"), SignalValue::Int(2));
+    assert_eq!(committed(&s, "Since"), SignalValue::Int(0));
+    assert_eq!(s.forces().len(), 1, "forces survive a restart");
+    s.step_cycle().unwrap();
+    assert_eq!(
+        committed(&s, "Starts"),
+        SignalValue::Int(1),
+        "Starts is not retained"
+    );
+    // A STOP to RUN transition is a warm start too.
+    s.set_plc_switch(PlcModeRequest::Stop).unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    assert_eq!(s.last_start(), Some(StartKind::Warm));
+    s.step_cycle().unwrap();
+    assert_eq!(committed(&s, "Presses"), SignalValue::Int(2));
+
+    // Cold restart: everything is initialized, retained variables included.
+    s.restart(StartKind::Cold).unwrap();
+    assert_eq!(committed(&s, "Presses"), SignalValue::Int(0));
+    s.step_cycle().unwrap();
+    assert_eq!(s.forces().len(), 1);
+
+    // A memory reset clears forces and prepares a cold start.
+    press(&mut s);
+    s.reset_plc().unwrap();
+    assert!(s.forces().is_empty());
+    assert_eq!(committed(&s, "Presses"), SignalValue::Int(0));
+    // With the mode switch in RUN the CPU starts again at once, cold.
+    assert_eq!(
+        (s.plc_mode(), s.last_start()),
+        (PlcMode::Run, Some(StartKind::Cold))
+    );
+    s.step_cycle().unwrap();
+
+    let (warm, cold) = (StartupKind::Warm, StartupKind::Cold);
+    let start = |kind, retained| DiagnosticKind::Startup { kind, retained };
+    let first = |kind| DiagnosticKind::FirstScan { kind };
+    assert_eq!(
+        startups(&s),
+        [
+            start(cold, 1),
+            first(cold),
+            start(warm, 1),
+            first(warm),
+            start(warm, 1),
+            first(warm),
+            start(cold, 1),
+            first(cold),
+            DiagnosticKind::MemoryReset,
+            start(cold, 1),
+            first(cold),
+        ],
+        "one start and one first scan each, never per scan"
+    );
+}
+
+#[test]
+fn a_restart_does_not_touch_the_process_and_a_faulted_cpu_needs_a_memory_reset() {
+    let mut s = session(TANK);
+    s.download(RESTART, 1, None).unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    for _ in 0..3 {
+        press(&mut s);
+    }
+    for _ in 0..20 {
+        s.step_cycle().unwrap();
+    }
+    let level = |s: &LabSession| {
+        let tank = s.scene().index_of_str("tank").unwrap();
+        s.scene().quantity(tank, "levelMl")
+    };
+    let before = level(&s);
+    s.restart(StartKind::Cold).unwrap();
+    assert_eq!(level(&s), before, "a restart changes no physical state");
+    s.download(
+        "PROGRAM Main VAR_OUTPUT InletValve : BOOL; END_VAR VAR X : INT; END_VAR
+         X := 32767; X := X + 1; InletValve := FALSE; END_PROGRAM",
+        2,
+        None,
+    )
+    .unwrap();
+    s.step_cycle().unwrap();
+    assert_eq!(s.plc_mode(), PlcMode::Fault);
+    assert!(matches!(
+        s.restart(StartKind::Warm),
+        Err(EngineError::PlcFaulted)
+    ));
+}
+
+#[test]
+fn the_same_restarts_give_the_same_trace() {
+    let run = || {
+        let mut s = session(TANK);
+        s.download(RESTART, 1, None).unwrap();
+        s.set_plc_switch(PlcModeRequest::Run).unwrap();
+        press(&mut s);
+        s.restart(StartKind::Warm).unwrap();
+        press(&mut s);
+        s.restart(StartKind::Cold).unwrap();
+        press(&mut s);
+        let values: Vec<_> = ["Presses", "Since", "Starts"]
+            .iter()
+            .map(|n| committed(&s, n))
+            .collect();
+        (values, startups(&s), s.cycle())
+    };
+    assert_eq!(run(), run());
 }

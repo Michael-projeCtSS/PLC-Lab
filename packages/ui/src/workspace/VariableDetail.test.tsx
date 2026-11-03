@@ -44,6 +44,9 @@ const live: WatchDto = {
       source: "%IX0.4",
       quality: "NO_FIELD_POWER",
       forced: null,
+      retained: false,
+      initial: null,
+      restartEffect: null,
     },
   ],
 };

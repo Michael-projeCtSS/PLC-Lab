@@ -34,7 +34,8 @@ PLC Lab does not claim to reproduce any vendor.
   - _Cold restart_ (operation): the CPU passes through STOP and starts cold.
   - _Download_ of a program creates new memory; its first start is cold.
   - _Memory reset_ (existing contract): all program memory is initialized, the runtime
-    fault and every force are cleared, the CPU goes to STOP, and the next start is cold.
+    fault and every force are cleared and the CPU leaves RUN; the next start is cold. With
+    the mode switch in RUN that start follows at once, as before.
 
   - _Simulation reset_ (world reset) and _project reopen_ create a new session and
     download the program again: the first start is cold.

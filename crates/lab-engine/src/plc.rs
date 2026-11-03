@@ -12,13 +12,13 @@ use lab_model::{
     network::ModbusDataType,
     profile::{AnalogRepresentation, PlatformProfile},
 };
-use plc_runtime::{Runtime, RuntimeConfig, RuntimeSnapshot, ScanError};
+use plc_runtime::{Runtime, RuntimeConfig, RuntimeSnapshot, ScanError, StartKind};
 use plc_types::{
     PlcTime, PlcType, PlcValue,
     diagnostics::Diagnostic,
     function_blocks::StandardFunctionBlock,
     identity::{FunctionBlockInstanceId, SymbolId},
-    symbols::{Scope, VariableCategory},
+    symbols::{Retention, Scope, VariableCategory},
 };
 use st_frontend::{CompiledProgram, CompilerConfig};
 use std::collections::BTreeMap;
@@ -37,7 +37,7 @@ pub enum TagRole {
     Local,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TagBinding {
     pub symbol: SymbolId,
     pub name: String,
@@ -46,6 +46,10 @@ pub struct TagBinding {
     pub signal: SignalId,
     pub source: Option<InputSource>,
     pub sink: Option<ChannelRef>,
+    /// Kept by a warm start (VAR RETAIN, ADR-0038).
+    pub retained: bool,
+    /// The value a start initializes the variable with.
+    pub initial: SignalValue,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -81,6 +85,14 @@ pub(crate) struct PlcParticipant {
     pub fault: Option<Diagnostic>,
     pub forces: BTreeMap<SignalId, SignalValue>,
     pub scans: u64,
+    /// How the next start initializes memory: cold after a download or memory reset.
+    pub next_start: StartKind,
+    /// How the latest start initialized memory.
+    pub last_start: Option<StartKind>,
+    /// Set when the first scan after a start has just executed.
+    pub first_scan_done: Option<StartKind>,
+    /// Set by a start until the session has recorded it.
+    pub started: Option<StartKind>,
 }
 
 fn type_value(kind: PlcType) -> ValueType {
@@ -145,6 +157,8 @@ pub(crate) fn link(
                 ),
                 source: None,
                 sink: None,
+                retained: s.retention() == Retention::Retained,
+                initial: SignalValue::from_plc(s.initial_value()),
             }
         })
         .collect();
@@ -348,6 +362,10 @@ impl PlcParticipant {
             fault: None,
             forces: BTreeMap::new(),
             scans: 0,
+            next_start: StartKind::Cold,
+            last_start: None,
+            first_scan_done: None,
+            started: None,
         })
     }
     pub fn snapshot(&self) -> Option<RuntimeSnapshot> {
@@ -365,24 +383,37 @@ impl PlcParticipant {
         };
         if before != after {
             if before != PlcMode::Run && after == PlcMode::Run {
-                self.warm_restart();
+                self.start();
             }
             self.mode = after;
             return Some((before, after));
         }
         None
     }
-    /// STOP to RUN: non-retentive memory and block state return to initial values.
-    pub fn warm_restart(&mut self) {
+    /// The one initialization of every start (ADR-0038): a warm start keeps retained
+    /// variables, a cold start (after a download, a memory reset or a cold restart)
+    /// initializes everything. Block instances always start fresh.
+    pub fn start(&mut self) {
+        let kind = self.next_start;
         if let Some(p) = &mut self.program {
-            p.runtime.reset();
+            p.runtime.start(kind);
         }
+        self.last_start = Some(kind);
+        self.started = Some(kind);
+        self.next_start = StartKind::Warm;
         self.segment += 1;
+    }
+    /// Variables of the loaded program that a warm start keeps.
+    pub fn retained_variables(&self) -> usize {
+        self.program
+            .as_ref()
+            .map_or(0, |p| p.runtime.retained_variables())
     }
     pub fn memory_reset(&mut self) {
         if let Some(p) = &mut self.program {
             p.runtime.reset();
         }
+        self.next_start = StartKind::Cold;
         self.fault = None;
         self.mode = PlcMode::Stop;
         self.segment += 1;
@@ -402,9 +433,13 @@ impl PlcParticipant {
         let Some(p) = &mut self.program else {
             return Ok(ScanOutcome::NotScanned);
         };
+        let first = p.runtime.first_scan_pending();
         match p.runtime.single_scan() {
             Ok(_) => {
                 self.scans += 1;
+                if first {
+                    self.first_scan_done = Some(self.last_start.unwrap_or(StartKind::Cold));
+                }
                 Ok(ScanOutcome::Completed)
             }
             Err(ScanError::Fault(fault)) => {

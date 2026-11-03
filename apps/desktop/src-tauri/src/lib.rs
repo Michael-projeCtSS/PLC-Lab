@@ -154,6 +154,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             commands::build_and_load,
             commands::plc_mode,
             commands::plc_reset,
+            commands::plc_restart,
             commands::simulation,
             commands::set_speed,
             commands::operate,
