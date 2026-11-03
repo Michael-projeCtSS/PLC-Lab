@@ -16,6 +16,7 @@ use crate::{
     plc::{self, InputSource, LoadedProgram, PlcMode, PlcParticipant, ScanOutcome, TagRole},
     signals::{SignalId, SignalKind, SignalRegistry, SignalValue, ValueType, unit_of},
 };
+use alarm_core::{AlarmEngine, AlarmEvent, AlarmPriority, AlarmState, AlarmTransition};
 use hardware_model::{ChannelValue, CpuState, DiagnosticKind, DiagnosticSource, StationRuntime};
 use lab_model::{
     Identifier,
@@ -160,6 +161,15 @@ pub enum LabEventKind {
     Repair {
         label: String,
     },
+    /// An alarm changed its state (activated, acknowledged, returned or withdrawn).
+    Alarm {
+        id: String,
+        code: String,
+        message: String,
+        priority: AlarmPriority,
+        transition: AlarmTransition,
+        to: AlarmState,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -176,6 +186,9 @@ impl TraceEvent for LabEvent {
                 LabEventKind::ProgramDownloaded { name, .. } => name.len(),
                 LabEventKind::Process { component, .. } => component.len(),
                 LabEventKind::Repair { label } => label.len(),
+                LabEventKind::Alarm {
+                    id, code, message, ..
+                } => id.len() + code.len() + message.len(),
                 _ => 0,
             }
     }
@@ -223,6 +236,9 @@ pub struct LabSession {
     pub(crate) previous: Option<CycleObservation>,
     /// I/O tests performed in this session, for the commissioning checklist.
     pub(crate) tests: crate::commissioning::IoTests,
+    /// Plant alarms and the conditions behind them, in alarm id order.
+    pub(crate) alarms: AlarmEngine,
+    pub(crate) alarm_conditions: Vec<(String, crate::alarms::AlarmCondition)>,
 }
 
 fn quantity_value(q: Quantity) -> SignalValue {
@@ -275,11 +291,16 @@ impl LabSession {
             last: None,
             previous: None,
             tests: Default::default(),
+            alarms: AlarmEngine::new(Vec::new(), alarm_core::HISTORY_CAPACITY)
+                .map_err(|e| EngineError::Internal(e.to_string()))?,
+            alarm_conditions: Vec::new(),
         };
         session.register_physical();
         session.register_channels();
         session.sample()?;
         session.drive()?;
+        session.configure_alarms()?;
+        session.evaluate_alarms();
         Ok(session)
     }
 
@@ -712,6 +733,88 @@ impl LabSession {
         }
     }
 
+    /// Derive the plant's alarms again (at start and after a configuration change); alarms
+    /// that remain keep their state.
+    pub(crate) fn configure_alarms(&mut self) -> Result<(), EngineError> {
+        let plant = crate::alarms::plant_alarms(self);
+        let definitions = plant.iter().map(|a| a.definition.clone()).collect();
+        let events = self
+            .alarms
+            .configure(definitions, self.now())
+            .map_err(|e| EngineError::Internal(e.to_string()))?;
+        self.alarm_conditions = plant
+            .into_iter()
+            .map(|a| (a.definition.id, a.condition))
+            .collect();
+        self.log_alarms(events);
+        Ok(())
+    }
+
+    /// Evaluate every alarm condition at the current instant.
+    pub(crate) fn evaluate_alarms(&mut self) {
+        let holds: BTreeMap<String, bool> = self
+            .alarm_conditions
+            .iter()
+            .map(|(id, c)| (id.clone(), crate::alarms::holds(self, c)))
+            .collect();
+        let now = self.now();
+        let events = self
+            .alarms
+            .update(now, |d| holds.get(&d.id).copied().unwrap_or(false));
+        self.log_alarms(events);
+    }
+
+    fn log_alarms(&mut self, events: Vec<AlarmEvent>) {
+        for e in events {
+            self.events.append(LabEvent {
+                time_us: e.time.as_micros(),
+                cycle: self.cycle,
+                kind: LabEventKind::Alarm {
+                    id: e.definition.id,
+                    code: e.definition.code,
+                    message: e.definition.message,
+                    priority: e.definition.priority,
+                    transition: e.transition,
+                    to: e.to,
+                },
+            });
+        }
+    }
+
+    pub fn alarms(&self) -> &AlarmEngine {
+        &self.alarms
+    }
+
+    /// The operator acknowledges one alarm. The condition behind it is not changed.
+    pub fn acknowledge_alarm(&mut self, id: &str) -> Result<(), EngineError> {
+        let event = self
+            .alarms
+            .acknowledge(id, self.now())
+            .map_err(|e| EngineError::InvalidAction(e.to_string()))?;
+        self.log_alarms(vec![event]);
+        Ok(())
+    }
+
+    /// The operator acknowledges the listed alarms: all of them, or none when one of them
+    /// is unknown or has nothing to acknowledge. Returns how many were acknowledged.
+    pub fn acknowledge_alarms(&mut self, ids: &[&str]) -> Result<usize, EngineError> {
+        let events = self
+            .alarms
+            .acknowledge_many(ids, self.now())
+            .map_err(|e| EngineError::InvalidAction(e.to_string()))?;
+        let count = events.len();
+        self.log_alarms(events);
+        Ok(count)
+    }
+
+    /// The operator acknowledges every alarm waiting for it; returns how many.
+    pub fn acknowledge_all_alarms(&mut self) -> usize {
+        let events = self.alarms.acknowledge_all(self.now());
+        let count = events.len();
+        self.log_alarms(events);
+        count
+    }
+
     /// Execute one PLC cycle and advance the world by one cycle period.
     pub fn step_cycle(&mut self) -> Result<CycleObservation, EngineError> {
         let start = self.now();
@@ -756,6 +859,7 @@ impl LabSession {
         }
         self.drain_world_events();
         self.sample()?;
+        self.evaluate_alarms();
         let mut tests = std::mem::take(&mut self.tests);
         tests.observe(self);
         self.tests = tests;
@@ -953,6 +1057,7 @@ impl LabSession {
             );
             self.signals = registry;
             self.register_channels();
+            self.configure_alarms()?;
             self.events.append(LabEvent {
                 time_us: now.as_micros(),
                 cycle: self.cycle,

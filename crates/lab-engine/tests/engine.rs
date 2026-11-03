@@ -1,7 +1,8 @@
 //! Engine integration tests over the product scenes in the knowledge pack.
 use lab_engine::{
-    CycleOutcome, EngineError, ForceTarget, LabEventKind, LabSession, OperatorAction, PlcMode,
-    SessionConfig, SignalId, SignalKind, SignalValue,
+    AlarmPriority, AlarmState, AlarmTransition, CycleOutcome, EngineError, ForceTarget,
+    LabEventKind, LabSession, OperatorAction, PlcMode, SessionConfig, SignalId, SignalKind,
+    SignalValue,
 };
 use lab_model::{
     exercise::PlcModeRequest,
@@ -639,4 +640,138 @@ fn mode_changes_and_downloads_are_recorded_in_the_cpu_diagnostic_buffer() {
     // Single events are not active conditions.
     let active = s.station().active_diagnostics().count();
     assert_eq!(active, 0);
+}
+
+const TANK_OVERFILL: &str = "PROGRAM Main
+VAR_INPUT StartPB : BOOL; StopPB : BOOL; LevelLow : BOOL; LevelHigh : BOOL; InletOpen : BOOL; LevelRaw : INT; END_VAR
+VAR_OUTPUT InletValve : BOOL; DrainPump : BOOL; END_VAR
+InletValve := TRUE;
+DrainPump := FALSE;
+END_PROGRAM";
+const TANK_DRAIN: &str = "PROGRAM Main
+VAR_INPUT StartPB : BOOL; StopPB : BOOL; LevelLow : BOOL; LevelHigh : BOOL; InletOpen : BOOL; LevelRaw : INT; END_VAR
+VAR_OUTPUT InletValve : BOOL; DrainPump : BOOL; END_VAR
+InletValve := FALSE;
+DrainPump := TRUE;
+END_PROGRAM";
+
+fn alarm_history(s: &LabSession, id: &str) -> Vec<(AlarmTransition, AlarmState)> {
+    let entries = s.alarms().history().filter(|e| e.definition.id == id);
+    entries.map(|e| (e.transition, e.to)).collect()
+}
+
+#[test]
+fn a_process_alarm_follows_its_condition_and_acknowledgment_never_changes_the_process() {
+    let mut s = session(TANK);
+    let high = "tank.high-level";
+    let definition = &s.alarms().get(high).unwrap().definition;
+    assert_eq!(
+        (definition.priority, definition.code.as_str()),
+        (AlarmPriority::Alarm, "HIGH_LEVEL")
+    );
+    assert!(s.alarms().get("tank.overflow").is_some());
+    assert_eq!(s.alarms().get(high).unwrap().state, AlarmState::Normal);
+    s.download(TANK_OVERFILL, 1, None).unwrap();
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    // 15 L to the high-high level of 142.5 L at 10 L/s takes 12.75 s, plus 0.75 s because
+    // the inlet opens over its 1.5 s travel.
+    for _ in 0..200 {
+        s.step_cycle().unwrap();
+    }
+    let status = s.alarms().get(high).unwrap();
+    assert_eq!(status.state, AlarmState::ActiveUnacknowledged);
+    assert_eq!(status.activated.unwrap().as_micros(), 13_500_000);
+    // A condition that holds for many cycles is recorded once.
+    assert_eq!(alarm_history(&s, high).len(), 1);
+
+    // The operator acknowledges: the alarm stays active and the process is unchanged.
+    let level = |s: &LabSession| {
+        let tank = s.scene().index_of_str("tank").unwrap();
+        s.scene().quantity(tank, "levelMl")
+    };
+    let before = level(&s);
+    s.acknowledge_alarm(high).unwrap();
+    assert_eq!(level(&s), before);
+    s.step_cycle().unwrap();
+    let status = s.alarms().get(high).unwrap();
+    assert_eq!(
+        (status.state, status.condition),
+        (AlarmState::ActiveAcknowledged, true)
+    );
+    assert!(matches!(
+        s.acknowledge_alarm(high),
+        Err(EngineError::InvalidAction(_))
+    ));
+    assert!(matches!(
+        s.acknowledge_alarm("tank.no-such-alarm"),
+        Err(EngineError::InvalidAction(_))
+    ));
+    // Process alarms report the plant, not the PLC: STOP and a memory reset leave them.
+    s.set_plc_switch(PlcModeRequest::Stop).unwrap();
+    s.step_cycle().unwrap();
+    s.reset_plc().unwrap();
+    assert_eq!(
+        s.alarms().get(high).unwrap().state,
+        AlarmState::ActiveAcknowledged
+    );
+    s.set_plc_switch(PlcModeRequest::Run).unwrap();
+    // The overflow alarm is still waiting for its acknowledgment.
+    assert_eq!(s.acknowledge_all_alarms(), 1);
+
+    // Only correcting the process clears the condition: the alarms return to normal.
+    s.download(TANK_DRAIN, 2, None).unwrap();
+    for _ in 0..100 {
+        s.step_cycle().unwrap();
+    }
+    assert_eq!(s.alarms().get(high).unwrap().state, AlarmState::Normal);
+    assert_eq!(
+        alarm_history(&s, high),
+        [
+            (AlarmTransition::Activated, AlarmState::ActiveUnacknowledged),
+            (
+                AlarmTransition::Acknowledged,
+                AlarmState::ActiveAcknowledged
+            ),
+            (AlarmTransition::ReturnedToNormal, AlarmState::Normal),
+        ]
+    );
+    let logged = s
+        .events()
+        .iter()
+        .filter(|(_, e)| matches!(&e.kind, LabEventKind::Alarm { id, .. } if id == high));
+    assert_eq!(logged.count(), 3, "every transition is in the event log");
+
+    // A world reset restores the initial plant: every alarm normal, a new history.
+    s.reset_world().unwrap();
+    assert!(
+        s.alarms()
+            .alarms()
+            .iter()
+            .all(|a| a.state == AlarmState::Normal)
+    );
+    assert_eq!(s.alarms().history().len(), 0);
+}
+
+#[test]
+fn the_same_run_records_the_same_alarm_history() {
+    let run = || {
+        let mut s = session(TANK);
+        s.download(TANK_OVERFILL, 1, None).unwrap();
+        s.set_plc_switch(PlcModeRequest::Run).unwrap();
+        for _ in 0..160 {
+            s.step_cycle().unwrap();
+        }
+        s.acknowledge_all_alarms();
+        s.download(TANK_DRAIN, 2, None).unwrap();
+        for _ in 0..80 {
+            s.step_cycle().unwrap();
+        }
+        s.alarms()
+            .history()
+            .map(|e| (e.seq, e.time, e.definition.id.clone(), e.transition))
+            .collect::<Vec<_>>()
+    };
+    let first = run();
+    assert!(first.len() >= 6, "{first:?}");
+    assert_eq!(first, run());
 }

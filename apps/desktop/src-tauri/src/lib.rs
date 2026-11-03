@@ -159,6 +159,8 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             commands::operate,
             commands::force,
             commands::diagnostic_buffer,
+            commands::alarms,
+            commands::acknowledge_alarm,
             commands::forces,
             commands::remove_all_forces,
             commands::frame,

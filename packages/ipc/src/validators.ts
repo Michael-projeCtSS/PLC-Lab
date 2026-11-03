@@ -451,6 +451,28 @@ export const causeEffect = obj<G.CauseEffectDto>({
   next: arr(effect),
   fault: nullable(diagnostic),
 });
+const alarmCategory = literal("PROCESS", "HARDWARE", "NETWORK");
+const alarmPriority = literal("INFORMATION", "WARNING", "ALARM", "CRITICAL");
+const alarmState = literal(
+  "NORMAL",
+  "ACTIVE_UNACKNOWLEDGED",
+  "ACTIVE_ACKNOWLEDGED",
+  "RETURNED_UNACKNOWLEDGED",
+);
+const alarm = obj<G.AlarmDto>({
+  component: str,
+  kind: str,
+  text: str,
+  id: str,
+  sourceLabel: str,
+  category: alarmCategory,
+  priority: alarmPriority,
+  state: alarmState,
+  condition: bool,
+  activatedUs: nullable(u64),
+  changedUs: nullable(u64),
+  acknowledgments: u32,
+});
 export const frame = obj<G.LiveFrameDto>({
   workspaceId: u64,
   worldTimeUs: u64,
@@ -485,7 +507,7 @@ export const frame = obj<G.LiveFrameDto>({
     64,
   ),
   causeEffect: nullable(causeEffect),
-  alarms: arr(obj<G.AlarmDto>({ component: str, kind: str, text: str })),
+  alarms: arr(alarm),
   activeDiagnostics: u32,
   latestEvent: nullable(u64),
   trace: obj<G.TraceStatsDto>({
@@ -674,6 +696,37 @@ export const diagnosticBuffer = obj<G.DiagnosticBufferDto>({
   recorded: u64,
   matching: u32,
   entries: arr(diagnosticEntry, 200),
+});
+export const alarms = obj<G.AlarmsDto>({
+  worldTimeUs: u64,
+  configured: u32,
+  alarms: arr(alarm),
+  capacity: u32,
+  recorded: u64,
+  kept: u32,
+  matching: u32,
+  history: arr(
+    obj<G.AlarmEventDto>({
+      seq: u64,
+      timeUs: u64,
+      alarm: str,
+      code: str,
+      source: str,
+      sourceLabel: str,
+      category: alarmCategory,
+      priority: alarmPriority,
+      message: str,
+      transition: literal(
+        "ACTIVATED",
+        "ACKNOWLEDGED",
+        "RETURNED_TO_NORMAL",
+        "WITHDRAWN",
+      ),
+      from: alarmState,
+      to: alarmState,
+    }),
+    200,
+  ),
 });
 export const hardware = obj<G.HardwareDto>({
   station,
@@ -893,6 +946,7 @@ export const diagnosis = obj<G.DiagnosisResultDto>({
   repairs: arr(option),
 });
 export const repair = obj<G.RepairResultDto>({ message: str, frame });
+export const alarmAck = obj<G.AlarmAckResultDto>({ acknowledged: u32, frame });
 export const gradeReport = obj<G.GradeReportDto>({
   outcome: literal(
     "GRADED",

@@ -24,6 +24,7 @@ simulation-core = { path = "crates/simulation-core" }
 trace-core = { path = "crates/trace-core" }
 network-core = { path = "crates/network-core" }
 grading-core = { path = "crates/grading-core" }
+alarm-core = { path = "crates/alarm-core" }
 app-contract = { path = "crates/app-contract" }
 desktop-session = { path = "crates/desktop-session" }
 process-simulation = { path = "crates/process-simulation" }

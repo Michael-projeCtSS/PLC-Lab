@@ -174,9 +174,32 @@ pub struct CauseEffectDto {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AlarmDto {
+    /// Canonical id of the plant object: a component id, `io.<module>`,
+    /// `io.<module>.ch<n>` or `modbus.<connection>`.
     pub component: String,
+    /// Generic condition code, for example "HIGH_LEVEL".
     pub kind: String,
+    /// Canonical English message.
     pub text: String,
+    /// Canonical alarm id, for example "tank.high-level".
+    pub id: String,
+    pub source_label: String,
+    /// "PROCESS" | "HARDWARE" | "NETWORK"
+    #[ts(type = "\"PROCESS\" | \"HARDWARE\" | \"NETWORK\"")]
+    pub category: String,
+    /// "INFORMATION" | "WARNING" | "ALARM" | "CRITICAL"
+    #[ts(type = "\"INFORMATION\" | \"WARNING\" | \"ALARM\" | \"CRITICAL\"")]
+    pub priority: String,
+    /// "NORMAL" | "ACTIVE_UNACKNOWLEDGED" | "ACTIVE_ACKNOWLEDGED" | "RETURNED_UNACKNOWLEDGED"
+    #[ts(
+        type = "\"NORMAL\" | \"ACTIVE_UNACKNOWLEDGED\" | \"ACTIVE_ACKNOWLEDGED\" | \"RETURNED_UNACKNOWLEDGED\""
+    )]
+    pub state: String,
+    /// Whether the condition holds now: an acknowledged alarm stays active while it does.
+    pub condition: bool,
+    pub activated_us: Option<ExactU64>,
+    pub changed_us: Option<ExactU64>,
+    pub acknowledgments: u32,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -573,6 +596,79 @@ pub struct DiagnosticBufferDto {
     pub matching: u32,
     pub entries: Vec<DiagnosticEntryDto>,
 }
+/// The plant's alarms (ADR-0037) and their history, newest first, in pages. The filters
+/// apply to both: a priority, a state (of an alarm, or the state a transition led to) and
+/// a case-insensitive part of the source id or label.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AlarmsRequest {
+    pub contract_version: u32,
+    pub workspace_id: ExactU64,
+    pub offset: u32,
+    pub limit: u16,
+    pub priority: Option<String>,
+    pub state: Option<String>,
+    pub source: Option<String>,
+}
+/// One recorded alarm state change.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AlarmEventDto {
+    pub seq: ExactU64,
+    pub time_us: ExactU64,
+    pub alarm: String,
+    pub code: String,
+    pub source: String,
+    pub source_label: String,
+    #[ts(type = "\"PROCESS\" | \"HARDWARE\" | \"NETWORK\"")]
+    pub category: String,
+    #[ts(type = "\"INFORMATION\" | \"WARNING\" | \"ALARM\" | \"CRITICAL\"")]
+    pub priority: String,
+    pub message: String,
+    /// "ACTIVATED" | "ACKNOWLEDGED" | "RETURNED_TO_NORMAL" | "WITHDRAWN"
+    #[ts(type = "\"ACTIVATED\" | \"ACKNOWLEDGED\" | \"RETURNED_TO_NORMAL\" | \"WITHDRAWN\"")]
+    pub transition: String,
+    #[ts(
+        type = "\"NORMAL\" | \"ACTIVE_UNACKNOWLEDGED\" | \"ACTIVE_ACKNOWLEDGED\" | \"RETURNED_UNACKNOWLEDGED\""
+    )]
+    pub from: String,
+    #[ts(
+        type = "\"NORMAL\" | \"ACTIVE_UNACKNOWLEDGED\" | \"ACTIVE_ACKNOWLEDGED\" | \"RETURNED_UNACKNOWLEDGED\""
+    )]
+    pub to: String,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AlarmsDto {
+    pub world_time_us: ExactU64,
+    /// Alarms configured for the plant.
+    pub configured: u32,
+    /// Alarms active or waiting for acknowledgment, highest priority and newest first.
+    pub alarms: Vec<AlarmDto>,
+    pub capacity: u32,
+    /// Transitions recorded since the world started, including those no longer kept.
+    pub recorded: ExactU64,
+    /// History entries kept.
+    pub kept: u32,
+    /// Kept history entries that pass the filters.
+    pub matching: u32,
+    pub history: Vec<AlarmEventDto>,
+}
+/// Acknowledge the listed alarms (all or none), or every alarm waiting for it when
+/// `alarms` is null.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AlarmAckRequest {
+    pub contract_version: u32,
+    pub workspace_id: ExactU64,
+    pub alarms: Option<Vec<String>>,
+}
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AlarmAckResultDto {
+    pub acknowledged: u32,
+    pub frame: LiveFrameDto,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ModuleTypeDto {
@@ -890,7 +986,8 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         DeclarationDto, CompileResultDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
-        EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticDetailDto, DiagnosticEntryDto, DiagnosticBufferRequest, DiagnosticBufferDto, ModuleTypeDto,
+        EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticDetailDto, DiagnosticEntryDto, DiagnosticBufferRequest, DiagnosticBufferDto,
+        AlarmsRequest, AlarmEventDto, AlarmsDto, AlarmAckRequest, AlarmAckResultDto, ModuleTypeDto,
         CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareFindingDto, SignalMapRowDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,
         CriterionResultDto, DebriefDto, GradeReportDto, ExecutionWakeDto

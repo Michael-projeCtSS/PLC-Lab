@@ -101,6 +101,51 @@ pub struct Workspace {
     pub failure: Option<String>,
 }
 
+/// Alarms acknowledged in one request at most.
+const MAX_ALARM_ACKS: usize = 256;
+
+/// Validated alarm filters.
+struct AlarmFilter {
+    priority: Option<String>,
+    state: Option<String>,
+    source: Option<String>,
+}
+impl AlarmFilter {
+    fn new(request: &AlarmsRequest) -> AppResult<Self> {
+        let known = |value: &Option<String>, allowed: &[&str], what: &str| match value {
+            Some(v) if !allowed.contains(&v.as_str()) => Err(AppError::InvalidRequest(format!(
+                "Unknown alarm {what} filter {v:?}."
+            ))),
+            _ => Ok(value.clone()),
+        };
+        let priorities = ["INFORMATION", "WARNING", "ALARM", "CRITICAL"];
+        let states = [
+            "NORMAL",
+            "ACTIVE_UNACKNOWLEDGED",
+            "ACTIVE_ACKNOWLEDGED",
+            "RETURNED_UNACKNOWLEDGED",
+        ];
+        let source = request.source.as_deref().map(str::trim);
+        if source.is_some_and(|s| s.chars().count() > 128) {
+            return Err(AppError::InvalidRequest(
+                "The alarm source filter is longer than 128 characters.".into(),
+            ));
+        }
+        Ok(Self {
+            priority: known(&request.priority, &priorities, "priority")?,
+            state: known(&request.state, &states, "state")?,
+            source: source.filter(|s| !s.is_empty()).map(str::to_lowercase),
+        })
+    }
+    fn passes(&self, priority: &str, state: &str, source: &str, label: &str) -> bool {
+        self.priority.as_deref().is_none_or(|p| p == priority)
+            && self.state.as_deref().is_none_or(|s| s == state)
+            && self.source.as_deref().is_none_or(|needle| {
+                source.to_lowercase().contains(needle) || label.to_lowercase().contains(needle)
+            })
+    }
+}
+
 /// Whether a diagnostic buffer entry passes the request's filters.
 fn passes(r: &DiagnosticEntryDto, f: &DiagnosticBufferRequest) -> bool {
     fn wanted(filter: &Option<String>, actual: Option<&str>) -> bool {
@@ -672,22 +717,13 @@ impl Workspace {
         let s = &self.session;
         let scene = s.scene();
         let mut components = Vec::new();
-        let mut alarms = Vec::new();
+        let alarms = self.alarm_list();
         for index in 0..scene.component_count() {
             let id = scene
                 .component_id(index)
                 .map(ToString::to_string)
                 .unwrap_or_default();
             let quantities = scene.quantities(index);
-            for (name, q) in &quantities {
-                if let (Quantity::Bool(true), Some((kind, text))) = (q, alarm_text(name)) {
-                    alarms.push(AlarmDto {
-                        component: id.clone(),
-                        kind: kind.into(),
-                        text: text.into(),
-                    });
-                }
-            }
             components.push(ComponentStateDto {
                 id,
                 quantities: quantities
@@ -855,6 +891,84 @@ impl Workspace {
                 .collect(),
             has_network: self.scene.network.is_some(),
         }
+    }
+
+    /// Alarms active or waiting for acknowledgment: highest priority, then newest first.
+    pub fn alarm_list(&self) -> Vec<AlarmDto> {
+        let mut alarms: Vec<_> = self
+            .session
+            .alarms()
+            .alarms()
+            .iter()
+            .filter(|s| s.state != lab_engine::AlarmState::Normal)
+            .collect();
+        alarms.sort_by(|a, b| {
+            (b.definition.priority, b.activated)
+                .cmp(&(a.definition.priority, a.activated))
+                .then_with(|| a.definition.id.cmp(&b.definition.id))
+        });
+        alarms.into_iter().map(convert::alarm).collect()
+    }
+
+    /// Alarms and history pages that pass the request's filters.
+    pub fn alarms(&self, request: &AlarmsRequest) -> AppResult<AlarmsDto> {
+        let filter = AlarmFilter::new(request)?;
+        let engine = self.session.alarms();
+        let matching: Vec<_> = engine
+            .history()
+            .rev()
+            .map(convert::alarm_event)
+            .filter(|e| filter.passes(&e.priority, &e.to, &e.source, &e.source_label))
+            .collect();
+        let alarms = self
+            .alarm_list()
+            .into_iter()
+            .filter(|a| filter.passes(&a.priority, &a.state, &a.component, &a.source_label))
+            .collect();
+        Ok(AlarmsDto {
+            world_time_us: ExactU64(self.session.now().as_micros()),
+            configured: u32::try_from(engine.alarms().len()).unwrap_or(u32::MAX),
+            alarms,
+            capacity: u32::try_from(engine.capacity()).unwrap_or(u32::MAX),
+            recorded: ExactU64(engine.recorded()),
+            kept: u32::try_from(engine.history().len()).unwrap_or(u32::MAX),
+            matching: u32::try_from(matching.len()).unwrap_or(u32::MAX),
+            history: matching
+                .into_iter()
+                .skip(request.offset as usize)
+                .take(usize::from(request.limit.clamp(1, 200)))
+                .collect(),
+        })
+    }
+
+    /// Alarm ids the operator acknowledged since the world started.
+    pub fn acknowledged_alarms(&self) -> Vec<String> {
+        let alarms = self.session.alarms().alarms();
+        let acknowledged = alarms.iter().filter(|s| s.acknowledgments > 0);
+        acknowledged.map(|s| s.definition.id.clone()).collect()
+    }
+
+    /// The operator acknowledges the listed alarms (all or none), or every alarm waiting
+    /// for it.
+    pub fn acknowledge_alarms(&mut self, alarms: Option<&[String]>) -> AppResult<u32> {
+        let count = match alarms {
+            Some([]) => {
+                return Err(AppError::InvalidRequest(
+                    "Choose at least one alarm to acknowledge.".into(),
+                ));
+            }
+            Some(ids) if ids.len() > MAX_ALARM_ACKS => {
+                return Err(AppError::InvalidRequest(format!(
+                    "At most {MAX_ALARM_ACKS} alarms can be acknowledged at once."
+                )));
+            }
+            Some(ids) => {
+                let ids: Vec<&str> = ids.iter().map(String::as_str).collect();
+                self.engine(|s| s.acknowledge_alarms(&ids))?
+            }
+            None => self.engine(|s| Ok(s.acknowledge_all_alarms()))?,
+        };
+        Ok(u32::try_from(count).unwrap_or(u32::MAX))
     }
 
     /// Live watch rows for signal ids; ids the runtime does not know are left out.
@@ -1263,15 +1377,4 @@ fn channel_value(v: hardware_model::ChannelValue) -> lab_engine::SignalValue {
         hardware_model::ChannelValue::Int(i) => lab_engine::SignalValue::Int(i),
         hardware_model::ChannelValue::Real(r) => lab_engine::SignalValue::Real(r),
     }
-}
-
-fn alarm_text(quantity: &str) -> Option<(&'static str, &'static str)> {
-    Some(match quantity {
-        "overflowing" => ("OVERFLOW", "Tank overflow"),
-        "highHigh" => ("HIGH_HIGH", "Level high-high"),
-        "lowLow" => ("LOW_LOW", "Level low-low"),
-        "dry" => ("DRY_RUN", "Pump running dry"),
-        "tripped" => ("OVERLOAD", "Motor overload tripped"),
-        _ => return None,
-    })
 }

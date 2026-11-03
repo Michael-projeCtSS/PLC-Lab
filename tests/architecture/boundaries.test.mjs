@@ -58,6 +58,7 @@ const semantic = [
   "hardware-model",
   "network-core",
   "grading-core",
+  "alarm-core",
   "lab-engine",
   "knowledge-core",
   "project-model",
@@ -80,6 +81,8 @@ test("vocabulary crates stay minimal and one runtime executes every language", (
   assert.deepEqual(deps("plc-types"), ["serde"]);
   assert.deepEqual(deps("plc-ir"), ["plc-types"]);
   assert.deepEqual(deps("st-frontend"), ["plc-ir", "plc-types"]);
+  // The alarm model is generic: lifecycle and history over world time only (ADR-0037).
+  assert.deepEqual(deps("alarm-core"), ["simulation-core"]);
   assert.ok(!closure("st-frontend").has("plc-runtime"));
   const runtimes = [...packages.keys()].filter((n) => /runtime/.test(n));
   assert.deepEqual(runtimes, ["plc-runtime"], "exactly one PLC runtime crate");
@@ -181,6 +184,7 @@ test("simulation time never comes from the wall clock", () => {
     "crates/lab-engine/src",
     "crates/grading-core/src",
     "crates/trace-core/src",
+    "crates/alarm-core/src",
     "crates/desktop-session/src/workspace.rs",
   ];
   for (const target of timeless) {

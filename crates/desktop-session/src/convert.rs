@@ -7,6 +7,7 @@ use hardware_model::{
     ModuleStatus, Quality,
 };
 use lab_engine::{
+    AlarmCategory, AlarmEvent, AlarmPriority, AlarmState, AlarmStatus, AlarmTransition,
     CauseEffect, CycleOutcome, LabEvent, LabEventKind, LabSession, ModeReason, OperatorAction,
     PlcMode, SignalKind, SignalValue,
 };
@@ -895,6 +896,98 @@ pub fn describe(
         LabEventKind::Repair { label } => {
             ("REPAIR".into(), "info", format!("Repair: {label}"), None)
         }
+        LabEventKind::Alarm {
+            message,
+            priority,
+            transition,
+            ..
+        } => {
+            let severity = match (transition, priority) {
+                (AlarmTransition::Activated, AlarmPriority::Critical | AlarmPriority::Alarm) => {
+                    "error"
+                }
+                (AlarmTransition::Activated, AlarmPriority::Warning) => "warning",
+                _ => "info",
+            };
+            let what = match transition {
+                AlarmTransition::Activated => "alarm",
+                AlarmTransition::Acknowledged => "acknowledged",
+                AlarmTransition::ReturnedToNormal => "returned to normal",
+                AlarmTransition::Withdrawn => "withdrawn",
+            };
+            (
+                "ALARM".into(),
+                severity,
+                format!("{message} ({what})"),
+                None,
+            )
+        }
+    }
+}
+
+pub fn alarm_category(category: AlarmCategory) -> &'static str {
+    match category {
+        AlarmCategory::Process => "PROCESS",
+        AlarmCategory::Hardware => "HARDWARE",
+        AlarmCategory::Network => "NETWORK",
+    }
+}
+pub fn alarm_priority(priority: AlarmPriority) -> &'static str {
+    match priority {
+        AlarmPriority::Information => "INFORMATION",
+        AlarmPriority::Warning => "WARNING",
+        AlarmPriority::Alarm => "ALARM",
+        AlarmPriority::Critical => "CRITICAL",
+    }
+}
+pub fn alarm_state(state: AlarmState) -> &'static str {
+    match state {
+        AlarmState::Normal => "NORMAL",
+        AlarmState::ActiveUnacknowledged => "ACTIVE_UNACKNOWLEDGED",
+        AlarmState::ActiveAcknowledged => "ACTIVE_ACKNOWLEDGED",
+        AlarmState::ReturnedUnacknowledged => "RETURNED_UNACKNOWLEDGED",
+    }
+}
+
+pub fn alarm(status: &AlarmStatus) -> AlarmDto {
+    let d = &status.definition;
+    AlarmDto {
+        component: d.source.clone(),
+        kind: d.code.clone(),
+        text: d.message.clone(),
+        id: d.id.clone(),
+        source_label: d.source_label.clone(),
+        category: alarm_category(d.category).into(),
+        priority: alarm_priority(d.priority).into(),
+        state: alarm_state(status.state).into(),
+        condition: status.condition,
+        activated_us: status.activated.map(|t| ExactU64(t.as_micros())),
+        changed_us: status.changed.map(|t| ExactU64(t.as_micros())),
+        acknowledgments: status.acknowledgments,
+    }
+}
+
+pub fn alarm_event(e: &AlarmEvent) -> AlarmEventDto {
+    let d = &e.definition;
+    AlarmEventDto {
+        seq: ExactU64(e.seq),
+        time_us: ExactU64(e.time.as_micros()),
+        alarm: d.id.clone(),
+        code: d.code.clone(),
+        source: d.source.clone(),
+        source_label: d.source_label.clone(),
+        category: alarm_category(d.category).into(),
+        priority: alarm_priority(d.priority).into(),
+        message: d.message.clone(),
+        transition: match e.transition {
+            AlarmTransition::Activated => "ACTIVATED",
+            AlarmTransition::Acknowledged => "ACKNOWLEDGED",
+            AlarmTransition::ReturnedToNormal => "RETURNED_TO_NORMAL",
+            AlarmTransition::Withdrawn => "WITHDRAWN",
+        }
+        .into(),
+        from: alarm_state(e.from).into(),
+        to: alarm_state(e.to).into(),
     }
 }
 

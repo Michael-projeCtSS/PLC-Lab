@@ -45,6 +45,8 @@ export const COMMANDS = [
   "operate",
   "force",
   "diagnostic_buffer",
+  "alarms",
+  "acknowledge_alarm",
   "forces",
   "remove_all_forces",
   "frame",
@@ -189,6 +191,20 @@ export const api = {
       moduleId: string | null;
     },
   ) => call("diagnostic_buffer", { ...w, ...page }, V.diagnosticBuffer),
+  /** The plant's alarms that need attention and their history, filtered, newest first. */
+  alarms: (
+    w: Ws,
+    page: {
+      offset: number;
+      limit: number;
+      priority: string | null;
+      state: string | null;
+      source: string | null;
+    },
+  ) => call("alarms", { ...w, ...page }, V.alarms),
+  /** Operator acknowledgment of the listed alarms (all or none), or of all waiting (null). */
+  acknowledgeAlarms: (w: Ws, alarms: string[] | null) =>
+    call("acknowledge_alarm", { ...w, alarms }, V.alarmAck),
   /** Every active force with what it replaces. */
   forces: (w: Ws) => call("forces", { ...w }, V.forces),
   /** Remove every active force; returns the frame without them. */

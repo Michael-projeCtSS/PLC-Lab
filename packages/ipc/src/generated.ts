@@ -279,7 +279,40 @@ outcome: "SCANNED" | "FAULTED" | "NOT_SCANNED_STOP" | "NOT_SCANNED_FAULT", saw: 
  */
 applied: Array<EffectDto>, process: Array<ChangeDto>, next: Array<EffectDto>, fault: DiagnosticDto | null, };
 
-export type AlarmDto = { component: string, kind: string, text: string, };
+export type AlarmDto = { 
+/**
+ * Canonical id of the plant object: a component id, `io.<module>`,
+ * `io.<module>.ch<n>` or `modbus.<connection>`.
+ */
+component: string, 
+/**
+ * Generic condition code, for example "HIGH_LEVEL".
+ */
+kind: string, 
+/**
+ * Canonical English message.
+ */
+text: string, 
+/**
+ * Canonical alarm id, for example "tank.high-level".
+ */
+id: string, sourceLabel: string, 
+/**
+ * "PROCESS" | "HARDWARE" | "NETWORK"
+ */
+category: "PROCESS" | "HARDWARE" | "NETWORK", 
+/**
+ * "INFORMATION" | "WARNING" | "ALARM" | "CRITICAL"
+ */
+priority: "INFORMATION" | "WARNING" | "ALARM" | "CRITICAL", 
+/**
+ * "NORMAL" | "ACTIVE_UNACKNOWLEDGED" | "ACTIVE_ACKNOWLEDGED" | "RETURNED_UNACKNOWLEDGED"
+ */
+state: "NORMAL" | "ACTIVE_UNACKNOWLEDGED" | "ACTIVE_ACKNOWLEDGED" | "RETURNED_UNACKNOWLEDGED", 
+/**
+ * Whether the condition holds now: an acknowledged alarm stays active while it does.
+ */
+condition: boolean, activatedUs: ExactU64 | null, changedUs: ExactU64 | null, acknowledgments: number, };
 
 export type SimulationStatusDto = { 
 /**
@@ -415,6 +448,40 @@ moduleId: string | null, severity: "error" | "warning" | "info", category: "CPU"
 export type DiagnosticBufferRequest = { contractVersion: number, workspaceId: ExactU64, offset: number, limit: number, severity: string | null, category: string | null, moduleId: string | null, };
 
 export type DiagnosticBufferDto = { capacity: number, recorded: ExactU64, matching: number, entries: Array<DiagnosticEntryDto>, };
+
+export type AlarmsRequest = { contractVersion: number, workspaceId: ExactU64, offset: number, limit: number, priority: string | null, state: string | null, source: string | null, };
+
+export type AlarmEventDto = { seq: ExactU64, timeUs: ExactU64, alarm: string, code: string, source: string, sourceLabel: string, category: "PROCESS" | "HARDWARE" | "NETWORK", priority: "INFORMATION" | "WARNING" | "ALARM" | "CRITICAL", message: string, 
+/**
+ * "ACTIVATED" | "ACKNOWLEDGED" | "RETURNED_TO_NORMAL" | "WITHDRAWN"
+ */
+transition: "ACTIVATED" | "ACKNOWLEDGED" | "RETURNED_TO_NORMAL" | "WITHDRAWN", from: "NORMAL" | "ACTIVE_UNACKNOWLEDGED" | "ACTIVE_ACKNOWLEDGED" | "RETURNED_UNACKNOWLEDGED", to: "NORMAL" | "ACTIVE_UNACKNOWLEDGED" | "ACTIVE_ACKNOWLEDGED" | "RETURNED_UNACKNOWLEDGED", };
+
+export type AlarmsDto = { worldTimeUs: ExactU64, 
+/**
+ * Alarms configured for the plant.
+ */
+configured: number, 
+/**
+ * Alarms active or waiting for acknowledgment, highest priority and newest first.
+ */
+alarms: Array<AlarmDto>, capacity: number, 
+/**
+ * Transitions recorded since the world started, including those no longer kept.
+ */
+recorded: ExactU64, 
+/**
+ * History entries kept.
+ */
+kept: number, 
+/**
+ * Kept history entries that pass the filters.
+ */
+matching: number, history: Array<AlarmEventDto>, };
+
+export type AlarmAckRequest = { contractVersion: number, workspaceId: ExactU64, alarms: Array<string> | null, };
+
+export type AlarmAckResultDto = { acknowledged: number, frame: LiveFrameDto, };
 
 export type ModuleTypeDto = { id: string, name: string, product: string | null, channels: number, class: string, };
 

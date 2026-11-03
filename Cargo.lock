@@ -18,6 +18,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "alarm-core"
+version = "0.2.0-dev"
+dependencies = [
+ "simulation-core",
+]
+
+[[package]]
 name = "alloc-no-stdlib"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1933,6 +1940,7 @@ dependencies = [
 name = "lab-engine"
 version = "0.2.0-dev"
 dependencies = [
+ "alarm-core",
  "grading-core",
  "hardware-model",
  "lab-model",

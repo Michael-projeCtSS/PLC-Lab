@@ -5,6 +5,7 @@
 //! assessment. It has no dependency on transport DTOs, Tauri or the user interface;
 //! errors are typed ([`EngineError`]) and mapped to transport codes by the adapter.
 
+mod alarms;
 mod assessment;
 mod commissioning;
 mod error;
@@ -14,6 +15,10 @@ mod queries;
 mod session;
 mod signals;
 
+pub use alarm_core::{
+    AlarmCategory, AlarmDefinition, AlarmEngine, AlarmEvent, AlarmPriority, AlarmState,
+    AlarmStatus, AlarmTransition,
+};
 pub use assessment::{
     AssessmentError, AssessmentOutcome, AssessmentSetup, assess, interface_problems, run_scenario,
 };

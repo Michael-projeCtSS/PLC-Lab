@@ -300,6 +300,10 @@ pub struct TroubleshootingSetup {
     pub repairs: Vec<RepairOption>,
     /// Criterion IDs that verify the repaired system.
     pub verification: Vec<Identifier>,
+    /// Alarm ids the operator must acknowledge. Acknowledging is an operator duty, not a
+    /// repair: it never clears the condition behind an alarm.
+    #[serde(default)]
+    pub acknowledge: Vec<Identifier>,
     /// General references that help the investigation without identifying the cause.
     /// Shown from the moment the lab opens, so they must never point at the specific
     /// fault (knowledge-pack loading rejects troubleshooting guides here).

@@ -398,6 +398,10 @@ pub struct InvestigationSummary {
     pub repairs: Vec<String>,
     /// Hidden faults still active when verification ran.
     pub remaining_faults: Vec<String>,
+    /// Alarm ids the lab requires the operator to acknowledge.
+    pub acknowledgments_required: Vec<String>,
+    /// Alarm ids the operator acknowledged in this session.
+    pub acknowledged: Vec<String>,
 }
 
 /// Combine diagnosis correctness, repair state and the behavioral verification report.
@@ -474,11 +478,40 @@ pub fn grade_troubleshooting(
             }
         ),
     });
-    let scale = |earned: u32, max: u32| (earned * 50).checked_div(max).unwrap_or(0);
+    // Acknowledging is an operator duty of its own: it confirms an alarm was seen and never
+    // clears its cause, so it is scored apart from the repair.
+    let required = &investigation.acknowledgments_required;
+    let verification_points = if required.is_empty() { 50 } else { 40 };
+    let scale =
+        |earned: u32, max: u32| (earned * verification_points).checked_div(max).unwrap_or(0);
+    if !required.is_empty() {
+        let missing: Vec<&str> = required
+            .iter()
+            .filter(|a| !investigation.acknowledged.contains(a))
+            .map(String::as_str)
+            .collect();
+        criteria.push(CriterionResult {
+            id: "acknowledge".into(),
+            title: "Alarms acknowledged by the operator".into(),
+            points: 10,
+            earned: if missing.is_empty() { 10 } else { 0 },
+            passed: missing.is_empty(),
+            feedback: if missing.is_empty() {
+                "The alarms were acknowledged. Acknowledging confirms that an alarm was seen; only the repair removed its cause.".into()
+            } else {
+                "An alarm has not been acknowledged. Acknowledge it in the alarm view: it confirms that you have seen it and does not remove its cause.".into()
+            },
+            detail: format!("Not acknowledged: {}.", if missing.is_empty() {
+                "none".to_string()
+            } else {
+                missing.join(", ")
+            }),
+        });
+    }
     criteria.push(CriterionResult {
         id: "verification".into(),
         title: "System verified after repair".into(),
-        points: 50,
+        points: verification_points,
         earned: scale(verification.score, verification.max_score),
         passed: verification.passed,
         feedback: if verification.passed {
@@ -701,7 +734,18 @@ mod tests {
         let r = grade_troubleshooting(&roots, &inv, verification.clone());
         assert_eq!(r.score, 85);
         inv.remaining_faults.push("f1".into());
-        let r = grade_troubleshooting(&roots, &inv, verification);
+        let r = grade_troubleshooting(&roots, &inv, verification.clone());
         assert!(!r.passed);
+        // A lab that requires an acknowledgment scores it apart from repair and verification.
+        let mut inv = InvestigationSummary {
+            diagnoses: vec!["field-power".into()],
+            acknowledgments_required: vec!["tank.high-level".into()],
+            ..Default::default()
+        };
+        let r = grade_troubleshooting(&roots, &inv, verification.clone());
+        assert_eq!((r.score, r.passed), (90, false));
+        inv.acknowledged.push("tank.high-level".into());
+        let r = grade_troubleshooting(&roots, &inv, verification);
+        assert_eq!((r.score, r.max_score, r.passed), (100, 100, true));
     }
 }

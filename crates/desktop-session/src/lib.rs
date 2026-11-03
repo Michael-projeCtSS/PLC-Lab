@@ -701,6 +701,31 @@ impl DesktopApp {
         })())
     }
 
+    pub fn alarms(&self, request: AlarmsRequest) -> Result<AlarmsDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            state.workspace(request.workspace_id)?.alarms(&request)
+        })())
+    }
+
+    /// Operator acknowledgment. It never changes the condition behind an alarm.
+    pub fn acknowledge_alarm(
+        &self,
+        request: AlarmAckRequest,
+    ) -> Result<AlarmAckResultDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            let acknowledged = w.acknowledge_alarms(request.alarms.as_deref())?;
+            Ok(AlarmAckResultDto {
+                acknowledged,
+                frame: w.frame(&[]),
+            })
+        })())
+    }
+
     pub fn forces(&self, request: WorkspaceRequest) -> Result<ForceListDto, IpcError> {
         boundary((|| {
             version(request.contract_version)?;
@@ -894,7 +919,17 @@ impl DesktopApp {
     pub fn check(&self, request: CheckRequest) -> Result<GradeReportDto, IpcError> {
         boundary((|| {
             version(request.contract_version)?;
-            let (exercise, scene, profile, station, faults, investigation, exercise_id, references) = {
+            let (
+                exercise,
+                scene,
+                profile,
+                station,
+                faults,
+                investigation,
+                exercise_id,
+                references,
+                acknowledged,
+            ) = {
                 let mut state = self.lock()?;
                 let w = state.workspace(request.workspace_id)?;
                 let exercise = w.exercise.clone().ok_or_else(|| {
@@ -912,6 +947,7 @@ impl DesktopApp {
                     w.investigation.clone(),
                     w.exercise_id(),
                 );
+                let acknowledged = w.acknowledged_alarms();
                 let references = library::debrief_references(&state.library, &exercise);
                 (
                     exercise,
@@ -922,6 +958,7 @@ impl DesktopApp {
                     investigation,
                     exercise_id,
                     references,
+                    acknowledged,
                 )
             };
             // Assessment runs without holding the application lock.
@@ -956,6 +993,12 @@ impl DesktopApp {
                                         .iter()
                                         .map(|f| f.id.to_string())
                                         .collect(),
+                                    acknowledgments_required: t
+                                        .acknowledge
+                                        .iter()
+                                        .map(ToString::to_string)
+                                        .collect(),
+                                    acknowledged: acknowledged.clone(),
                                 },
                                 report,
                             )
