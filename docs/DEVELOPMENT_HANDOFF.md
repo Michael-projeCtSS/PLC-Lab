@@ -325,8 +325,52 @@ Reviewed against the source of `ad54bc5`:
 | Online variable detail, native engineering smoke                  | 7-F UI test, smoke step on every entry point                                                                                                                                                          |
 | Single-instance root executable, knowledge from `resources/`      | native smoke on every entry point since 7-A                                                                                                                                                           |
 
-The gate test was run locally (all 17 desktop-session workflow tests pass, rustfmt and
-clippy clean); its hosted validation is recorded with the next slice.
+Validated: CP7 FINAL GATE PASS on `135612551294a58d0ffe3b29965241cfc08a9e28`, CI run
+41691014122 (Windows job 126109292632 and Linux job 126109293202 PASS; native smoke 24
+steps on the debug build, the root `PLC Lab.exe` and the relocated copy, 22 through the
+BAT). That source contains the gate test (`e25a0d0`), this record (`ab7a9a2`) and the
+lockfile fix `1356125`: run 41687714171 on `ab7a9a2` passed on Windows but failed on Linux
+only because cargo-deny rejected `async-executor 1.14.0`, yanked from crates.io after the
+previous green run; `1356125` moves it to 1.14.1 and changes nothing else.
+
+## Checkpoint 8-A: industrial alarm management
+
+- ADR-0037: crate `alarm-core` (generic lifecycle `NORMAL`, `ACTIVE_UNACKNOWLEDGED`,
+  `ACTIVE_ACKNOWLEDGED`, `RETURNED_UNACKNOWLEDGED`; priorities information to critical;
+  on-delay in world time; atomic acknowledgment of a selection; bounded history of 500
+  transitions with sequence numbers). The engine derives the plant's alarms from the
+  scene (overflow, high-high, low-low, dry run, motor fault, drive fault, drive not ready,
+  valve position timeout), the configured station (invalid analog signal, missing field
+  supply, module fault) and the Modbus connections (communication lost), evaluates them
+  at the end of every cycle and logs every transition. Acknowledgment never changes a
+  condition; PLC STOP and memory reset leave process alarms; a world reset restarts them.
+- IPC (contract 8, additive): richer frame alarms (most urgent first), `alarms` (list and
+  history pages filtered by priority, state and source in the backend) and
+  `acknowledge_alarm` (a selection, all or none, or every waiting alarm).
+- Alarms view: Basic lists what needs attention with acknowledge and acknowledge all;
+  a Basic-mode indicator names the most urgent alarm and what to investigate; Advanced adds
+  filters, selection with acknowledge selected, details with inspect source, and the paged
+  history. Columns: time, priority, source, message, condition, acknowledgment, action.
+  The CPU diagnostic buffer stays separate. English and Polish throughout.
+- Content: lab `ts.tank-overfill-alarm` (failed high level switch; the acknowledgment is
+  a separately graded duty via `troubleshooting.acknowledge`), lesson 23
+  `lesson.industrial-alarms`, articles `fundamentals.industrial-alarms` and
+  `troubleshooting.level-switch-failed`; complete Polish overlays, coverage report
+  regenerated.
+- Tests: alarm-core (lifecycle, on-delay, refused and atomic acknowledgments, same-instant
+  order, bounded history, reconfiguration), engine (activation from the real process at
+  the exact world time, one activation per condition, acknowledgment leaves the process
+  unchanged, STOP and memory reset keep process alarms, return only after correction,
+  event log, world reset, determinism), workflow (the lab from symptom to debrief, most
+  urgent first, backend filters, atomic selection, a forced level switch never passes),
+  grading-core (separate acknowledgment criterion), UI (basic and advanced lists, filters,
+  selection, details, history, empty states, Polish, indicator, keyboard-reachable
+  controls), native smoke (normal, active, acknowledged but present, repaired, returned,
+  history in order, verified) on every entry point.
+- Local runs (Smart App Control allowed these executables): alarm-core, grading-core,
+  lab-engine engine tests, desktop-session workflows, knowledge conformance, all
+  architecture and frontend tests; rustfmt and clippy clean except the host crate, whose
+  build script the policy blocks.
 
 ## Local machine limits
 

@@ -13,15 +13,15 @@ field, not only titles. The canonical English knowledge pack remains byte-identi
 
 | Category                                       | Complete Polish content | Polish title + summary |
 | ---------------------------------------------- | ----------------------: | ---------------------: |
-| Exercises, total                               |                   17/46 |                  46/46 |
+| Exercises, total                               |                   18/47 |                  47/47 |
 | Practice (subset)                              |                   10/10 |                  10/10 |
-| Troubleshooting cases (subset)                 |                     7/7 |                    7/7 |
+| Troubleshooting cases (subset)                 |                     8/8 |                    8/8 |
 | Commissioning (subset)                         |                    0/29 |                  29/29 |
-| Lessons                                        |                   22/22 |                  22/22 |
-| Fundamentals                                   |                    0/23 |                   0/23 |
+| Lessons                                        |                   23/23 |                  23/23 |
+| Fundamentals                                   |                    1/24 |                   1/24 |
 | Instruction articles                           |                     7/7 |                    7/7 |
 | Protocol articles                              |                     0/9 |                    0/9 |
-| Troubleshooting articles (distinct from cases) |                    0/29 |                   0/29 |
+| Troubleshooting articles (distinct from cases) |                    1/30 |                   1/30 |
 | Vendor/family articles                         |                    0/24 |                   0/24 |
 
 Lessons include objectives, section prose/diagrams and questions/options/explanations.
@@ -55,7 +55,7 @@ backend English search. Accent-insensitive matching supports `opóźnione załą
 `force`. Untranslated bodies still require English terms or aliases: search coverage is
 **partial**. Filters/ranking are deterministic. Hidden diagnosis/repair/debrief content
 is never indexed. Projection cannot introduce absent repair/debrief data or references.
-All seven cases have projection anti-leak tests; native smoke verifies real backend gates
+All eight cases have projection anti-leak tests; native smoke verifies real backend gates
 before diagnosis and translated repair/debrief availability after successful verification.
 
 ## Interface and remaining gaps
