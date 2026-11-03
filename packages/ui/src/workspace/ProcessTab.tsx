@@ -9,6 +9,7 @@ import {
   type SignalValueDto,
 } from "@plc-lab/ipc";
 import { formatQuantity, humanize } from "../format";
+import { AlarmSummary } from "./AlarmsTab";
 import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
 
@@ -71,7 +72,6 @@ export function ProcessTab({
       () => api.operate(ws, id, action),
       (f) => f,
     );
-  const byId = new Map(workspace.scene.components.map((c) => [c.id, c]));
   return (
     <div
       style={{
@@ -87,14 +87,7 @@ export function ProcessTab({
           style={{ padding: "6px 10px", borderBottom: "1px solid var(--line)" }}
           role="status"
         >
-          {frame.alarms.map((a) => (
-            <span
-              key={a.component + a.kind}
-              className={`badge ${a.kind === "OVERFLOW" || a.kind === "DRY_RUN" || a.kind === "OVERLOAD" ? "fault" : "warning"}`}
-            >
-              {byId.get(a.component)?.label ?? a.component}: {a.text}
-            </span>
-          ))}
+          <AlarmSummary alarms={frame.alarms} />
         </div>
       )}
       <svg

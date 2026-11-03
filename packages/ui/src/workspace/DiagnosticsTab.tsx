@@ -1,14 +1,16 @@
 /** Online diagnostics: CPU state, active process alarms and the CPU diagnostic buffer. */
-import { Badge, PlcModeBadge } from "../ui";
+import { PlcModeBadge } from "../ui";
 import { useEvidence } from "./useFrameQuery";
+import { useInterface } from "../locale";
+import { AlarmSummary } from "./AlarmsTab";
 import { DiagnosticBuffer } from "./DiagnosticBuffer";
 import type { Lab } from "./useLab";
 
 export function DiagnosticsTab({ lab }: { lab: Lab }) {
+  const { t } = useInterface();
   const { frame, workspace } = lab;
   useEvidence(lab, "diagnostic buffer");
   if (!frame || !workspace) return null;
-  const byId = new Map(workspace.scene.components.map((c) => [c.id, c.label]));
   return (
     <div
       style={{ position: "absolute", inset: 0, overflow: "auto", padding: 16 }}
@@ -47,30 +49,13 @@ export function DiagnosticsTab({ lab }: { lab: Lab }) {
         </div>
         <div className="panel grow">
           <div className="panel-head">
-            <h4>Active process alarms</h4>
+            <h4>{t("alarm.active")}</h4>
           </div>
-          <div className="panel-body col">
+          <div className="panel-body row wrap">
             {frame.alarms.length === 0 && (
-              <span className="muted">No active process alarm.</span>
+              <span className="muted">{t("alarm.none")}</span>
             )}
-            {frame.alarms.map((a) => (
-              <div key={a.component + a.kind} className="row">
-                <Badge
-                  kind={
-                    a.kind === "OVERFLOW" ||
-                    a.kind === "DRY_RUN" ||
-                    a.kind === "OVERLOAD"
-                      ? "fault"
-                      : "warning"
-                  }
-                >
-                  {a.kind.replaceAll("_", " ")}
-                </Badge>
-                <span>
-                  {byId.get(a.component) ?? a.component}: {a.text}
-                </span>
-              </div>
-            ))}
+            <AlarmSummary alarms={frame.alarms} />
           </div>
         </div>
       </div>
