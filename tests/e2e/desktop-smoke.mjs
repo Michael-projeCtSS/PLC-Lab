@@ -829,6 +829,91 @@ try {
     },
   );
 
+  await step(
+    "alarm lab: an acknowledged alarm stays active until the cause is repaired",
+    async () => {
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+      await page
+        .getByRole("button", { name: "TROUBLESHOOT", exact: true })
+        .click();
+      await page
+        .getByRole("button", {
+          name: /Start Tank overfill: the alarm stays active/,
+        })
+        .click();
+      await page.getByText("Fault report").waitFor({ timeout: 30_000 });
+      await page.getByRole("button", { name: "ADVANCED", exact: true }).click();
+      const views = page.getByRole("tablist", { name: "Workspace views" });
+      await views.getByRole("tab", { name: /^Alarms/ }).click();
+      // Before the batch the plant is normal.
+      await page.getByText("No alarm needs attention.").waitFor();
+      await page.getByLabel("Simulation speed").selectOption("1000");
+      await page.getByRole("button", { name: "Run", exact: true }).click();
+      await views.getByRole("tab", { name: "Process" }).click();
+      const start = page.getByRole("button", {
+        name: "Start S1 (hold to press)",
+      });
+      await start.dispatchEvent("pointerdown", { pointerId: 1 });
+      await delay(300);
+      await start.dispatchEvent("pointerup", { pointerId: 1 });
+      // The batch fills past the failed level switch: the HIGH LEVEL alarm activates.
+      await views.getByRole("tab", { name: /^Alarms/ }).click();
+      const active = page.getByRole("table", { name: "Active alarms" });
+      const high = active.getByRole("row", { name: /level high-high/ });
+      await high.getByText("unacknowledged").waitFor({ timeout: 30_000 });
+      await high.getByText("present").waitFor();
+      await high.getByRole("button", { name: "Acknowledge" }).click();
+      await high
+        .getByText("acknowledged", { exact: true })
+        .waitFor({ timeout: 10_000 });
+      // Acknowledged is not repaired: the condition is still present.
+      await delay(1000);
+      await high.getByText("present").waitFor();
+      await high.getByText("acknowledged", { exact: true }).waitFor();
+      await page.screenshot({
+        path: path.join(directory, "alarm-acknowledged.png"),
+      });
+      await page.getByRole("tab", { name: "Investigation" }).click();
+      await page.getByLabel("Root cause").selectOption("lsh-failed");
+      await page.getByRole("button", { name: "Submit diagnosis" }).click();
+      await page
+        .locator(".notice.success", { hasText: "(attempt 1)" })
+        .waitFor({ timeout: 10_000 });
+      await page
+        .getByRole("button", { name: "Replace the high level switch LSH-103" })
+        .click();
+      // The repaired switch ends filling and the alarm returns to normal by itself.
+      await high.waitFor({ state: "detached", timeout: 30_000 });
+      await page.getByRole("button", { name: "Pause" }).click();
+      // The history holds the whole lifecycle of the alarm, newest first.
+      await page.getByLabel("Find a source").fill("Tank");
+      const history = page.getByRole("table", { name: "Alarm history" });
+      const lifecycle = history
+        .getByRole("row")
+        .filter({ hasText: "level high-high" });
+      await lifecycle
+        .filter({ hasText: "Returned to normal" })
+        .waitFor({ timeout: 10_000 });
+      const events = await lifecycle.allInnerTexts();
+      const order = ["Returned to normal", "Acknowledged", "Activated"].map(
+        (transition) => events.findIndex((row) => row.includes(transition)),
+      );
+      assert.ok(
+        order.every((i, n) => i >= 0 && (n === 0 || i > order[n - 1])),
+        `alarm history out of order: ${JSON.stringify(events)}`,
+      );
+      await page.screenshot({
+        path: path.join(directory, "alarm-returned.png"),
+      });
+      await page.getByRole("button", { name: "Verify repair" }).click();
+      await page
+        .getByLabel("Check result")
+        .getByText("Passed", { exact: true })
+        .waitFor({ timeout: 30_000 });
+      await page.getByRole("button", { name: "BASIC", exact: true }).click();
+    },
+  );
+
   await step("project round trip through the real backend", async () => {
     const created = await invoke("create_project", {
       contractVersion: 8,
