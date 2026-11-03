@@ -367,6 +367,13 @@ previous green run; `1356125` moves it to 1.14.1 and changes nothing else.
   selection, details, history, empty states, Polish, indicator, keyboard-reachable
   controls), native smoke (normal, active, acknowledged but present, repaired, returned,
   history in order, verified) on every entry point.
+- Validated: CP8-A PASS on `1fc2bbc3965e59db835f0c693dd6c96ae1257cf4`, CI run 41695556939
+  (Windows job 126125006743 and Linux job 126125006135 PASS; native smoke 25 steps on the
+  debug build, the root `PLC Lab.exe` and the relocated copy, 23 through the BAT, the new
+  alarm lifecycle step on each; advisories ok). The local release build of this source
+  was staged as the root `PLC Lab.exe` (byte-identical to `target/release`), but Smart App
+  Control refuses to start the new unsigned binary on the development machine (Code
+  Integrity events 3077 and 3033), so it was not launched locally.
 - Local runs (Smart App Control allowed these executables): alarm-core, grading-core,
   lab-engine engine tests, desktop-session workflows, knowledge conformance, all
   architecture and frontend tests; rustfmt and clippy clean except the host crate, whose
