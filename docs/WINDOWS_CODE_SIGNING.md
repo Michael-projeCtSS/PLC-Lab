@@ -212,7 +212,11 @@ passes protected secrets only to the signing subprocess.
 
 For optional local production signing, install a trusted Java 17+ runtime, set
 `JAVA_HOME` if needed, and install the pinned provider client with
-`node scripts/esigner.mjs install`. Supply the same four `ESIGNER_*` secret values below
+`node scripts/esigner.mjs install`. Run `node scripts/esigner.mjs doctor` before adding
+credentials: it checks the genuine pinned client/JVM without an account or signing call.
+The client download/hash/extraction passed locally, while local `doctor` is blocked by
+the absence of Java 17+. Standard hosted Windows validation installs the client and runs
+this credential-free check with the runner's Java runtime. Supply the four `ESIGNER_*` secret values below
 through a secure process environment, then run `node scripts/esigner.mjs preflight`
 and `node scripts/windows-signing.mjs preflight`. Do not write secret values to commands
 committed in Git or paste them in chat. Managed CI is the preferred way to obtain the
@@ -246,13 +250,23 @@ the current individual uses SSL.com instead of Azure.
 ## Protected GitHub production workflow
 
 The trusted entry point is `.github/workflows/windows-signed-release.yml`, **Signed Windows
-production release**. It runs only by explicit `workflow_dispatch` on
-`claude/product-development-v2` in `Michael-projeCtSS/PLC-Lab`; it accepts no arbitrary
-source/artifact input. Review and protect that branch and the workflow file.
+production release**. Its primary trigger is an explicitly pushed tag matching
+**`plc-lab-production-*`** in `Michael-projeCtSS/PLC-Lab`. A read-only source gate requires
+the tagged commit to be an ancestor of the reviewed remote
+`origin/claude/product-development-v2` before validation or signing. It accepts no arbitrary
+source/artifact input. Review and protect the development branch and workflow file.
+
+`workflow_dispatch` remains available for the trusted development branch after the
+workflow is registered on the default branch. The repository's default branch `main`
+does not currently contain this workflow, so manual dispatch cannot be relied on now.
+GitHub documents the [default-branch requirement for manual workflows](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
+The release-tag path works without changing `main` or replacing the active development
+branch.
 
 GitHub Environment **`windows-production-signing`** has been created with required reviewer
 **Michael-projeCtSS**, a custom deployment-branch restriction to
-`claude/product-development-v2` only, no tag deployments and `PLC_LAB_SIGNING_READY=false`.
+`claude/product-development-v2`, the production tag pattern `plc-lab-production-*`, and
+`PLC_LAB_SIGNING_READY=false`.
 Self-review is allowed so the sole individual publisher can authorize a manual release;
 this is a publisher approval gate, without an independent second reviewer. Review the
 source/workflow before approving. Publisher secrets/configuration are still absent.
@@ -277,8 +291,25 @@ permission. A leaked TOTP seed together with the password can authorize signing;
 both inside the protected environment, avoid raw provider logs/artifacts and rotate
 compromised credentials through the provider.
 
-Dispatch from GitHub Actions using branch `claude/product-development-v2`. Canonical
-Windows/Linux validation runs at the immutable source SHA. The production job verifies
+After account setup, secrets, nonsecret publisher/root configuration and
+`PLC_LAB_SIGNING_READY=true`, choose a **full reviewed, validated commit SHA** already
+pushed on `claude/product-development-v2`. Create a unique production tag at that exact
+commit and push only that tag. Replace both placeholder values below:
+
+```powershell
+$releaseCommit = '<full-reviewed-and-validated-commit-sha>'
+$releaseTag = 'plc-lab-production-<unique-version>'
+git tag $releaseTag $releaseCommit
+git push origin "refs/tags/$releaseTag"
+```
+
+Pushing this tag explicitly requests a production release and can consume signing
+credits after approval. Do not create release tags on unreviewed code or move/reuse a
+published tag. Inspect the run's full source SHA and validation results, then approve
+the `windows-production-signing` environment as the publisher. No production tag has
+been created or signing run requested by this task.
+
+Canonical Windows/Linux validation runs at the immutable tagged source SHA. The production job verifies
 the originating run, source SHA, immutable unsigned artifact ID and archive digest before
 signing. After protected-environment approval it signs the exact application with the
 pinned official client, prepares the post-signing manifest/catalog, signs the catalog,

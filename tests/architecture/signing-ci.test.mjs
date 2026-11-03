@@ -30,21 +30,58 @@ async function workflow(name) {
   };
 }
 
-test("production credentials are isolated behind explicit dispatch, trusted ref and protected environment", async () => {
+test("production credentials are isolated behind explicit release requests, trusted history and protected environment", async () => {
   const { source, value } = await workflow("windows-signed-release.yml");
-  assert.deepEqual(Object.keys(value.on), ["workflow_dispatch"]);
+  assert.deepEqual(Object.keys(value.on).sort(), ["push", "workflow_dispatch"]);
   assert.equal(value.on.workflow_dispatch, null, "no arbitrary source inputs");
+  assert.deepEqual(value.on.push, { tags: ["plc-lab-production-*"] });
   assert.deepEqual(value.permissions, { contents: "read" });
   assert.equal(value.jobs.validate.uses, "./.github/workflows/validation.yml");
-  assert.equal(value.jobs.sign.needs, "validate");
-  for (const job of Object.values(value.jobs)) {
+  assert.equal(value.jobs.validate.needs, "source-gate");
+  assert.equal(value.jobs.validate.if, "needs.source-gate.result == 'success'");
+  assert.deepEqual(value.jobs.sign.needs, ["source-gate", "validate"]);
+  for (const job of [value.jobs["source-gate"], value.jobs.sign]) {
     assert.match(job.if, /github\.repository == 'Michael-projeCtSS\/PLC-Lab'/);
     assert.match(
       job.if,
       /github\.ref == 'refs\/heads\/claude\/product-development-v2'/,
     );
+    assert.match(job.if, /github\.event_name == 'workflow_dispatch'/);
+    assert.match(job.if, /github\.event_name == 'push'/);
+    assert.match(
+      job.if,
+      /startsWith\(github\.ref, 'refs\/tags\/plc-lab-production-'\)/,
+    );
   }
+  const gate = value.jobs["source-gate"];
+  assert.deepEqual(gate.permissions, { contents: "read" });
+  assert.equal(
+    gate.environment,
+    undefined,
+    "source provenance uses no signing environment",
+  );
+  const gateCheckout = gate.steps.find((step) =>
+    step.uses?.startsWith("actions/checkout@"),
+  );
+  assert.equal(gateCheckout.with.ref, "${{ github.sha }}");
+  assert.equal(gateCheckout.with["fetch-depth"], "0");
+  assert.equal(gateCheckout.with["persist-credentials"], "false");
+  const provenance = gate.steps.find((step) => step.run);
+  assert.match(
+    provenance.run,
+    /git fetch --no-tags origin '\+refs\/heads\/claude\/product-development-v2:refs\/remotes\/origin\/claude\/product-development-v2'/,
+  );
+  assert.match(
+    provenance.run,
+    /git merge-base --is-ancestor HEAD origin\/claude\/product-development-v2/,
+  );
+  assert.match(
+    provenance.run,
+    /if \(\$LASTEXITCODE -ne 0\).*outside the trusted development branch history/,
+  );
+  assert.doesNotMatch(JSON.stringify(gate), /secrets\.|ESIGNER_/);
   const sign = value.jobs.sign;
+  assert.match(sign.if, /needs\.source-gate\.result == 'success'/);
   assert.match(sign.if, /needs\.validate\.result == 'success'/);
   assert.equal(sign.environment, "windows-production-signing");
   assert.deepEqual(sign.permissions, {

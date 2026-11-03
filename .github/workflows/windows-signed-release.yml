@@ -1,9 +1,13 @@
 name: Signed Windows production release
 
 # Never add pull_request, workflow_run, arbitrary ref inputs, or a caller workflow.
-# The protected environment must restrict the same trusted ref.
+# Tag pushes work before this workflow is registered on the default branch.
+# Protect both the trusted branch and the production tag pattern in the environment.
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - plc-lab-production-*
 
 permissions:
   contents: read
@@ -13,14 +17,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  source-gate:
+    name: Require an explicit release request from the trusted development history
+    if: github.repository == 'Michael-projeCtSS/PLC-Lab' && ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/claude/product-development-v2') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/plc-lab-production-')))
+    runs-on: windows-2022
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the exact source commit belongs to the trusted branch
+        shell: pwsh
+        env:
+          GH_SOURCE_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:GITHUB_EVENT_NAME -eq 'push' -and $env:GITHUB_REF -notmatch '^refs/tags/plc-lab-production-[A-Za-z0-9][A-Za-z0-9._-]*$') { throw 'Release tag name must use plc-lab-production- followed by a version or unique release identifier.' }
+          $credential = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("x-access-token:$env:GH_SOURCE_TOKEN"))
+          $env:GIT_CONFIG_COUNT = '1'
+          $env:GIT_CONFIG_KEY_0 = 'http.https://github.com/.extraheader'
+          $env:GIT_CONFIG_VALUE_0 = "AUTHORIZATION: basic $credential"
+          try {
+            git fetch --no-tags origin '+refs/heads/claude/product-development-v2:refs/remotes/origin/claude/product-development-v2'
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot fetch the trusted development branch; signing is refused.' }
+          } finally {
+            Remove-Item Env:GIT_CONFIG_COUNT, Env:GIT_CONFIG_KEY_0, Env:GIT_CONFIG_VALUE_0
+          }
+          git merge-base --is-ancestor HEAD origin/claude/product-development-v2
+          if ($LASTEXITCODE -ne 0) { throw 'The requested release commit is outside the trusted development branch history; signing is refused.' }
+
   validate:
-    if: github.repository == 'Michael-projeCtSS/PLC-Lab' && github.ref == 'refs/heads/claude/product-development-v2'
+    needs: source-gate
+    if: needs.source-gate.result == 'success'
     uses: ./.github/workflows/validation.yml
 
   sign:
     name: Sign the exact validated artifact and verify the final root executable
-    needs: validate
-    if: needs.validate.result == 'success' && github.repository == 'Michael-projeCtSS/PLC-Lab' && github.ref == 'refs/heads/claude/product-development-v2'
+    needs:
+      - source-gate
+      - validate
+    if: needs.source-gate.result == 'success' && needs.validate.result == 'success' && github.repository == 'Michael-projeCtSS/PLC-Lab' && ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/claude/product-development-v2') || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/plc-lab-production-')))
     runs-on: windows-2022
     timeout-minutes: 40
     environment: windows-production-signing

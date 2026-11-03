@@ -46,6 +46,13 @@ environment, with no pull-request signing. Missing configuration and verificatio
 fail the production release. Identity verification, paid service setup and protected
 environment configuration are external prerequisites, not implied by checked-in code.
 
+Production tags use `plc-lab-production-*` and must point to a reviewed commit on the
+remote development branch; a read-only ancestry gate precedes validation and signing.
+The protected environment allows only that tag pattern and the development branch, with
+the individual publisher approving releases. This provides a usable release trigger
+while the workflow is absent from the repository's default `main` branch, without
+changing `main`. Manual dispatch remains optional after default-branch registration.
+
 ## Alternatives
 
 Commercial OV/EV signing is valid when the selected CA accepts the legal publisher and

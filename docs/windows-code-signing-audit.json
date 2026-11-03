@@ -62,5 +62,24 @@
     "signingSecretsPresent": false,
     "productionWorkflowDispatched": false
   },
+  "githubReleaseTagFollowup": {
+    "environment": "windows-production-signing",
+    "allowedBranch": "claude/product-development-v2",
+    "allowedTagPattern": "plc-lab-production-*",
+    "tagDeploymentPolicyId": 65403744,
+    "remotePolicyVerifiedByGet": true,
+    "reason": "Default branch main does not contain the new workflow; workflow_dispatch requires default-branch registration, so an explicit reviewed production tag provides the release trigger without modifying main",
+    "productionTagCreated": false,
+    "productionSigningRunRequested": false,
+    "PLC_LAB_SIGNING_READY": "false"
+  },
+  "providerClientFollowup": {
+    "provider": "SSL.com CodeSignTool",
+    "version": "1.3.2",
+    "localDownloadHashAndExtraction": "PASS",
+    "localCredentialFreeDoctor": "BLOCKED (Java 17+ unavailable)",
+    "hostedCredentialFreeDoctor": "NOT YET VERIFIED",
+    "signingCallMade": false
+  },
   "securitySettingsModified": false
 }
