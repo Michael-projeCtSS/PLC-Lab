@@ -1,0 +1,91 @@
+{
+  "id": "lesson.industrial-alarms",
+  "number": 23,
+  "title": "Industrial alarms: see, acknowledge, correct",
+  "summary": "Read an alarm like an operator: what its state means, why acknowledging repairs nothing, and how the alarm history proves a repair.",
+  "level": "intermediate",
+  "minutes": 20,
+  "objectives": [
+    "Read an alarm's priority, source, condition and acknowledgment",
+    "Explain why an acknowledged alarm can stay active",
+    "Use the alarm history to verify that a repair removed the cause"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Condition, alarm and operator",
+      "body": "A **condition** is a fact about the plant, for example a tank above its high-high level. The **alarm** reports it to the operator with a priority, a source and a message. The **operator** acknowledges the alarm to show that it is being handled. These are three different things: only the plant changes the condition, and only the operator acknowledges."
+    },
+    {
+      "type": "visual",
+      "heading": "The alarm lifecycle",
+      "body": "Two independent questions decide the state: does the condition hold, and has the alarm been acknowledged?",
+      "diagram": "             condition holds                  condition clears\n  NORMAL --------------------> ACTIVE, UNACKN. -----------------> RETURNED, UNACKN.\n    ^                              |                                    |\n    |                         acknowledge                          acknowledge\n    |                              v                                    v\n    +------ condition clears -- ACTIVE, ACKN.                         NORMAL"
+    },
+    {
+      "type": "concept",
+      "heading": "Acknowledging is not repairing",
+      "body": "An acknowledged alarm whose condition still holds stays **active**. Acknowledging changes nobody's level, motor or valve. When the cause is corrected, the condition clears and the alarm returns to normal by itself. If the condition clears before anyone acknowledged it, the alarm stays in the list as **returned, unacknowledged**, so no event goes unnoticed."
+    },
+    {
+      "type": "example",
+      "heading": "A worked example",
+      "body": "A conveyor jams and the motor overload relay trips: MOTOR FAULT activates with priority Alarm. The operator acknowledges it; the alarm is now active and acknowledged, and the motor still stands. The jam is cleared and the overload relay reset: the condition clears and the alarm returns to normal. The history shows three entries: activated, acknowledged, returned to normal."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Pressing Acknowledge all to clear the screen and then assuming the plant is fine. The alarms stay active while their conditions hold. Read the condition column, not only the acknowledgment column."
+    },
+    {
+      "type": "task",
+      "heading": "Try it",
+      "body": "Open the overfill lab. Acknowledge the alarm, watch it stay active, find the cause from evidence and repair it. Then check the alarm history for the return to normal.",
+      "exercise": "ts.tank-overfill-alarm"
+    },
+    {
+      "type": "challenge",
+      "heading": "Next step",
+      "body": "Decide what the alarm list tells you.",
+      "question": {
+        "question": "After Acknowledge all, one alarm still shows the condition as present. What does that mean?",
+        "options": [
+          "The acknowledgment failed and must be repeated",
+          "The cause is still there and must be found and corrected",
+          "The alarm will clear by itself after a while"
+        ],
+        "answer": 1,
+        "explanation": "Acknowledgment worked; the condition still holds. Only correcting the cause clears it."
+      }
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "An operator acknowledges a HIGH LEVEL alarm while the tank is still above high-high. What is the alarm's state?",
+      "options": ["Normal", "Active, acknowledged", "Returned, unacknowledged"],
+      "answer": 1,
+      "explanation": "Acknowledging does not change the condition: the level is still above high-high, so the alarm stays active."
+    },
+    {
+      "question": "The condition clears before anyone has acknowledged the alarm. What happens?",
+      "options": [
+        "The alarm disappears without a trace",
+        "The alarm becomes returned, unacknowledged and waits for an acknowledgment",
+        "The alarm stays active until it is acknowledged"
+      ],
+      "answer": 1,
+      "explanation": "The return is recorded, and the alarm stays in the list until an operator confirms that it was seen."
+    },
+    {
+      "question": "Which evidence shows that a repair removed the cause of an alarm?",
+      "options": [
+        "The alarm was acknowledged",
+        "The alarm returned to normal on its own, and the history shows the return after the repair",
+        "The alarm list is empty after Acknowledge all"
+      ],
+      "answer": 1,
+      "explanation": "Only a cleared condition returns an alarm to normal. The history shows when that happened."
+    }
+  ],
+  "knowledgeRefs": ["fundamentals.industrial-alarms", "fundamentals.diagnostics"]
+}

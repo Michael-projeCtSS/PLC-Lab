@@ -1515,6 +1515,72 @@
       ]
     },
     {
+      "id": "fundamentals.industrial-alarms",
+      "file": "fundamentals/industrial-alarms.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Industrial alarms: lifecycle, acknowledgment and fault correction",
+          "text": "Alarmy przemysłowe: cykl życia, potwierdzanie i usuwanie przyczyny"
+        },
+        {
+          "path": "summary",
+          "source": "An alarm is more than a red lamp: it has a lifecycle. It activates when its condition holds, an operator acknowledges it, and it returns to normal only when the condition itself is gone.",
+          "text": "Alarm to więcej niż czerwona lampka: ma swój cykl życia. Aktywuje się, gdy spełniony jest jego warunek, operator go potwierdza, a do stanu normalnego wraca dopiero wtedy, gdy sam warunek ustąpi."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Condition and alarm",
+          "text": "Warunek i alarm"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A **condition** is a fact about the plant: the tank level is above high-high, a motor overload has tripped, a connection has failed. An **alarm** is how the control system tells the operator about it. Each alarm has an identity, a source, a priority and a message, and its own state that changes only at defined events.",
+          "text": "**Warunek** to fakt dotyczący instalacji: poziom w zbiorniku przekroczył stan bardzo wysoki, zadziałało zabezpieczenie przeciążeniowe silnika, przerwano połączenie. **Alarm** to sposób, w jaki system sterowania informuje o tym operatora. Każdy alarm ma identyfikator, źródło, priorytet i komunikat oraz własny stan, który zmienia się tylko przy określonych zdarzeniach."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "The lifecycle in PLC Lab",
+          "text": "Cykl życia alarmu w PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "PLC Lab uses one generic lifecycle for every alarm:\n- **Normal**: the condition does not hold and nothing waits for the operator.\n- **Active, unacknowledged**: the condition holds and nobody has confirmed it yet.\n- **Active, acknowledged**: the operator confirmed the alarm, but the condition still holds.\n- **Returned, unacknowledged**: the condition cleared before anyone confirmed the alarm. It stays in the list until it is acknowledged.\nAn alarm can carry an on-delay: the condition must hold for that time before the alarm activates, so short disturbances do not flood the operator. Real control systems use similar lifecycles; details such as latching, shelving or vendor alarm classes differ and are not modeled here.",
+          "text": "PLC Lab stosuje jeden ogólny cykl życia dla każdego alarmu:\n- **Normalny**: warunek nie jest spełniony i nic nie czeka na operatora.\n- **Aktywny, niepotwierdzony**: warunek jest spełniony i nikt jeszcze nie potwierdził alarmu.\n- **Aktywny, potwierdzony**: operator potwierdził alarm, ale warunek nadal jest spełniony.\n- **Ustąpił, niepotwierdzony**: warunek ustąpił, zanim ktokolwiek potwierdził alarm. Alarm pozostaje na liście do czasu potwierdzenia.\nAlarm może mieć opóźnienie załączenia: warunek musi trwać przez ten czas, zanim alarm się aktywuje, dzięki czemu krótkie zakłócenia nie zalewają operatora komunikatami. Rzeczywiste systemy sterowania stosują podobne cykle życia; szczegóły, takie jak podtrzymanie (latching), odkładanie alarmów (shelving) czy klasy alarmów producentów, różnią się i nie są tu modelowane."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Acknowledging is not repairing",
+          "text": "Potwierdzenie to nie naprawa"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Acknowledging records that an operator has seen the alarm. It does **not** change the level, restart a motor or remove a fault. An acknowledged alarm whose condition still holds stays active. Only correcting the cause clears the condition, and then the alarm returns to normal on its own. A control program must never treat an acknowledgment as a reason to continue an operation that the condition forbids.",
+          "text": "Potwierdzenie rejestruje, że operator zauważył alarm. **Nie** zmienia poziomu, nie uruchamia ponownie silnika i nie usuwa usterki. Potwierdzony alarm, którego warunek nadal jest spełniony, pozostaje aktywny. Dopiero usunięcie przyczyny kasuje warunek, a wtedy alarm sam wraca do stanu normalnego. Program sterujący nigdy nie może traktować potwierdzenia jako powodu do kontynuowania operacji, której warunek zabrania."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Priority and history",
+          "text": "Priorytet i historia"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "Priorities tell the operator what to handle first: **critical** (immediate danger to equipment or process), **alarm** (act now), **warning** (act soon) and **information**. The alarm history records every transition with its time: activated, acknowledged, returned to normal. It shows what happened in which order, which is often the best evidence when troubleshooting. Only transitions are recorded, so a condition that holds for an hour produces one entry, not thousands.",
+          "text": "Priorytety mówią operatorowi, czym zająć się najpierw: **krytyczny** (bezpośrednie zagrożenie dla urządzeń lub procesu), **alarm** (działaj teraz), **ostrzeżenie** (działaj wkrótce) i **informacja**. Historia alarmów zapisuje każde przejście wraz z czasem: aktywację, potwierdzenie, powrót do stanu normalnego. Pokazuje, co i w jakiej kolejności się wydarzyło, co przy wyszukiwaniu usterek jest często najlepszym dowodem. Zapisywane są tylko przejścia, więc warunek trwający godzinę daje jeden wpis, a nie tysiące."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "Working with an alarm",
+          "text": "Praca z alarmem"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "1. Read the alarm: source, priority, message and time.\n2. Acknowledge it, so others know it is being handled.\n3. Inspect the evidence: the measured value, the inputs and outputs, the diagnostic buffer.\n4. Find and correct the cause.\n5. Verify that the alarm returns to normal and that the process behaves as intended.",
+          "text": "1. Odczytaj alarm: źródło, priorytet, komunikat i czas.\n2. Potwierdź go, aby inni wiedzieli, że ktoś się nim zajmuje.\n3. Sprawdź dowody: wartość mierzoną, wejścia i wyjścia, bufor diagnostyczny.\n4. Znajdź i usuń przyczynę.\n5. Sprawdź, czy alarm wraca do stanu normalnego i czy proces działa zgodnie z założeniami."
+        }
+      ]
+    },
+    {
       "id": "hw.ai-mode",
       "file": "exercises/hw-ai-mode.json",
       "fields": [
@@ -4269,6 +4335,212 @@
       ]
     },
     {
+      "id": "lesson.industrial-alarms",
+      "file": "lessons/lesson-23.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Industrial alarms: see, acknowledge, correct",
+          "text": "Alarmy przemysłowe: zauważ, potwierdź, usuń przyczynę"
+        },
+        {
+          "path": "summary",
+          "source": "Read an alarm like an operator: what its state means, why acknowledging repairs nothing, and how the alarm history proves a repair.",
+          "text": "Odczytaj alarm jak operator: co oznacza jego stan, dlaczego potwierdzenie niczego nie naprawia i jak historia alarmów potwierdza skuteczność naprawy."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Read an alarm's priority, source, condition and acknowledgment",
+          "text": "Odczytać priorytet, źródło, warunek i potwierdzenie alarmu"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Explain why an acknowledged alarm can stay active",
+          "text": "Wyjaśnić, dlaczego potwierdzony alarm może pozostać aktywny"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Use the alarm history to verify that a repair removed the cause",
+          "text": "Na podstawie historii alarmów sprawdzić, czy naprawa usunęła przyczynę"
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Condition, alarm and operator",
+          "text": "Warunek, alarm i operator"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A **condition** is a fact about the plant, for example a tank above its high-high level. The **alarm** reports it to the operator with a priority, a source and a message. The **operator** acknowledges the alarm to show that it is being handled. These are three different things: only the plant changes the condition, and only the operator acknowledges.",
+          "text": "**Warunek** to fakt dotyczący instalacji, na przykład poziom w zbiorniku powyżej stanu bardzo wysokiego. **Alarm** informuje o nim operatora, podając priorytet, źródło i komunikat. **Operator** potwierdza alarm, aby pokazać, że ktoś się nim zajmuje. To trzy różne rzeczy: warunek zmienia tylko instalacja, a potwierdza tylko operator."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "The alarm lifecycle",
+          "text": "Cykl życia alarmu"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Two independent questions decide the state: does the condition hold, and has the alarm been acknowledged?",
+          "text": "O stanie decydują dwa niezależne pytania: czy warunek jest spełniony i czy alarm został potwierdzony?"
+        },
+        {
+          "path": "sections.1.diagram",
+          "source": "             condition holds                  condition clears\n  NORMAL --------------------> ACTIVE, UNACKN. -----------------> RETURNED, UNACKN.\n    ^                              |                                    |\n    |                         acknowledge                          acknowledge\n    |                              v                                    v\n    +------ condition clears -- ACTIVE, ACKN.                         NORMAL",
+          "text": "             warunek spełniony                warunek ustępuje\n  NORMALNY ------------------> AKTYWNY, NIEPOTW. --------------> USTĄPIŁ, NIEPOTW.\n    ^                              |                                    |\n    |                          potwierdź                            potwierdź\n    |                              v                                    v\n    +----- warunek ustępuje -- AKTYWNY, POTW.                        NORMALNY"
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Acknowledging is not repairing",
+          "text": "Potwierdzenie to nie naprawa"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "An acknowledged alarm whose condition still holds stays **active**. Acknowledging changes nobody's level, motor or valve. When the cause is corrected, the condition clears and the alarm returns to normal by itself. If the condition clears before anyone acknowledged it, the alarm stays in the list as **returned, unacknowledged**, so no event goes unnoticed.",
+          "text": "Potwierdzony alarm, którego warunek nadal jest spełniony, pozostaje **aktywny**. Potwierdzenie nie zmienia poziomu, nie uruchamia silnika i nie przestawia zaworu. Gdy przyczyna zostanie usunięta, warunek ustępuje, a alarm sam wraca do stanu normalnego. Jeśli warunek ustąpi, zanim ktokolwiek potwierdził alarm, alarm pozostaje na liście jako **ustąpił, niepotwierdzony**, dzięki czemu żadne zdarzenie nie umknie uwadze."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "A worked example",
+          "text": "Przykład"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "A conveyor jams and the motor overload relay trips: MOTOR FAULT activates with priority Alarm. The operator acknowledges it; the alarm is now active and acknowledged, and the motor still stands. The jam is cleared and the overload relay reset: the condition clears and the alarm returns to normal. The history shows three entries: activated, acknowledged, returned to normal.",
+          "text": "Przenośnik się zakleszcza i zadziałał przekaźnik przeciążeniowy silnika: aktywuje się alarm MOTOR_FAULT o priorytecie Alarm. Operator go potwierdza; alarm jest teraz aktywny i potwierdzony, a silnik nadal stoi. Zakleszczenie zostaje usunięte, a przekaźnik przeciążeniowy skasowany: warunek ustępuje i alarm wraca do stanu normalnego. Historia zawiera trzy wpisy: aktywacja, potwierdzenie, powrót do stanu normalnego."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "Common mistake",
+          "text": "Typowy błąd"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "Pressing Acknowledge all to clear the screen and then assuming the plant is fine. The alarms stay active while their conditions hold. Read the condition column, not only the acknowledgment column.",
+          "text": "Naciśnięcie Potwierdź wszystkie, aby wyczyścić ekran, i założenie, że z instalacją wszystko jest w porządku. Alarmy pozostają aktywne, dopóki trwają ich warunki. Czytaj kolumnę warunku, a nie tylko kolumnę potwierdzenia."
+        },
+        {
+          "path": "sections.5.heading",
+          "source": "Try it",
+          "text": "Spróbuj"
+        },
+        {
+          "path": "sections.5.body",
+          "source": "Open the overfill lab. Acknowledge the alarm, watch it stay active, find the cause from evidence and repair it. Then check the alarm history for the return to normal.",
+          "text": "Otwórz ćwiczenie z przepełnieniem zbiornika. Potwierdź alarm, zobacz, że pozostaje aktywny, znajdź przyczynę na podstawie dowodów i usuń ją. Następnie sprawdź w historii alarmów powrót do stanu normalnego."
+        },
+        {
+          "path": "sections.6.heading",
+          "source": "Next step",
+          "text": "Następny krok"
+        },
+        {
+          "path": "sections.6.body",
+          "source": "Decide what the alarm list tells you.",
+          "text": "Zdecyduj, co mówi lista alarmów."
+        },
+        {
+          "path": "sections.6.question.question",
+          "source": "After Acknowledge all, one alarm still shows the condition as present. What does that mean?",
+          "text": "Po użyciu Potwierdź wszystkie jeden alarm nadal pokazuje, że warunek występuje. Co to oznacza?"
+        },
+        {
+          "path": "sections.6.question.options.0",
+          "source": "The acknowledgment failed and must be repeated",
+          "text": "Potwierdzenie się nie powiodło i trzeba je powtórzyć"
+        },
+        {
+          "path": "sections.6.question.options.1",
+          "source": "The cause is still there and must be found and corrected",
+          "text": "Przyczyna nadal istnieje i trzeba ją znaleźć oraz usunąć"
+        },
+        {
+          "path": "sections.6.question.options.2",
+          "source": "The alarm will clear by itself after a while",
+          "text": "Alarm sam zniknie po pewnym czasie"
+        },
+        {
+          "path": "sections.6.question.explanation",
+          "source": "Acknowledgment worked; the condition still holds. Only correcting the cause clears it.",
+          "text": "Potwierdzenie zadziałało; warunek nadal jest spełniony. Ustąpi dopiero po usunięciu przyczyny."
+        },
+        {
+          "path": "checkpoint.0.question",
+          "source": "An operator acknowledges a HIGH LEVEL alarm while the tank is still above high-high. What is the alarm's state?",
+          "text": "Operator potwierdza alarm HIGH_LEVEL, gdy poziom w zbiorniku nadal przekracza stan bardzo wysoki. Jaki jest stan alarmu?"
+        },
+        {
+          "path": "checkpoint.0.options.0",
+          "source": "Normal",
+          "text": "Normalny"
+        },
+        {
+          "path": "checkpoint.0.options.1",
+          "source": "Active, acknowledged",
+          "text": "Aktywny, potwierdzony"
+        },
+        {
+          "path": "checkpoint.0.options.2",
+          "source": "Returned, unacknowledged",
+          "text": "Ustąpił, niepotwierdzony"
+        },
+        {
+          "path": "checkpoint.0.explanation",
+          "source": "Acknowledging does not change the condition: the level is still above high-high, so the alarm stays active.",
+          "text": "Potwierdzenie nie zmienia warunku: poziom nadal przekracza stan bardzo wysoki, więc alarm pozostaje aktywny."
+        },
+        {
+          "path": "checkpoint.1.question",
+          "source": "The condition clears before anyone has acknowledged the alarm. What happens?",
+          "text": "Warunek ustępuje, zanim ktokolwiek potwierdził alarm. Co się dzieje?"
+        },
+        {
+          "path": "checkpoint.1.options.0",
+          "source": "The alarm disappears without a trace",
+          "text": "Alarm znika bez śladu"
+        },
+        {
+          "path": "checkpoint.1.options.1",
+          "source": "The alarm becomes returned, unacknowledged and waits for an acknowledgment",
+          "text": "Alarm przechodzi w stan „ustąpił, niepotwierdzony” i czeka na potwierdzenie"
+        },
+        {
+          "path": "checkpoint.1.options.2",
+          "source": "The alarm stays active until it is acknowledged",
+          "text": "Alarm pozostaje aktywny do czasu potwierdzenia"
+        },
+        {
+          "path": "checkpoint.1.explanation",
+          "source": "The return is recorded, and the alarm stays in the list until an operator confirms that it was seen.",
+          "text": "Ustąpienie zostaje zapisane, a alarm pozostaje na liście, dopóki operator nie potwierdzi, że go zauważył."
+        },
+        {
+          "path": "checkpoint.2.question",
+          "source": "Which evidence shows that a repair removed the cause of an alarm?",
+          "text": "Który dowód pokazuje, że naprawa usunęła przyczynę alarmu?"
+        },
+        {
+          "path": "checkpoint.2.options.0",
+          "source": "The alarm was acknowledged",
+          "text": "Alarm został potwierdzony"
+        },
+        {
+          "path": "checkpoint.2.options.1",
+          "source": "The alarm returned to normal on its own, and the history shows the return after the repair",
+          "text": "Alarm sam wrócił do stanu normalnego, a historia pokazuje ten powrót po naprawie"
+        },
+        {
+          "path": "checkpoint.2.options.2",
+          "source": "The alarm list is empty after Acknowledge all",
+          "text": "Lista alarmów jest pusta po użyciu Potwierdź wszystkie"
+        },
+        {
+          "path": "checkpoint.2.explanation",
+          "source": "Only a cleared condition returns an alarm to normal. The history shows when that happened.",
+          "text": "Do stanu normalnego alarm wraca tylko wtedy, gdy warunek ustąpi. Historia pokazuje, kiedy to nastąpiło."
+        }
+      ]
+    },
+    {
       "id": "lesson.inputs-outputs",
       "file": "lessons/lesson-02.json",
       "fields": [
@@ -6280,6 +6552,97 @@
       ]
     },
     {
+      "id": "troubleshooting.level-switch-failed",
+      "file": "troubleshooting/level-switch-failed.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Level switch never switches: the tank overfills",
+          "text": "Sygnalizator poziomu nie przełącza: zbiornik się przepełnia"
+        },
+        {
+          "path": "summary",
+          "source": "Filling should stop at the high level switch, but the switch input never changes. The tank keeps filling until a high-high alarm or an overflow reveals the problem.",
+          "text": "Napełnianie powinno zakończyć się na sygnalizatorze górnego poziomu, ale jego wejście nigdy się nie zmienia. Zbiornik napełnia się dalej, aż problem ujawni alarm poziomu bardzo wysokiego lub przelanie."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Why the switch matters",
+          "text": "Dlaczego sygnalizator jest ważny"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Many filling sequences end on a level switch. When the switch input never becomes TRUE, the program waits forever and keeps the inlet open. The high-high alarm or the overflow is then the first visible symptom.",
+          "text": "Wiele sekwencji napełniania kończy się na sygnalizatorze poziomu. Gdy jego wejście nigdy nie przyjmuje wartości TRUE, program czeka bez końca i utrzymuje otwarty dopływ. Pierwszym widocznym objawem jest wtedy alarm poziomu bardzo wysokiego lub przelanie."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Recognizing it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "A second, independent measurement such as a level transmitter shows the tank above the switch point, while the switch input still reports that the level is below it. The inlet valve is open and its limit switch confirms it: the valve follows its command. Acknowledging the alarm changes nothing, because the condition behind it stays.",
+          "text": "Drugi, niezależny pomiar, na przykład przetwornik poziomu, pokazuje poziom powyżej punktu przełączania, a wejście sygnalizatora nadal zgłasza poziom poniżej niego. Zawór dopływowy jest otwarty, a jego wyłącznik krańcowy to potwierdza: zawór wykonuje polecenie. Potwierdzenie alarmu niczego nie zmienia, ponieważ warunek, który go wywołał, nadal trwa."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Typical causes",
+          "text": "Typowe przyczyny"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "- A failed or contaminated switch that no longer changes state.\n- A broken wire or loose terminal between the switch and the input.\n- A switch mounted at the wrong height or wrongly adjusted.",
+          "text": "- Uszkodzony lub zanieczyszczony sygnalizator, który nie zmienia już stanu.\n- Przerwany przewód lub poluzowany zacisk między sygnalizatorem a wejściem.\n- Sygnalizator zamontowany na złej wysokości lub źle wyregulowany."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The tank is filled past the switch point until it runs over",
+          "text": "Zbiornik jest napełniany powyżej punktu przełączania, aż się przeleje"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "The tank keeps filling past the high level switch",
+          "text": "Zbiornik napełnia się dalej mimo osiągnięcia sygnalizatora górnego poziomu"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "The high-high or overflow alarm activates and stays active after acknowledgment",
+          "text": "Alarm poziomu bardzo wysokiego lub przelania aktywuje się i pozostaje aktywny po potwierdzeniu"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "The level transmitter shows the level above the switch point while the switch input stays FALSE",
+          "text": "Przetwornik poziomu pokazuje poziom powyżej punktu przełączania, a wejście sygnalizatora ma wartość FALSE"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "The inlet valve is commanded open and its limit switch confirms it",
+          "text": "Zawór dopływowy ma polecenie otwarcia, a jego wyłącznik krańcowy to potwierdza"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare the switch input with an independent level measurement",
+          "text": "Porównaj wejście sygnalizatora z niezależnym pomiarem poziomu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Check the switch, its wiring and its input with the level above the switch point",
+          "text": "Sprawdź sygnalizator, jego okablowanie i wejście przy poziomie powyżej punktu przełączania"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Replace or repair the switch, then run a batch and verify that filling stops at the switch",
+          "text": "Wymień lub napraw sygnalizator, a następnie wykonaj cykl i sprawdź, czy napełnianie kończy się na sygnalizatorze"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "When one measurement disagrees with another, the sensor that disagrees with the physical process is the suspect. The alarm proves the repair by returning to normal once the cause is gone.",
+          "text": "Gdy jeden pomiar przeczy drugiemu, podejrzany jest czujnik niezgodny z rzeczywistym stanem procesu. Alarm potwierdza skuteczność naprawy, wracając do stanu normalnego po usunięciu przyczyny."
+        }
+      ]
+    },
+    {
       "id": "ts.motor-wont-start",
       "file": "exercises/ts-motor-wont-start.json",
       "fields": [
@@ -7377,6 +7740,197 @@
           "path": "troubleshooting.debrief.reasoning",
           "source": "Measure the signal and calculate what the engineering value should be. When the measured current is right but the value is wrong, the fault is in the configuration or scaling between the terminal and the program, not in the transmitter.",
           "text": "Zmierz sygnał i oblicz oczekiwaną wartość w jednostkach inżynierskich. Gdy prąd jest prawidłowy, a wartość błędna, przyczyna leży w konfiguracji lub skalowaniu między zaciskiem a programem, a nie w przetworniku."
+        }
+      ]
+    },
+    {
+      "id": "ts.tank-overfill-alarm",
+      "file": "exercises/ts-tank-overfill-alarm.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Tank overfill: the alarm stays active after acknowledgment",
+          "text": "Przepełnienie zbiornika: alarm pozostaje aktywny po potwierdzeniu"
+        },
+        {
+          "path": "summary",
+          "source": "During the last batch the tank ran over. The operator acknowledged the HIGH LEVEL alarm, but it stays active and the tank keeps filling. Find out why, repair it and prove that the alarm returns to normal.",
+          "text": "Podczas ostatniego cyklu napełniania zbiornik się przelał. Operator potwierdził alarm HIGH_LEVEL, ale alarm pozostaje aktywny, a zbiornik nadal się napełnia. Ustal przyczynę, usuń usterkę i wykaż, że alarm wraca do stanu normalnego."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Tell an acknowledged alarm from a removed cause",
+          "text": "Odróżnić potwierdzony alarm od usuniętej przyczyny"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Compare a level switch with the level transmitter to locate a failed sensor",
+          "text": "Porównać sygnalizator poziomu z przetwornikiem poziomu, aby zlokalizować uszkodzony czujnik"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Verify the return to normal after a repair",
+          "text": "Zweryfikować powrót do stanu normalnego po naprawie"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Start the simulation and press Start: the batch begins as it did during the last shift.",
+          "text": "Uruchom symulację i naciśnij Start: cykl rozpoczyna się tak samo jak podczas ostatniej zmiany."
+        },
+        {
+          "path": "instructions.1",
+          "source": "Watch the tank in the Process view and the alarms in the Alarms view. Acknowledge the HIGH LEVEL alarm and note what happens to it and to the tank.",
+          "text": "Obserwuj zbiornik w widoku procesu i alarmy w widoku alarmów. Potwierdź alarm HIGH_LEVEL (poziom bardzo wysoki) i zanotuj, co dzieje się z alarmem i ze zbiornikiem."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Collect evidence: compare the level transmitter LT-105 with the level switch inputs and watch what the program commands.",
+          "text": "Zbierz dowody: porównaj przetwornik poziomu LT-105 z wejściami sygnalizatorów poziomu i obserwuj, czym steruje program."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Submit the root cause you can prove, apply the repair, then run Check. The alarm must return to normal on its own once its cause is gone.",
+          "text": "Wskaż przyczynę potwierdzoną dowodami, wykonaj naprawę i uruchom sprawdzanie. Alarm musi sam wrócić do stanu normalnego, gdy zniknie jego przyczyna."
+        },
+        {
+          "path": "hints.0",
+          "source": "Acknowledging tells the system that someone has seen the alarm. Does it change the level in the tank?",
+          "text": "Potwierdzenie informuje system, że ktoś zauważył alarm. Czy zmienia ono poziom w zbiorniku?"
+        },
+        {
+          "path": "hints.1",
+          "source": "The program stops filling when LevelHigh becomes TRUE. What level does LT-105 show while LevelHigh is still FALSE?",
+          "text": "Program kończy napełnianie, gdy LevelHigh przyjmie wartość TRUE. Jaki poziom pokazuje LT-105, gdy LevelHigh nadal ma wartość FALSE?"
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "One batch: fill to the high switch, drain to the low switch",
+          "text": "Jeden cykl: napełnianie do sygnalizatora górnego, opróżnianie do sygnalizatora dolnego"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "Filling stops at the high level switch",
+          "text": "Napełnianie kończy się na sygnalizatorze górnego poziomu"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "InletValve stayed open after LevelHigh became TRUE.",
+          "text": "InletValve pozostał otwarty po zmianie LevelHigh na TRUE."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "The level never reaches high-high",
+          "text": "Poziom nigdy nie osiąga stanu bardzo wysokiego"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "The tank reached the high-high level: the HIGH LEVEL alarm would activate.",
+          "text": "Zbiornik osiągnął poziom bardzo wysoki: aktywowałby się alarm HIGH_LEVEL."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "The tank is drained down to the low level switch",
+          "text": "Zbiornik zostaje opróżniony do sygnalizatora dolnego poziomu"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "The tank was not drained to the low level switch within 30 s.",
+          "text": "Zbiornik nie został opróżniony do sygnalizatora dolnego poziomu w ciągu 30 s."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "The drain pump stops at the low level switch",
+          "text": "Pompa spustowa zatrzymuje się na sygnalizatorze dolnego poziomu"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "DrainPump kept running after LevelLow became TRUE.",
+          "text": "DrainPump pracowała dalej po zmianie LevelLow na TRUE."
+        },
+        {
+          "path": "troubleshooting.symptom",
+          "source": "During the last batch the tank ran over. The HIGH LEVEL and OVERFLOW alarms came in. The operator acknowledged them, but they stay active and the inlet valve stays open.",
+          "text": "Podczas ostatniego cyklu zbiornik się przelał. Pojawiły się alarmy HIGH_LEVEL i OVERFLOW. Operator je potwierdził, ale pozostają aktywne, a zawór dopływowy jest nadal otwarty."
+        },
+        {
+          "path": "troubleshooting.reportedBy",
+          "source": "Shift operator, tank farm",
+          "text": "Operator zmiany, park zbiorników"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.0.label",
+          "source": "The alarm was not acknowledged correctly, so the PLC keeps filling",
+          "text": "Alarm nie został poprawnie potwierdzony, więc PLC dalej napełnia zbiornik"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.1.label",
+          "source": "The high level switch LSH-103 does not switch",
+          "text": "Sygnalizator górnego poziomu LSH-103 nie przełącza"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.2.label",
+          "source": "The inlet valve XV-101 is stuck open",
+          "text": "Zawór dopływowy XV-101 zablokował się w pozycji otwartej"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.3.label",
+          "source": "The level transmitter LT-105 reads too high",
+          "text": "Przetwornik poziomu LT-105 zawyża odczyt"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.4.label",
+          "source": "The program never closes the inlet valve",
+          "text": "Program nigdy nie zamyka zaworu dopływowego"
+        },
+        {
+          "path": "troubleshooting.repairs.0.label",
+          "source": "Replace the high level switch LSH-103",
+          "text": "Wymień sygnalizator górnego poziomu LSH-103"
+        },
+        {
+          "path": "troubleshooting.repairs.1.label",
+          "source": "Service the inlet valve XV-101",
+          "text": "Wykonaj serwis zaworu dopływowego XV-101"
+        },
+        {
+          "path": "troubleshooting.repairs.2.label",
+          "source": "Recalibrate the level transmitter LT-105",
+          "text": "Ponownie skalibruj przetwornik poziomu LT-105"
+        },
+        {
+          "path": "troubleshooting.debrief.rootCause",
+          "source": "The high level switch LSH-103 failed and never closed its contact. The program waits for LevelHigh to end filling, so the inlet valve stayed open until the tank ran over.",
+          "text": "Sygnalizator górnego poziomu LSH-103 uległ uszkodzeniu i nigdy nie zamykał styku. Program czeka na LevelHigh, aby zakończyć napełnianie, więc zawór dopływowy pozostał otwarty, aż zbiornik się przelał."
+        },
+        {
+          "path": "troubleshooting.debrief.evidence.0",
+          "source": "LT-105 showed the tank above 80 % while LevelHigh was still FALSE: the two level measurements disagreed.",
+          "text": "LT-105 pokazywał poziom powyżej 80 %, gdy LevelHigh nadal miał wartość FALSE: oba pomiary poziomu były ze sobą sprzeczne."
+        },
+        {
+          "path": "troubleshooting.debrief.evidence.1",
+          "source": "InletValve stayed TRUE and InletOpen confirmed the valve open: the valve followed its command.",
+          "text": "InletValve miał wartość TRUE, a InletOpen potwierdzał otwarcie zaworu: zawór wykonywał polecenie."
+        },
+        {
+          "path": "troubleshooting.debrief.evidence.2",
+          "source": "The acknowledged HIGH LEVEL alarm stayed active: acknowledging confirmed that the alarm was seen and did not change the level.",
+          "text": "Potwierdzony alarm HIGH_LEVEL pozostał aktywny: potwierdzenie oznaczało tylko, że alarm został zauważony, i nie zmieniło poziomu."
+        },
+        {
+          "path": "troubleshooting.debrief.evidence.3",
+          "source": "After the switch was replaced, LevelHigh became TRUE, the drain pump started and the alarms returned to normal on their own.",
+          "text": "Po wymianie sygnalizatora LevelHigh przyjął wartość TRUE, pompa spustowa ruszyła, a alarmy same wróciły do stanu normalnego."
+        },
+        {
+          "path": "troubleshooting.debrief.repair",
+          "source": "Replace the high level switch LSH-103 and run a batch: filling stops at the switch and the tank is drained to the low switch.",
+          "text": "Wymień sygnalizator górnego poziomu LSH-103 i wykonaj cykl: napełnianie kończy się na sygnalizatorze, a zbiornik zostaje opróżniony do sygnalizatora dolnego poziomu."
+        },
+        {
+          "path": "troubleshooting.debrief.reasoning",
+          "source": "An alarm reports a condition; acknowledging it only records that an operator has seen it. The cause must be found from evidence, here two level measurements that disagree, and the alarm proves the repair by returning to normal.",
+          "text": "Alarm informuje o stanie procesu; jego potwierdzenie jedynie rejestruje, że operator go zauważył. Przyczynę trzeba ustalić na podstawie dowodów, tutaj dwóch sprzecznych pomiarów poziomu, a alarm potwierdza skuteczność naprawy, wracając do stanu normalnego."
         }
       ]
     },

@@ -91,7 +91,7 @@ test("troubleshooting labs show only general references before the diagnosis", (
   const labs = [...items.values()].filter(
     (d) => d.kind === "troubleshooting" && d.troubleshooting?.symptom,
   );
-  assert.equal(labs.length, 7);
+  assert.equal(labs.length, 8);
   for (const lab of labs) {
     const t = lab.troubleshooting;
     assert.equal(

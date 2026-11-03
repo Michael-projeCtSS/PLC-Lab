@@ -364,6 +364,13 @@
             "$ref": "#/$defs/id"
           }
         },
+        "acknowledge": {
+          "description": "Alarm ids the operator must acknowledge. Acknowledging is an operator duty, not a repair.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
         "learningRefs": {
           "type": "array",
           "items": {

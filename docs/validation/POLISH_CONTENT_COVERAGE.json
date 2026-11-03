@@ -3,21 +3,21 @@
   "coverage": [
     {
       "group": "exercises",
-      "total": 46,
-      "catalogue": 46,
-      "complete": 17
+      "total": 47,
+      "catalogue": 47,
+      "complete": 18
     },
     {
       "group": "lessons",
-      "total": 22,
-      "catalogue": 22,
-      "complete": 22
+      "total": 23,
+      "catalogue": 23,
+      "complete": 23
     },
     {
       "group": "fundamentals",
-      "total": 23,
-      "catalogue": 0,
-      "complete": 0
+      "total": 24,
+      "catalogue": 1,
+      "complete": 1
     },
     {
       "group": "instructions",
@@ -33,9 +33,9 @@
     },
     {
       "group": "troubleshooting",
-      "total": 29,
-      "catalogue": 0,
-      "complete": 0
+      "total": 30,
+      "catalogue": 1,
+      "complete": 1
     },
     {
       "group": "vendors",

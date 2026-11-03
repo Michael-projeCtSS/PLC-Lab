@@ -1,0 +1,32 @@
+{
+  "id": "fundamentals.industrial-alarms",
+  "kind": "topic",
+  "title": "Industrial alarms: lifecycle, acknowledgment and fault correction",
+  "summary": "An alarm is more than a red lamp: it has a lifecycle. It activates when its condition holds, an operator acknowledges it, and it returns to normal only when the condition itself is gone.",
+  "tags": ["alarm", "acknowledge", "alarm history", "priority", "return to normal", "HMI"],
+  "sections": [
+    {
+      "heading": "Condition and alarm",
+      "body": "A **condition** is a fact about the plant: the tank level is above high-high, a motor overload has tripped, a connection has failed. An **alarm** is how the control system tells the operator about it. Each alarm has an identity, a source, a priority and a message, and its own state that changes only at defined events."
+    },
+    {
+      "heading": "The lifecycle in PLC Lab",
+      "body": "PLC Lab uses one generic lifecycle for every alarm:\n- **Normal**: the condition does not hold and nothing waits for the operator.\n- **Active, unacknowledged**: the condition holds and nobody has confirmed it yet.\n- **Active, acknowledged**: the operator confirmed the alarm, but the condition still holds.\n- **Returned, unacknowledged**: the condition cleared before anyone confirmed the alarm. It stays in the list until it is acknowledged.\nAn alarm can carry an on-delay: the condition must hold for that time before the alarm activates, so short disturbances do not flood the operator. Real control systems use similar lifecycles; details such as latching, shelving or vendor alarm classes differ and are not modeled here."
+    },
+    {
+      "heading": "Acknowledging is not repairing",
+      "body": "Acknowledging records that an operator has seen the alarm. It does **not** change the level, restart a motor or remove a fault. An acknowledged alarm whose condition still holds stays active. Only correcting the cause clears the condition, and then the alarm returns to normal on its own. A control program must never treat an acknowledgment as a reason to continue an operation that the condition forbids."
+    },
+    {
+      "heading": "Priority and history",
+      "body": "Priorities tell the operator what to handle first: **critical** (immediate danger to equipment or process), **alarm** (act now), **warning** (act soon) and **information**. The alarm history records every transition with its time: activated, acknowledged, returned to normal. It shows what happened in which order, which is often the best evidence when troubleshooting. Only transitions are recorded, so a condition that holds for an hour produces one entry, not thousands."
+    },
+    {
+      "heading": "Working with an alarm",
+      "body": "1. Read the alarm: source, priority, message and time.\n2. Acknowledge it, so others know it is being handled.\n3. Inspect the evidence: the measured value, the inputs and outputs, the diagnostic buffer.\n4. Find and correct the cause.\n5. Verify that the alarm returns to normal and that the process behaves as intended."
+    }
+  ],
+  "facts": [],
+  "sources": ["src.plclab-simulation"],
+  "related": ["fundamentals.diagnostics", "fundamentals.interlocks", "fundamentals.troubleshooting-method"]
+}

@@ -1485,6 +1485,189 @@ fn forces_keep_field_and_program_values_apart_and_never_pass_a_lab() {
 }
 
 #[test]
+fn overfill_alarm_lab_separates_acknowledgment_repair_and_recovery() {
+    let f = fixture("alarm-lab");
+    let (project, w) = exercise(&f.app, "ts.tank-overfill-alarm");
+    let id = w.workspace_id;
+    let source = project.programs[0].source.clone();
+    let acknowledge = |alarms: &[&str]| {
+        f.app.acknowledge_alarm(AlarmAckRequest {
+            contract_version: V,
+            workspace_id: id,
+            alarms: Some(alarms.iter().map(|a| a.to_string()).collect()),
+        })
+    };
+    let high = |frame: &LiveFrameDto| {
+        let found = frame.alarms.iter().find(|a| a.id == "tank.high-level");
+        found.cloned()
+    };
+    let list = |priority: Option<&str>, state: Option<&str>, source: Option<&str>| {
+        f.app
+            .alarms(AlarmsRequest {
+                contract_version: V,
+                workspace_id: id,
+                offset: 0,
+                limit: 50,
+                priority: priority.map(str::to_owned),
+                state: state.map(str::to_owned),
+                source: source.map(str::to_owned),
+            })
+            .unwrap()
+    };
+
+    // Before the batch the plant is normal.
+    assert!(high(&step(&f.app, id, 2)).is_none());
+    // Symptom: the batch fills past the failed high level switch until the tank runs over.
+    press(&f.app, id, "start");
+    let frame = step(&f.app, id, 150);
+    // The most urgent alarm comes first: the critical overflow before high-high.
+    let order: Vec<&str> = frame.alarms.iter().map(|a| a.id.as_str()).collect();
+    assert_eq!(order, ["tank.overflow", "tank.high-level"]);
+    let alarm = high(&frame).expect("the HIGH LEVEL alarm is active");
+    assert_eq!(
+        (
+            alarm.state.as_str(),
+            alarm.priority.as_str(),
+            alarm.kind.as_str()
+        ),
+        ("ACTIVE_UNACKNOWLEDGED", "ALARM", "HIGH_LEVEL")
+    );
+    assert!(is_true(quantity(&frame, "tank", "overflowing")));
+
+    // Acknowledging confirms the alarm; the condition and the overflow remain.
+    // A selection is acknowledged entirely or not at all.
+    assert!(acknowledge(&["tank.high-level", "tank.unknown"]).is_err());
+    assert!(high(&step(&f.app, id, 1)).unwrap().state == "ACTIVE_UNACKNOWLEDGED");
+    assert_eq!(acknowledge(&["tank.high-level"]).unwrap().acknowledged, 1);
+    let frame = step(&f.app, id, 10);
+    let alarm = high(&frame).unwrap();
+    assert_eq!(
+        (alarm.state.as_str(), alarm.condition),
+        ("ACTIVE_ACKNOWLEDGED", true)
+    );
+    assert!(
+        is_true(quantity(&frame, "tank", "overflowing")),
+        "acknowledging changes nothing in the process"
+    );
+    assert!(
+        acknowledge(&["tank.high-level"]).is_err(),
+        "nothing left to acknowledge"
+    );
+    assert!(acknowledge(&[]).is_err(), "an empty selection is refused");
+    // Filters apply to the list and the history alike.
+    let critical = list(Some("CRITICAL"), None, None);
+    let ids: Vec<&str> = critical.alarms.iter().map(|a| a.id.as_str()).collect();
+    assert_eq!(ids, ["tank.overflow"]);
+    assert!(critical.history.iter().all(|e| e.priority == "CRITICAL"));
+    let acknowledged = list(None, Some("ACTIVE_ACKNOWLEDGED"), Some("TANK"));
+    assert_eq!(acknowledged.alarms.len(), 1);
+    assert_eq!(
+        acknowledged.matching, 1,
+        "one transition led to ACTIVE_ACKNOWLEDGED"
+    );
+    assert!(
+        f.app
+            .alarms(AlarmsRequest {
+                contract_version: V,
+                workspace_id: id,
+                offset: 0,
+                limit: 50,
+                priority: Some("SEVERE".into()),
+                state: None,
+                source: None,
+            })
+            .is_err(),
+        "unknown filter values are refused"
+    );
+
+    // Acknowledged but not repaired: the lab is not passed and reveals nothing.
+    let report = check(&f.app, id, &source, None);
+    assert!(!report.passed && report.debrief.is_none());
+    let passed = |r: &GradeReportDto, criterion: &str| {
+        let found = r.criteria.iter().find(|c| c.id == criterion);
+        found.unwrap().passed
+    };
+    assert!(passed(&report, "acknowledge") && !passed(&report, "repair"));
+
+    // The real repair removes the cause: the alarm returns to normal on its own.
+    assert!(!diagnose(&f.app, id, "alarm-not-acknowledged"));
+    assert!(diagnose(&f.app, id, "lsh-failed"));
+    repair(&f.app, id, "replace-lsh");
+    let frame = step(&f.app, id, 50);
+    assert!(high(&frame).is_none(), "{:?}", frame.alarms);
+    let list = list(None, None, None);
+    let transitions: Vec<&str> = list
+        .history
+        .iter()
+        .rev()
+        .filter(|e| e.alarm == "tank.high-level")
+        .map(|e| e.transition.as_str())
+        .collect();
+    assert_eq!(
+        transitions,
+        ["ACTIVATED", "ACKNOWLEDGED", "RETURNED_TO_NORMAL"]
+    );
+    assert!(list.kept as usize <= list.capacity as usize);
+    let report = check(&f.app, id, &source, None);
+    assert!(report.passed, "{:?}", report.criteria);
+    let debrief = report
+        .debrief
+        .expect("the debrief follows the verified repair");
+    assert!(debrief.root_cause.contains("LSH-103"));
+    let titles: Vec<&str> = debrief
+        .references
+        .iter()
+        .map(|r| r.title.as_str())
+        .collect();
+    assert_eq!(titles, ["Level switch never switches: the tank overfills"]);
+}
+
+#[test]
+fn a_forced_level_switch_never_passes_the_overfill_lab() {
+    let f = fixture("alarm-force");
+    let (project, w) = exercise(&f.app, "ts.tank-overfill-alarm");
+    let id = w.workspace_id;
+    let source = project.programs[0].source.clone();
+    press(&f.app, id, "start");
+    step(&f.app, id, 150);
+    f.app
+        .acknowledge_alarm(AlarmAckRequest {
+            contract_version: V,
+            workspace_id: id,
+            alarms: None,
+        })
+        .unwrap();
+    // The student forces the switch input instead of repairing the switch.
+    let signal = w
+        .signals
+        .iter()
+        .find(|s| s.path == "plc.LevelHigh")
+        .unwrap();
+    f.app
+        .force(ForceRequest {
+            contract_version: V,
+            workspace_id: id,
+            signal: signal.id,
+            value: Some(SignalValueDto::Bool { value: true }),
+        })
+        .unwrap();
+    let frame = step(&f.app, id, 60);
+    // The program believes the force and drains: the live alarm even returns to normal.
+    assert!(frame.alarms.iter().all(|a| a.id != "tank.high-level"));
+    assert!(is_true(quantity(&frame, "pump", "running")));
+    // The installation is not repaired, so the isolated verification still fails.
+    let report = check(&f.app, id, &source, None);
+    assert!(!report.passed && report.debrief.is_none());
+    let failed: Vec<&str> = report
+        .criteria
+        .iter()
+        .filter(|c| !c.passed)
+        .map(|c| c.id.as_str())
+        .collect();
+    assert_eq!(failed, ["diagnosis", "repair", "verification"]);
+}
+
+#[test]
 fn the_diagnostic_buffer_classifies_pairs_filters_and_pages_its_entries() {
     let library =
         knowledge_core::KnowledgeLibrary::load(&[
@@ -1771,6 +1954,20 @@ fn every_fault_finding_lab_hides_its_cause_until_verified() {
             None
         };
         let report = check(&f.app, w.workspace_id, &project.programs[0].source, station);
+        if !t.acknowledge.is_empty() {
+            // The operator must also acknowledge an alarm, which first has to activate: the
+            // lab's own workflow test walks that path to the debrief. Here the duty stays open
+            // and nothing is revealed.
+            let open: Vec<&str> = report
+                .criteria
+                .iter()
+                .filter(|c| !c.passed)
+                .map(|c| c.id.as_str())
+                .collect();
+            assert_eq!(open, ["acknowledge"], "{id}");
+            assert!(report.debrief.is_none(), "{id}");
+            continue;
+        }
         assert!(report.passed, "{id}: {:?}", report.criteria);
         let shown = report.debrief.expect("debrief after verification");
         assert_eq!(shown.root_cause, debrief.root_cause, "{id}");

@@ -1,0 +1,47 @@
+{
+  "id": "troubleshooting.level-switch-failed",
+  "kind": "troubleshooting",
+  "title": "Level switch never switches: the tank overfills",
+  "summary": "Filling should stop at the high level switch, but the switch input never changes. The tank keeps filling until a high-high alarm or an overflow reveals the problem.",
+  "tags": ["level switch", "overfill", "high level", "alarm", "sensor"],
+  "sections": [
+    {
+      "heading": "Why the switch matters",
+      "body": "Many filling sequences end on a level switch. When the switch input never becomes TRUE, the program waits forever and keeps the inlet open. The high-high alarm or the overflow is then the first visible symptom."
+    },
+    {
+      "heading": "Recognizing it",
+      "body": "A second, independent measurement such as a level transmitter shows the tank above the switch point, while the switch input still reports that the level is below it. The inlet valve is open and its limit switch confirms it: the valve follows its command. Acknowledging the alarm changes nothing, because the condition behind it stays."
+    },
+    {
+      "heading": "Typical causes",
+      "body": "- A failed or contaminated switch that no longer changes state.\n- A broken wire or loose terminal between the switch and the input.\n- A switch mounted at the wrong height or wrongly adjusted."
+    }
+  ],
+  "facts": [],
+  "sources": ["src.plclab-simulation"],
+  "related": ["fundamentals.industrial-alarms", "fundamentals.digital-io"],
+  "troubleshooting": {
+    "faultId": "level-switch-failed",
+    "area": "Process instrumentation",
+    "target": "Level switch input",
+    "effect": "The tank is filled past the switch point until it runs over",
+    "symptoms": [
+      "The tank keeps filling past the high level switch",
+      "The high-high or overflow alarm activates and stays active after acknowledgment"
+    ],
+    "evidence": [
+      "The level transmitter shows the level above the switch point while the switch input stays FALSE",
+      "The inlet valve is commanded open and its limit switch confirms it"
+    ],
+    "diagnosticMethod": [
+      "Compare the switch input with an independent level measurement",
+      "Check the switch, its wiring and its input with the level above the switch point"
+    ],
+    "repair": [
+      "Replace or repair the switch, then run a batch and verify that filling stops at the switch"
+    ],
+    "explanation": "When one measurement disagrees with another, the sensor that disagrees with the physical process is the suspect. The alarm proves the repair by returning to normal once the cause is gone.",
+    "simulatedIn": ["ts.tank-overfill-alarm"]
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ts.tank-overfill-alarm",
+  "revision": 1,
+  "title": "Tank overfill: the alarm stays active after acknowledgment",
+  "kind": "troubleshooting",
+  "difficulty": "intermediate",
+  "summary": "During the last batch the tank ran over. The operator acknowledged the HIGH LEVEL alarm, but it stays active and the tank keeps filling. Find out why, repair it and prove that the alarm returns to normal.",
+  "objectives": [
+    "Tell an acknowledged alarm from a removed cause",
+    "Compare a level switch with the level transmitter to locate a failed sensor",
+    "Verify the return to normal after a repair"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.tank-filling",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1 (normally open). *)\n    StopPB : BOOL; (* Stop button S2 (normally closed: TRUE while not pressed). *)\n    LevelLow : BOOL; (* TRUE while the level is below the low switch (LSL-104 contact closes when dry). *)\n    LevelHigh : BOOL; (* TRUE while the level is at or above the high switch (LSH-103 contact closes when wet). *)\n    InletOpen : BOOL; (* Inlet valve fully-open limit switch. *)\n    LevelRaw : INT; (* Raw analog value of LT-105 (scaling depends on the selected platform profile). *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve solenoid XV-101: TRUE opens the valve. *)\n    DrainPump : BOOL; (* Drain pump P-102 contactor. *)\nEND_VAR\nVAR\n    Filling : BOOL;\n    Draining : BOOL;\nEND_VAR\n\n(* Batch: Start fills the tank up to the high level switch LSH-103, then the drain pump\n   empties it down to the low level switch LSL-104. Stop ends the batch. *)\nIF StartPB AND NOT Draining THEN\n    Filling := TRUE;\nEND_IF;\nIF Filling AND LevelHigh THEN\n    Filling := FALSE;\n    Draining := TRUE;\nEND_IF;\nIF Draining AND LevelLow THEN\n    Draining := FALSE;\nEND_IF;\nIF NOT StopPB THEN\n    Filling := FALSE;\n    Draining := FALSE;\nEND_IF;\nInletValve := Filling;\nDrainPump := Draining;\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    { "tag": "StartPB", "type": "BOOL", "direction": "input" },
+    { "tag": "StopPB", "type": "BOOL", "direction": "input" },
+    { "tag": "LevelLow", "type": "BOOL", "direction": "input" },
+    { "tag": "LevelHigh", "type": "BOOL", "direction": "input" },
+    { "tag": "InletValve", "type": "BOOL", "direction": "output" },
+    { "tag": "DrainPump", "type": "BOOL", "direction": "output" }
+  ],
+  "instructions": [
+    "Start the simulation and press Start: the batch begins as it did during the last shift.",
+    "Watch the tank in the Process view and the alarms in the Alarms view. Acknowledge the HIGH LEVEL alarm and note what happens to it and to the tank.",
+    "Collect evidence: compare the level transmitter LT-105 with the level switch inputs and watch what the program commands.",
+    "Submit the root cause you can prove, apply the repair, then run Check. The alarm must return to normal on its own once its cause is gone."
+  ],
+  "hints": [
+    "Acknowledging tells the system that someone has seen the alarm. Does it change the level in the tank?",
+    "The program stops filling when LevelHigh becomes TRUE. What level does LT-105 show while LevelHigh is still FALSE?"
+  ],
+  "evidence": [
+    { "name": "start", "source": { "type": "plcTag", "tag": "StartPB" } },
+    { "name": "high", "source": { "type": "plcTag", "tag": "LevelHigh" } },
+    { "name": "low", "source": { "type": "plcTag", "tag": "LevelLow" } },
+    { "name": "valve", "source": { "type": "plcTag", "tag": "InletValve" } },
+    { "name": "pump", "source": { "type": "plcTag", "tag": "DrainPump" } },
+    {
+      "name": "level",
+      "source": { "type": "component", "component": "tank", "quantity": "levelPermille" }
+    },
+    {
+      "name": "high-high",
+      "source": { "type": "component", "component": "tank", "quantity": "highHigh" }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "batch",
+      "title": "One batch: fill to the high switch, drain to the low switch",
+      "durationMs": 30000,
+      "actions": [
+        { "atMs": 0, "action": { "type": "setPlcMode", "mode": "run" } },
+        { "atMs": 500, "action": { "type": "press", "component": "start" } },
+        { "atMs": 800, "action": { "type": "release", "component": "start" } }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "fill-stops",
+      "title": "Filling stops at the high level switch",
+      "points": 30,
+      "scenario": "batch",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": { "type": "compare", "signal": "high", "layer": "inputs", "op": "eq", "value": true },
+        "response": { "type": "compare", "signal": "valve", "layer": "outputs", "op": "eq", "value": false },
+        "withinMs": 200
+      },
+      "onFail": "InletValve stayed open after LevelHigh became TRUE."
+    },
+    {
+      "id": "no-high-high",
+      "title": "The level never reaches high-high",
+      "points": 30,
+      "scenario": "batch",
+      "rule": {
+        "type": "never",
+        "condition": { "type": "compare", "signal": "high-high", "layer": "process", "op": "eq", "value": true }
+      },
+      "onFail": "The tank reached the high-high level: the HIGH LEVEL alarm would activate."
+    },
+    {
+      "id": "drains",
+      "title": "The tank is drained down to the low level switch",
+      "points": 20,
+      "scenario": "batch",
+      "rule": {
+        "type": "eventually",
+        "condition": { "type": "compare", "signal": "level", "layer": "process", "op": "le", "value": 210 },
+        "byMs": 30000
+      },
+      "onFail": "The tank was not drained to the low level switch within 30 s."
+    },
+    {
+      "id": "pump-stops",
+      "title": "The drain pump stops at the low level switch",
+      "points": 20,
+      "scenario": "batch",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": { "type": "compare", "signal": "low", "layer": "inputs", "op": "eq", "value": true },
+        "response": { "type": "compare", "signal": "pump", "layer": "outputs", "op": "eq", "value": false },
+        "withinMs": 200
+      },
+      "onFail": "DrainPump kept running after LevelLow became TRUE."
+    }
+  ],
+  "curriculumOrder": 8,
+  "troubleshooting": {
+    "symptom": "During the last batch the tank ran over. The HIGH LEVEL and OVERFLOW alarms came in. The operator acknowledged them, but they stay active and the inlet valve stays open.",
+    "reportedBy": "Shift operator, tank farm",
+    "faults": [
+      {
+        "id": "lsh-stuck",
+        "fault": { "type": "sensorStuck", "component": "lsh", "conducting": false }
+      }
+    ],
+    "diagnosisOptions": [
+      { "id": "alarm-not-acknowledged", "label": "The alarm was not acknowledged correctly, so the PLC keeps filling" },
+      { "id": "lsh-failed", "label": "The high level switch LSH-103 does not switch" },
+      { "id": "valve-stuck", "label": "The inlet valve XV-101 is stuck open" },
+      { "id": "transmitter-high", "label": "The level transmitter LT-105 reads too high" },
+      { "id": "program-error", "label": "The program never closes the inlet valve" }
+    ],
+    "rootCauses": ["lsh-failed"],
+    "repairs": [
+      { "id": "replace-lsh", "label": "Replace the high level switch LSH-103", "clears": ["lsh-stuck"] },
+      { "id": "service-valve", "label": "Service the inlet valve XV-101", "clears": [] },
+      { "id": "recalibrate-lt", "label": "Recalibrate the level transmitter LT-105", "clears": [] }
+    ],
+    "verification": ["fill-stops", "no-high-high", "drains", "pump-stops"],
+    "acknowledge": ["tank.high-level"],
+    "learningRefs": ["fundamentals.industrial-alarms", "fundamentals.troubleshooting-method"],
+    "debriefRefs": ["troubleshooting.level-switch-failed"],
+    "debrief": {
+      "rootCause": "The high level switch LSH-103 failed and never closed its contact. The program waits for LevelHigh to end filling, so the inlet valve stayed open until the tank ran over.",
+      "evidence": [
+        "LT-105 showed the tank above 80 % while LevelHigh was still FALSE: the two level measurements disagreed.",
+        "InletValve stayed TRUE and InletOpen confirmed the valve open: the valve followed its command.",
+        "The acknowledged HIGH LEVEL alarm stayed active: acknowledging confirmed that the alarm was seen and did not change the level.",
+        "After the switch was replaced, LevelHigh became TRUE, the drain pump started and the alarms returned to normal on their own."
+      ],
+      "repair": "Replace the high level switch LSH-103 and run a batch: filling stops at the switch and the tank is drained to the low switch.",
+      "reasoning": "An alarm reports a condition; acknowledging it only records that an operator has seen it. The cause must be found from evidence, here two level measurements that disagree, and the alarm proves the repair by returning to normal."
+    }
+  }
+}

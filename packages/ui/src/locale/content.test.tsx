@@ -57,9 +57,9 @@ it("missing and stale translations fall back field by field without adding hidde
   ).toBe("New TON title");
   expect(localizeContent(null, "pl")).toBeNull();
 });
-it("all seven Polish investigations retain the backend repair and debrief gates", () => {
+it("every Polish investigation retains the backend repair and debrief gates", () => {
   const cases = raw.items.filter((item) => item.id.startsWith("ts."));
-  expect(cases).toHaveLength(7);
+  expect(cases).toHaveLength(8);
   for (const item of cases) {
     const source = canonical(item);
     const brief = source.troubleshooting as Record<string, unknown>;
