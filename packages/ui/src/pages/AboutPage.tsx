@@ -2,9 +2,23 @@ import { useInterface } from "../locale";
 import { api } from "@plc-lab/ipc";
 import { Badge, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
+import { NativeRequired } from "../preview/Preview";
+
+export function AboutPage() {
+  const { t } = useInterface();
+  return api.available() ? (
+    <NativeAboutPage />
+  ) : (
+    <div className="page-inner">
+      <h1>{t("about.title")}</h1>
+      <p>{t("preview.sourceContent")}</p>
+      <NativeRequired />
+    </div>
+  );
+}
 
 /** Product information and developer diagnostics (versions, contract, knowledge packs). */
-export function AboutPage() {
+function NativeAboutPage() {
   const { t } = useInterface();
   const info = useLoad(() => api.coreInfo(), []);
   const status = useLoad(() => api.knowledgeStatus(), []);

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import {
-  api,
   type ArticleDto,
   type CatalogEntryDto,
   type SearchHitDto,
 } from "@plc-lab/ipc";
+import { presentation, uiPreview } from "../presentation";
 import { Markdown } from "../Markdown";
 import { Badge, Empty, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
@@ -48,13 +48,13 @@ export function KnowledgePage({
   const [category, setCategory] = useState<string | null>(null);
   const [hits, setHits] = useState<SearchHitDto[] | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const catalog = useLoad(() => api.catalog(), []);
-  const library = useLoad(() => api.library(), []);
+  const catalog = useLoad(() => presentation.catalog(), []);
+  const library = useLoad(() => presentation.library(), []);
   useEffect(() => {
     if (!query.trim()) return;
     let active = true;
     const timer = setTimeout(() => {
-      api
+      presentation
         .search(
           preferences.language === "pl" ? englishSearchAlias(query) : query,
           { category },
@@ -166,9 +166,10 @@ function SearchResults({
           onClick={() => {
             if (h.docType === "lesson")
               navigate({ page: "learn", lesson: h.id });
-            else if (h.docType === "exercise")
-              void openExercise(h.id, navigate, "practice");
-            else open(h.id);
+            else if (h.docType === "exercise") {
+              if (uiPreview()) navigate({ page: "practice" });
+              else void openExercise(h.id, navigate, "practice");
+            } else open(h.id);
           }}
         >
           <div className="grow">
@@ -255,7 +256,7 @@ function ArticleView({
   navigate: Navigate;
 }) {
   const { t, preferences } = useInterface();
-  const article = useLoad<ArticleDto>(() => api.article(id), [id]);
+  const article = useLoad<ArticleDto>(() => presentation.article(id), [id]);
   const a = article.data;
   if (article.error) return <ErrorNotice error={article.error} />;
   if (!a) return <Empty>{t("knowledge.loading")}</Empty>;

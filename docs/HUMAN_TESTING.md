@@ -3,6 +3,12 @@
 Routine testing needs no typed commands. Keep the terminal window of a BAT helper open
 while testing; it explains what runs and preserves errors.
 
+For UI testing on a host that blocks unsigned native builds, double-click
+**TEST_PLC_LAB_WEB.bat**. It opens the real browser UI with an explicit preview banner,
+PL/EN content and live updates, without starting PLC Lab.exe. PLC simulation remains
+native. See [local testing](LOCAL_TESTING.md) for capabilities, shutdown, troubleshooting
+and verified unsigned testing in a separate Windows Sandbox/VM.
+
 ## Start the release
 
 Double-click **PLC Lab.exe** in the repository root. It is the application itself (the

@@ -3,6 +3,7 @@ import { api, type LibraryDto, type ProjectListDto } from "@plc-lab/ipc";
 import { ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
 import type { Navigate } from "../route";
+import { presentation, uiPreview } from "../presentation";
 
 const AREAS = [
   {
@@ -41,13 +42,13 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   const { t } = useInterface();
   const data = useLoad(
     async () => ({
-      library: await api.library(),
-      projects: await api.projects(),
+      library: await presentation.library(),
+      projects: uiPreview() ? null : await api.projects(),
     }),
     [],
   );
   const library: LibraryDto | undefined = data.data?.library;
-  const projects: ProjectListDto | undefined = data.data?.projects;
+  const projects: ProjectListDto | null | undefined = data.data?.projects;
   const next = library?.lessons.find((l) => !l.completed) ?? null;
   const done = library?.lessons.filter((l) => l.completed).length ?? 0;
   const total = library?.lessons.length ?? 0;
@@ -134,9 +135,11 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
                 </span>
               </button>
             ) : (
-              <p className="muted">{t("home.empty")}</p>
+              <p className="muted">
+                {t(uiPreview() ? "preview.noProgress" : "home.empty")}
+              </p>
             )}
-            {total > 0 && (
+            {total > 0 && !uiPreview() && (
               <div>
                 <div
                   className="row muted"

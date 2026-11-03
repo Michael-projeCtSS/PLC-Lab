@@ -113,6 +113,7 @@ test("Windows plan runs checks, release tests, native, release and root PLC Lab.
       "release-native",
       "release-relocated",
       "release-bat",
+      "web-preview",
     ],
   );
   assert.equal(plan[0].args.at(-1), "npm.cmd run check");
@@ -129,6 +130,7 @@ test("Windows plan runs checks, release tests, native, release and root PLC Lab.
   assert.equal(plan[8].args.at(-1), "npm.cmd run test:desktop:release");
   assert.equal(plan[9].args.at(-1), "npm.cmd run test:release:relocated");
   assert.equal(plan[10].args.at(-1), "npm.cmd run test:release:bat");
+  assert.equal(plan[11].args.at(-1), "npm.cmd run test:web");
   const core = validationPlan("core", "linux");
   assert.deepEqual(
     core.map((item) => item.id),

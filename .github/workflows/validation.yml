@@ -67,6 +67,10 @@ jobs:
             artifacts/release-relocated-smoke/*.png
             artifacts/release-bat-smoke/native.log
             artifacts/release-bat-smoke/result.json
+            artifacts/web-preview-launcher/*.log
+            artifacts/web-preview-launcher/result.json
+            artifacts/web-preview-smoke/result.json
+            artifacts/web-preview-smoke/*.png
       - name: Publish the validated UNSIGNED Windows development build
         id: unsigned-windows
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

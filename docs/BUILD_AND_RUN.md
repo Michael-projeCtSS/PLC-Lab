@@ -13,7 +13,12 @@ build), not a launcher, and it starts no other executable (ADR-0030).
 | `RUN_PLC_LAB.bat` (root)    | Optional fallback that only starts `PLC Lab.exe` next to it          |
 | `BUILD_PLC_LAB_RELEASE.bat` | Validates, builds, signs, verifies and stages the production release |
 | `RUN_PLC_LAB_DEV.bat`       | Development application with hot reload (`npm run dev`)              |
+| `TEST_PLC_LAB_WEB.bat`      | Browser UI preview with live updates; no native runtime or EXE       |
 | `RUN_ALL_CHECKS.bat`        | Complete validation (`npm run validate`)                             |
+
+For a host that blocks unsigned EXEs, use the browser preview for UI work and a
+separate Sandbox/VM for native simulation. These workflows preserve host security
+and production signing: [local testing guide](LOCAL_TESTING.md).
 
 `PLC Lab.exe` resolves everything relative to its own location, so it works when started
 from Explorer, CMD or PowerShell, from any working directory, from a folder whose path
