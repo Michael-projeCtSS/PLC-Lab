@@ -12,7 +12,7 @@ use plc_types::{
     function_blocks::{FunctionBlockKind, ParameterDirection, StandardFunctionBlock},
     identity::{FunctionBlockInstanceId, SymbolId},
     source::{SourceMap, SourceRef},
-    symbols::{Scope, VariableCategory},
+    symbols::{Retention, Scope, SystemVariable, VariableCategory},
 };
 use std::collections::BTreeMap;
 
@@ -27,6 +27,11 @@ pub enum MemoryRole {
 pub(crate) struct Slot {
     pub(crate) role: MemoryRole,
     pub(crate) plc_type: PlcType,
+    /// The value a start initializes the cell with (ADR-0038).
+    pub(crate) initial: PlcValue,
+    pub(crate) retention: Retention,
+    /// Supplied by the runtime before every scan; programs only read it.
+    pub(crate) system: Option<SystemVariable>,
 }
 
 #[derive(Debug)]
@@ -111,6 +116,9 @@ pub fn lower(validated: &ValidatedProgram<'_>) -> Result<ExecutionPlan, Lowering
             Slot {
                 role,
                 plc_type: symbol.plc_type(),
+                initial: symbol.initial_value(),
+                retention: symbol.retention(),
+                system: symbol.system(),
             },
         );
     }

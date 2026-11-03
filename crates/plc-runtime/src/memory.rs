@@ -2,7 +2,11 @@ use crate::{
     errors::{InputError, InternalError},
     plan::{MemoryRole, Slot},
 };
-use plc_types::{PlcValue, identity::SymbolId};
+use plc_types::{
+    PlcValue,
+    identity::SymbolId,
+    symbols::{Retention, SystemVariable},
+};
 use std::collections::BTreeMap;
 pub(crate) type Values = BTreeMap<SymbolId, PlcValue>;
 
@@ -22,7 +26,10 @@ impl Memory {
         let mut committed = Values::new();
         let mut outputs = Values::new();
         for (id, slot) in layout {
-            let value = slot.plc_type.default_value();
+            let value = match slot.role {
+                MemoryRole::ExternalInput => slot.plc_type.default_value(),
+                _ => slot.initial,
+            };
             match slot.role {
                 MemoryRole::ExternalInput => {
                     inputs.insert(*id, value);
@@ -63,11 +70,41 @@ impl Memory {
         self.staged_inputs.insert(id, value);
         Ok(())
     }
-    pub(crate) fn begin_scan(&mut self) -> WorkingState {
+    /// Warm initialization: non-retained cells return to their initial values, retained
+    /// cells keep theirs; the input images are rebuilt and sampled again (ADR-0038).
+    pub(crate) fn warm(&mut self, layout: &BTreeMap<SymbolId, Slot>) {
+        let mut fresh = Self::new(layout);
+        for (id, slot) in layout {
+            if slot.retention == Retention::Retained
+                && let Some(value) = self.committed.get(id)
+            {
+                fresh.committed.insert(*id, *value);
+            }
+        }
+        *self = fresh;
+    }
+    /// Retained cells of the layout.
+    pub(crate) fn retained(layout: &BTreeMap<SymbolId, Slot>) -> usize {
+        let retained = layout
+            .values()
+            .filter(|s| s.retention == Retention::Retained);
+        retained.count()
+    }
+    pub(crate) fn begin_scan(
+        &mut self,
+        layout: &BTreeMap<SymbolId, Slot>,
+        first_scan: bool,
+    ) -> WorkingState {
         self.input_image = self.staged_inputs.clone();
+        let mut writable = self.committed.clone();
+        for (id, slot) in layout {
+            if slot.system == Some(SystemVariable::FirstScan) {
+                writable.insert(*id, PlcValue::Bool(first_scan));
+            }
+        }
         WorkingState {
             inputs: self.input_image.clone(),
-            writable: self.committed.clone(),
+            writable,
         }
     }
     pub(crate) fn commit(

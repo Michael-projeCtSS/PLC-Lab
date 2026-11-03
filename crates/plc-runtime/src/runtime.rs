@@ -111,6 +111,17 @@ pub struct Runtime {
     state: RuntimeState,
     last_failure: Option<ScanError>,
     instances: InstanceStates,
+    /// The next executed scan is the first after a start (ADR-0038).
+    first_scan: bool,
+}
+
+/// How a start initializes program memory (ADR-0038).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StartKind {
+    /// Non-retained variables and every block instance are initialized; retained keep.
+    Warm,
+    /// Every variable, retained or not, and every block instance is initialized.
+    Cold,
 }
 impl Runtime {
     pub fn new(plan: ExecutionPlan, config: RuntimeConfig) -> Self {
@@ -125,7 +136,16 @@ impl Runtime {
             state: RuntimeState::Ready,
             last_failure: None,
             instances,
+            first_scan: true,
         }
+    }
+    /// Whether the next executed scan is the first after a start.
+    pub fn first_scan_pending(&self) -> bool {
+        self.first_scan
+    }
+    /// Variables of the program that a warm start keeps.
+    pub fn retained_variables(&self) -> usize {
+        Memory::retained(&self.plan.layout)
     }
     pub fn state(&self) -> RuntimeState {
         self.state
@@ -171,7 +191,7 @@ impl Runtime {
         }
     }
     fn scan_transaction(&mut self) -> Result<u64, ScanError> {
-        let mut working = self.memory.begin_scan();
+        let mut working = self.memory.begin_scan(&self.plan.layout, self.first_scan);
         let mut working_instances = self.instances.clone();
         let operations = Executor::new(
             &self.plan,
@@ -198,16 +218,26 @@ impl Runtime {
         self.instances = working_instances;
         self.completed_scans = next_count;
         self.clock = next_clock;
+        self.first_scan = false;
         Ok(operations)
     }
     /// Reinitialize all images, fault, count, and time; preserve plan/configuration.
     pub fn reset(&mut self) {
-        self.memory = Memory::new(&self.plan.layout);
+        self.start(StartKind::Cold);
+        self.state = RuntimeState::Ready;
+        self.last_failure = None;
+    }
+    /// The one initialization of a start: memory by kind, every block instance, the
+    /// program clock and the scan count; the next executed scan is a first scan.
+    pub fn start(&mut self, kind: StartKind) {
+        match kind {
+            StartKind::Warm => self.memory.warm(&self.plan.layout),
+            StartKind::Cold => self.memory = Memory::new(&self.plan.layout),
+        }
         self.instances = initial_states(&self.plan.instances);
         self.clock = SimulationClock::new();
         self.completed_scans = 0;
-        self.state = RuntimeState::Ready;
-        self.last_failure = None;
+        self.first_scan = true;
     }
 }
 

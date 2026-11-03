@@ -13,6 +13,6 @@ pub use errors::{
 };
 pub use function_blocks::FunctionBlockStateSnapshot;
 pub use plan::{ExecutionPlan, MemoryRole, lower};
-pub use runtime::{Runtime, RuntimeConfig, RuntimeSnapshot, RuntimeState, ScanResult};
+pub use runtime::{Runtime, RuntimeConfig, RuntimeSnapshot, RuntimeState, ScanResult, StartKind};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
