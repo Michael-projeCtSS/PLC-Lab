@@ -1,0 +1,68 @@
+{
+  "id": "lesson.first-scan",
+  "number": 25,
+  "title": "The first scan and a safe start",
+  "summary": "Use FIRST_SCAN to bring a process into a safe initial state after every start, while production data survives.",
+  "level": "intermediate",
+  "minutes": 20,
+  "objectives": [
+    "Explain when FIRST_SCAN is TRUE",
+    "Write startup logic that waits for the operator",
+    "Tell which data may resume and which must start safe"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Exactly one scan",
+      "body": "`FIRST_SCAN` is TRUE during the first program scan after each start and FALSE afterwards. STOP, a paused simulation and monitoring do not change it; only an executed scan does. The toolbar shows when a first scan is pending."
+    },
+    {
+      "type": "visual",
+      "heading": "A start in time",
+      "body": "The flag belongs to one scan.",
+      "diagram": "  STOP ---> start (warm or cold) ---> scan 1 ---> scan 2 ---> scan 3\n                                      FIRST_SCAN  FALSE      FALSE\n                                      = TRUE"
+    },
+    {
+      "type": "example",
+      "heading": "A worked example",
+      "body": "A tank was filling when the PLC restarted. The fill request was retentive, so the inlet opened again by itself. With `IF FIRST_SCAN THEN Filling := FALSE; END_IF;` the inlet stays closed after every start until the operator presses Start; the retentive batch count still survives a warm restart."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Making everything non-retentive to get a safe start. The start is safe, but the production data is lost. Decide variable by variable."
+    },
+    {
+      "type": "task",
+      "heading": "Try it",
+      "body": "Open the safe start exercise and make the startup safe without losing the batch count.",
+      "exercise": "ex.safe-startup"
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "The PLC is in STOP for a minute, then set to RUN. In which scan is FIRST_SCAN TRUE?",
+      "options": [
+        "In every scan of the first second",
+        "In the first scan after the start only",
+        "Never, because STOP to RUN is not a restart"
+      ],
+      "answer": 1,
+      "explanation": "STOP to RUN is a warm start; FIRST_SCAN is TRUE in its first scan only."
+    },
+    {
+      "question": "Which value should usually not resume after a restart?",
+      "options": [
+        "The number of batches made today",
+        "A request to keep a valve open",
+        "A recipe setpoint"
+      ],
+      "answer": 1,
+      "explanation": "An actuator command may be unsafe after the plant has changed; it should wait for the operator."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.plc-startup",
+    "fundamentals.interlocks"
+  ]
+}

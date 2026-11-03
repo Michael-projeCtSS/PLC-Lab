@@ -1157,6 +1157,238 @@
       ]
     },
     {
+      "id": "ex.retentive-counter",
+      "file": "exercises/ex-retentive-counter.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Retentive part counter",
+          "text": "Retencyjny licznik detali"
+        },
+        {
+          "path": "summary",
+          "source": "A part counter must keep the shift count when the PLC makes a warm restart, but a cold restart starts a new shift at zero. Make the right variable retentive.",
+          "text": "Licznik detali musi zachować stan zmiany, gdy PLC wykona restart ciepły, ale restart zimny rozpoczyna nową zmianę od zera. Ustaw retencję właściwej zmiennej."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Declare a retentive variable with VAR RETAIN",
+          "text": "Zadeklarować zmienną retencyjną przez VAR RETAIN"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Predict what a warm and a cold restart do to retentive and non-retentive data",
+          "text": "Przewidzieć, co restart ciepły i zimny robi z danymi retencyjnymi i nieretencyjnymi"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Verify retention with the online variable detail and the diagnostic buffer",
+          "text": "Sprawdzić retencję w szczegółach zmiennej online i w buforze diagnostycznym"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Build and load the program, set the PLC to RUN and let the proximity sensor see a few parts.",
+          "text": "Zbuduj i załaduj program, przełącz PLC na RUN i pozwól czujnikowi zbliżeniowemu wykryć kilka detali."
+        },
+        {
+          "path": "instructions.1",
+          "source": "In Advanced mode, make a warm restart. Watch Count in the online variable detail: with the starter program it starts again from 0.",
+          "text": "W trybie zaawansowanym wykonaj restart ciepły. Obserwuj Count w szczegółach zmiennej online: w programie startowym licznik zaczyna znów od 0."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Move Count into a VAR RETAIN section, load again and repeat: the count must survive the warm restart.",
+          "text": "Przenieś Count do sekcji VAR RETAIN, załaduj ponownie i powtórz: licznik musi przetrwać restart ciepły."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Make a cold restart and check that the count starts again from its initial value. Then run Check.",
+          "text": "Wykonaj restart zimny i sprawdź, że licznik zaczyna znów od wartości początkowej. Następnie uruchom sprawdzanie."
+        },
+        {
+          "path": "hints.0",
+          "source": "A warm restart keeps only variables declared in VAR RETAIN; everything else returns to its initial value.",
+          "text": "Restart ciepły zachowuje tylko zmienne zadeklarowane w VAR RETAIN; wszystkie pozostałe wracają do wartości początkowych."
+        },
+        {
+          "path": "hints.1",
+          "source": "Function block instances such as R_TRIG are not retentive in PLC Lab. Retain the counted value, not the block.",
+          "text": "Instancje bloków funkcyjnych, takie jak R_TRIG, nie są w PLC Lab retencyjne. Zachowuj zliczoną wartość, nie blok."
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "Parts, a warm restart, one more part, a cold restart",
+          "text": "Detale, restart ciepły, kolejny detal, restart zimny"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "Two parts are counted",
+          "text": "Zliczone są dwa detale"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "Count was not 2 after two parts. Count one part per rising edge of PartPresent.",
+          "text": "Po dwóch detalach Count nie miał wartości 2. Zliczaj jeden detal przy każdym zboczu narastającym PartPresent."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "The count survives a warm restart",
+          "text": "Licznik przetrwa restart ciepły"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "After the warm restart and one more part Count was not 3: the count was not kept. Declare it in VAR RETAIN.",
+          "text": "Po restarcie ciepłym i kolejnym detalu Count nie miał wartości 3: stan licznika nie został zachowany. Zadeklaruj go w VAR RETAIN."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "Lamp H1 shows three parts",
+          "text": "Lampka H1 pokazuje trzy detale"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "Lamp1 was off with three parts counted.",
+          "text": "Lamp1 nie świeciła przy trzech zliczonych detalach."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "A cold restart starts a new shift",
+          "text": "Restart zimny rozpoczyna nową zmianę"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "After the cold restart Count was not back to its initial value 0.",
+          "text": "Po restarcie zimnym Count nie wrócił do wartości początkowej 0."
+        }
+      ]
+    },
+    {
+      "id": "ex.safe-startup",
+      "file": "exercises/ex-safe-startup.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Safe start after a restart",
+          "text": "Bezpieczny start po restarcie"
+        },
+        {
+          "path": "summary",
+          "source": "A filling interrupted by a restart reopened the inlet valve by itself, because the fill request was retentive. After every start the inlet must stay closed until the operator presses Start again, while the batch count survives a warm restart.",
+          "text": "Napełnianie przerwane restartem samo otworzyło zawór dopływowy, bo żądanie napełniania było retencyjne. Po każdym starcie zawór musi pozostać zamknięty, dopóki operator nie naciśnie Start, a licznik partii musi przetrwać restart ciepły."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Recognize a retentive actuator command as an unsafe start",
+          "text": "Rozpoznać retencyjne polecenie dla elementu wykonawczego jako niebezpieczny start"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Use FIRST_SCAN to bring a sequence into a safe initial state",
+          "text": "Użyć FIRST_SCAN, aby wprowadzić sekwencję w bezpieczny stan początkowy"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Keep production data retentive while commands start safe",
+          "text": "Zachować retencję danych produkcyjnych, a polecenia startować bezpiecznie"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Build and load the program, set the PLC to RUN and press Start: the tank fills.",
+          "text": "Zbuduj i załaduj program, przełącz PLC na RUN i naciśnij Start: zbiornik się napełnia."
+        },
+        {
+          "path": "instructions.1",
+          "source": "While it fills, make a warm restart in Advanced mode. Watch the inlet valve: with the starter program it opens again by itself.",
+          "text": "W trakcie napełniania wykonaj restart ciepły w trybie zaawansowanym. Obserwuj zawór dopływowy: w programie startowym otwiera się ponownie sam."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Change the startup behavior so that after every start the inlet stays closed until Start is pressed, and keep Batches retentive.",
+          "text": "Zmień zachowanie przy starcie tak, aby po każdym starcie zawór pozostawał zamknięty do naciśnięcia Start, a Batches pozostała retencyjna."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Verify with a warm and a cold restart, check the diagnostic buffer for the start and first-scan events, then run Check.",
+          "text": "Sprawdź działanie restartem ciepłym i zimnym, odszukaj w buforze diagnostycznym zdarzenia startu i pierwszego cyklu, a następnie uruchom sprawdzanie."
+        },
+        {
+          "path": "hints.0",
+          "source": "FIRST_SCAN is TRUE during exactly the first scan after each start.",
+          "text": "FIRST_SCAN ma wartość TRUE w dokładnie pierwszym cyklu po każdym starcie."
+        },
+        {
+          "path": "hints.1",
+          "source": "Not every retentive value is safe to resume: a count may survive a restart, an actuator command usually must not.",
+          "text": "Nie każdą wartość retencyjną można bezpiecznie wznowić: licznik może przetrwać restart, polecenie dla elementu wykonawczego zwykle nie."
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "A filling interrupted by a warm restart, a full batch, then restarts",
+          "text": "Napełnianie przerwane restartem ciepłym, pełna partia, potem restarty"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "Start opens the inlet",
+          "text": "Start otwiera zawór dopływowy"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "InletValve did not open after Start.",
+          "text": "InletValve nie otworzył się po naciśnięciu Start."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "The inlet stays closed after the restart",
+          "text": "Zawór pozostaje zamknięty po restarcie"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "InletValve opened again right after the warm restart: the retained fill request resumed the filling.",
+          "text": "InletValve otworzył się ponownie zaraz po restarcie ciepłym: retencyjne żądanie napełniania wznowiło napełnianie."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "The inlet waits for the operator",
+          "text": "Zawór czeka na operatora"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "InletValve opened before Start was pressed again.",
+          "text": "InletValve otworzył się, zanim ponownie naciśnięto Start."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "Start fills again after the restart",
+          "text": "Start po restarcie ponownie uruchamia napełnianie"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "InletValve stayed closed after Start was pressed again.",
+          "text": "InletValve pozostał zamknięty po ponownym naciśnięciu Start."
+        },
+        {
+          "path": "criteria.4.title",
+          "source": "The batch count survives a warm restart",
+          "text": "Licznik partii przetrwa restart ciepły"
+        },
+        {
+          "path": "criteria.4.onFail",
+          "source": "Batches was not 1 after the warm restart: keep the batch count retentive.",
+          "text": "Po restarcie ciepłym Batches nie miała wartości 1: zachowaj retencję licznika partii."
+        },
+        {
+          "path": "criteria.5.title",
+          "source": "A cold restart starts a new shift",
+          "text": "Restart zimny rozpoczyna nową zmianę"
+        },
+        {
+          "path": "criteria.5.onFail",
+          "source": "After the cold restart Batches was not back to its initial value 0.",
+          "text": "Po restarcie zimnym Batches nie wróciła do wartości początkowej 0."
+        }
+      ]
+    },
+    {
       "id": "ex.tank-analog-scaling",
       "file": "exercises/ex-tank-analog-scaling.json",
       "fields": [
@@ -1577,6 +1809,82 @@
           "path": "sections.4.body",
           "source": "1. Read the alarm: source, priority, message and time.\n2. Acknowledge it, so others know it is being handled.\n3. Inspect the evidence: the measured value, the inputs and outputs, the diagnostic buffer.\n4. Find and correct the cause.\n5. Verify that the alarm returns to normal and that the process behaves as intended.",
           "text": "1. Odczytaj alarm: źródło, priorytet, komunikat i czas.\n2. Potwierdź go, aby inni wiedzieli, że ktoś się nim zajmuje.\n3. Sprawdź dowody: wartość mierzoną, wejścia i wyjścia, bufor diagnostyczny.\n4. Znajdź i usuń przyczynę.\n5. Sprawdź, czy alarm wraca do stanu normalnego i czy proces działa zgodnie z założeniami."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.plc-startup",
+      "file": "fundamentals/plc-startup.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "PLC startup, restart and retentive memory",
+          "text": "Start PLC, restart i pamięć retencyjna"
+        },
+        {
+          "path": "summary",
+          "source": "What a PLC does to its program data when it starts: warm and cold restarts, retentive variables, the first scan and why a start must be safe.",
+          "text": "Co PLC robi z danymi programu przy starcie: restart ciepły i zimny, zmienne retencyjne, pierwszy cykl i dlaczego start musi być bezpieczny."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Every start initializes memory",
+          "text": "Każdy start inicjalizuje pamięć"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "When a PLC enters RUN, it first prepares its program data. In PLC Lab's generic model there are two kinds of start. A **warm start** gives every non-retentive variable and every function block its initial value and keeps **retentive** variables. A **cold start** gives every variable, retentive ones included, its initial value. Switching from STOP to RUN is a warm start; a newly downloaded program starts cold.",
+          "text": "Gdy PLC przechodzi w RUN, najpierw przygotowuje dane programu. W ogólnym modelu PLC Lab są dwa rodzaje startu. **Start ciepły** nadaje wszystkim zmiennym nieretencyjnym i blokom funkcyjnym wartości początkowe, a zmienne **retencyjne** zachowuje. **Start zimny** nadaje wartości początkowe wszystkim zmiennym, także retencyjnym. Przełączenie ze STOP na RUN jest startem ciepłym; nowo załadowany program startuje na zimno."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Operations",
+          "text": "Operacje"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "- **Warm restart**: the running CPU passes through STOP and starts warm.\n- **Cold restart**: the running CPU passes through STOP and starts cold.\n- **Memory reset**: all program data is initialized, the fault and every force are cleared; the next start is cold.\n- **Download**: a new program replaces the old one; it starts cold.\nA restart uses the program and configuration already in the CPU; it never downloads pending changes.",
+          "text": "- **Restart ciepły**: pracujący PLC przechodzi przez STOP i startuje na ciepło.\n- **Restart zimny**: pracujący PLC przechodzi przez STOP i startuje na zimno.\n- **Reset pamięci**: wszystkie dane programu są inicjalizowane, błąd i wszystkie wymuszenia zostają skasowane; następny start jest zimny.\n- **Ładowanie programu**: nowy program zastępuje stary i startuje na zimno.\nRestart używa programu i konfiguracji, które już są w PLC; nigdy nie ładuje oczekujących zmian."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Retentive variables",
+          "text": "Zmienne retencyjne"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Declare variables that must survive a warm start in a `VAR RETAIN` section, for example a production count. Give them an initial value with `:=` if the default (0, FALSE) is not right. In PLC Lab only program variables of type BOOL, INT, REAL and TIME can be retentive; function block instances such as timers and counters always start again, so retain the value you need, not the block.",
+          "text": "Zmienne, które muszą przetrwać start ciepły, deklaruje się w sekcji `VAR RETAIN`, na przykład licznik produkcji. Jeśli wartość domyślna (0, FALSE) nie pasuje, nadaj wartość początkową przez `:=`. W PLC Lab retencyjne mogą być tylko zmienne programu typu BOOL, INT, REAL i TIME; instancje bloków funkcyjnych, takie jak timery i liczniki, zawsze startują od nowa, więc zachowuj potrzebną wartość, a nie blok."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "The first scan",
+          "text": "Pierwszy cykl"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "The system variable `FIRST_SCAN` is TRUE during exactly the first program scan after each start and FALSE in every other scan. Use it to bring a sequence into a defined, safe state: close valves, drop run requests, choose the initial step. STOP, a paused simulation or looking at the values do not use it up; only an executed scan does.",
+          "text": "Zmienna systemowa `FIRST_SCAN` ma wartość TRUE w dokładnie pierwszym cyklu programu po każdym starcie i FALSE we wszystkich pozostałych. Używaj jej, aby wprowadzić sekwencję w określony, bezpieczny stan: zamknąć zawory, skasować żądania pracy, wybrać krok początkowy. STOP, wstrzymana symulacja ani podgląd wartości jej nie zużywają; robi to tylko wykonany cykl."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "Safe start",
+          "text": "Bezpieczny start"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "Not every value is safe to resume. A count may survive a restart; an actuator command usually must not, because the plant may have changed while the PLC was stopped. Keep production data retentive and let commands start from a safe state that waits for the operator.",
+          "text": "Nie każdą wartość można bezpiecznie wznowić. Licznik może przetrwać restart; polecenie dla elementu wykonawczego zwykle nie, bo stan instalacji mógł się zmienić, gdy PLC był zatrzymany. Dane produkcyjne zachowuj jako retencyjne, a polecenia niech startują ze stanu bezpiecznego, który czeka na operatora."
+        },
+        {
+          "path": "sections.5.heading",
+          "source": "Real PLCs differ",
+          "text": "Rzeczywiste sterowniki różnią się"
+        },
+        {
+          "path": "sections.5.body",
+          "source": "PLC families differ in what STOP to RUN initializes, how retentive areas are configured, whether timers can be retentive and what outputs do in STOP. This is PLC Lab's generic educational model; check the documentation of the controller you work with.",
+          "text": "Rodziny sterowników różnią się tym, co inicjalizuje przejście ze STOP na RUN, jak konfiguruje się obszary retencyjne, czy timery mogą być retencyjne i co robią wyjścia w STOP. To jest ogólny model dydaktyczny PLC Lab; sprawdzaj dokumentację sterownika, z którym pracujesz."
         }
       ]
     },
@@ -4159,6 +4467,142 @@
       ]
     },
     {
+      "id": "lesson.first-scan",
+      "file": "lessons/lesson-25.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "The first scan and a safe start",
+          "text": "Pierwszy cykl i bezpieczny start"
+        },
+        {
+          "path": "summary",
+          "source": "Use FIRST_SCAN to bring a process into a safe initial state after every start, while production data survives.",
+          "text": "Użyj FIRST_SCAN, aby po każdym starcie wprowadzić proces w bezpieczny stan początkowy, zachowując dane produkcyjne."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Explain when FIRST_SCAN is TRUE",
+          "text": "Wyjaśnić, kiedy FIRST_SCAN ma wartość TRUE"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Write startup logic that waits for the operator",
+          "text": "Napisać logikę startową, która czeka na operatora"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Tell which data may resume and which must start safe",
+          "text": "Odróżnić dane, które mogą być wznowione, od tych, które muszą startować bezpiecznie"
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Exactly one scan",
+          "text": "Dokładnie jeden cykl"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "`FIRST_SCAN` is TRUE during the first program scan after each start and FALSE afterwards. STOP, a paused simulation and monitoring do not change it; only an executed scan does. The toolbar shows when a first scan is pending.",
+          "text": "`FIRST_SCAN` ma wartość TRUE w pierwszym cyklu programu po każdym starcie, a potem FALSE. STOP, wstrzymana symulacja i podgląd wartości tego nie zmieniają; zmienia to tylko wykonany cykl. Pasek narzędzi pokazuje, kiedy oczekuje pierwszy cykl."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "A start in time",
+          "text": "Start na osi czasu"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "The flag belongs to one scan.",
+          "text": "Znacznik dotyczy jednego cyklu."
+        },
+        {
+          "path": "sections.1.diagram",
+          "source": "  STOP ---> start (warm or cold) ---> scan 1 ---> scan 2 ---> scan 3\n                                      FIRST_SCAN  FALSE      FALSE\n                                      = TRUE",
+          "text": "  STOP ---> start (ciepły lub zimny) ---> cykl 1 ---> cykl 2 ---> cykl 3\n                                         FIRST_SCAN  FALSE      FALSE\n                                         = TRUE"
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "A worked example",
+          "text": "Przykład"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "A tank was filling when the PLC restarted. The fill request was retentive, so the inlet opened again by itself. With `IF FIRST_SCAN THEN Filling := FALSE; END_IF;` the inlet stays closed after every start until the operator presses Start; the retentive batch count still survives a warm restart.",
+          "text": "Zbiornik był napełniany, gdy PLC wykonał restart. Żądanie napełniania było retencyjne, więc zawór dopływowy otworzył się sam. Dzięki `IF FIRST_SCAN THEN Filling := FALSE; END_IF;` zawór pozostaje zamknięty po każdym starcie, dopóki operator nie naciśnie Start; retencyjny licznik partii nadal przetrwa restart ciepły."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Common mistake",
+          "text": "Typowy błąd"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "Making everything non-retentive to get a safe start. The start is safe, but the production data is lost. Decide variable by variable.",
+          "text": "Zrobienie wszystkich zmiennych nieretencyjnymi, aby uzyskać bezpieczny start. Start jest bezpieczny, ale dane produkcyjne przepadają. Decyduj osobno dla każdej zmiennej."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "Try it",
+          "text": "Spróbuj"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "Open the safe start exercise and make the startup safe without losing the batch count.",
+          "text": "Otwórz ćwiczenie z bezpiecznym startem i spraw, aby start był bezpieczny bez utraty licznika partii."
+        },
+        {
+          "path": "checkpoint.0.question",
+          "source": "The PLC is in STOP for a minute, then set to RUN. In which scan is FIRST_SCAN TRUE?",
+          "text": "PLC przez minutę jest w STOP, potem zostaje przełączony na RUN. W którym cyklu FIRST_SCAN ma wartość TRUE?"
+        },
+        {
+          "path": "checkpoint.0.options.0",
+          "source": "In every scan of the first second",
+          "text": "W każdym cyklu pierwszej sekundy"
+        },
+        {
+          "path": "checkpoint.0.options.1",
+          "source": "In the first scan after the start only",
+          "text": "Tylko w pierwszym cyklu po starcie"
+        },
+        {
+          "path": "checkpoint.0.options.2",
+          "source": "Never, because STOP to RUN is not a restart",
+          "text": "Nigdy, bo przejście ze STOP na RUN nie jest restartem"
+        },
+        {
+          "path": "checkpoint.0.explanation",
+          "source": "STOP to RUN is a warm start; FIRST_SCAN is TRUE in its first scan only.",
+          "text": "Przejście ze STOP na RUN to start ciepły; FIRST_SCAN ma wartość TRUE tylko w jego pierwszym cyklu."
+        },
+        {
+          "path": "checkpoint.1.question",
+          "source": "Which value should usually not resume after a restart?",
+          "text": "Która wartość zwykle nie powinna być wznowiona po restarcie?"
+        },
+        {
+          "path": "checkpoint.1.options.0",
+          "source": "The number of batches made today",
+          "text": "Liczba partii wykonanych dzisiaj"
+        },
+        {
+          "path": "checkpoint.1.options.1",
+          "source": "A request to keep a valve open",
+          "text": "Żądanie utrzymania otwartego zaworu"
+        },
+        {
+          "path": "checkpoint.1.options.2",
+          "source": "A recipe setpoint",
+          "text": "Wartość zadana receptury"
+        },
+        {
+          "path": "checkpoint.1.explanation",
+          "source": "An actuator command may be unsafe after the plant has changed; it should wait for the operator.",
+          "text": "Polecenie dla elementu wykonawczego może być niebezpieczne, gdy stan instalacji się zmienił; powinno czekać na operatora."
+        }
+      ]
+    },
+    {
       "id": "lesson.hardware-modules",
       "file": "lessons/lesson-15.json",
       "fields": [
@@ -5090,6 +5534,152 @@
           "path": "checkpoint.1.explanation",
           "source": "This gives stop priority.",
           "text": "Taki zapis zapewnia priorytet zatrzymania."
+        }
+      ]
+    },
+    {
+      "id": "lesson.restart-retention",
+      "file": "lessons/lesson-24.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Restarts and retentive memory",
+          "text": "Restarty i pamięć retencyjna"
+        },
+        {
+          "path": "summary",
+          "source": "Tell a warm restart from a cold restart and a memory reset, and keep exactly the data that must survive a start.",
+          "text": "Odróżnij restart ciepły od zimnego i od resetu pamięci, i zachowuj dokładnie te dane, które muszą przetrwać start."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Predict what warm and cold starts do to each variable",
+          "text": "Przewidzieć, co start ciepły i zimny robi z każdą zmienną"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Declare retentive variables with VAR RETAIN and initial values",
+          "text": "Deklarować zmienne retencyjne przez VAR RETAIN z wartościami początkowymi"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Check a restart in the online variable detail and the diagnostic buffer",
+          "text": "Sprawdzić restart w szczegółach zmiennej online i w buforze diagnostycznym"
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Two kinds of start",
+          "text": "Dwa rodzaje startu"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A **warm start** keeps retentive variables and initializes everything else; a **cold start** initializes everything. STOP to RUN and a warm restart start warm; a download, a memory reset and a cold restart lead to a cold start.",
+          "text": "**Start ciepły** zachowuje zmienne retencyjne i inicjalizuje całą resztę; **start zimny** inicjalizuje wszystko. Przejście ze STOP na RUN i restart ciepły to start ciepły; ładowanie programu, reset pamięci i restart zimny prowadzą do startu zimnego."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "What each start keeps",
+          "text": "Co zachowuje każdy start"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Read the table row by row.",
+          "text": "Czytaj tabelę wiersz po wierszu."
+        },
+        {
+          "path": "sections.1.diagram",
+          "source": "                      retentive (VAR RETAIN)   other variables   function blocks\n  warm start          kept                     initial value     start again\n  cold start          initial value            initial value     start again\n  memory reset        initial value            initial value     start again",
+          "text": "                      retencyjne (VAR RETAIN)  pozostałe zmienne  bloki funkcyjne\n  start ciepły        zachowane                wart. początkowa   startują od nowa\n  start zimny         wart. początkowa         wart. początkowa   startują od nowa\n  reset pamięci       wart. początkowa         wart. początkowa   startują od nowa"
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Declaring retention",
+          "text": "Deklarowanie retencji"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Put a variable into `VAR RETAIN` to keep it over a warm start: `VAR RETAIN Count : INT := 0; END_VAR`. The initializer `:= 0` is the value both starts use when they initialize it. Inputs, outputs and function block instances cannot be retentive in PLC Lab.",
+          "text": "Umieść zmienną w `VAR RETAIN`, aby przetrwała start ciepły: `VAR RETAIN Count : INT := 0; END_VAR`. Inicjalizator `:= 0` to wartość, którą oba starty nadają przy inicjalizacji. Wejścia, wyjścia i instancje bloków funkcyjnych nie mogą być w PLC Lab retencyjne."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "A worked example",
+          "text": "Przykład"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "A part counter counts 2 parts. After a warm restart the retentive Count is still 2, the next part makes it 3. After a cold restart Count is 0 again: a new shift. The diagnostic buffer shows a warm start with one retentive variable kept, then a cold start.",
+          "text": "Licznik zlicza 2 detale. Po restarcie ciepłym retencyjna zmienna Count nadal ma wartość 2, kolejny detal daje 3. Po restarcie zimnym Count znów ma wartość 0: nowa zmiana. Bufor diagnostyczny pokazuje start ciepły z jedną zachowaną zmienną retencyjną, a potem start zimny."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "Common mistake",
+          "text": "Typowy błąd"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "Declaring the CTU instance retentive to keep its count. Blocks start again on every start in PLC Lab; copy the count into a retentive variable or count with an INT.",
+          "text": "Deklarowanie instancji CTU jako retencyjnej, aby zachować jej stan licznika. W PLC Lab bloki startują od nowa przy każdym starcie; skopiuj wartość licznika do zmiennej retencyjnej albo zliczaj w zmiennej INT."
+        },
+        {
+          "path": "sections.5.heading",
+          "source": "Try it",
+          "text": "Spróbuj"
+        },
+        {
+          "path": "sections.5.body",
+          "source": "Open the retentive counter exercise, make the count survive a warm restart and check that a cold restart starts a new shift.",
+          "text": "Otwórz ćwiczenie z licznikiem retencyjnym, spraw, aby licznik przetrwał restart ciepły, i sprawdź, że restart zimny rozpoczyna nową zmianę."
+        },
+        {
+          "path": "checkpoint.0.question",
+          "source": "A variable is declared in VAR RETAIN with := 5 and has the value 9. What is it after a warm restart, and after a cold restart?",
+          "text": "Zmienna zadeklarowana w VAR RETAIN z := 5 ma wartość 9. Jaka będzie po restarcie ciepłym, a jaka po zimnym?"
+        },
+        {
+          "path": "checkpoint.0.options.0",
+          "source": "9 and 9",
+          "text": "9 i 9"
+        },
+        {
+          "path": "checkpoint.0.options.1",
+          "source": "9 and 5",
+          "text": "9 i 5"
+        },
+        {
+          "path": "checkpoint.0.options.2",
+          "source": "5 and 5",
+          "text": "5 i 5"
+        },
+        {
+          "path": "checkpoint.0.explanation",
+          "source": "A warm start keeps a retentive variable; a cold start gives it its initial value 5.",
+          "text": "Start ciepły zachowuje zmienną retencyjną; start zimny nadaje jej wartość początkową 5."
+        },
+        {
+          "path": "checkpoint.1.question",
+          "source": "Which operation never downloads the changes you made in the editor?",
+          "text": "Która operacja nigdy nie ładuje zmian wprowadzonych w edytorze?"
+        },
+        {
+          "path": "checkpoint.1.options.0",
+          "source": "Build & Load",
+          "text": "Build & Load"
+        },
+        {
+          "path": "checkpoint.1.options.1",
+          "source": "Warm restart",
+          "text": "Restart ciepły"
+        },
+        {
+          "path": "checkpoint.1.options.2",
+          "source": "Download",
+          "text": "Ładowanie programu"
+        },
+        {
+          "path": "checkpoint.1.explanation",
+          "source": "A restart uses the program and configuration already in the CPU.",
+          "text": "Restart używa programu i konfiguracji, które już są w PLC."
         }
       ]
     },

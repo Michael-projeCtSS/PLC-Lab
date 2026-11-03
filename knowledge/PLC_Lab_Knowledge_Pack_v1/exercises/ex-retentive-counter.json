@@ -1,0 +1,212 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.retentive-counter",
+  "revision": 1,
+  "title": "Retentive part counter",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "A part counter must keep the shift count when the PLC makes a warm restart, but a cold restart starts a new shift at zero. Make the right variable retentive.",
+  "objectives": [
+    "Declare a retentive variable with VAR RETAIN",
+    "Predict what a warm and a cold restart do to retentive and non-retentive data",
+    "Verify retention with the online variable detail and the diagnostic buffer"
+  ],
+  "estimatedMinutes": 15,
+  "scene": "scene.io-basics",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    Button1 : BOOL; (* Pushbutton S1: starts a new shift count. *)\n    Button2 : BOOL; (* Pushbutton S2 (unused). *)\n    AutoMode : BOOL; (* Selector S3 in position AUTO (unused). *)\n    PartPresent : BOOL; (* Proximity sensor B1 detects a part. *)\nEND_VAR\nVAR_OUTPUT\n    Lamp1 : BOOL; (* Green lamp H1: three or more parts counted. *)\n    Lamp2 : BOOL; (* Amber lamp H2 (unused). *)\n    Lamp3 : BOOL; (* Red lamp H3 (unused). *)\nEND_VAR\nVAR\n    Count : INT := 0; (* Parts counted in this shift. *)\n    Edge : R_TRIG;\nEND_VAR\n\n(* The shift count must survive a warm restart; a cold restart starts a new shift. *)\nEdge(CLK := PartPresent);\nIF Edge.Q THEN\n    Count := Count + 1;\nEND_IF;\nIF Button1 THEN\n    Count := 0;\nEND_IF;\nLamp1 := Count >= 3;\nLamp2 := FALSE;\nLamp3 := FALSE;\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "Button1",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "PartPresent",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Lamp1",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Build and load the program, set the PLC to RUN and let the proximity sensor see a few parts.",
+    "In Advanced mode, make a warm restart. Watch Count in the online variable detail: with the starter program it starts again from 0.",
+    "Move Count into a VAR RETAIN section, load again and repeat: the count must survive the warm restart.",
+    "Make a cold restart and check that the count starts again from its initial value. Then run Check."
+  ],
+  "hints": [
+    "A warm restart keeps only variables declared in VAR RETAIN; everything else returns to its initial value.",
+    "Function block instances such as R_TRIG are not retentive in PLC Lab. Retain the counted value, not the block."
+  ],
+  "evidence": [
+    {
+      "name": "count",
+      "source": {
+        "type": "plcTag",
+        "tag": "Count"
+      }
+    },
+    {
+      "name": "lamp1",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp1"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "shift",
+      "title": "Parts, a warm restart, one more part, a cold restart",
+      "durationMs": 4200,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1100,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 1400,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "warmRestart"
+          }
+        },
+        {
+          "atMs": 2400,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2700,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 3400,
+          "action": {
+            "type": "coldRestart"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "counts",
+      "title": "Two parts are counted",
+      "points": 20,
+      "scenario": "shift",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 1800,
+        "condition": {
+          "type": "compare",
+          "signal": "count",
+          "layer": "outputs",
+          "op": "eq",
+          "value": 2
+        }
+      },
+      "onFail": "Count was not 2 after two parts. Count one part per rising edge of PartPresent."
+    },
+    {
+      "id": "kept",
+      "title": "The count survives a warm restart",
+      "points": 40,
+      "scenario": "shift",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3100,
+        "condition": {
+          "type": "compare",
+          "signal": "count",
+          "layer": "outputs",
+          "op": "eq",
+          "value": 3
+        }
+      },
+      "onFail": "After the warm restart and one more part Count was not 3: the count was not kept. Declare it in VAR RETAIN."
+    },
+    {
+      "id": "lamp",
+      "title": "Lamp H1 shows three parts",
+      "points": 10,
+      "scenario": "shift",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3100,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp1",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp1 was off with three parts counted."
+    },
+    {
+      "id": "cold",
+      "title": "A cold restart starts a new shift",
+      "points": 30,
+      "scenario": "shift",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3900,
+        "condition": {
+          "type": "compare",
+          "signal": "count",
+          "layer": "outputs",
+          "op": "eq",
+          "value": 0
+        }
+      },
+      "onFail": "After the cold restart Count was not back to its initial value 0."
+    }
+  ],
+  "curriculumOrder": 11
+}

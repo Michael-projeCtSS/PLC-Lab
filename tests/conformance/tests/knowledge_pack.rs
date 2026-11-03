@@ -316,3 +316,49 @@ fn troubleshooting_exercises_fail_until_repaired_and_pass_afterwards() {
         assert!(lib.exercise(id).is_some(), "{id}");
     }
 }
+
+/// Failed criterion ids of a program in an exercise's isolated assessment.
+fn failed(id: &str, program: &str) -> Vec<String> {
+    let lib = library();
+    let e = lib.exercise(id).unwrap();
+    let scene = lib.scene(e.scene.as_str()).unwrap();
+    let profile = lib.profile("generic.iec").unwrap();
+    let station = scene.reference_station.clone();
+    match assess(e, scene, &station, &profile, program, &[], None).unwrap() {
+        AssessmentOutcome::Graded(r) => r
+            .criteria
+            .iter()
+            .filter(|c| !c.passed)
+            .map(|c| c.id.clone())
+            .collect(),
+        other => panic!("{id}: {other:?}"),
+    }
+}
+
+#[test]
+fn restart_labs_are_graded_by_their_behavior_over_real_restarts() {
+    let lib = library();
+    // Without VAR RETAIN the count is lost by the warm restart; the cold restart still resets.
+    let counter = &lib
+        .exercise("ex.retentive-counter")
+        .unwrap()
+        .starter_program;
+    assert_eq!(failed("ex.retentive-counter", counter), ["kept", "lamp"]);
+    // The starter resumes the retained fill request after the restart.
+    let startup = &lib.exercise("ex.safe-startup").unwrap().starter_program;
+    let unsafe_start = failed("ex.safe-startup", startup);
+    assert!(
+        unsafe_start.contains(&"safe-start".to_string()),
+        "{unsafe_start:?}"
+    );
+    // Another correct fix: the fill request is not retentive, the batch count is.
+    let moved = startup.replace(
+        "VAR RETAIN\n    Filling : BOOL; (* Fill request. *)\n    Batches",
+        "VAR\n    Filling : BOOL; (* Fill request. *)\nEND_VAR\nVAR RETAIN\n    Batches",
+    );
+    assert_ne!(&moved, startup);
+    assert!(failed("ex.safe-startup", &moved).is_empty());
+    // Making everything non-retentive starts safe but loses the batch count.
+    let nothing_kept = startup.replace("VAR RETAIN", "VAR");
+    assert_eq!(failed("ex.safe-startup", &nothing_kept), ["batch-kept"]);
+}

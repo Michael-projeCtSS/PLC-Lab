@@ -3,21 +3,21 @@
   "coverage": [
     {
       "group": "exercises",
-      "total": 47,
-      "catalogue": 47,
-      "complete": 18
+      "total": 49,
+      "catalogue": 49,
+      "complete": 20
     },
     {
       "group": "lessons",
-      "total": 23,
-      "catalogue": 23,
-      "complete": 23
+      "total": 25,
+      "catalogue": 25,
+      "complete": 25
     },
     {
       "group": "fundamentals",
-      "total": 24,
-      "catalogue": 1,
-      "complete": 1
+      "total": 25,
+      "catalogue": 2,
+      "complete": 2
     },
     {
       "group": "instructions",

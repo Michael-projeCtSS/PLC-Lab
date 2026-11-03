@@ -1,0 +1,50 @@
+{
+  "id": "fundamentals.plc-startup",
+  "kind": "topic",
+  "title": "PLC startup, restart and retentive memory",
+  "summary": "What a PLC does to its program data when it starts: warm and cold restarts, retentive variables, the first scan and why a start must be safe.",
+  "tags": [
+    "startup",
+    "restart",
+    "warm restart",
+    "cold restart",
+    "retain",
+    "first scan",
+    "memory reset"
+  ],
+  "sections": [
+    {
+      "heading": "Every start initializes memory",
+      "body": "When a PLC enters RUN, it first prepares its program data. In PLC Lab's generic model there are two kinds of start. A **warm start** gives every non-retentive variable and every function block its initial value and keeps **retentive** variables. A **cold start** gives every variable, retentive ones included, its initial value. Switching from STOP to RUN is a warm start; a newly downloaded program starts cold."
+    },
+    {
+      "heading": "Operations",
+      "body": "- **Warm restart**: the running CPU passes through STOP and starts warm.\n- **Cold restart**: the running CPU passes through STOP and starts cold.\n- **Memory reset**: all program data is initialized, the fault and every force are cleared; the next start is cold.\n- **Download**: a new program replaces the old one; it starts cold.\nA restart uses the program and configuration already in the CPU; it never downloads pending changes."
+    },
+    {
+      "heading": "Retentive variables",
+      "body": "Declare variables that must survive a warm start in a `VAR RETAIN` section, for example a production count. Give them an initial value with `:=` if the default (0, FALSE) is not right. In PLC Lab only program variables of type BOOL, INT, REAL and TIME can be retentive; function block instances such as timers and counters always start again, so retain the value you need, not the block."
+    },
+    {
+      "heading": "The first scan",
+      "body": "The system variable `FIRST_SCAN` is TRUE during exactly the first program scan after each start and FALSE in every other scan. Use it to bring a sequence into a defined, safe state: close valves, drop run requests, choose the initial step. STOP, a paused simulation or looking at the values do not use it up; only an executed scan does."
+    },
+    {
+      "heading": "Safe start",
+      "body": "Not every value is safe to resume. A count may survive a restart; an actuator command usually must not, because the plant may have changed while the PLC was stopped. Keep production data retentive and let commands start from a safe state that waits for the operator."
+    },
+    {
+      "heading": "Real PLCs differ",
+      "body": "PLC families differ in what STOP to RUN initializes, how retentive areas are configured, whether timers can be retentive and what outputs do in STOP. This is PLC Lab's generic educational model; check the documentation of the controller you work with."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.scan-cycle",
+    "fundamentals.plc-architecture",
+    "fundamentals.industrial-alarms"
+  ]
+}

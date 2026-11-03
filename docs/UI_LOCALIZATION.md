@@ -13,12 +13,12 @@ field, not only titles. The canonical English knowledge pack remains byte-identi
 
 | Category                                       | Complete Polish content | Polish title + summary |
 | ---------------------------------------------- | ----------------------: | ---------------------: |
-| Exercises, total                               |                   18/47 |                  47/47 |
-| Practice (subset)                              |                   10/10 |                  10/10 |
+| Exercises, total                               |                   20/49 |                  49/49 |
+| Practice (subset)                              |                   12/12 |                  12/12 |
 | Troubleshooting cases (subset)                 |                     8/8 |                    8/8 |
 | Commissioning (subset)                         |                    0/29 |                  29/29 |
-| Lessons                                        |                   23/23 |                  23/23 |
-| Fundamentals                                   |                    1/24 |                   1/24 |
+| Lessons                                        |                   25/25 |                  25/25 |
+| Fundamentals                                   |                    2/25 |                   2/25 |
 | Instruction articles                           |                     7/7 |                    7/7 |
 | Protocol articles                              |                     0/9 |                    0/9 |
 | Troubleshooting articles (distinct from cases) |                    1/30 |                   1/30 |

@@ -1,0 +1,73 @@
+{
+  "id": "lesson.restart-retention",
+  "number": 24,
+  "title": "Restarts and retentive memory",
+  "summary": "Tell a warm restart from a cold restart and a memory reset, and keep exactly the data that must survive a start.",
+  "level": "intermediate",
+  "minutes": 20,
+  "objectives": [
+    "Predict what warm and cold starts do to each variable",
+    "Declare retentive variables with VAR RETAIN and initial values",
+    "Check a restart in the online variable detail and the diagnostic buffer"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "Two kinds of start",
+      "body": "A **warm start** keeps retentive variables and initializes everything else; a **cold start** initializes everything. STOP to RUN and a warm restart start warm; a download, a memory reset and a cold restart lead to a cold start."
+    },
+    {
+      "type": "visual",
+      "heading": "What each start keeps",
+      "body": "Read the table row by row.",
+      "diagram": "                      retentive (VAR RETAIN)   other variables   function blocks\n  warm start          kept                     initial value     start again\n  cold start          initial value            initial value     start again\n  memory reset        initial value            initial value     start again"
+    },
+    {
+      "type": "concept",
+      "heading": "Declaring retention",
+      "body": "Put a variable into `VAR RETAIN` to keep it over a warm start: `VAR RETAIN Count : INT := 0; END_VAR`. The initializer `:= 0` is the value both starts use when they initialize it. Inputs, outputs and function block instances cannot be retentive in PLC Lab."
+    },
+    {
+      "type": "example",
+      "heading": "A worked example",
+      "body": "A part counter counts 2 parts. After a warm restart the retentive Count is still 2, the next part makes it 3. After a cold restart Count is 0 again: a new shift. The diagnostic buffer shows a warm start with one retentive variable kept, then a cold start."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Declaring the CTU instance retentive to keep its count. Blocks start again on every start in PLC Lab; copy the count into a retentive variable or count with an INT."
+    },
+    {
+      "type": "task",
+      "heading": "Try it",
+      "body": "Open the retentive counter exercise, make the count survive a warm restart and check that a cold restart starts a new shift.",
+      "exercise": "ex.retentive-counter"
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "A variable is declared in VAR RETAIN with := 5 and has the value 9. What is it after a warm restart, and after a cold restart?",
+      "options": [
+        "9 and 9",
+        "9 and 5",
+        "5 and 5"
+      ],
+      "answer": 1,
+      "explanation": "A warm start keeps a retentive variable; a cold start gives it its initial value 5."
+    },
+    {
+      "question": "Which operation never downloads the changes you made in the editor?",
+      "options": [
+        "Build & Load",
+        "Warm restart",
+        "Download"
+      ],
+      "answer": 1,
+      "explanation": "A restart uses the program and configuration already in the CPU."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.plc-startup",
+    "fundamentals.scan-cycle"
+  ]
+}

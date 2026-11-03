@@ -379,6 +379,29 @@ previous green run; `1356125` moves it to 1.14.1 and changes nothing else.
   architecture and frontend tests; rustfmt and clippy clean except the host crate, whose
   build script the policy blocks.
 
+## Checkpoint 8-B: PLC startup, restart and retentive memory (in progress)
+
+- ADR-0038. ST: `VAR RETAIN` (scalar program variables), constant initializers, reserved
+  read-only `FIRST_SCAN`; RETAIN on inputs, outputs and FB instances refused. Canonical
+  symbols carry retention and initial values; the runtime has one start initialization
+  (warm keeps retained variables, cold initializes everything). STOP to RUN stays a warm
+  start; download and memory reset start cold; warm and cold restart operations (RUN
+  only, refused in FAULT); forces survive restarts, memory reset clears them. CPU
+  diagnostic buffer: start (kind, retained count), first scan, memory reset, once each.
+- IPC: `plc_restart`; PLC status (last start, retained count, first scan pending);
+  retention, initial value and restart effect on variable, watch and declaration rows;
+  scenario actions `warmRestart` and `coldRestart`.
+- UI: confirmed warm restart, cold restart and memory reset (Advanced), start status,
+  retention in the online variable detail (now English and Polish) and the variables table.
+- Content: labs `ex.retentive-counter` and `ex.safe-startup` with reference solutions,
+  lessons 24 and 25, article `fundamentals.plc-startup`, complete Polish overlays.
+- Tests (all run locally and pass): ST retention (9), engine restarts (19 total), workflows
+  (19), knowledge conformance incl. restart lab grading (5), architecture (50), frontend
+  (83).
+- Remaining before CP8-B can close: the native smoke step for the restart scenario
+  (Free Lab retentive counter: RUN, warm restart, first scan, cold restart, diagnostic
+  buffer), hosted CI PASS on the final SHA, then rebuild and stage the root `PLC Lab.exe`.
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some generated test
