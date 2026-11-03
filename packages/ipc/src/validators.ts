@@ -575,7 +575,12 @@ export const compileResult = obj<G.CompileResultDto>({
   programName: nullable(str),
   diagnostics: arr(diagnostic),
   declarations: arr(
-    obj<G.DeclarationDto>({ name: str, dataType: str, role: str, retained: bool }),
+    obj<G.DeclarationDto>({
+      name: str,
+      dataType: str,
+      role: str,
+      retained: bool,
+    }),
   ),
 });
 export const buildLoadResult = obj<G.BuildLoadResultDto>({
