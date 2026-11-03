@@ -267,6 +267,11 @@ the root `PLC Lab.exe` and the relocated copy, 19 through the BAT).
   field supply lab (active error of `do-r0s3`, cleared after the repair, CPU events with
   details, filters, order and bounds), UI (states, details, filters, paging).
 
+Validated: `61c3f9aecc23b76bd6f4a9b16ad36190cb858c99`, CI run 40959373131 (Windows job
+123747799783 and Linux job 123747800120 PASS; native smoke 20 steps on the debug build,
+the root `PLC Lab.exe` and the relocated copy, 19 through the BAT). The first candidate
+`83c8268` (run 40958561936) failed only the rustfmt check; `61c3f9a` formats it.
+
 ## Checkpoint 7-F: online variable detail and the native engineering smoke
 
 - Choosing a variable in Variables or a watch row (Details) shows its online detail in
@@ -285,24 +290,63 @@ the root `PLC Lab.exe` and the relocated copy, 19 through the BAT).
 - Limitation: the declaration's source location is not shown; the ST compiler keeps no
   declaration spans yet.
 
+Validated: CP7-F (`4c4618e`, `5b0b6f6`, `b25e595`) never ran on its own; it was pushed
+together with the toolchain fail-fast fix. Its first green source is
+`3f0840b4565ab8d51430d60c74d36081f8965715`, CI run 40962333885 (Windows job 123758082757
+and Linux job 123758082588 PASS; native smoke with the engineering tools step 21 steps
+on the debug build, the root `PLC Lab.exe` and the relocated copy, 20 through the BAT).
+
+## After Checkpoint 7-F: local build recovery and Polish interface (Codex)
+
+- `3f0840b` (run 40962333885 PASS): `scripts/toolchain.mjs` accepts a project-local or
+  user toolchain only when the exact pin from `rust-toolchain.toml` and its components
+  execute; an incomplete toolchain stops the human build at once instead of looping in
+  rustup. Evidence: `docs/validation/LOCAL_BUILD_RECOVERY.md`.
+- `54c97b9` (run 40967852784 PASS): interface preferences (English, Polish), the student
+  workspace and Basic/Advanced presentation (ADR-0035, `docs/UI_LOCALIZATION.md`).
+- `ad54bc5` (run 40972186144 PASS, native smoke 24 steps, 22 through the BAT): Polish
+  learning content as guarded overlays over the canonical English pack (ADR-0036,
+  `knowledge/locales/pl.json`, `docs/validation/POLISH_CONTENT_COVERAGE.json`).
+
+## Checkpoint 7: final gate
+
+Reviewed against the source of `ad54bc5`:
+
+| Criterion                                                         | Evidence                                                                                                                                                                                              |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Saved versus downloaded configuration across reopen               | 7-B workflow test, ADR-0031                                                                                                                                                                           |
+| Watch tables, canonical targets, persistence, unavailable rows    | 7-C tests, ADR-0032                                                                                                                                                                                   |
+| Input and output image forcing, typed values                      | engine and workflow force tests, ADR-0033                                                                                                                                                             |
+| Field value versus forced PLC input                               | a forced input replaces only the staged and scanned image; the channel signal and device state keep the field value (workflow test `forces_keep_field_and_program_values_apart_and_never_pass_a_lab`) |
+| Program result versus forced output                               | the committed value stays the program's, only the terminal follows the force (same test)                                                                                                              |
+| Remove all forces, global banner, explicit lifetime               | workflow and UI tests, native smoke                                                                                                                                                                   |
+| Forces and grading                                                | grading runs in an isolated session with the faults still unrepaired and no live forces; forced feedback does not pass the drive lab, the real repair does, and the forces stay untouched (same test) |
+| Bounded diagnostic buffer, transition events, deterministic order | 7-E engine and workflow tests, ADR-0034                                                                                                                                                               |
+| Online variable detail, native engineering smoke                  | 7-F UI test, smoke step on every entry point                                                                                                                                                          |
+| Single-instance root executable, knowledge from `resources/`      | native smoke on every entry point since 7-A                                                                                                                                                           |
+
+The gate test was run locally (all 17 desktop-session workflow tests pass, rustfmt and
+clippy clean); its hosted validation is recorded with the next slice.
+
 ## Local machine limits
 
-Smart App Control blocks freshly built release build scripts and some test binaries on
-the development machine (os error 4551). It is never disabled or bypassed. The full Tauri
-release build, staging and every native smoke test run on hosted Windows CI, which is
-authoritative. On 2026-10-29 the
-local `rustc.exe` disappeared and reinstalling the pinned toolchain fails because Windows
-refuses to create `rustc.exe` (os error 5, no Defender or Code Integrity event; Norton
-360 is the active antivirus). Until that is resolved by the machine owner, Rust is
-compiled and tested only on hosted CI; antivirus settings are never changed by the
-agent.
+Smart App Control blocks freshly built release build scripts and some generated test
+binaries on the development machine (os error 4551), so the complete local
+`BUILD_PLC_LAB_RELEASE.bat` validation does not finish. It is never disabled or
+bypassed. Since the 2026-10-29 recovery the exact pinned Rust works locally again
+(rustfmt, clippy, the native release build and staging, and the test binaries the policy
+allows); hosted Windows and Linux CI remain authoritative for the full suites and every
+native smoke test. Antivirus settings are never changed by the agent.
 
 ## Next checkpoints
 
-1. Checkpoint 7: D forcing, E diagnostic buffer and F online variable detail are
-   validated one slice at a time on hosted CI.
-2. Checkpoint 8: alarms and events, startup and restart, sequence diagnostics (P9, P10).
-3. Checkpoint 9: ST depth, multiple POUs and FB instances (P11), then LAD readiness.
+1. Checkpoint 8, one validated slice at a time: A industrial alarm engine (lifecycle,
+   acknowledgment, bounded history, alarm view, an alarm lab); B PLC startup and restart
+   (cold and warm restart, retained data, first scan, startup diagnostics, two labs);
+   C sequence diagnostic foundation (steps, transitions, timeouts, hold and resume,
+   interlocks and permissives, a sequence inspector, a process sequence). All new
+   content in English and Polish.
+2. Checkpoint 9: ST depth, multiple POUs and FB instances (P11), then LAD readiness.
 
 ## How to continue
 
