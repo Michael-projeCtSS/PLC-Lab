@@ -85,6 +85,8 @@ pub mod codes {
     pub const DUPLICATE_FB_BINDING: &str = "PLC-COMP-022";
     pub const UNSUPPORTED_FB_KIND: &str = "PLC-COMP-023";
     pub const INVALID_FB_OWNER: &str = "PLC-COMP-024";
+    pub const INVALID_RETENTION: &str = "PLC-COMP-025";
+    pub const INITIAL_VALUE_TYPE: &str = "PLC-COMP-026";
     pub const EXECUTION_BUDGET: &str = "PLC-RUNTIME-001";
     pub const INT_OVERFLOW: &str = "PLC-RUNTIME-002";
     pub const DIVISION_BY_ZERO: &str = "PLC-RUNTIME-003";

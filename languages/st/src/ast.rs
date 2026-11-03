@@ -22,6 +22,10 @@ pub struct Declaration {
     pub name: Name,
     pub role: VariableCategory,
     pub kind: DeclaredType,
+    /// Declared in a `VAR RETAIN` section.
+    pub retain: bool,
+    /// `:= value` after the type; the compiler accepts only constants.
+    pub initializer: Option<Expression>,
     pub span: TextSpan,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]

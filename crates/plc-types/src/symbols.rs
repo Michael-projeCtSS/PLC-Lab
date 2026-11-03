@@ -1,7 +1,7 @@
 //! Declaration and name resolution only; no variable storage or process image.
 
 use crate::{
-    PlcType,
+    PlcType, PlcValue,
     diagnostics::{Diagnostic, RelatedIdentity, codes},
     identity::{PouId, SymbolId},
     source::SourceRef,
@@ -20,6 +20,36 @@ pub enum VariableCategory {
     InOut,
     Local,
 }
+/// Whether a variable keeps its value over a warm restart (ADR-0038).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Retention {
+    #[default]
+    NonRetained,
+    Retained,
+}
+/// A variable the runtime supplies itself; programs may only read it (ADR-0038).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SystemVariable {
+    /// TRUE during exactly the first executed scan after each start.
+    FirstScan,
+}
+impl SystemVariable {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::FirstScan => "FIRST_SCAN",
+        }
+    }
+    pub fn plc_type(self) -> PlcType {
+        match self {
+            Self::FirstScan => PlcType::Bool,
+        }
+    }
+    /// The system variable with this name (case-insensitive), if any.
+    pub fn named(name: &str) -> Option<Self> {
+        name.eq_ignore_ascii_case("FIRST_SCAN")
+            .then_some(Self::FirstScan)
+    }
+}
 /// Function/FB are ownership tags only, with no callable implementation in M1A.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PouKind {
@@ -37,6 +67,13 @@ pub enum SymbolError {
     DuplicateIdentity,
     DuplicateName(String),
     IncompatibleRedeclaration(String),
+    /// Only program variables (not inputs, outputs or system variables) can be retained.
+    InvalidRetention(String),
+    InitialValueType {
+        name: String,
+        expected: PlcType,
+        actual: PlcType,
+    },
 }
 impl std::fmt::Display for SymbolError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -55,6 +92,18 @@ impl std::fmt::Display for SymbolError {
                 f,
                 "'{name}' is redeclared with a different type or category."
             ),
+            Self::InvalidRetention(name) => write!(
+                f,
+                "'{name}' cannot be retained: only program variables (VAR) are retentive."
+            ),
+            Self::InitialValueType {
+                name,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "The initial value of '{name}' must be {expected:?}, not {actual:?}."
+            ),
         }
     }
 }
@@ -68,6 +117,8 @@ impl SymbolError {
             Self::DuplicateIdentity => codes::DUPLICATE_IDENTITY,
             Self::DuplicateName(_) => codes::DUPLICATE_SYMBOL,
             Self::IncompatibleRedeclaration(_) => codes::INCOMPATIBLE_REDECLARATION,
+            Self::InvalidRetention(_) => codes::INVALID_RETENTION,
+            Self::InitialValueType { .. } => codes::INITIAL_VALUE_TYPE,
         };
         let diagnostic = Diagnostic::compiler_error(code, self.to_string());
         match self {
@@ -125,6 +176,9 @@ pub struct Symbol {
     scope: Scope,
     category: VariableCategory,
     source: Option<SourceRef>,
+    retention: Retention,
+    initial: Option<PlcValue>,
+    system: Option<SystemVariable>,
 }
 impl Symbol {
     pub fn new(
@@ -145,7 +199,61 @@ impl Symbol {
             scope,
             category,
             source,
+            retention: Retention::NonRetained,
+            initial: None,
+            system: None,
         })
+    }
+    /// The read-only variable the runtime supplies, owned by `scope`.
+    pub fn system_variable(
+        id: SymbolId,
+        variable: SystemVariable,
+        scope: Scope,
+    ) -> Result<Self, SymbolError> {
+        let mut symbol = Self::new(
+            id,
+            variable.name(),
+            variable.plc_type(),
+            scope,
+            VariableCategory::Local,
+            None,
+        )?;
+        symbol.system = Some(variable);
+        Ok(symbol)
+    }
+    pub fn with_retention(mut self, retention: Retention) -> Result<Self, SymbolError> {
+        if retention == Retention::Retained
+            && (self.category != VariableCategory::Local || self.system.is_some())
+        {
+            return Err(SymbolError::InvalidRetention(self.name));
+        }
+        self.retention = retention;
+        Ok(self)
+    }
+    pub fn with_initial(mut self, value: PlcValue) -> Result<Self, SymbolError> {
+        if value.plc_type() != self.plc_type {
+            return Err(SymbolError::InitialValueType {
+                name: self.name,
+                expected: self.plc_type,
+                actual: value.plc_type(),
+            });
+        }
+        self.initial = Some(value);
+        Ok(self)
+    }
+    pub fn retention(&self) -> Retention {
+        self.retention
+    }
+    /// The declared initial value, else the type's default.
+    pub fn initial_value(&self) -> PlcValue {
+        self.initial
+            .unwrap_or_else(|| self.plc_type.default_value())
+    }
+    pub fn declared_initial(&self) -> Option<PlcValue> {
+        self.initial
+    }
+    pub fn system(&self) -> Option<SystemVariable> {
+        self.system
     }
     pub fn id(&self) -> SymbolId {
         self.id

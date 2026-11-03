@@ -19,6 +19,7 @@ pub enum Keyword {
     VarOutput,
     Var,
     EndVar,
+    Retain,
     If,
     Then,
     Else,
@@ -332,6 +333,7 @@ fn word(name: String, upper: &str) -> TokenKind {
         "VAR_OUTPUT" => VarOutput,
         "VAR" => Var,
         "END_VAR" => EndVar,
+        "RETAIN" => Retain,
         "IF" => If,
         "THEN" => Then,
         "ELSE" => Else,
@@ -358,8 +360,9 @@ fn word(name: String, upper: &str) -> TokenKind {
         "FALSE" => return TokenKind::Literal(Literal::Bool(false)),
         "FOR" | "WHILE" | "REPEAT" | "RETURN" | "ARRAY" | "STRUCT" | "STRING" | "FUNCTION"
         | "FUNCTION_BLOCK" | "METHOD" | "CLASS" | "NAMESPACE" | "VAR_IN_OUT" | "VAR_TEMP"
-        | "RETAIN" | "AT" | "POINTER" | "REFERENCE" | "INCLUDE" | "IMPORT" | "NAN" | "INF"
-        | "INFINITY" => return TokenKind::Unsupported(name),
+        | "AT" | "POINTER" | "REFERENCE" | "INCLUDE" | "IMPORT" | "NAN" | "INF" | "INFINITY" => {
+            return TokenKind::Unsupported(name);
+        }
         _ => return TokenKind::Identifier(name),
     };
     TokenKind::Keyword(keyword)

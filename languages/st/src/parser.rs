@@ -107,6 +107,19 @@ impl Parser<'_> {
                 TokenKind::Keyword(Keyword::VarOutput) => VariableCategory::Output,
                 _ => VariableCategory::Local,
             };
+            let mut retain = false;
+            if self.keyword(Keyword::Retain) {
+                let qualifier = self.take();
+                if role == VariableCategory::Local {
+                    retain = true;
+                } else {
+                    self.errors.push(error(
+                        codes::UNSUPPORTED,
+                        "RETAIN is supported for program variables only: use VAR RETAIN.",
+                        Some(qualifier.span),
+                    ));
+                }
+            }
             while !self.keyword(Keyword::EndVar)
                 && !self.at(&TokenKind::Eof)
                 && !self.errors.stopped
@@ -132,7 +145,7 @@ impl Parser<'_> {
                     break;
                 }
                 let before = self.cursor;
-                match self.declaration(role) {
+                match self.declaration(role, retain) {
                     Ok(declaration) => declarations.push(declaration),
                     Err(diagnostic) => {
                         self.errors.push(diagnostic);
@@ -172,7 +185,11 @@ impl Parser<'_> {
             span: joined(start, end),
         })
     }
-    fn declaration(&mut self, role: VariableCategory) -> Result<Declaration, Diagnostic> {
+    fn declaration(
+        &mut self,
+        role: VariableCategory,
+        retain: bool,
+    ) -> Result<Declaration, Diagnostic> {
         let name = self.name()?;
         self.expect(
             TokenKind::Colon,
@@ -201,6 +218,12 @@ impl Parser<'_> {
                     .syntax("Expected BOOL, INT, REAL, TIME or a standard function block type."));
             }
         };
+        let initializer = if self.at(&TokenKind::Assign) {
+            self.take();
+            Some(self.expression(0, 0)?)
+        } else {
+            None
+        };
         let end = self
             .expect(TokenKind::Semicolon, "Expected ';' after declaration.")?
             .span;
@@ -209,6 +232,8 @@ impl Parser<'_> {
             name,
             role,
             kind,
+            retain,
+            initializer,
         })
     }
     /// True when the cursor starts a CASE label list (`1:`, `-2,`, `3..5:`).

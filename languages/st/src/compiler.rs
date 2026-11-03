@@ -19,7 +19,9 @@ use plc_types::{
         SymbolId,
     },
     source::{SourceLanguage, SourceLocation, SourceMap, SourceRef, TextSpan},
-    symbols::{Pou, PouKind, Scope, Symbol, SymbolTable, VariableCategory},
+    symbols::{
+        Pou, PouKind, Retention, Scope, Symbol, SymbolTable, SystemVariable, VariableCategory,
+    },
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -28,6 +30,8 @@ pub struct DeclarationSummary {
     pub name: String,
     pub type_name: String,
     pub role: String,
+    /// Declared in `VAR RETAIN` (ADR-0038).
+    pub retained: bool,
     pub span: TextSpan,
 }
 
@@ -166,11 +170,44 @@ impl Compiler {
                 );
                 continue;
             }
+            if let Some(system) = SystemVariable::named(&name.text) {
+                self.report(
+                    codes::DUPLICATE,
+                    format!(
+                        "'{}' is reserved: the PLC supplies it as a read-only system variable.",
+                        system.name()
+                    ),
+                    name.span,
+                );
+                continue;
+            }
             let source = self.anchor(declaration.span);
             match declaration.kind {
                 ast::DeclaredType::Scalar(kind) => {
+                    let initial = match &declaration.initializer {
+                        None => None,
+                        Some(_) if declaration.role == VariableCategory::Input => {
+                            self.report(
+                                codes::UNSUPPORTED,
+                                "VAR_INPUT values come from the input image; an initial value is not allowed.",
+                                declaration.span,
+                            );
+                            continue;
+                        }
+                        Some(expression) => {
+                            match self.initial_value(&name.text, kind, expression) {
+                                Some(value) => Some(value),
+                                None => continue,
+                            }
+                        }
+                    };
                     let id = SymbolId::new(self.next_symbol).expect("bounded declaration count");
                     self.next_symbol += 1;
+                    let retention = if declaration.retain {
+                        Retention::Retained
+                    } else {
+                        Retention::NonRetained
+                    };
                     match Symbol::new(
                         id,
                         &name.text,
@@ -179,6 +216,11 @@ impl Compiler {
                         declaration.role,
                         Some(source),
                     )
+                    .and_then(|s| s.with_retention(retention))
+                    .and_then(|s| match initial {
+                        Some(value) => s.with_initial(value),
+                        None => Ok(s),
+                    })
                     .and_then(|s| self.symbols.declare(s))
                     {
                         Ok(()) => self.declarations.push(DeclarationSummary {
@@ -190,6 +232,7 @@ impl Compiler {
                                 _ => "Local",
                             }
                             .into(),
+                            retained: declaration.retain,
                             span: declaration.span,
                         }),
                         Err(e) => self.errors.push(
@@ -199,6 +242,25 @@ impl Compiler {
                     }
                 }
                 ast::DeclaredType::FunctionBlock(kind) => {
+                    if declaration.retain {
+                        self.report(
+                            codes::UNSUPPORTED,
+                            format!(
+                                "{} instances are not retentive in PLC Lab: keep the value to retain in a VAR RETAIN variable, not the block instance.",
+                                kind.name()
+                            ),
+                            declaration.span,
+                        );
+                        continue;
+                    }
+                    if declaration.initializer.is_some() {
+                        self.report(
+                            codes::UNSUPPORTED,
+                            format!("A {} instance has no initial value.", kind.name()),
+                            declaration.span,
+                        );
+                        continue;
+                    }
                     if declaration.role != VariableCategory::Local {
                         self.report(
                             codes::BLOCK,
@@ -241,6 +303,7 @@ impl Compiler {
                                 name: name.text.clone(),
                                 type_name: kind.name().into(),
                                 role: "FB Instance".into(),
+                                retained: false,
                                 span: declaration.span,
                             });
                         }
@@ -253,7 +316,75 @@ impl Compiler {
             }
         }
     }
+    /// A constant initializer of exactly the declared type.
+    fn initial_value(
+        &mut self,
+        name: &str,
+        kind: PlcType,
+        expression: &ast::Expression,
+    ) -> Option<PlcValue> {
+        let (literal, negative) = match &expression.kind {
+            ast::ExpressionKind::Literal(literal) => (literal, false),
+            ast::ExpressionKind::Parentheses(inner) => {
+                return self.initial_value(name, kind, inner);
+            }
+            ast::ExpressionKind::Unary(UnaryOperator::Negate, inner)
+                if signed_literal(inner).is_some() =>
+            {
+                (signed_literal(inner)?, true)
+            }
+            _ => {
+                self.report(
+                    codes::UNSUPPORTED,
+                    format!(
+                        "The initial value of '{name}' must be a constant {} literal.",
+                        type_name(kind)
+                    ),
+                    expression.span,
+                );
+                return None;
+            }
+        };
+        let value = match literals::value(literal, negative) {
+            Ok(value) => value,
+            Err(message) => {
+                self.report(codes::LITERAL, message, expression.span);
+                return None;
+            }
+        };
+        if value.plc_type() != kind {
+            self.report(
+                codes::TYPE,
+                format!(
+                    "The initial value of '{name}' must be {}, not {}.",
+                    type_name(kind),
+                    type_name(value.plc_type())
+                ),
+                expression.span,
+            );
+            return None;
+        }
+        Some(value)
+    }
+    /// The program's view of a system variable, declared on first use.
+    fn system_variable(&mut self, variable: SystemVariable) -> Option<(SymbolId, PlcType)> {
+        if let Ok(symbol) = self
+            .symbols
+            .resolve(Scope::Pou(self.owner), variable.name())
+        {
+            return Some((symbol.id(), symbol.plc_type()));
+        }
+        let id = SymbolId::new(self.next_symbol).expect("bounded declaration count");
+        self.next_symbol += 1;
+        let symbol = Symbol::system_variable(id, variable, Scope::Pou(self.owner)).ok()?;
+        self.symbols.declare(symbol).ok()?;
+        Some((id, variable.plc_type()))
+    }
     fn resolve(&mut self, name: &ast::Name) -> Option<(SymbolId, PlcType, VariableCategory)> {
+        if let Some(variable) = SystemVariable::named(&name.text) {
+            let (id, kind) = self.system_variable(variable)?;
+            return Some((id, kind, VariableCategory::Local));
+        }
         match self.symbols.resolve(Scope::Pou(self.owner), &name.text) {
             Ok(symbol) => Some((symbol.id(), symbol.plc_type(), symbol.category())),
             Err(_) => {
@@ -271,6 +402,17 @@ impl Compiler {
         }
     }
     fn target(&mut self, name: &ast::Name, code: &str) -> Option<(SymbolId, PlcType)> {
+        if let Some(variable) = SystemVariable::named(&name.text) {
+            self.report(
+                code,
+                format!(
+                    "Cannot write {}: the PLC supplies it and it is read-only.",
+                    variable.name()
+                ),
+                name.span,
+            );
+            return None;
+        }
         let (id, kind, role) = self.resolve(name)?;
         if role == VariableCategory::Input {
             self.report(
