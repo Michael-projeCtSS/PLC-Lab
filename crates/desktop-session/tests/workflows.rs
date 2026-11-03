@@ -1416,6 +1416,75 @@ fn forces_are_listed_removed_and_end_with_the_session_or_a_memory_reset() {
 }
 
 #[test]
+fn forces_keep_field_and_program_values_apart_and_never_pass_a_lab() {
+    let f = fixture("force-grading");
+    let (project, w) = exercise(&f.app, "ts.vfd-local");
+    let id = w.workspace_id;
+    let source = project.programs[0].source.clone();
+    let signal = |path: &str| w.signals.iter().find(|s| s.path == path).unwrap().id;
+    let force = |signal: u32, value: bool| {
+        f.app
+            .force(ForceRequest {
+                contract_version: V,
+                workspace_id: id,
+                signal,
+                value: Some(SignalValueDto::Bool { value }),
+            })
+            .unwrap();
+    };
+    let watch = |path: &str| {
+        let request = WatchRequest {
+            contract_version: V,
+            workspace_id: id,
+            signals: vec![signal(path)],
+        };
+        f.app.watch(request).unwrap().rows.remove(0)
+    };
+    let on = Some(SignalValueDto::Bool { value: true });
+    let off = Some(SignalValueDto::Bool { value: false });
+
+    // The student fakes the drive's feedback in the PLC input image.
+    force(signal("plc.DriveRunning"), true);
+    force(signal("plc.DriveRemote"), true);
+    press(&f.app, id, "start");
+    let frame = step(&f.app, id, 30);
+    let running = watch("plc.DriveRunning");
+    assert_eq!((running.scan_value, running.forced), (on, on));
+    assert_eq!(
+        watch("plc.RunLamp").committed,
+        on,
+        "the program sees the force"
+    );
+    assert!(
+        !is_true(quantity(&frame, "drive", "running")),
+        "the field is unchanged: the drive still stands"
+    );
+
+    // A forced output replaces what reaches the terminal, not the program's result.
+    force(signal("plc.DriveRun"), false);
+    let frame = step(&f.app, id, 3);
+    let run = watch("plc.DriveRun");
+    assert_eq!((run.committed, run.forced), (on, off));
+    assert!(!is_true(quantity(&frame, "drive", "command")));
+
+    // Grading runs isolated: the forces neither pass the lab nor are touched by it.
+    let report = check(&f.app, id, &source, None);
+    assert!(!report.passed && report.debrief.is_none());
+    let request = || WorkspaceRequest {
+        contract_version: V,
+        workspace_id: id,
+    };
+    assert_eq!(f.app.forces(request()).unwrap().forces.len(), 3);
+
+    // Only the real repair passes it.
+    assert!(diagnose(&f.app, id, "drive-local"));
+    repair(&f.app, id, "set-remote");
+    let report = check(&f.app, id, &source, None);
+    assert!(report.passed, "{:?}", report.criteria);
+    f.app.remove_all_forces(request()).unwrap();
+}
+
+#[test]
 fn the_diagnostic_buffer_classifies_pairs_filters_and_pages_its_entries() {
     let library =
         knowledge_core::KnowledgeLibrary::load(&[
