@@ -1,0 +1,13 @@
+{
+  "provider": "azure-artifact-signing",
+  "publisherSubject": "CN=REPLACE_WITH_EXACT_VERIFIED_PUBLISHER",
+  "trustedRootThumbprints": [
+    "REPLACE_WITH_PROVIDER_PUBLIC_ROOT_SHA1_THUMBPRINT"
+  ],
+  "azure": {
+    "endpoint": "https://plc.codesigning.azure.net",
+    "accountName": "REPLACE_ACCOUNT",
+    "certificateProfileName": "REPLACE_PUBLIC_TRUST_PROFILE",
+    "dlibPath": "C:/Program Files/Microsoft Artifact Signing Client Tools/Azure.CodeSigning.Dlib.dll"
+  }
+}

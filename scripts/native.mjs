@@ -3,6 +3,10 @@ import path from "node:path";
 import { root, toolchainEnvironment } from "./toolchain.mjs";
 
 try {
+  if (process.argv[2] === "build")
+    console.log(
+      "UNSIGNED DEVELOPMENT / INTERMEDIATE BUILD: production releases require npm run build:release signing and verification.",
+    );
   const result = spawnSync(
     process.execPath,
     [

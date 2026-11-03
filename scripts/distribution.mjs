@@ -5,10 +5,13 @@
 //   node scripts/distribution.mjs [productRoot]   verify a staged distribution
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { lstat, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { root } from "./toolchain.mjs";
+import { assertSigningRecord } from "./release-trust.mjs";
+import { loadSigningConfig, verifyExecutable } from "./windows-signing.mjs";
+import { verifyManifestCatalog } from "./windows-manifest.mjs";
 
 export const APPLICATION = "PLC Lab.exe";
 export const RESOURCES = "resources";
@@ -33,6 +36,10 @@ async function hash(file) {
 async function filesBelow(dir, prefix = "") {
   const out = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (entry.isSymbolicLink())
+      throw new Error(
+        "Distribution resources must not contain symbolic links.",
+      );
     const name = prefix ? `${prefix}/${entry.name}` : entry.name;
     if (entry.isDirectory())
       out.push(...(await filesBelow(path.join(dir, entry.name), name)));
@@ -55,7 +62,10 @@ export async function distributionEntries(productRoot) {
 }
 
 /** Problems of the staged distribution in `productRoot`; empty when it is complete. */
-export async function verifyDistribution(productRoot) {
+export async function verifyDistribution(
+  productRoot,
+  { production = false, config } = {},
+) {
   const problems = [];
   const application = path.join(productRoot, APPLICATION);
   const manifestFile = path.join(productRoot, RESOURCES, PRODUCT_MANIFEST);
@@ -63,7 +73,29 @@ export async function verifyDistribution(productRoot) {
     return [`${APPLICATION} is missing in ${productRoot}`];
   if (!existsSync(manifestFile))
     return [`${RESOURCES}/${PRODUCT_MANIFEST} is missing`];
+  if (
+    (await lstat(application)).isSymbolicLink() ||
+    (await lstat(manifestFile)).isSymbolicLink() ||
+    (await lstat(path.join(productRoot, RESOURCES))).isSymbolicLink()
+  )
+    return ["Distribution executable and manifest must not be symbolic links"];
   const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
+  const safeFile = (name) =>
+    typeof name === "string" &&
+    name !== "." &&
+    name !== ".." &&
+    /^[^\\/:]+$/.test(name);
+  if (
+    (manifest.dependencies ?? []).some((item) => !safeFile(item.name)) ||
+    (manifest.files ?? []).some(
+      (item) =>
+        typeof item.name !== "string" ||
+        item.name.includes("\\") ||
+        item.name.includes(":") ||
+        item.name.split("/").some((part) => !safeFile(part)),
+    )
+  )
+    return ["product.json contains unsafe distribution paths"];
   if (manifest.application?.name !== APPLICATION)
     problems.push(`${PRODUCT_MANIFEST} does not name ${APPLICATION}`);
   else if (manifest.application.sha256 !== (await hash(application)))
@@ -88,18 +120,33 @@ export async function verifyDistribution(productRoot) {
   )
     problems.push("no knowledge pack is staged in resources/knowledge-packs");
   // Exactly one application executable in everything the distribution consists of.
+  const resourceFiles = await filesBelow(path.join(productRoot, RESOURCES));
   const shipped = [
     APPLICATION,
     ...(manifest.dependencies ?? []).map((d) => d.name),
-    ...(await filesBelow(path.join(productRoot, RESOURCES))).map(
-      (name) => `${RESOURCES}/${name}`,
-    ),
+    ...resourceFiles.map((name) => `${RESOURCES}/${name}`),
   ];
   const executables = shipped.filter((name) => /\.exe$/i.test(name));
   if (executables.length !== 1 || executables[0] !== APPLICATION)
     problems.push(
       `the distribution must contain exactly one application executable (${APPLICATION}), found: ${executables.join(", ")}`,
     );
+  for (const entry of await readdir(productRoot, { withFileTypes: true }))
+    if (
+      /\.dll$/i.test(entry.name) &&
+      !(manifest.dependencies ?? []).some(
+        (record) => record.name === entry.name,
+      )
+    )
+      problems.push(`unlisted DLL in product root: ${entry.name}`);
+    else if (
+      !entry.isDirectory() &&
+      /\.exe$/i.test(entry.name) &&
+      entry.name !== APPLICATION
+    )
+      problems.push(
+        `unexpected application executable in product root: ${entry.name}`,
+      );
   for (const legacy of LEGACY_FILES)
     if (existsSync(path.join(productRoot, legacy)))
       problems.push(`${legacy} from an earlier distribution is still present`);
@@ -118,6 +165,42 @@ export async function verifyDistribution(productRoot) {
         `${FALLBACK_BAT} refers to something other than ${APPLICATION}`,
       );
   }
+  if (production) {
+    try {
+      config ??= await loadSigningConfig();
+      const inventory = new Set([
+        PRODUCT_MANIFEST,
+        "product.cat",
+        ...(manifest.files ?? []).map((record) => record.name),
+      ]);
+      for (const name of resourceFiles)
+        if (!inventory.has(name))
+          throw new Error(
+            `SIGNATURE VERIFICATION FAILED: unlisted resource ${name}.`,
+          );
+      if (existsSync(bat)) {
+        if (
+          manifest.fallback?.name !== FALLBACK_BAT ||
+          manifest.fallback.sha256 !== (await hash(bat))
+        )
+          throw new Error(
+            "SIGNATURE VERIFICATION FAILED: fallback BAT differs from the signed manifest.",
+          );
+      } else if (manifest.fallback)
+        throw new Error(
+          "SIGNATURE VERIFICATION FAILED: fallback BAT is missing.",
+        );
+      const evidence = await verifyExecutable(application, { config });
+      assertSigningRecord(manifest, evidence);
+      await verifyManifestCatalog(productRoot, { config });
+      for (const dependency of manifest.dependencies ?? [])
+        await verifyExecutable(path.join(productRoot, dependency.name), {
+          config,
+        });
+    } catch (error) {
+      problems.push(error.message);
+    }
+  }
   return problems;
 }
 
@@ -125,8 +208,13 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  const productRoot = path.resolve(process.argv[2] ?? root);
-  const problems = await verifyDistribution(productRoot);
+  const args = process.argv.slice(2);
+  const productRoot = path.resolve(
+    args.find((arg) => arg !== "--production") ?? root,
+  );
+  const problems = await verifyDistribution(productRoot, {
+    production: args.includes("--production"),
+  });
   if (problems.length) {
     console.error(
       `Distribution check FAILED for ${productRoot}:\n- ${problems.join("\n- ")}`,

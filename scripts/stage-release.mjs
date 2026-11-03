@@ -17,6 +17,21 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { root, toolchainEnvironment } from "./toolchain.mjs";
 import {
+  loadSigningConfig,
+  signExecutable,
+  verifyExecutable,
+} from "./windows-signing.mjs";
+import {
+  assertDevelopmentMayReplace,
+  DEVELOPMENT,
+  PRODUCTION,
+} from "./release-trust.mjs";
+import {
+  createManifestCatalog,
+  signManifestCatalog,
+} from "./windows-manifest.mjs";
+import { installPreparedDistribution } from "./install-signed-release.mjs";
+import {
   DEFAULT_PACK,
   DEFAULT_ZIP,
   PACK_NAME,
@@ -24,8 +39,7 @@ import {
 } from "./knowledge-pack.mjs";
 import {
   APPLICATION,
-  LEGACY_DIRS,
-  LEGACY_FILES,
+  FALLBACK_BAT,
   PRODUCT_MANIFEST,
   RESOURCES,
   verifyDistribution,
@@ -127,19 +141,23 @@ export async function stageArtifactSet(
       );
     }
     await writeFile(
-      path.join(staging, PRODUCT_MANIFEST),
-      `${JSON.stringify({ ...information, stagedAt: new Date().toISOString(), files: records }, null, 2)}\n`,
-    );
-    await writeFile(
       path.join(staging, "RUNTIME_REQUIREMENTS.txt"),
       [
-        "PLC Lab portable release (not an installer).",
+        `PLC Lab portable build: ${information.releaseKind ?? "DEVELOPMENT BUILD"}.`,
         "Start it by double-clicking PLC Lab.exe in the folder that contains this resources folder.",
         "Requires Windows 10/11 x64 and the Microsoft Edge WebView2 Runtime (preinstalled on current Windows; not bundled).",
         "Knowledge packs are read from resources\\knowledge-packs\\ and from %APPDATA%\\dev.plclab.desktop\\knowledge-packs.",
         "Keep PLC Lab.exe and this resources folder together; product.json lists every file with its SHA-256.",
         "",
       ].join("\r\n"),
+    );
+    records.push({
+      name: "RUNTIME_REQUIREMENTS.txt",
+      sha256: await hash(path.join(staging, "RUNTIME_REQUIREMENTS.txt")),
+    });
+    await writeFile(
+      path.join(staging, PRODUCT_MANIFEST),
+      `${JSON.stringify({ ...information, stagedAt: new Date().toISOString(), files: records }, null, 2)}\n`,
     );
     try {
       await rename(current, backup);
@@ -187,6 +205,36 @@ function capture(command, args) {
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  const development = args.includes("--development");
+  const alreadySigned = args.includes("--already-signed");
+  const sourceIndex = args.indexOf("--source-exe");
+  const prepareIndex = args.indexOf("--prepare-only");
+  const knownArgs = new Set([
+    "--development",
+    "--production",
+    "--already-signed",
+    "--source-exe",
+    "--prepare-only",
+  ]);
+  for (const [index, argument] of args.entries())
+    if (
+      !knownArgs.has(argument) &&
+      !(sourceIndex >= 0 && index === sourceIndex + 1) &&
+      !(prepareIndex >= 0 && index === prepareIndex + 1)
+    )
+      throw new Error(`Unknown staging argument: ${argument}`);
+  if (
+    (development &&
+      (alreadySigned || args.includes("--production") || sourceIndex >= 0)) ||
+    (sourceIndex >= 0 && !args[sourceIndex + 1]) ||
+    (prepareIndex >= 0 &&
+      (!args[prepareIndex + 1] || development || !alreadySigned))
+  )
+    throw new Error(
+      "Choose explicit unsigned development staging or signed production staging.",
+    );
+  const config = development ? undefined : await loadSigningConfig();
   if (process.platform !== "win32" || process.arch !== "x64")
     throw new Error(
       "Local release staging is currently validated for Windows x64 only.",
@@ -207,9 +255,11 @@ async function main() {
   const binary = application?.targets.find((item) => item.kind.includes("bin"));
   if (!binary)
     throw new Error("Cargo metadata does not identify the desktop executable.");
-  const sourceDir = path.join(metadata.target_directory, "release");
-  const sourceName = `${binary.name}.exe`;
-  const sourceExe = path.join(sourceDir, sourceName);
+  const sourceExe =
+    sourceIndex >= 0
+      ? path.resolve(args[sourceIndex + 1])
+      : path.join(metadata.target_directory, "release", `${binary.name}.exe`);
+  const sourceDir = path.dirname(sourceExe);
   const installer = path.join(
     process.env["ProgramFiles(x86)"] ?? "C:/Program Files (x86)",
     "Microsoft Visual Studio/Installer/vswhere.exe",
@@ -261,48 +311,106 @@ async function main() {
       `The knowledge pack archive does not verify: ${pack.problems.join("; ")}. Run npm run knowledge:zip.`,
     );
   const productRoot = await realpath(root);
-  // The executable first: it cannot be replaced while PLC Lab runs, and nothing else
-  // changes when that fails.
-  await installFile(sourceExe, path.join(productRoot, APPLICATION));
-  const installed = [];
-  for (const name of localDependencies) {
-    await installFile(path.join(sourceDir, name), path.join(productRoot, name));
-    installed.push({ name, sha256: await hash(path.join(sourceDir, name)) });
-  }
-  await stageArtifactSet(
-    sourceDir,
-    path.join(productRoot, RESOURCES),
-    [],
-    {
-      appVersion: application.version,
-      profile: "release",
-      architecture: "x64",
-      application: { name: APPLICATION, sha256: await hash(sourceExe) },
-      dependencies: installed,
-      sourceExecutable: path.relative(root, sourceExe),
-      sourceModifiedAt: (await stat(sourceExe)).mtime.toISOString(),
-      systemDependencies,
-      webView2: "Installed Evergreen Runtime required; not bundled",
-      knowledgePack: {
-        archive: path.relative(root, DEFAULT_ZIP).split(path.sep).join("/"),
-        sha256: await hash(DEFAULT_ZIP),
-      },
-    },
-    [{ source: DEFAULT_PACK, target: `knowledge-packs/${PACK_NAME}` }],
-  );
-  await removeLegacy(productRoot);
-  const problems = await verifyDistribution(productRoot);
-  if (problems.length)
-    throw new Error(
-      `The staged distribution is incomplete: ${problems.join("; ")}`,
+  if (development) await assertDevelopmentMayReplace(productRoot);
+  const signing = development
+    ? undefined
+    : await (alreadySigned ? verifyExecutable : signExecutable)(sourceExe, {
+        config,
+      });
+  for (const name of localDependencies)
+    if (!development)
+      await (alreadySigned ? verifyExecutable : signExecutable)(
+        path.join(sourceDir, name),
+        { config },
+      );
+  // Prepare the complete distribution before replacing the working root release.
+  const candidate =
+    prepareIndex >= 0
+      ? path.resolve(args[prepareIndex + 1])
+      : await mkdtemp(path.join(productRoot, ".staging-release-"));
+  within(productRoot, candidate);
+  if (prepareIndex >= 0) await mkdir(candidate);
+  try {
+    await installFile(sourceExe, path.join(candidate, APPLICATION));
+    if (
+      signing &&
+      signing.sha256 !== (await hash(path.join(candidate, APPLICATION)))
+    )
+      throw new Error(
+        "SIGNATURE VERIFICATION FAILED: candidate differs from verified signed source.",
+      );
+    const installed = [];
+    for (const name of localDependencies) {
+      await installFile(path.join(sourceDir, name), path.join(candidate, name));
+      installed.push({ name, sha256: await hash(path.join(sourceDir, name)) });
+    }
+    await installFile(
+      path.join(productRoot, FALLBACK_BAT),
+      path.join(candidate, FALLBACK_BAT),
     );
-  console.log(`Release ready: ${path.join(productRoot, APPLICATION)}`);
-  console.log(
-    "Start PLC Lab by double-clicking PLC Lab.exe in this folder. It is the Tauri release build itself, byte-identical to the successful build.",
-  );
-  console.log(
-    "Runtime requirements: Windows x64 with Microsoft Edge WebView2 installed. This is not an installer.",
-  );
+    await stageArtifactSet(
+      sourceDir,
+      path.join(candidate, RESOURCES),
+      [],
+      {
+        appVersion: application.version,
+        profile: "release",
+        releaseKind: development ? DEVELOPMENT : PRODUCTION,
+        ...(signing ? { signing } : {}),
+        sourceCommit: capture("git", ["rev-parse", "HEAD"]).trim(),
+        architecture: "x64",
+        application: {
+          name: APPLICATION,
+          sha256: await hash(path.join(candidate, APPLICATION)),
+        },
+        dependencies: installed,
+        fallback: {
+          name: FALLBACK_BAT,
+          sha256: await hash(path.join(candidate, FALLBACK_BAT)),
+        },
+        sourceExecutable: path.relative(root, sourceExe),
+        sourceModifiedAt: (await stat(sourceExe)).mtime.toISOString(),
+        systemDependencies,
+        webView2: "Installed Evergreen Runtime required; not bundled",
+        knowledgePack: {
+          archive: path.relative(root, DEFAULT_ZIP).split(path.sep).join("/"),
+          sha256: await hash(DEFAULT_ZIP),
+        },
+      },
+      [{ source: DEFAULT_PACK, target: `knowledge-packs/${PACK_NAME}` }],
+    );
+    if (prepareIndex >= 0) {
+      await createManifestCatalog(candidate);
+      console.log(
+        `PRODUCTION CANDIDATE ONLY: ${candidate}. Sign resources/product.cat, then install with scripts/install-signed-release.mjs. The working root has not changed.`,
+      );
+      return;
+    }
+    if (!development) await signManifestCatalog(candidate, { config });
+    const problems = await verifyDistribution(candidate, {
+      production: !development,
+      config,
+    });
+    if (problems.length)
+      throw new Error(
+        `The staged distribution is incomplete: ${problems.join("; ")}`,
+      );
+    await installPreparedDistribution(candidate, productRoot, {
+      production: !development,
+      config,
+    });
+    console.log(
+      `${development ? DEVELOPMENT : PRODUCTION}: ${path.join(productRoot, APPLICATION)}`,
+    );
+    console.log(
+      "Start PLC Lab by double-clicking PLC Lab.exe in this folder. It is the Tauri release build itself, byte-identical to the successful build.",
+    );
+    console.log(
+      "Runtime requirements: Windows x64 with Microsoft Edge WebView2 installed. This is not an installer.",
+    );
+  } finally {
+    if (prepareIndex < 0) await rm(candidate, { recursive: true, force: true });
+  }
 }
 
 /** Replace a file in the product root atomically and verify its bytes. */
@@ -319,21 +427,6 @@ async function installFile(source, target) {
       `${path.basename(target)} could not be replaced (${error.message}). Close PLC Lab and try again.`,
       { cause: error },
     );
-  }
-}
-
-/** Remove entry points of earlier distributions (the retired launcher and the separate
- * application folder); earlier builds generated them, never the user. */
-async function removeLegacy(productRoot) {
-  for (const name of LEGACY_FILES) {
-    const file = path.join(productRoot, name);
-    within(productRoot, file);
-    await rm(file, { force: true });
-  }
-  for (const name of LEGACY_DIRS) {
-    const dir = path.join(productRoot, name);
-    within(productRoot, dir);
-    await rm(dir, { recursive: true, force: true });
   }
 }
 

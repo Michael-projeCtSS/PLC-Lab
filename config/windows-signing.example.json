@@ -1,0 +1,7 @@
+{
+  "provider": "ssl-esigner",
+  "publisherSubject": "CN=REPLACE_WITH_EXACT_VERIFIED_PUBLISHER",
+  "trustedRootThumbprints": [
+    "REPLACE_WITH_PROVIDER_PUBLIC_ROOT_SHA1_THUMBPRINT"
+  ]
+}

@@ -24,3 +24,9 @@ apps/desktop/src-tauri/icons/*
 /.previous-*/
 /Launcher.exe
 /Launcher.exe.*.tmp
+/.staging-signed-*/
+*.pfx
+*.p12
+*.key
+*.pem
+config/windows-signing.local.json

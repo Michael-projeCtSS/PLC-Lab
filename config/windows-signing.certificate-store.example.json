@@ -1,0 +1,12 @@
+{
+  "provider": "certificate-store",
+  "publisherSubject": "CN=REPLACE_WITH_EXACT_VERIFIED_PUBLISHER",
+  "trustedRootThumbprints": [
+    "REPLACE_WITH_PROVIDER_PUBLIC_ROOT_SHA1_THUMBPRINT"
+  ],
+  "certificateStore": {
+    "thumbprint": "REPLACE_WITH_CA_SIGNING_CERTIFICATE_SHA1_THUMBPRINT",
+    "storeLocation": "CurrentUser",
+    "timestampUrl": "https://REPLACE_WITH_CA_DOCUMENTED_RFC3161_TIMESTAMP_SERVICE"
+  }
+}

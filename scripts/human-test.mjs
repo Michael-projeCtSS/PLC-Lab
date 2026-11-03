@@ -178,12 +178,12 @@ async function main() {
     );
   if (mode === "build-release") {
     const { verifyDistribution } = await import("./distribution.mjs");
-    const problems = await verifyDistribution(root);
+    const problems = await verifyDistribution(root, { production: true });
     if (problems.length) throw new Error(problems.join("\n"));
     console.log(
       [
         "============================================================",
-        "PLC LAB RELEASE BUILD: SUCCESS",
+        "PLC LAB RELEASE BUILD: SUCCESS - SIGNED PRODUCTION RELEASE",
         `Application: ${path.join(root, "PLC Lab.exe")}`,
         "Double-click PLC Lab.exe to start.",
         "============================================================",

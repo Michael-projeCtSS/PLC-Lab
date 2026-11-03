@@ -108,6 +108,15 @@ test("a modified application or missing resources fail the check", async () => {
   }
 });
 
+test("unlisted root DLLs are rejected before Windows can load stale dependencies", async () => {
+  const dir = await product({ extra: ["unexpected.dll"] });
+  try {
+    assert.match((await verifyDistribution(dir)).join("\n"), /unlisted DLL/);
+  } finally {
+    await cleanup(dir);
+  }
+});
+
 test("the workspace has no launcher and stages the Tauri application as PLC Lab.exe", () => {
   assert.doesNotMatch(read("Cargo.toml"), /apps\/launcher/);
   assert.doesNotMatch(read("Cargo.lock"), /name = "plc-lab-launcher"/);
@@ -115,8 +124,9 @@ test("the workspace has no launcher and stages the Tauri application as PLC Lab.
   assert.match(stage, /item\.name === "plc-lab-desktop"/);
   assert.match(
     stage,
-    /installFile\(sourceExe, path\.join\(productRoot, APPLICATION\)\)/,
+    /installFile\(sourceExe, path\.join\(candidate, APPLICATION\)\)/,
   );
+  assert.match(stage, /installPreparedDistribution\(candidate, productRoot/);
   assert.doesNotMatch(
     stage,
     /plc-lab-launcher|ROOT_LAUNCHERS|PLC Lab Desktop\.exe/,
