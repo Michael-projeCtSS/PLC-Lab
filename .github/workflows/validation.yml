@@ -5,6 +5,13 @@ on:
   pull_request:
   workflow_dispatch:
   workflow_call:
+    outputs:
+      windows-artifact-id:
+        description: Immutable unsigned Windows development artifact ID from this validated commit
+        value: ${{ jobs.windows-validation.outputs.artifact-id }}
+      windows-artifact-digest:
+        description: SHA-256 of the unsigned Windows development artifact archive
+        value: ${{ jobs.windows-validation.outputs.artifact-digest }}
 
 permissions:
   contents: read
@@ -14,6 +21,9 @@ jobs:
     name: Windows checks, native smoke and release
     runs-on: windows-2022
     timeout-minutes: 75
+    outputs:
+      artifact-id: ${{ steps.unsigned-windows.outputs.artifact-id }}
+      artifact-digest: ${{ steps.unsigned-windows.outputs.artifact-digest }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -28,6 +38,12 @@ jobs:
         run: node scripts/ci.mjs setup-rust
       - name: Verify Windows build tools and provide WebView2 if needed
         run: node scripts/ci.mjs windows-prerequisites
+      - name: Install the pinned signing client and exercise its real CLI without credentials
+        shell: pwsh
+        run: |
+          node scripts/esigner.mjs install
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/esigner.mjs doctor
       - name: Checks, release tests, knowledge pack, native smoke, release build and root PLC Lab.exe smoke
         run: npm run ci:windows
       - name: Preserve validation evidence
@@ -51,10 +67,11 @@ jobs:
             artifacts/release-relocated-smoke/*.png
             artifacts/release-bat-smoke/native.log
             artifacts/release-bat-smoke/result.json
-      - name: Publish the validated Windows release
+      - name: Publish the validated UNSIGNED Windows development build
+        id: unsigned-windows
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: plc-lab-windows-release-${{ github.run_attempt }}
+          name: plc-lab-windows-UNSIGNED-development-${{ github.run_attempt }}
           retention-days: 14
           if-no-files-found: error
           path: |

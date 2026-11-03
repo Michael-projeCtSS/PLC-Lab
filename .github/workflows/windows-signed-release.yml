@@ -1,0 +1,139 @@
+name: Signed Windows production release
+
+# Never add pull_request, workflow_run, arbitrary ref inputs, or a caller workflow.
+# The protected environment must restrict the same trusted ref.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-production-signing
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'Michael-projeCtSS/PLC-Lab' && github.ref == 'refs/heads/claude/product-development-v2'
+    uses: ./.github/workflows/validation.yml
+
+  sign:
+    name: Sign the exact validated artifact and verify the final root executable
+    needs: validate
+    if: needs.validate.result == 'success' && github.repository == 'Michael-projeCtSS/PLC-Lab' && github.ref == 'refs/heads/claude/product-development-v2'
+    runs-on: windows-2022
+    timeout-minutes: 40
+    environment: windows-production-signing
+    permissions:
+      contents: read
+      actions: read
+    env:
+      PLC_LAB_SIGNING_CONFIG: ${{ github.workspace }}\artifacts\windows-signing.json
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.15.0
+          package-manager-cache: false
+      - name: Require explicit protected environment configuration
+        env:
+          SIGNING_READY: ${{ vars.PLC_LAB_SIGNING_READY }}
+          SIGNING_CONFIG_JSON: ${{ vars.PLC_LAB_SIGNING_CONFIG_JSON }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:SIGNING_READY -cne 'true') { throw 'SIGNING NOT CONFIGURED: protect windows-production-signing, complete publisher verification, and set PLC_LAB_SIGNING_READY=true.' }
+          foreach ($name in @('SIGNING_CONFIG_JSON')) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) { throw "SIGNING NOT CONFIGURED: missing protected environment setting $name." }
+          }
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          [IO.File]::WriteAllText($env:PLC_LAB_SIGNING_CONFIG, $env:SIGNING_CONFIG_JSON, [Text.UTF8Encoding]::new($false))
+          node --input-type=module -e "import {loadSigningConfig} from './scripts/windows-signing.mjs'; const c=await loadSigningConfig(); if(c.provider!=='ssl-esigner') throw Error('SIGNING NOT CONFIGURED: this workflow requires SSL.com eSigner with an issued public code-signing certificate');"
+          if ($LASTEXITCODE -ne 0) { throw 'SIGNING NOT CONFIGURED: invalid publisher/provider configuration.' }
+      - name: Install locked verification and smoke dependencies
+        run: node scripts/ci.mjs dependencies
+      - name: Install repository-pinned Rust for Cargo metadata only
+        run: node scripts/ci.mjs setup-rust
+      - name: Verify Windows build tools and WebView2
+        run: node scripts/ci.mjs windows-prerequisites
+      - name: Install the pinned official CodeSignTool package without signing credentials
+        run: node scripts/esigner.mjs install
+      - name: Download only the immutable artifact from this validated source commit
+        env:
+          ARTIFACT_ID: ${{ needs.validate.outputs.windows-artifact-id }}
+          ARTIFACT_DIGEST: ${{ needs.validate.outputs.windows-artifact-digest }}
+          GH_ARTIFACT_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:ARTIFACT_ID -notmatch '^\d+$' -or $env:ARTIFACT_DIGEST -notmatch '^[a-fA-F0-9]{64}$') { throw 'Validated artifact ID or SHA-256 is missing; signing is refused.' }
+          $headers = @{ Authorization = "Bearer $env:GH_ARTIFACT_TOKEN"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
+          $artifactUrl = "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/actions/artifacts/$env:ARTIFACT_ID"
+          $metadata = Invoke-RestMethod -Uri $artifactUrl -Headers $headers
+          if ($metadata.expired -or [string]$metadata.workflow_run.id -ne $env:GITHUB_RUN_ID -or $metadata.workflow_run.head_sha -cne $env:GITHUB_SHA) { throw 'Artifact provenance does not match this validated workflow run and source commit.' }
+          $archive = Join-Path $env:RUNNER_TEMP 'validated-unsigned-windows.zip'
+          Invoke-WebRequest -Uri "$artifactUrl/zip" -Headers $headers -OutFile $archive
+          $actualDigest = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+          if ($actualDigest -ine $env:ARTIFACT_DIGEST) { throw 'Validated artifact archive SHA-256 mismatch; signing is refused.' }
+          $destination = [IO.Path]::GetFullPath((Join-Path $env:GITHUB_WORKSPACE 'artifacts/unsigned-windows'))
+          $zip = [IO.Compression.ZipFile]::OpenRead($archive)
+          try {
+            $names = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            foreach ($entry in $zip.Entries) {
+              $name = $entry.FullName.Replace('\', '/')
+              $entryPath = [IO.Path]::GetFullPath((Join-Path $destination $name))
+              if ($name.Contains(':') -or $name.Split('/') -contains '..' -or -not $entryPath.StartsWith($destination + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or -not $names.Add($name)) { throw 'Unsafe or duplicate path in validated artifact archive.' }
+              if ($name -match '\.exe$' -and $name -cne 'PLC Lab.exe') { throw 'The validated distribution contains a second application executable.' }
+            }
+          } finally { $zip.Dispose() }
+          Expand-Archive -LiteralPath $archive -DestinationPath $destination
+          node scripts/distribution.mjs $destination
+          if ($LASTEXITCODE -ne 0) { throw 'Validated unsigned distribution integrity check failed.' }
+      - name: Sign exactly the validated application through SSL.com eSigner
+        env:
+          ESIGNER_USERNAME: ${{ secrets.ESIGNER_USERNAME }}
+          ESIGNER_PASSWORD: ${{ secrets.ESIGNER_PASSWORD }}
+          ESIGNER_CREDENTIAL_ID: ${{ secrets.ESIGNER_CREDENTIAL_ID }}
+          ESIGNER_TOTP_SECRET: ${{ secrets.ESIGNER_TOTP_SECRET }}
+        run: node scripts/windows-signing.mjs sign "artifacts/unsigned-windows/PLC Lab.exe"
+      - name: Prepare post-signing manifest and catalog without installing an unsigned catalog
+        run: node scripts/stage-release.mjs --production --already-signed --source-exe "artifacts/unsigned-windows/PLC Lab.exe" --prepare-only artifacts/prepared-production
+      - name: Sign the exact distribution manifest catalog through SSL.com eSigner
+        env:
+          ESIGNER_USERNAME: ${{ secrets.ESIGNER_USERNAME }}
+          ESIGNER_PASSWORD: ${{ secrets.ESIGNER_PASSWORD }}
+          ESIGNER_CREDENTIAL_ID: ${{ secrets.ESIGNER_CREDENTIAL_ID }}
+          ESIGNER_TOTP_SECRET: ${{ secrets.ESIGNER_TOTP_SECRET }}
+        run: node scripts/windows-signing.mjs sign-catalog "artifacts/prepared-production/resources/product.cat"
+      - name: Install only the verified signed catalog and application into the root product
+        run: node scripts/install-signed-release.mjs artifacts/prepared-production
+      - name: Verify final root Authenticode, publisher, timestamp and manifest
+        run: node scripts/distribution.mjs --production
+      - name: Exercise signed root executable, single instance, resources and relocated distribution
+        run: |
+          npm run test:desktop:release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:release:relocated
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:release:bat
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify no distributed bytes changed during smoke testing
+        run: node scripts/distribution.mjs --production
+      - name: Publish only the verified SIGNED production distribution
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: plc-lab-windows-SIGNED-production-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            PLC Lab.exe
+            RUN_PLC_LAB.bat
+            resources/**
+      - name: Record hosted runner acceptance boundary
+        run: |
+          'SIGNED PRODUCTION RELEASE: cryptographic and native smoke checks passed.' | Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Append
+          'SMART APP CONTROL DEVICE ACCEPTANCE: NOT VERIFIED. Test the downloaded artifact on Windows 11 with Smart App Control On.' | Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Append

@@ -74,7 +74,8 @@ test("workflow YAML preserves triggers, two lanes, read permissions and required
   assert.match(source, /artifacts\/release-relocated-smoke\/result\.json/);
   assert.match(source, /artifacts\/release-bat-smoke\/result\.json/);
   const release = value.jobs["windows-validation"].steps.find(
-    (step) => step.name === "Publish the validated Windows release",
+    (step) =>
+      step.name === "Publish the validated UNSIGNED Windows development build",
   );
   // The published product is the root application and its resources: one executable.
   assert.match(release.with.path, /^\s*PLC Lab\.exe$/m);
@@ -123,8 +124,8 @@ test("Windows plan runs checks, release tests, native, release and root PLC Lab.
   ]);
   assert.equal(plan[3].args.at(-1), "npm.cmd run knowledge:install-check");
   assert.equal(plan[4].args.at(-1), "npm.cmd run test:desktop");
-  assert.equal(plan[6].args.at(-1), "npm.cmd run stage:release");
-  assert.equal(plan[7].args.at(-1), "npm.cmd run check:distribution");
+  assert.equal(plan[6].args.at(-1), "npm.cmd run stage:release:unsigned");
+  assert.equal(plan[7].args.at(-1), "npm.cmd run check:distribution:unsigned");
   assert.equal(plan[8].args.at(-1), "npm.cmd run test:desktop:release");
   assert.equal(plan[9].args.at(-1), "npm.cmd run test:release:relocated");
   assert.equal(plan[10].args.at(-1), "npm.cmd run test:release:bat");
