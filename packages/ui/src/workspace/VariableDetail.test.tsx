@@ -114,3 +114,50 @@ it("shows the runtime's view of one signal, its binding and its recent changes",
   // PLC inputs can be forced from here.
   expect(within(detail).getByTitle("Force TRUE")).toBeInTheDocument();
 });
+
+it("shows a program variable's retention, initial value and what the latest start did", async () => {
+  fake.watch.mockResolvedValue({
+    ...live,
+    rows: [
+      {
+        ...live.rows[0]!,
+        signal: 7,
+        path: "plc.Count",
+        label: "Count",
+        kind: "PLC_LOCAL",
+        valueType: "INT",
+        value: { type: "INT", value: 12 },
+        scanValue: null,
+        committed: { type: "INT", value: 12 },
+        staged: null,
+        source: null,
+        quality: null,
+        retained: true,
+        initial: { type: "INT", value: 0 },
+        restartEffect: "KEPT",
+      },
+    ],
+  });
+  fake.trend.mockResolvedValue({ ...trend, series: [] });
+  fake.hardware.mockResolvedValue({ signals: [] } as unknown as HardwareDto);
+  const counter = {
+    ...lab(),
+    signals: [
+      {
+        ...signal,
+        id: 7,
+        path: "plc.Count",
+        label: "Count",
+        kind: "PLC_LOCAL",
+        valueType: "INT",
+      },
+    ],
+  } as unknown as Lab;
+  render(<VariableDetail lab={counter} signal={7} />);
+  const detail = screen.getByLabelText("Online variable");
+  expect(
+    await within(detail).findByText("retentive (VAR RETAIN)"),
+  ).toBeInTheDocument();
+  expect(within(detail).getByText("Initial value")).toBeInTheDocument();
+  expect(within(detail).getByText("value kept")).toBeInTheDocument();
+});

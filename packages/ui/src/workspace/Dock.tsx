@@ -284,6 +284,11 @@ function Variables({
                       ) : (
                         <span>{r.name}</span>
                       )}
+                      {r.retained && (
+                        <Badge kind="info" title={t("var.retained")}>
+                          RETAIN
+                        </Badge>
+                      )}
                     </td>
                     <td className="dim">
                       {r.kind === "PLC_INPUT"

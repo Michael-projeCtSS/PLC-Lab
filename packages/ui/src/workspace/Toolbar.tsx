@@ -4,6 +4,7 @@ import { api } from "@plc-lab/ipc";
 import { seconds } from "../format";
 import { Badge, PlcModeBadge, SimulationBadge } from "../ui";
 import { isFaultFinding } from "../route";
+import { RestartControls } from "./RestartControls";
 import type { Lab } from "./useLab";
 
 const SPEEDS = [25, 50, 100, 200, 500, 1000];
@@ -181,22 +182,7 @@ export function Toolbar({
             STOP
           </button>
         </div>
-        {(frame.plc.mode === "FAULT" || mode === "advanced") && (
-          <button
-            className={`btn btn-sm${frame.plc.mode === "FAULT" ? " btn-danger" : ""}`}
-            disabled={busy}
-            onClick={() =>
-              void lab.act(
-                "reset",
-                () => api.plcReset(ws),
-                (f) => f,
-              )
-            }
-            title={t("help.reset")}
-          >
-            {t("control.reset")}
-          </button>
-        )}
+        <RestartControls lab={lab} advanced={mode === "advanced"} />
         {frame.plc.forces > 0 && (
           <Badge kind="forced">{frame.plc.forces} forced</Badge>
         )}

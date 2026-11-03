@@ -1,8 +1,9 @@
 /**
  * Online detail of one canonical signal: identity, the runtime's values (scan input,
  * committed, next input), quality, force state with force controls, the I/O binding from
- * the PLC symbol to the device on the drawing, and its recent changes from the trace.
- * Everything comes from backend projections; nothing is evaluated here.
+ * the PLC symbol to the device on the drawing, its retention and what the latest start
+ * did to it (ADR-0038), and its recent changes from the trace. Everything comes from
+ * backend projections; nothing is evaluated here.
  */
 import {
   api,
@@ -11,22 +12,25 @@ import {
   type WatchDto,
 } from "@plc-lab/ipc";
 import { formatValue, seconds, valueClass } from "../format";
+import { useInterface } from "../locale";
+import type { TranslationKey } from "../locale/en";
 import { Badge } from "../ui";
 import { ForceCell } from "./Dock";
 import { useFrameQuery } from "./useFrameQuery";
 import type { Lab } from "./useLab";
 
-const KIND: Record<string, string> = {
-  PLC_INPUT: "PLC input",
-  PLC_OUTPUT: "PLC output",
-  PLC_LOCAL: "PLC variable",
-  BLOCK_OUTPUT: "Block output",
-  PHYSICAL: "Process value",
-  CHANNEL: "I/O channel",
+const KIND: Record<string, TranslationKey> = {
+  PLC_INPUT: "var.kind.PLC_INPUT",
+  PLC_OUTPUT: "var.kind.PLC_OUTPUT",
+  PLC_LOCAL: "var.kind.PLC_LOCAL",
+  BLOCK_OUTPUT: "var.kind.BLOCK_OUTPUT",
+  PHYSICAL: "var.kind.PHYSICAL",
+  CHANNEL: "var.kind.CHANNEL",
 };
 const HISTORY_US = 20_000_000n;
 
 export function VariableDetail({ lab, signal }: { lab: Lab; signal: number }) {
+  const { t } = useInterface();
   const ws = lab.ws;
   const descriptor = lab.signals.find((s) => s.id === signal) ?? null;
   const symbol = descriptor?.path.startsWith("plc.")
@@ -53,11 +57,7 @@ export function VariableDetail({ lab, signal }: { lab: Lab; signal: number }) {
     [symbol],
   );
   if (!descriptor)
-    return (
-      <div className="inspector-section muted">
-        This signal is not part of the loaded program or station.
-      </div>
-    );
+    return <div className="inspector-section muted">{t("var.missing")}</div>;
   const e = live.data?.rows[0] ?? null;
   const binding = symbol
     ? (hardware.data?.signals.find((s) => s.tag === symbol) ?? null)
@@ -77,55 +77,81 @@ export function VariableDetail({ lab, signal }: { lab: Lab; signal: number }) {
     .sort((a, b) => (BigInt(b.t) > BigInt(a.t) ? 1 : -1))
     .slice(0, 10);
   return (
-    <div className="inspector-section" aria-label="Online variable">
+    <div className="inspector-section" aria-label={t("var.title")}>
       <h4>{descriptor.label}</h4>
       <dl className="kv">
-        <dt>Canonical id</dt>
+        <dt>{t("var.id")}</dt>
         <dd className="mono">{descriptor.path}</dd>
-        <dt>Kind</dt>
-        <dd>{KIND[descriptor.kind] ?? descriptor.kind}</dd>
-        <dt>Type</dt>
+        <dt>{t("var.kind")}</dt>
+        <dd>
+          {KIND[descriptor.kind] ? t(KIND[descriptor.kind]!) : descriptor.kind}
+        </dd>
+        <dt>{t("var.type")}</dt>
         <dd>
           {descriptor.valueType}
           {descriptor.unit ? ` (${descriptor.unit})` : ""}
         </dd>
-        <dt>Value</dt>
+        <dt>{t("var.value")}</dt>
         <dd className={valueClass(e?.value)}>
           {formatValue(e?.value, descriptor.unit)}
         </dd>
         {e?.scanValue && (
           <>
-            <dt>Scan input</dt>
+            <dt>{t("var.scan")}</dt>
             <dd>{formatValue(e.scanValue)}</dd>
           </>
         )}
         {e?.committed && (
           <>
-            <dt>Committed</dt>
+            <dt>{t("var.committed")}</dt>
             <dd>{formatValue(e.committed)}</dd>
           </>
         )}
         {e?.staged && (
           <>
-            <dt>Next input</dt>
+            <dt>{t("var.next")}</dt>
             <dd>{formatValue(e.staged)}</dd>
           </>
         )}
-        <dt>Quality</dt>
+        <dt>{t("var.quality")}</dt>
         <dd>
           {!e?.quality ? (
             "—"
           ) : e.quality === "GOOD" ? (
-            "good"
+            t("var.good")
           ) : (
             <Badge kind="bad">
               {e.quality.replaceAll("_", " ").toLowerCase()}
             </Badge>
           )}
         </dd>
-        <dt>Source</dt>
+        {e?.initial && (
+          <>
+            <dt>{t("var.retention")}</dt>
+            <dd>
+              {e.retained ? (
+                <Badge kind="info">{t("var.retained")}</Badge>
+              ) : (
+                t("var.nonRetained")
+              )}
+            </dd>
+            <dt>{t("var.initial")}</dt>
+            <dd className="mono">{formatValue(e.initial)}</dd>
+            {e.restartEffect && (
+              <>
+                <dt>{t("var.latestStart")}</dt>
+                <dd>
+                  {e.restartEffect === "KEPT"
+                    ? t("var.kept")
+                    : t("var.initialized")}
+                </dd>
+              </>
+            )}
+          </>
+        )}
+        <dt>{t("var.source")}</dt>
         <dd>{e?.source ?? "—"}</dd>
-        <dt>Force</dt>
+        <dt>{t("var.force")}</dt>
         <dd>
           {descriptor.kind === "PLC_INPUT" ||
           descriptor.kind === "PLC_OUTPUT" ? (
@@ -137,36 +163,34 @@ export function VariableDetail({ lab, signal }: { lab: Lab; signal: number }) {
               forced={e?.forced ?? null}
             />
           ) : (
-            <span className="muted">
-              only PLC inputs and outputs can be forced
-            </span>
+            <span className="muted">{t("var.notForceable")}</span>
           )}
         </dd>
       </dl>
       {binding && (
         <>
-          <h4 style={{ marginTop: 12 }}>I/O binding</h4>
+          <h4 style={{ marginTop: 12 }}>{t("var.binding")}</h4>
           <dl className="kv">
-            <dt>Channel</dt>
+            <dt>{t("var.channel")}</dt>
             <dd className="mono">{binding.channelId ?? "—"}</dd>
-            <dt>Address</dt>
+            <dt>{t("var.address")}</dt>
             <dd className="mono">{binding.address}</dd>
-            <dt>Device on the drawing</dt>
+            <dt>{t("var.device")}</dt>
             <dd>
               {binding.drawnDevice
                 ? `${binding.drawnDevice} (${binding.drawnPort ?? ""})`
-                : "not on the drawing"}
+                : t("var.notDrawn")}
             </dd>
-            <dt>Device state</dt>
+            <dt>{t("var.deviceState")}</dt>
             <dd>{binding.deviceState ?? "—"}</dd>
           </dl>
         </>
       )}
-      <h4 style={{ marginTop: 12 }}>Recent changes</h4>
+      <h4 style={{ marginTop: 12 }}>{t("var.changes")}</h4>
       {changes.length === 0 ? (
-        <p className="muted">No change in the last 20 s of the trace.</p>
+        <p className="muted">{t("var.noChanges")}</p>
       ) : (
-        <table className="table" aria-label="Recent changes">
+        <table className="table" aria-label={t("var.changes")}>
           <tbody>
             {changes.map((c) => (
               <tr key={`${c.layer}-${c.t}`}>
