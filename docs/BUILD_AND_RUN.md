@@ -6,14 +6,14 @@ Double-click **`PLC Lab.exe`** in the product (repository) root. That is the who
 startup: `PLC Lab.exe` is the PLC Lab desktop application itself (the optimized Tauri
 build), not a launcher, and it starts no other executable (ADR-0030).
 
-| File                        | What it does                                                        |
-| --------------------------- | ------------------------------------------------------------------- |
-| `PLC Lab.exe` (root)        | The application. `PLC Lab.exe "<file.plclab>"` opens a project      |
-| `resources/` (root)         | Data the application reads: knowledge pack and `product.json`       |
-| `RUN_PLC_LAB.bat` (root)    | Optional fallback that only starts `PLC Lab.exe` next to it         |
-| `BUILD_PLC_LAB_RELEASE.bat` | Validates, builds the optimized release and stages it into the root |
-| `RUN_PLC_LAB_DEV.bat`       | Development application with hot reload (`npm run dev`)             |
-| `RUN_ALL_CHECKS.bat`        | Complete validation (`npm run validate`)                            |
+| File                        | What it does                                                         |
+| --------------------------- | -------------------------------------------------------------------- |
+| `PLC Lab.exe` (root)        | The application. `PLC Lab.exe "<file.plclab>"` opens a project       |
+| `resources/` (root)         | Data the application reads: knowledge pack and `product.json`        |
+| `RUN_PLC_LAB.bat` (root)    | Optional fallback that only starts `PLC Lab.exe` next to it          |
+| `BUILD_PLC_LAB_RELEASE.bat` | Validates, builds, signs, verifies and stages the production release |
+| `RUN_PLC_LAB_DEV.bat`       | Development application with hot reload (`npm run dev`)              |
+| `RUN_ALL_CHECKS.bat`        | Complete validation (`npm run validate`)                             |
 
 `PLC Lab.exe` resolves everything relative to its own location, so it works when started
 from Explorer, CMD or PowerShell, from any working directory, from a folder whose path
@@ -64,6 +64,10 @@ while PLC Lab is running), stages `resources/` in a temporary folder with hashes
 it in atomically, removes entry points of earlier distributions (`Launcher.exe`,
 `releases/current/`), and finally checks the distribution (`scripts/distribution.mjs`):
 one application executable, every file matching `product.json`, a knowledge pack present.
+Production staging signs and verifies the executable before calculating its final hash,
+then signs `resources/product.cat` to authenticate the manifest and distribution files.
+The complete verified candidate is promoted with rollback on installation failure.
+Unsigned development staging refuses to overwrite a signed root release.
 
 ## Commands
 
@@ -71,10 +75,14 @@ one application executable, every file matching `product.json`, a knowledge pack
 npm ci                         # locked dependencies
 npm run dev                    # development application
 npm run validate               # all checks + native debug smoke
-npm run build:release          # validate + release build + staging into the root
-npm run build:release:native   # optimized Tauri build only
-npm run stage:release          # stage PLC Lab.exe and resources/ (after build:release:native)
-npm run check:distribution     # one application executable, files match product.json
+npm run build:release          # trusted signing preflight + validate + build + sign + stage
+npm run build:release:unsigned # explicit unsigned development build (may be blocked by SAC)
+npm run build:release:native   # optimized unsigned Tauri build only, not a production release
+npm run stage:release          # sign, verify and stage production (provider configuration required)
+npm run stage:release:unsigned # explicitly stage an unsigned development build
+npm run check:distribution     # trusted EXE/catalog signatures, publisher and final manifest hashes
+npm run check:distribution:unsigned # file inventory only, no publisher-trust claim
+npm run release:install -- <extracted-directory> # verify and install a signed CI artifact at the root
 npm run test:desktop:release   # native smoke of the root PLC Lab.exe from another directory
 npm run test:release:relocated # the same from a copied folder whose path contains spaces
 npm run test:release:bat       # the same through RUN_PLC_LAB.bat
@@ -83,10 +91,13 @@ npm run knowledge:verify       # knowledge archive matches the pack
 
 ## Code signing
 
-Release executables are not code-signed. Windows SmartScreen or Smart App Control may
-block or warn about unsigned binaries built locally. Do not disable Windows security to
-run them; sign them with an organization certificate (for example with `signtool` in a
-release pipeline) or use builds whose reputation your policy accepts. On the development
-machine used for the rebuild, Smart App Control blocked freshly compiled release build
-scripts (os error 4551); the release is therefore built, staged and smoke-tested on hosted
-Windows CI and published as the `plc-lab-windows-release` workflow artifact.
+Production signing uses a verified publisher and a trusted CA chain; missing credentials
+fail with `SIGNING NOT CONFIGURED`. The current audited root executable remains unsigned
+until publisher onboarding is completed. Standard CI publishes explicitly labeled
+`UNSIGNED-development` validation artifacts. The protected **Signed Windows production
+release** workflow signs the validated executable and its manifest catalog, verifies
+them, runs native smoke, and publishes `SIGNED-production` artifacts. Install one with
+the command above to update the actual root executable. See
+[Windows code signing](WINDOWS_CODE_SIGNING.md) for provider eligibility, setup,
+verification and Smart App Control acceptance. Hosted CI smoke does not prove acceptance
+on a Windows 11 device with Smart App Control On.

@@ -43,3 +43,4 @@ as history; their session, process and controller details are superseded as note
 | [0035](0035-interface-preferences-and-localization.md) | Typed interface localization and presentation preferences            | Accepted                           |
 | [0036](0036-bundled-educational-content-locales.md)    | Source-guarded educational content overlays                          | Accepted                           |
 | [0037](0037-industrial-alarm-model.md)                 | A generic industrial alarm model                                     | Accepted                           |
+| [0039](0039-windows-release-signing.md)                | Trusted production signatures and signed distribution catalog        | Accepted for this signing task     |

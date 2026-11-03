@@ -16,12 +16,21 @@ PLC Lab.exe was not found next to this file. Run BUILD_PLC_LAB_RELEASE.bat first
 
 ## Build the release
 
-Double-click **BUILD_PLC_LAB_RELEASE.bat**. It runs the complete validation, builds the
+Configure trusted signing first using [Windows code signing](WINDOWS_CODE_SIGNING.md).
+Double-click **BUILD_PLC_LAB_RELEASE.bat**. It runs signing preflight, the complete validation, builds the
 optimized Tauri application and stages it as `PLC Lab.exe` in the repository root with
 its `resources\` folder (knowledge pack, `product.json` with hashes), then checks that the
-distribution contains exactly one application executable. A failure never reports a new
+distribution contains exactly one application executable, verifies trusted executable
+and manifest-catalog signatures, and installs the complete candidate with rollback. A failure never reports a new
 release. Close running PLC Lab windows first: `PLC Lab.exe` cannot be replaced while it
 runs.
+
+Without publisher credentials the production build fails with `SIGNING NOT CONFIGURED`.
+Use `npm run build:release:unsigned` for an explicitly labeled development build in a
+separate checkout; it cannot replace a signed root release and may be blocked by Smart
+App Control. To obtain a production executable from protected CI, extract its
+`SIGNED-production` artifact and run `npm run release:install -- <extracted-directory>`.
+This verifies and stages the signed application at the normal root path.
 
 ## Development application
 

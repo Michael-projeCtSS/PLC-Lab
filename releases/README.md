@@ -9,3 +9,9 @@ created by `BUILD_PLC_LAB_RELEASE.bat` (ADR-0030). Earlier builds staged a separ
 `current/` folder here; staging removes it.
 
 See [build and run](../docs/BUILD_AND_RUN.md).
+
+Standard validation artifacts are labeled `UNSIGNED-development`. Trusted production
+artifacts come from the protected **Signed Windows production release** workflow and
+include a signed `resources/product.cat` manifest catalog. See
+[Windows code signing](../docs/WINDOWS_CODE_SIGNING.md) for required publisher setup and
+the supported installation command that updates the root `PLC Lab.exe`.
