@@ -1196,7 +1196,27 @@ try {
     await step(
       "language and density survive closing and restarting the real application",
       async () => {
+        const answers = async () => {
+          try {
+            const response = await fetch(
+              `http://127.0.0.1:${port}/json/version`,
+              { signal: AbortSignal.timeout(1000) },
+            );
+            return response.ok;
+          } catch {
+            return false;
+          }
+        };
         for (const expected of ["en", "pl"]) {
+          // The WebView2 browser process of the instance that just closed can
+          // outlive the application for a moment and still answer on the
+          // debugging port; connecting to it ends with a reset socket.
+          const released = Date.now() + 30_000;
+          while (await answers()) {
+            if (Date.now() > released)
+              throw new Error("The closed WebView kept the debugging port");
+            await delay(100);
+          }
           const restarted = spawn(target, [], {
             cwd: os.tmpdir(),
             env: environment,
@@ -1217,15 +1237,7 @@ try {
               if (startError) throw startError;
               if (restarted.exitCode !== null)
                 throw new Error(`Restart exited ${restarted.exitCode}`);
-              try {
-                const response = await fetch(
-                  `http://127.0.0.1:${port}/json/version`,
-                  { signal: AbortSignal.timeout(1000) },
-                );
-                if (response.ok) break;
-              } catch {
-                /* WebView starts asynchronously. */
-              }
+              if (await answers()) break;
               if (Date.now() > deadline)
                 throw new Error("Restarted WebView did not become ready");
               await delay(100);
