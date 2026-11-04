@@ -28,14 +28,12 @@ test("the Polish overlay validates all declared complete categories and reports 
       ["fundamentals", 25, 25, 25],
       ["instructions", 7, 7, 7],
       ["protocols", 9, 9, 9],
-      ["troubleshooting", 30, 1, 1],
+      ["troubleshooting", 30, 30, 30],
       ["vendors", 24, 24, 24],
     ],
   );
   assert.ok(report.missing.length > 0, "do not claim full Polish coverage");
-  assert.ok(
-    report.missing.some((field) => field.startsWith("troubleshooting.")),
-  );
+  assert.ok(report.missing.some((field) => field.startsWith("cm.")));
   for (const { data, group } of canonicalItems().filter(
     (x) => x.group === "exercises" || x.group === "lessons",
   )) {
@@ -161,7 +159,12 @@ test("an unchanged English text counts only with an explicit reason", () => {
 });
 
 test("a declared complete article group fails when one of its fields is missing", () => {
-  for (const group of ["fundamentals", "protocols", "vendors"]) {
+  for (const group of [
+    "fundamentals",
+    "protocols",
+    "troubleshooting",
+    "vendors",
+  ]) {
     assert.ok(locale.complete.includes(group), group);
     const item = locale.items.find(
       (i) => i.id.startsWith(`${group}.`) || i.file.startsWith(`${group}/`),

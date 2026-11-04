@@ -11,6 +11,7 @@
     "fundamentals",
     "instructions",
     "protocols",
+    "troubleshooting",
     "vendors"
   ],
   "items": [
@@ -10217,6 +10218,1077 @@
       ]
     },
     {
+      "id": "troubleshooting.analog-calibration",
+      "file": "troubleshooting/analog-calibration.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Transmitter zero or span error",
+          "text": "Błąd zera lub zakresu przetwornika"
+        },
+        {
+          "path": "summary",
+          "source": "The transmitter delivers a valid signal that does not match the process: a constant error points to the zero, a growing error to the span.",
+          "text": "Przetwornik dostarcza prawidłowy sygnał, który nie odpowiada procesowi: stały błąd wskazuje na zero, a błąd rosnący na zakres."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognizing it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The channel configuration matches the drawing and the signal is within range, yet the value disagrees with an independent reference. Check the error at two levels: the same difference everywhere is an offset (zero) error; a difference that grows with the level is a span error. A large offset also pushes the signal over range near the top or under range near the bottom.",
+          "text": "Konfiguracja kanału zgadza się ze schematem, a sygnał mieści się w zakresie, mimo to wartość nie zgadza się z niezależnym odniesieniem. Sprawdź błąd na dwóch poziomach: jednakowa różnica w całym zakresie to błąd przesunięcia (zera); różnica rosnąca wraz z poziomem to błąd zakresu. Duże przesunięcie powoduje też przekroczenie zakresu w górę przy górnej granicy skali lub w dół przy dolnej."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "What to do",
+          "text": "Co zrobić"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Compare with a reference (sight glass, second instrument, calibrator), then recalibrate the transmitter's lower and upper range values. Do not hide a calibration error by changing the scaling in the program: the next replacement transmitter would then be wrong.",
+          "text": "Porównaj z odniesieniem (wziernik, drugi przyrząd, kalibrator), a następnie ponownie skalibruj dolną i górną wartość zakresu przetwornika. Nie ukrywaj błędu kalibracji zmianą skalowania w programie: następny przetwornik zamienny wskazywałby wtedy błędnie."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The measured value is offset from the process value",
+          "text": "Zmierzona wartość jest przesunięta względem wartości procesowej"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Two measurements of the same quantity disagree",
+          "text": "Dwa pomiary tej samej wielkości się nie zgadzają"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Over range near the top of the range",
+          "text": "Przekroczenie zakresu w górę przy górnej granicy zakresu"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "A reference agrees with the other measurement",
+          "text": "Odniesienie zgadza się z drugim pomiarem"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "The loop current differs from the expected current for the level",
+          "text": "Prąd pętli różni się od prądu oczekiwanego dla danego poziomu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare at two levels",
+          "text": "Porównaj na dwóch poziomach"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Calculate the expected current from the transmitter range",
+          "text": "Oblicz oczekiwany prąd na podstawie zakresu przetwornika"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Recalibrate the transmitter zero and span",
+          "text": "Ponownie skalibruj zero i zakres przetwornika"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Calibration belongs to the instrument; scaling in the PLC must follow the documented range.",
+          "text": "Kalibracja należy do przyrządu; skalowanie w PLC musi odpowiadać udokumentowanemu zakresowi."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.analog-loop-supply",
+      "file": "troubleshooting/analog-loop-supply.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "2-wire transmitter without loop supply",
+          "text": "Przetwornik 2-przewodowy bez zasilania pętli"
+        },
+        {
+          "path": "summary",
+          "source": "A loop-powered transmitter connected to a passive input has no power: the loop current is 0 mA although the wiring is intact.",
+          "text": "Przetwornik zasilany z pętli podłączony do wejścia pasywnego nie ma zasilania: prąd pętli wynosi 0 mA, choć okablowanie jest nienaruszone."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "What happens",
+          "text": "Co się dzieje"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A 2-wire transmitter needs the loop to be driven. On a passive input (meant for 4-wire devices) nothing drives it, so no current flows. The input reads 0 mA and, with live-zero diagnostics, reports a wire break that is not one.",
+          "text": "Przetwornik 2-przewodowy wymaga, aby pętla była zasilana. Na wejściu pasywnym (przeznaczonym dla urządzeń 4-przewodowych) nic jej nie zasila, więc prąd nie płynie. Wejście odczytuje 0 mA i przy diagnostyce żywego zera zgłasza przerwanie przewodu, którego nie ma."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "How to tell it from a broken wire",
+          "text": "Jak odróżnić to od przerwanego przewodu"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "The wiring checks out end to end, the transmitter display (if any) stays dark, and the drawing shows a 2-wire device while the channel is configured as a passive input. A broken wire shows 0 mA on a correctly supplied loop instead.",
+          "text": "Okablowanie jest sprawne na całej długości, wyświetlacz przetwornika (jeśli jest) pozostaje ciemny, a schemat pokazuje urządzenie 2-przewodowe, podczas gdy kanał jest skonfigurowany jako wejście pasywne. Przerwany przewód daje natomiast 0 mA w poprawnie zasilanej pętli."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "No loop current; the input reports a wire break",
+          "text": "Brak prądu pętli; wejście zgłasza przerwanie przewodu"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "0 mA on an intact loop",
+          "text": "0 mA w nienaruszonej pętli"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Wire break diagnostic without a broken wire",
+          "text": "Diagnostyka przerwania przewodu bez przerwanego przewodu"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "The drawing shows a 2-wire transmitter",
+          "text": "Schemat pokazuje przetwornik 2-przewodowy"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "The channel is configured as a passive input",
+          "text": "Kanał jest skonfigurowany jako wejście pasywne"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Loop current 0 mA",
+          "text": "Prąd pętli 0 mA"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare the transmitter type with the channel configuration",
+          "text": "Porównaj typ przetwornika z konfiguracją kanału"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Measure the loop current",
+          "text": "Zmierz prąd pętli"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Supply the loop (channel setting or external loop supply, as the module manual specifies)",
+          "text": "Zapewnij zasilanie pętli (ustawieniem kanału lub zewnętrznym zasilaczem pętli, zgodnie z instrukcją modułu)"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Loop power is part of the signal design: decide for every transmitter who powers the loop, and configure the input to match.",
+          "text": "Zasilanie pętli jest częścią projektu sygnału: dla każdego przetwornika ustal, kto zasila pętlę, i odpowiednio skonfiguruj wejście."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.analog-mode-mismatch",
+      "file": "troubleshooting/analog-mode-mismatch.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Current transmitter on a voltage-configured channel",
+          "text": "Przetwornik prądowy na kanale skonfigurowanym jako napięciowy"
+        },
+        {
+          "path": "summary",
+          "source": "A 4-20 mA transmitter is connected to a channel configured for 0-10 V, so the reading is wrong without any wire-break diagnostic.",
+          "text": "Przetwornik 4-20 mA jest podłączony do kanału skonfigurowanego na 0-10 V, więc odczyt jest błędny, a diagnostyka przerwania przewodu się nie pojawia."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "With a 2-wire transmitter the voltage input does not supply the loop: the transmitter is dead and the channel reads 0 with good quality. With a 4-wire transmitter the reading is far off scale. The hardware comparison shows the mode against the drawing.",
+          "text": "Przy przetworniku 2-przewodowym wejście napięciowe nie zasila pętli: przetwornik nie działa, a kanał odczytuje 0 z dobrą jakością. Przy przetworniku 4-przewodowym odczyt jest daleko poza skalą. Porównanie sprzętu pokazuje tryb kanału w zestawieniu ze schematem."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Compare the channel mode with the drawing and the transmitter's nameplate. For a 2-wire transmitter configure a current input that supplies the loop, enable diagnostics, download, and compare the level with an independent reference. On real modules check the manual before connecting a current loop to a voltage input.",
+          "text": "Porównaj tryb kanału ze schematem i tabliczką znamionową przetwornika. Dla przetwornika 2-przewodowego skonfiguruj wejście prądowe zasilające pętlę, włącz diagnostykę, wgraj konfigurację do PLC i porównaj poziom z niezależnym odniesieniem. W rzeczywistych modułach sprawdź instrukcję, zanim podłączysz pętlę prądową do wejścia napięciowego."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic modular station: configured and detected modules compared per slot, module electronics supply and field supply as separate conditions, channel modes against the drawing, process image addresses, wiring from devices to terminals",
+          "text": "Ogólna stacja modułowa: moduły skonfigurowane i wykryte porównywane slot po slocie, zasilanie elektroniki modułu i zasilanie obiektowe jako osobne warunki, tryby kanałów porównywane ze schematem, adresy obrazu procesu, okablowanie od urządzeń do zacisków"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Module status and LEDs follow generic PLC Lab rules, not a vendor's indicator behavior",
+          "text": "Stan modułów i diody LED działają według ogólnych reguł PLC Lab, a nie według zachowania wskaźników konkretnego producenta"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "A module of the wrong type or in an unconfigured slot exchanges no data and its inputs hold substitute value 0",
+          "text": "Moduł niewłaściwego typu lub w nieskonfigurowanym slocie nie wymienia danych, a jego wejścia mają wartość zastępczą 0"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Vendor-specific module parameters, diagnostic codes and firmware",
+          "text": "Parametry modułów, kody diagnostyczne i oprogramowanie układowe specyficzne dla producentów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Hot swapping and module start-up times",
+          "text": "Wymiana modułów pod napięciem i czasy rozruchu modułów"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The measurement is implausible but not flagged",
+          "text": "Pomiar jest nieprawdopodobny, ale nie jest oznaczony jako błędny"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Reading 0 with good quality",
+          "text": "Odczyt 0 z dobrą jakością"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Mode mismatch against the drawing",
+          "text": "Tryb kanału niezgodny ze schematem"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Channel configuration",
+          "text": "Konfiguracja kanału"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Drawing and nameplate",
+          "text": "Schemat i tabliczka znamionowa"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Independent level reference",
+          "text": "Niezależne odniesienie poziomu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare the channel mode with the device",
+          "text": "Porównaj tryb kanału z urządzeniem"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Measure the terminal",
+          "text": "Wykonaj pomiar na zacisku"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Configure the channel for the device's signal and download",
+          "text": "Skonfiguruj kanał zgodnie z sygnałem urządzenia i wgraj konfigurację do PLC"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "A voltage channel has no live zero: it cannot tell a dead loop from a zero reading.",
+          "text": "Kanał napięciowy nie ma żywego zera: nie odróżni martwej pętli od odczytu zerowego."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.analog-wire-break",
+      "file": "troubleshooting/analog-wire-break.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Wire break on a 4-20 mA input",
+          "text": "Przerwanie przewodu na wejściu 4-20 mA"
+        },
+        {
+          "path": "summary",
+          "source": "The loop current is 0 mA: the analog input reports wire break and the value is invalid.",
+          "text": "Prąd pętli wynosi 0 mA: wejście analogowe zgłasza przerwanie przewodu, a wartość jest nieprawidłowa."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The loop current is 0 mA: the analog input reports wire break and the value is invalid.",
+          "text": "Prąd pętli wynosi 0 mA: wejście analogowe zgłasza przerwanie przewodu, a wartość jest nieprawidłowa."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Invalid measurement; dependent control must react safely",
+          "text": "Nieprawidłowy pomiar; zależne sterowanie musi zareagować bezpiecznie"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Value jumps to an overflow or invalid code",
+          "text": "Wartość skacze do kodu przepełnienia lub wartości nieprawidłowej"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Module status LED flashes red",
+          "text": "Dioda stanu modułu miga na czerwono"
+        },
+        {
+          "path": "troubleshooting.symptoms.2",
+          "source": "Wire-break entry in the diagnostic buffer",
+          "text": "Wpis o przerwaniu przewodu w buforze diagnostycznym"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Diagnostic buffer",
+          "text": "Bufor diagnostyczny"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Channel quality",
+          "text": "Jakość kanału"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Loop current measurement",
+          "text": "Pomiar prądu pętli"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Check the diagnostic buffer",
+          "text": "Sprawdź bufor diagnostyczny"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Measure the loop current",
+          "text": "Zmierz prąd pętli"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Check terminals, junction boxes and the transmitter supply",
+          "text": "Sprawdź zaciski, puszki połączeniowe i zasilanie przetwornika"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Repair the wiring or replace the transmitter",
+          "text": "Napraw okablowanie lub wymień przetwornik"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Verify the value returns and the diagnostic goes outgoing",
+          "text": "Sprawdź, czy wartość wraca, a zdarzenie diagnostyczne staje się wychodzące"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "A live-zero signal makes a broken loop detectable: below about 3.6 mA the value cannot be a real measurement.",
+          "text": "Sygnał z żywym zerem pozwala wykryć przerwaną pętlę: poniżej około 3.6 mA wartość nie może być rzeczywistym pomiarem."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.analog-wrong-range",
+      "file": "troubleshooting/analog-wrong-range.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Analog channel configured for 0-20 mA instead of 4-20 mA",
+          "text": "Kanał analogowy skonfigurowany na 0-20 mA zamiast 4-20 mA"
+        },
+        {
+          "path": "summary",
+          "source": "A 4-20 mA level transmitter reads about 20 % high at low levels: the analog channel is configured for 0-20 mA.",
+          "text": "Przetwornik poziomu 4-20 mA przy niskich poziomach wskazuje o około 20 % za dużo: kanał analogowy jest skonfigurowany na 0-20 mA."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A 4-20 mA level transmitter reads about 20 % high at low levels: the analog channel is configured for 0-20 mA.",
+          "text": "Przetwornik poziomu 4-20 mA przy niskich poziomach wskazuje o około 20 % za dużo: kanał analogowy jest skonfigurowany na 0-20 mA."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Wrong engineering value, false high alarms",
+          "text": "Błędna wartość w jednostkach inżynierskich, fałszywe alarmy wysokiego poziomu"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "The level reads about 20 % with an empty tank",
+          "text": "Przy pustym zbiorniku poziom wynosi około 20 %"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Readings agree near full scale but not near zero",
+          "text": "Odczyty zgadzają się blisko pełnej skali, ale nie blisko zera"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Loop current measured at the terminal",
+          "text": "Prąd pętli zmierzony na zacisku"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Raw value in the PLC",
+          "text": "Wartość surowa w PLC"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Channel measurement type in the hardware configuration",
+          "text": "Typ pomiaru kanału w konfiguracji sprzętu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Measure the loop current and calculate the expected percentage",
+          "text": "Zmierz prąd pętli i oblicz oczekiwany procent"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Compare with the raw value and the scaling",
+          "text": "Porównaj z wartością surową i skalowaniem"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Inspect the channel configuration",
+          "text": "Sprawdź konfigurację kanału"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Configure the channel for 4-20 mA and download the hardware configuration",
+          "text": "Skonfiguruj kanał na 4-20 mA i wgraj konfigurację sprzętu do PLC"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Verify at 4, 12 and 20 mA if possible",
+          "text": "Jeśli to możliwe, sprawdź przy 4, 12 i 20 mA"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "With a 0-20 mA range, 4 mA is converted as 20 % of the range. The transmitter is correct; the configuration interprets the current differently.",
+          "text": "W zakresie 0-20 mA prąd 4 mA jest przetwarzany jako 20 % zakresu. Przetwornik jest sprawny; konfiguracja inaczej interpretuje prąd."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.commissioning-io-check",
+      "file": "troubleshooting/commissioning-io-check.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "I/O check before the first start",
+          "text": "Kontrola we/wy przed pierwszym uruchomieniem"
+        },
+        {
+          "path": "summary",
+          "source": "Wiring and mapping errors are found cheaply during the I/O check and expensively during production.",
+          "text": "Błędy okablowania i przypisań wykryte podczas kontroli we/wy kosztują niewiele, a wykryte w produkcji kosztują dużo."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Wiring and mapping errors are found cheaply during the I/O check and expensively during production.",
+          "text": "Błędy okablowania i przypisań wykryte podczas kontroli we/wy kosztują niewiele, a wykryte w produkcji kosztują dużo."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Unchecked I/O hides swapped wires and wrong mappings",
+          "text": "Niesprawdzone we/wy ukrywają zamienione przewody i błędne przypisania"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Actuators react to the wrong command",
+          "text": "Elementy wykonawcze reagują na niewłaściwe polecenie"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Sensor signals appear on unexpected tags",
+          "text": "Sygnały czujników pojawiają się w nieoczekiwanych tagach"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Input LEDs and tags while actuating each sensor",
+          "text": "Diody wejść i tagi podczas uruchamiania każdego czujnika"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Forced outputs and the field device reaction",
+          "text": "Wymuszone wyjścia i reakcja urządzeń obiektowych"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Work through the I/O list channel by channel",
+          "text": "Przejdź listę we/wy kanał po kanale"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Record each check",
+          "text": "Zapisz wynik każdej kontroli"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Correct wiring or mapping before the function test",
+          "text": "Popraw okablowanie lub przypisanie przed testem funkcjonalnym"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "A systematic loop check proves that each tag reaches the right terminal and device.",
+          "text": "Systematyczna kontrola pętli dowodzi, że każdy tag trafia na właściwy zacisk i do właściwego urządzenia."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.drive-command-path",
+      "file": "troubleshooting/drive-command-path.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Run command lost on the way to the drive",
+          "text": "Polecenie pracy ginie w drodze do przemiennika"
+        },
+        {
+          "path": "summary",
+          "source": "A ready drive in remote control stays stopped although the PLC output is on: the command does not arrive.",
+          "text": "Gotowy przemiennik w sterowaniu zdalnym pozostaje zatrzymany, choć wyjście PLC jest załączone: polecenie nie dociera."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "PLC commanded is not drive accepted",
+          "text": "Wysłane przez PLC to jeszcze nie przyjęte przez przemiennik"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The PLC output, the terminal voltage at the PLC, the field wire, the drive terminal and the drive's own indication are separate steps. A command can be present at one and missing at the next.",
+          "text": "Wyjście PLC, napięcie na zacisku PLC, przewód obiektowy, zacisk przemiennika i wskazanie samego przemiennika to osobne etapy. Polecenie może być obecne na jednym z nich i nie dotrzeć do następnego."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Find the gap",
+          "text": "Znajdź lukę"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "With the drive ready and in remote, compare the PLC output (LED and measured 24 V) with what the drive shows for its run terminal. The fault lies between the last point where the command is present and the first where it is missing. With a fieldbus the same reasoning applies to the communication status instead of a wire.",
+          "text": "Gdy przemiennik jest gotowy i w trybie zdalnym, porównaj wyjście PLC (dioda i zmierzone 24 V) z tym, co przemiennik pokazuje dla swojego zacisku pracy. Usterka leży między ostatnim punktem, w którym polecenie jest obecne, a pierwszym, w którym go brakuje. Przy magistrali polowej to samo rozumowanie dotyczy stanu komunikacji zamiast przewodu."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic VFD behavioral model: local/remote control place, ready chain (supply, no fault, run enable), run command, latched trip with acknowledge, terminal or keypad speed reference with a preset speed, ready/running/remote/fault relays",
+          "text": "Ogólny model behawioralny przemiennika: miejsce sterowania lokalne/zdalne, łańcuch gotowości (zasilanie, brak usterki, zezwolenie na pracę), polecenie pracy, zatrzaśnięte wyzwolenie z potwierdzeniem, wartość zadana prędkości z zacisków lub panelu z prędkością stałą, przekaźniki gotowość/praca/zdalne/usterka"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Linear acceleration ramp, immediate deceleration, simple motor current",
+          "text": "Liniowa rampa przyspieszania, natychmiastowe zwalnianie, uproszczony prąd silnika"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Product parameters and fault codes",
+          "text": "Parametry i kody usterek konkretnych produktów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Fieldbus control and its communication monitoring",
+          "text": "Sterowanie przez magistralę polową i nadzór tej komunikacji"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Braking",
+          "text": "Hamowanie"
+        },
+        {
+          "path": "fidelity.omitted.3",
+          "source": "Safe torque off and other safety functions",
+          "text": "Safe Torque Off i inne funkcje bezpieczeństwa"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The drive never receives the run command",
+          "text": "Przemiennik nigdy nie otrzymuje polecenia pracy"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "PLC run output ON, drive stopped",
+          "text": "Wyjście pracy PLC załączone, przemiennik zatrzymany"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Drive ready and in remote",
+          "text": "Przemiennik gotowy i w trybie zdalnym"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "PLC output terminal at 24 V",
+          "text": "Zacisk wyjściowy PLC na 24 V"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Drive run terminal not energized",
+          "text": "Zacisk pracy przemiennika bez napięcia"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare sent and received command",
+          "text": "Porównaj polecenie wysłane z odebranym"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Measure along the command path",
+          "text": "Wykonaj pomiary wzdłuż ścieżki polecenia"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Repair the command path, then verify",
+          "text": "Napraw ścieżkę polecenia, a następnie sprawdź działanie"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "A command is only effective where it is received; diagnose the path, not just the program.",
+          "text": "Polecenie działa tylko tam, gdzie zostało odebrane; diagnozuj ścieżkę, a nie tylko program."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.drive-not-ready",
+      "file": "troubleshooting/drive-not-ready.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Drive commanded but not ready",
+          "text": "Przemiennik z poleceniem pracy, ale niegotowy"
+        },
+        {
+          "path": "summary",
+          "source": "A drive starts only when it is ready: supplied, not faulted and enabled. A present run command is not enough.",
+          "text": "Przemiennik startuje tylko wtedy, gdy jest gotowy: zasilony, bez usterki i z zezwoleniem na pracę. Samo polecenie pracy nie wystarczy."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "The ready chain",
+          "text": "Łańcuch gotowości"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Ready usually needs the mains supply, no active fault and the run enable (often from a safety or interlock circuit). Each drive family adds its own conditions; check the manual.",
+          "text": "Gotowość zwykle wymaga zasilania sieciowego, braku aktywnej usterki i zezwolenia na pracę (często z obwodu bezpieczeństwa lub blokady). Każda rodzina przemienników dodaje własne warunki; sprawdź instrukcję."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Find the missing link",
+          "text": "Znajdź brakujące ogniwo"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Compare what the PLC sends with what the drive receives at its terminals, and read the drive display: no display points to the supply, a fault code to a trip, a missing enable to the enable path.",
+          "text": "Porównaj to, co wysyła PLC, z tym, co przemiennik odbiera na zaciskach, i odczytaj wyświetlacz przemiennika: brak wskazań oznacza problem z zasilaniem, kod usterki wskazuje na wyzwolenie, a brak zezwolenia na ścieżkę sygnału zezwolenia."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic VFD behavioral model: local/remote control place, ready chain (supply, no fault, run enable), run command, latched trip with acknowledge, terminal or keypad speed reference with a preset speed, ready/running/remote/fault relays",
+          "text": "Ogólny model behawioralny przemiennika: miejsce sterowania lokalne/zdalne, łańcuch gotowości (zasilanie, brak usterki, zezwolenie na pracę), polecenie pracy, zatrzaśnięte wyzwolenie z potwierdzeniem, wartość zadana prędkości z zacisków lub panelu z prędkością stałą, przekaźniki gotowość/praca/zdalne/usterka"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Linear acceleration ramp, immediate deceleration, simple motor current",
+          "text": "Liniowa rampa przyspieszania, natychmiastowe zwalnianie, uproszczony prąd silnika"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Product parameters and fault codes",
+          "text": "Parametry i kody usterek konkretnych produktów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Fieldbus control and its communication monitoring",
+          "text": "Sterowanie przez magistralę polową i nadzór tej komunikacji"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Braking",
+          "text": "Hamowanie"
+        },
+        {
+          "path": "fidelity.omitted.3",
+          "source": "Safe torque off and other safety functions",
+          "text": "Safe Torque Off i inne funkcje bezpieczeństwa"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The drive ignores the run command",
+          "text": "Przemiennik ignoruje polecenie pracy"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Run command present, drive not ready",
+          "text": "Polecenie pracy obecne, przemiennik niegotowy"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Display dark or showing a missing enable",
+          "text": "Wyświetlacz ciemny lub pokazujący brak zezwolenia"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "PLC enable output switched",
+          "text": "Wyjście zezwolenia PLC załączone"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Drive enable terminal not energized",
+          "text": "Zacisk zezwolenia przemiennika bez napięcia"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Supply and fault state",
+          "text": "Stan zasilania i usterki"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Check supply, fault and enable in that order",
+          "text": "Sprawdź po kolei zasilanie, usterkę i zezwolenie"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Measure where the signal is lost",
+          "text": "Zmierz, w którym miejscu sygnał ginie"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Restore the missing condition, then verify",
+          "text": "Przywróć brakujący warunek, a następnie sprawdź działanie"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Ready is a chain of conditions; a single open link keeps the drive from running.",
+          "text": "Gotowość to łańcuch warunków; jedno otwarte ogniwo uniemożliwia pracę przemiennika."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.drive-reference-source",
+      "file": "troubleshooting/drive-reference-source.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Drive ignores the speed command",
+          "text": "Przemiennik ignoruje polecenie prędkości"
+        },
+        {
+          "path": "summary",
+          "source": "A running drive that ignores speed commands is usually set to another reference source.",
+          "text": "Pracujący przemiennik, który ignoruje polecenia prędkości, ma zwykle ustawione inne źródło wartości zadanej."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Reference sources",
+          "text": "Źródła wartości zadanej"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Drives can take their speed reference from terminals (analog or preset inputs), a fieldbus or the keypad. Only the selected source counts; commands on the other sources are ignored.",
+          "text": "Przemienniki mogą pobierać wartość zadaną prędkości z zacisków (wejścia analogowe lub wejścia prędkości stałych), z magistrali polowej lub z panelu. Liczy się tylko wybrane źródło; polecenia z pozostałych źródeł są ignorowane."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Read the reference source on the drive display and compare the speed with the commanded preset.",
+          "text": "Odczytaj źródło wartości zadanej na wyświetlaczu przemiennika i porównaj prędkość z zadaną prędkością stałą."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic VFD behavioral model: local/remote control place, ready chain (supply, no fault, run enable), run command, latched trip with acknowledge, terminal or keypad speed reference with a preset speed, ready/running/remote/fault relays",
+          "text": "Ogólny model behawioralny przemiennika: miejsce sterowania lokalne/zdalne, łańcuch gotowości (zasilanie, brak usterki, zezwolenie na pracę), polecenie pracy, zatrzaśnięte wyzwolenie z potwierdzeniem, wartość zadana prędkości z zacisków lub panelu z prędkością stałą, przekaźniki gotowość/praca/zdalne/usterka"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Linear acceleration ramp, immediate deceleration, simple motor current",
+          "text": "Liniowa rampa przyspieszania, natychmiastowe zwalnianie, uproszczony prąd silnika"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Product parameters and fault codes",
+          "text": "Parametry i kody usterek konkretnych produktów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Fieldbus control and its communication monitoring",
+          "text": "Sterowanie przez magistralę polową i nadzór tej komunikacji"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Braking",
+          "text": "Hamowanie"
+        },
+        {
+          "path": "fidelity.omitted.3",
+          "source": "Safe torque off and other safety functions",
+          "text": "Safe Torque Off i inne funkcje bezpieczeństwa"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The drive runs at the wrong speed",
+          "text": "Przemiennik pracuje z niewłaściwą prędkością"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Speed does not follow the selector",
+          "text": "Prędkość nie podąża za przełącznikiem wyboru"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Speed fixed at a keypad value",
+          "text": "Prędkość ustalona na wartości z panelu"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Preset terminal follows the command",
+          "text": "Zacisk prędkości stałej podąża za poleceniem"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Display shows the keypad as source",
+          "text": "Wyświetlacz pokazuje panel jako źródło"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Read the reference source",
+          "text": "Odczytaj źródło wartości zadanej"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Compare commanded and actual speed",
+          "text": "Porównaj prędkość zadaną z rzeczywistą"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Select the documented reference source",
+          "text": "Wybierz udokumentowane źródło wartości zadanej"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Configuration decides which command a drive obeys; wiring alone does not.",
+          "text": "To konfiguracja decyduje, którego polecenia słucha przemiennik; samo okablowanie tego nie rozstrzyga."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.drive-trip-acknowledge",
+      "file": "troubleshooting/drive-trip-acknowledge.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Drive trip that cannot be reset",
+          "text": "Wyzwolenie przemiennika, którego nie da się skasować"
+        },
+        {
+          "path": "summary",
+          "source": "A latched drive trip is cleared in two steps: remove the cause, then acknowledge.",
+          "text": "Zatrzaśnięte wyzwolenie przemiennika kasuje się w dwóch krokach: usuń przyczynę, a następnie potwierdź."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Why reset does nothing",
+          "text": "Dlaczego reset nic nie daje"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "While the cause (for example a jam or overload) is present, most drives refuse to acknowledge the fault. Resetting again and again does not help and can stress the machine.",
+          "text": "Dopóki przyczyna (na przykład zablokowanie lub przeciążenie) jest obecna, większość przemienników odmawia potwierdzenia usterki. Wielokrotne resetowanie nie pomaga i może obciążać maszynę."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Order of work",
+          "text": "Kolejność działań"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Read the fault, remove the cause, acknowledge, then verify the function. Note the fault for the commissioning report.",
+          "text": "Odczytaj usterkę, usuń przyczynę, potwierdź, a następnie sprawdź działanie funkcji. Zapisz usterkę w protokole uruchomienia."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic VFD behavioral model: local/remote control place, ready chain (supply, no fault, run enable), run command, latched trip with acknowledge, terminal or keypad speed reference with a preset speed, ready/running/remote/fault relays",
+          "text": "Ogólny model behawioralny przemiennika: miejsce sterowania lokalne/zdalne, łańcuch gotowości (zasilanie, brak usterki, zezwolenie na pracę), polecenie pracy, zatrzaśnięte wyzwolenie z potwierdzeniem, wartość zadana prędkości z zacisków lub panelu z prędkością stałą, przekaźniki gotowość/praca/zdalne/usterka"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Linear acceleration ramp, immediate deceleration, simple motor current",
+          "text": "Liniowa rampa przyspieszania, natychmiastowe zwalnianie, uproszczony prąd silnika"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Product parameters and fault codes",
+          "text": "Parametry i kody usterek konkretnych produktów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Fieldbus control and its communication monitoring",
+          "text": "Sterowanie przez magistralę polową i nadzór tej komunikacji"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Braking",
+          "text": "Hamowanie"
+        },
+        {
+          "path": "fidelity.omitted.3",
+          "source": "Safe torque off and other safety functions",
+          "text": "Safe Torque Off i inne funkcje bezpieczeństwa"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The drive stays faulted",
+          "text": "Przemiennik pozostaje w stanie usterki"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Fault lamp lit",
+          "text": "Lampka usterki świeci"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Reset has no effect",
+          "text": "Reset nie przynosi efektu"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Fault relay closed",
+          "text": "Przekaźnik usterki zamknięty"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "The cause is still present",
+          "text": "Przyczyna jest nadal obecna"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Read the fault",
+          "text": "Odczytaj usterkę"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Remove the cause",
+          "text": "Usuń przyczynę"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Acknowledge",
+          "text": "Potwierdź"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Remove the cause, then acknowledge the fault",
+          "text": "Usuń przyczynę, a następnie potwierdź usterkę"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Acknowledging a fault is not a repair; it only confirms that the cause has been removed.",
+          "text": "Potwierdzenie usterki to nie naprawa; potwierdza tylko, że przyczyna została usunięta."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.ip-subnet-mismatch",
+      "file": "troubleshooting/ip-subnet-mismatch.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Device address outside the PLC subnet",
+          "text": "Adres urządzenia poza podsiecią PLC"
+        },
+        {
+          "path": "summary",
+          "source": "The PLC cannot reach a device: its IP address was changed to another subnet and no gateway is configured.",
+          "text": "PLC nie może połączyć się z urządzeniem: jego adres IP zmieniono na adres z innej podsieci, a brama nie jest skonfigurowana."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The PLC cannot reach a device: its IP address was changed to another subnet and no gateway is configured.",
+          "text": "PLC nie może połączyć się z urządzeniem: jego adres IP zmieniono na adres z innej podsieci, a brama nie jest skonfigurowana."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Communication timeout or no route",
+          "text": "Przekroczenie czasu komunikacji lub brak trasy"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Connection status: no route or timeout",
+          "text": "Stan połączenia: brak trasy lub przekroczenie czasu"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Ping from the PLC fails",
+          "text": "Ping z PLC kończy się niepowodzeniem"
+        },
+        {
+          "path": "troubleshooting.symptoms.2",
+          "source": "Communication-OK flag FALSE",
+          "text": "Flaga poprawnej komunikacji ma wartość FALSE"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "PLC interface address and mask",
+          "text": "Adres i maska interfejsu PLC"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Device address",
+          "text": "Adres urządzenia"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Ping result",
+          "text": "Wynik polecenia ping"
+        },
+        {
+          "path": "troubleshooting.evidence.3",
+          "source": "Connection diagnostics",
+          "text": "Diagnostyka połączeń"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare addresses and masks",
+          "text": "Porównaj adresy i maski"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Ping the device from the PLC side",
+          "text": "Wykonaj ping do urządzenia od strony PLC"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Check the device's current address",
+          "text": "Sprawdź bieżący adres urządzenia"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Restore the documented device address or correct the configuration",
+          "text": "Przywróć udokumentowany adres urządzenia lub popraw konfigurację"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Without a gateway a device can only reach addresses in its own subnet; ARP requests for other subnets are never answered.",
+          "text": "Bez bramy urządzenie może komunikować się tylko z adresami we własnej podsieci; zapytania ARP o adresy z innych podsieci nigdy nie dostają odpowiedzi."
+        }
+      ]
+    },
+    {
       "id": "troubleshooting.level-switch-failed",
       "file": "troubleshooting/level-switch-failed.json",
       "fields": [
@@ -10304,6 +11376,1744 @@
           "path": "troubleshooting.explanation",
           "source": "When one measurement disagrees with another, the sensor that disagrees with the physical process is the suspect. The alarm proves the repair by returning to normal once the cause is gone.",
           "text": "Gdy jeden pomiar przeczy drugiemu, podejrzany jest czujnik niezgodny z rzeczywistym stanem procesu. Alarm potwierdza skuteczność naprawy, wracając do stanu normalnego po usunięciu przyczyny."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.missing-feedback",
+      "file": "troubleshooting/missing-feedback.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Actuator works, but its feedback never arrives",
+          "text": "Element wykonawczy działa, ale jego sygnał zwrotny nie dociera"
+        },
+        {
+          "path": "summary",
+          "source": "A contactor pulls in or a valve moves, yet the confirmation input stays unchanged, and every step that waits for it stalls.",
+          "text": "Stycznik zadziałał albo zawór się przestawił, a wejście potwierdzenia się nie zmienia; każdy krok, który na nie czeka, staje w miejscu."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Why feedback matters",
+          "text": "Dlaczego sygnał zwrotny ma znaczenie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Programs rarely trust a command alone. A contactor's auxiliary contact, a valve's limit switch or a drive's running relay confirms that the actuator really did what it was told. The next step of a sequence, a lamp or an alarm is built on that confirmation.",
+          "text": "Programy rzadko ufają samemu poleceniu. Styk pomocniczy stycznika, wyłącznik krańcowy zaworu lub przekaźnik pracy przemiennika potwierdza, że element wykonawczy rzeczywiście wykonał polecenie. Na tym potwierdzeniu opiera się następny krok sekwencji, lampka lub alarm."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Recognizing it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "The output is ON, the terminal carries 24 V and the device visibly responds, but the feedback input does not change. Everything that depends on the confirmation stays off, and a well-designed program raises a feedback timeout alarm.",
+          "text": "Wyjście jest załączone, zacisk ma 24 V, a urządzenie widocznie reaguje, ale wejście sygnału zwrotnego się nie zmienia. Wszystko, co zależy od potwierdzenia, pozostaje wyłączone, a dobrze zaprojektowany program zgłasza alarm przekroczenia czasu oczekiwania na sygnał zwrotny."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Typical causes",
+          "text": "Typowe przyczyny"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "An auxiliary contact block not fitted or not wired, a broken or loose feedback wire, a limit switch that is misadjusted, or a feedback wired to another input than the drawing shows.",
+          "text": "Niezamontowany lub niepodłączony blok styków pomocniczych, przerwany lub poluzowany przewód sygnału zwrotnego, źle wyregulowany wyłącznik krańcowy albo sygnał zwrotny podłączony do innego wejścia, niż pokazuje schemat."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Steps that wait for the confirmation never continue",
+          "text": "Kroki oczekujące na potwierdzenie nigdy nie są kontynuowane"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "The actuator works, but the machine never reports it",
+          "text": "Element wykonawczy działa, ale maszyna nigdy tego nie zgłasza"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Lamps or follow-up steps that depend on the confirmation stay off",
+          "text": "Lampki lub kolejne kroki zależne od potwierdzenia pozostają wyłączone"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Output ON and device responding while the feedback input stays unchanged",
+          "text": "Wyjście załączone, urządzenie reaguje, a wejście sygnału zwrotnego się nie zmienia"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "The program waits for the feedback signal",
+          "text": "Program czeka na sygnał zwrotny"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Energize the actuator and watch its feedback input",
+          "text": "Zasil element wykonawczy i obserwuj jego wejście sygnału zwrotnego"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Measure the feedback contact and follow its wire to the input terminal",
+          "text": "Zmierz styk sygnału zwrotnego i prześledź jego przewód do zacisku wejściowego"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Restore the feedback contact and its wiring, then repeat the test",
+          "text": "Przywróć styk sygnału zwrotnego i jego okablowanie, a następnie powtórz test"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "A confirmation that never arrives stops everything built on it, although the actuator itself works. Test every feedback during commissioning, not only the command.",
+          "text": "Potwierdzenie, które nigdy nie dociera, zatrzymuje wszystko, co na nim zbudowano, choć sam element wykonawczy działa. Podczas uruchamiania testuj każdy sygnał zwrotny, a nie tylko polecenie."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.missing-field-power",
+      "file": "troubleshooting/missing-field-power.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Missing load (field) supply on an I/O module",
+          "text": "Brak zasilania obciążenia (obiektowego) modułu we/wy"
+        },
+        {
+          "path": "summary",
+          "source": "The PLC commands outputs but nothing switches; the module reports missing supply voltage.",
+          "text": "PLC wysterowuje wyjścia, ale nic się nie przełącza; moduł zgłasza brak napięcia zasilania."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The PLC commands outputs but nothing switches; the module reports missing supply voltage.",
+          "text": "PLC wysterowuje wyjścia, ale nic się nie przełącza; moduł zgłasza brak napięcia zasilania."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Outputs stay off although the program sets them",
+          "text": "Wyjścia pozostają wyłączone, choć program je ustawia"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Output tags TRUE, output LEDs off, actuators idle",
+          "text": "Tagi wyjść mają wartość TRUE, diody wyjść nie świecą, elementy wykonawcze nie działają"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Module status LED flashing red",
+          "text": "Dioda stanu modułu miga na czerwono"
+        },
+        {
+          "path": "troubleshooting.symptoms.2",
+          "source": "Diagnostic buffer: load voltage missing",
+          "text": "Bufor diagnostyczny: brak napięcia obciążenia"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Module LEDs and status",
+          "text": "Diody LED i stan modułu"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Diagnostic buffer",
+          "text": "Bufor diagnostyczny"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Voltage at the module's supply terminals",
+          "text": "Napięcie na zaciskach zasilania modułu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Confirm the output is commanded in the PLC",
+          "text": "Potwierdź, że wyjście jest wysterowane w PLC"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Check module status and diagnostics",
+          "text": "Sprawdź stan modułu i diagnostykę"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Measure the load supply and the fuse",
+          "text": "Zmierz zasilanie obciążenia i sprawdź bezpiecznik"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Restore the load supply (fuse, wiring, power supply)",
+          "text": "Przywróć zasilanie obciążenia (bezpiecznik, okablowanie, zasilacz)"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Verify outputs switch",
+          "text": "Sprawdź, czy wyjścia się przełączają"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Output modules switch the field supply to the load; without it the electronics work but no current can flow to the actuators.",
+          "text": "Moduły wyjściowe przełączają zasilanie obiektowe na obciążenie; bez niego elektronika działa, ale do elementów wykonawczych nie może popłynąć prąd."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.modbus-device-offline",
+      "file": "troubleshooting/modbus-device-offline.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Modbus device switched off",
+          "text": "Urządzenie Modbus wyłączone"
+        },
+        {
+          "path": "summary",
+          "source": "A correctly configured device stops answering because it has no power or no link.",
+          "text": "Poprawnie skonfigurowane urządzenie przestaje odpowiadać, ponieważ nie ma zasilania lub łącza."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Requests time out and ping gets no reply, although the configuration matches the documentation and other devices answer.",
+          "text": "Zapytania kończą się przekroczeniem czasu, a ping nie dostaje odpowiedzi, choć konfiguracja zgadza się z dokumentacją, a inne urządzenia odpowiadają."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Go to the device: power, link LED, its own diagnostics. Then verify the connection again.",
+          "text": "Idź do urządzenia: sprawdź zasilanie, diodę łącza i jego własną diagnostykę. Następnie ponownie sprawdź połączenie."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order",
+          "text": "Deterministyczny klient i serwery Modbus TCP: reguły podsieci IPv4, rozwiązywanie adresów, obsługa Unit ID przez bramy, odczyty funkcjami 03/04, wyjątki 01/02/0B, czas przetwarzania względem skonfigurowanego limitu czasu, wartości INT i REAL z kolejnością słów"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Fixed link latency",
+          "text": "Stałe opóźnienie łącza"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "One request at a time per connection",
+          "text": "Jedno zapytanie naraz na połączenie"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "TCP retransmission and connection handshakes",
+          "text": "Retransmisje TCP i nawiązywanie połączeń"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Writes, other function codes and serial bus timing behind gateways",
+          "text": "Zapisy, inne kody funkcji i zależności czasowe magistrali szeregowej za bramami"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Byte order inside a register (words are big-endian as the protocol defines)",
+          "text": "Kolejność bajtów wewnątrz rejestru (słowa są w kolejności big-endian, jak definiuje protokół)"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "No answers from the device",
+          "text": "Brak odpowiedzi od urządzenia"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Timeouts",
+          "text": "Przekroczenia czasu"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "No ping reply",
+          "text": "Brak odpowiedzi na ping"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Configuration matches the documentation",
+          "text": "Konfiguracja zgadza się z dokumentacją"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Other devices answer",
+          "text": "Inne urządzenia odpowiadają"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Rule out configuration",
+          "text": "Wyklucz błąd konfiguracji"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Check the device on site",
+          "text": "Sprawdź urządzenie na miejscu"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Restore power or link, then verify",
+          "text": "Przywróć zasilanie lub łącze, a następnie sprawdź połączenie"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "When the configuration is right, the problem is at the device or on its link.",
+          "text": "Gdy konfiguracja jest poprawna, problem leży w urządzeniu lub w jego łączu."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.modbus-timeout",
+      "file": "troubleshooting/modbus-timeout.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Timeout shorter than the device needs",
+          "text": "Limit czasu krótszy, niż potrzebuje urządzenie"
+        },
+        {
+          "path": "summary",
+          "source": "A reachable device answers too late for the configured timeout.",
+          "text": "Osiągalne urządzenie odpowiada zbyt późno w stosunku do skonfigurowanego limitu czasu."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Only timeouts, no exceptions; the device answers ping and other connections work. Gateways to serial devices are typically slower than direct TCP devices.",
+          "text": "Występują tylko przekroczenia czasu, bez wyjątków; urządzenie odpowiada na ping, a inne połączenia działają. Bramy do urządzeń szeregowych są zwykle wolniejsze niż urządzenia podłączone bezpośrednio przez TCP."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Compare the configured timeout with the documented response time and the observed round trip times.",
+          "text": "Porównaj skonfigurowany limit czasu z udokumentowanym czasem odpowiedzi i zaobserwowanymi czasami obiegu zapytań."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order",
+          "text": "Deterministyczny klient i serwery Modbus TCP: reguły podsieci IPv4, rozwiązywanie adresów, obsługa Unit ID przez bramy, odczyty funkcjami 03/04, wyjątki 01/02/0B, czas przetwarzania względem skonfigurowanego limitu czasu, wartości INT i REAL z kolejnością słów"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Fixed link latency",
+          "text": "Stałe opóźnienie łącza"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "One request at a time per connection",
+          "text": "Jedno zapytanie naraz na połączenie"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "TCP retransmission and connection handshakes",
+          "text": "Retransmisje TCP i nawiązywanie połączeń"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Writes, other function codes and serial bus timing behind gateways",
+          "text": "Zapisy, inne kody funkcji i zależności czasowe magistrali szeregowej za bramami"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Byte order inside a register (words are big-endian as the protocol defines)",
+          "text": "Kolejność bajtów wewnątrz rejestru (słowa są w kolejności big-endian, jak definiuje protokół)"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Replies arrive after the PLC gave up",
+          "text": "Odpowiedzi przychodzą po tym, jak PLC przestał czekać"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Timeouts on a slow device",
+          "text": "Przekroczenia czasu przy wolnym urządzeniu"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Device answers ping",
+          "text": "Urządzenie odpowiada na ping"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Configured timeout",
+          "text": "Skonfigurowany limit czasu"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Documented response time",
+          "text": "Udokumentowany czas odpowiedzi"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare timeout and response time",
+          "text": "Porównaj limit czasu z czasem odpowiedzi"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Configure a timeout above the response time",
+          "text": "Skonfiguruj limit czasu dłuższy niż czas odpowiedzi"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "The timeout must cover the slowest documented answer, with margin.",
+          "text": "Limit czasu musi z zapasem obejmować najwolniejszą udokumentowaną odpowiedź."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.modbus-unit-id",
+      "file": "troubleshooting/modbus-unit-id.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Gateway rejects the unit ID",
+          "text": "Brama odrzuca Unit ID"
+        },
+        {
+          "path": "summary",
+          "source": "Behind a gateway, the unit ID selects the target device; a wrong unit ID is answered with an exception.",
+          "text": "Za bramą Unit ID wybiera urządzenie docelowe; na błędny Unit ID brama odpowiada wyjątkiem."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The gateway answers quickly, but with exception 0Bh (gateway target device failed to respond) or 0Ah (gateway path unavailable), depending on the gateway.",
+          "text": "Brama odpowiada szybko, ale wyjątkiem 0Bh (urządzenie docelowe za bramą nie odpowiedziało) lub 0Ah (ścieżka bramy niedostępna), zależnie od bramy."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Compare the configured unit ID with the gateway's routing table in its documentation. Directly addressed TCP devices often ignore the unit ID; gateways do not.",
+          "text": "Porównaj skonfigurowany Unit ID z tablicą routingu bramy w jej dokumentacji. Urządzenia TCP adresowane bezpośrednio często ignorują Unit ID; bramy go nie ignorują."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order",
+          "text": "Deterministyczny klient i serwery Modbus TCP: reguły podsieci IPv4, rozwiązywanie adresów, obsługa Unit ID przez bramy, odczyty funkcjami 03/04, wyjątki 01/02/0B, czas przetwarzania względem skonfigurowanego limitu czasu, wartości INT i REAL z kolejnością słów"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Fixed link latency",
+          "text": "Stałe opóźnienie łącza"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "One request at a time per connection",
+          "text": "Jedno zapytanie naraz na połączenie"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "TCP retransmission and connection handshakes",
+          "text": "Retransmisje TCP i nawiązywanie połączeń"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Writes, other function codes and serial bus timing behind gateways",
+          "text": "Zapisy, inne kody funkcji i zależności czasowe magistrali szeregowej za bramami"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Byte order inside a register (words are big-endian as the protocol defines)",
+          "text": "Kolejność bajtów wewnątrz rejestru (słowa są w kolejności big-endian, jak definiuje protokół)"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "No data from the device behind the gateway",
+          "text": "Brak danych z urządzenia za bramą"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Fast exception replies",
+          "text": "Szybkie odpowiedzi z wyjątkiem"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Gateway reachable",
+          "text": "Brama jest osiągalna"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Exception code in the traffic",
+          "text": "Kod wyjątku w ruchu sieciowym"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Configured unit ID",
+          "text": "Skonfigurowany Unit ID"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Read the exception code",
+          "text": "Odczytaj kod wyjątku"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Compare the unit ID with the documentation",
+          "text": "Porównaj Unit ID z dokumentacją"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Configure the documented unit ID",
+          "text": "Skonfiguruj udokumentowany Unit ID"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "An exception is an answer: the path works, the request is wrong.",
+          "text": "Wyjątek to odpowiedź: ścieżka działa, błędne jest zapytanie."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.modbus-word-order",
+      "file": "troubleshooting/modbus-word-order.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "32-bit value with the wrong word order",
+          "text": "Wartość 32-bitowa z niewłaściwą kolejnością słów"
+        },
+        {
+          "path": "summary",
+          "source": "A REAL or 32-bit integer spans two registers; the order of the two words is device specific.",
+          "text": "Wartość REAL lub 32-bitowa liczba całkowita zajmuje dwa rejestry; kolejność obu słów zależy od urządzenia."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Communication is error free and the raw words look plausible, but the decoded 32-bit value is absurd.",
+          "text": "Komunikacja przebiega bez błędów, a surowe słowa wyglądają wiarygodnie, ale zdekodowana wartość 32-bitowa jest absurdalna."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Compare the configured word order with the device documentation; if the documentation is unclear, decode the raw words both ways and compare with a known value.",
+          "text": "Porównaj skonfigurowaną kolejność słów z dokumentacją urządzenia; jeśli dokumentacja jest niejasna, zdekoduj surowe słowa na oba sposoby i porównaj ze znaną wartością."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order",
+          "text": "Deterministyczny klient i serwery Modbus TCP: reguły podsieci IPv4, rozwiązywanie adresów, obsługa Unit ID przez bramy, odczyty funkcjami 03/04, wyjątki 01/02/0B, czas przetwarzania względem skonfigurowanego limitu czasu, wartości INT i REAL z kolejnością słów"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Fixed link latency",
+          "text": "Stałe opóźnienie łącza"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "One request at a time per connection",
+          "text": "Jedno zapytanie naraz na połączenie"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "TCP retransmission and connection handshakes",
+          "text": "Retransmisje TCP i nawiązywanie połączeń"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Writes, other function codes and serial bus timing behind gateways",
+          "text": "Zapisy, inne kody funkcji i zależności czasowe magistrali szeregowej za bramami"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Byte order inside a register (words are big-endian as the protocol defines)",
+          "text": "Kolejność bajtów wewnątrz rejestru (słowa są w kolejności big-endian, jak definiuje protokół)"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The decoded value is absurd",
+          "text": "Zdekodowana wartość jest absurdalna"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Absurd 32-bit value",
+          "text": "Absurdalna wartość 32-bitowa"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "No communication errors",
+          "text": "Brak błędów komunikacji"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Raw words",
+          "text": "Surowe słowa"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Configured word order",
+          "text": "Skonfigurowana kolejność słów"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Decode the raw words both ways",
+          "text": "Zdekoduj surowe słowa na oba sposoby"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Configure the documented word order",
+          "text": "Skonfiguruj udokumentowaną kolejność słów"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Swapping the halves of a 32-bit number changes it completely.",
+          "text": "Zamiana połówek liczby 32-bitowej całkowicie zmienia jej wartość."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.modbus-wrong-address",
+      "file": "troubleshooting/modbus-wrong-address.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Modbus TCP server address wrong",
+          "text": "Błędny adres serwera Modbus TCP"
+        },
+        {
+          "path": "summary",
+          "source": "The PLC sends its requests to an address where no device answers.",
+          "text": "PLC wysyła zapytania pod adres, pod którym żadne urządzenie nie odpowiada."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Requests time out and the address is not resolved on the segment; ping to the documented address answers, the configured one does not.",
+          "text": "Zapytania kończą się przekroczeniem czasu, a adres nie jest rozwiązywany w segmencie; ping na udokumentowany adres dostaje odpowiedź, a na skonfigurowany nie."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Compare the configured server address with the device documentation and the device's own display or web page.",
+          "text": "Porównaj skonfigurowany adres serwera z dokumentacją urządzenia oraz z jego własnym wyświetlaczem lub stroną WWW."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Deterministic Modbus TCP client and servers: IPv4 subnet rules, address resolution, unit ID handling of gateways, function 03/04 reads, exceptions 01/02/0B, processing time against the configured timeout, INT and REAL values with word order",
+          "text": "Deterministyczny klient i serwery Modbus TCP: reguły podsieci IPv4, rozwiązywanie adresów, obsługa Unit ID przez bramy, odczyty funkcjami 03/04, wyjątki 01/02/0B, czas przetwarzania względem skonfigurowanego limitu czasu, wartości INT i REAL z kolejnością słów"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Fixed link latency",
+          "text": "Stałe opóźnienie łącza"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "One request at a time per connection",
+          "text": "Jedno zapytanie naraz na połączenie"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "TCP retransmission and connection handshakes",
+          "text": "Retransmisje TCP i nawiązywanie połączeń"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Writes, other function codes and serial bus timing behind gateways",
+          "text": "Zapisy, inne kody funkcji i zależności czasowe magistrali szeregowej za bramami"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Byte order inside a register (words are big-endian as the protocol defines)",
+          "text": "Kolejność bajtów wewnątrz rejestru (słowa są w kolejności big-endian, jak definiuje protokół)"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Every request times out",
+          "text": "Każde zapytanie kończy się przekroczeniem czasu"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Timeouts on one connection",
+          "text": "Przekroczenia czasu na jednym połączeniu"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Address not resolved",
+          "text": "Adres nie jest rozwiązywany"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Configured address differs from the documentation",
+          "text": "Skonfigurowany adres różni się od dokumentacji"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Ping",
+          "text": "Odpowiedź na ping"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare configuration and documentation",
+          "text": "Porównaj konfigurację z dokumentacją"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Ping both addresses",
+          "text": "Wykonaj ping na oba adresy"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Correct the address and download",
+          "text": "Popraw adres i wgraj konfigurację do PLC"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "A connection can only work if it addresses the right device.",
+          "text": "Połączenie może działać tylko wtedy, gdy jest skierowane do właściwego urządzenia."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.modbus-wrong-register",
+      "file": "troubleshooting/modbus-wrong-register.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Modbus register address offset by one or wrong",
+          "text": "Adres rejestru Modbus przesunięty o jeden lub błędny"
+        },
+        {
+          "path": "summary",
+          "source": "Modbus communication works (no timeout, no exception) but the value is wrong or constant: the PLC reads the wrong register.",
+          "text": "Komunikacja Modbus działa (bez przekroczeń czasu i bez wyjątków), ale wartość jest błędna lub stała: PLC odczytuje niewłaściwy rejestr."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Modbus communication works (no timeout, no exception) but the value is wrong or constant: the PLC reads the wrong register.",
+          "text": "Komunikacja Modbus działa (bez przekroczeń czasu i bez wyjątków), ale wartość jest błędna lub stała: PLC odczytuje niewłaściwy rejestr."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Plausible but wrong data",
+          "text": "Wiarygodne, ale błędne dane"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Communication status OK, value constant or nonsensical",
+          "text": "Stan komunikacji OK, wartość stała lub bezsensowna"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Value of a neighboring register appears",
+          "text": "Pojawia się wartość sąsiedniego rejestru"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Register table of the device",
+          "text": "Tabela rejestrów urządzenia"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Configured start address and offsets",
+          "text": "Skonfigurowany adres początkowy i przesunięcia"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Raw registers received",
+          "text": "Odebrane surowe rejestry"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare the device's register map (and whether it uses 0-based or 40001 notation) with the client configuration",
+          "text": "Porównaj mapę rejestrów urządzenia (i to, czy używa numeracji od 0, czy notacji 40001) z konfiguracją klienta"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Check data type and word order for 32-bit values",
+          "text": "Sprawdź typ danych i kolejność słów dla wartości 32-bitowych"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Correct the register address or offset",
+          "text": "Popraw adres rejestru lub przesunięcie"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Verify against a known process value",
+          "text": "Sprawdź na znanej wartości procesowej"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Modbus addresses on the wire are zero-based; register 40001 in documentation is address 0. Off-by-one errors produce valid responses with the wrong data.",
+          "text": "Adresy Modbus w ramce liczy się od zera; rejestr 40001 w dokumentacji to adres 0. Błędy przesunięcia o jeden dają prawidłowe odpowiedzi z niewłaściwymi danymi."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.module-electronics-supply",
+      "file": "troubleshooting/module-electronics-supply.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "I/O module without electronics supply",
+          "text": "Moduł we/wy bez zasilania elektroniki"
+        },
+        {
+          "path": "summary",
+          "source": "A module is plugged in but cannot talk to the CPU, so none of its channels works.",
+          "text": "Moduł jest zamontowany, ale nie może komunikować się z CPU, więc żaden z jego kanałów nie działa."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The module's status LEDs are dark and the CPU reports that the module does not answer. The module reports nothing itself: it cannot. Every channel of the module is affected at once.",
+          "text": "Diody stanu modułu nie świecą, a CPU zgłasza, że moduł nie odpowiada. Sam moduł niczego nie zgłasza, bo nie może. Problem dotyczy jednocześnie wszystkich kanałów modułu."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Tell it apart",
+          "text": "Jak to odróżnić"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "With a missing field (load) supply the module still answers and reports the missing voltage; with a missing electronics supply it is silent. The electronics supply often comes through the backplane or bus connector; on some systems it has its own terminals. Follow the module manual.",
+          "text": "Przy braku zasilania obiektowego (obciążenia) moduł nadal odpowiada i zgłasza brak napięcia; przy braku zasilania elektroniki milczy. Zasilanie elektroniki jest często doprowadzane przez magistralę modułów lub złącze magistrali; w niektórych systemach ma własne zaciski. Postępuj zgodnie z instrukcją modułu."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Check that the module is fully engaged on the backplane or bus connector, then its electronics supply terminals if it has them. After the repair the module must answer and its status must be OK before you test channels.",
+          "text": "Sprawdź, czy moduł jest całkowicie osadzony na magistrali modułów lub złączu magistrali, a następnie jego zaciski zasilania elektroniki, jeśli je ma. Po naprawie moduł musi odpowiadać, a jego stan musi być prawidłowy, zanim zaczniesz testować kanały."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic modular station: configured and detected modules compared per slot, module electronics supply and field supply as separate conditions, channel modes against the drawing, process image addresses, wiring from devices to terminals",
+          "text": "Ogólna stacja modułowa: moduły skonfigurowane i wykryte porównywane slot po slocie, zasilanie elektroniki modułu i zasilanie obiektowe jako osobne warunki, tryby kanałów porównywane ze schematem, adresy obrazu procesu, okablowanie od urządzeń do zacisków"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Module status and LEDs follow generic PLC Lab rules, not a vendor's indicator behavior",
+          "text": "Stan modułów i diody LED działają według ogólnych reguł PLC Lab, a nie według zachowania wskaźników konkretnego producenta"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "A module of the wrong type or in an unconfigured slot exchanges no data and its inputs hold substitute value 0",
+          "text": "Moduł niewłaściwego typu lub w nieskonfigurowanym slocie nie wymienia danych, a jego wejścia mają wartość zastępczą 0"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Vendor-specific module parameters, diagnostic codes and firmware",
+          "text": "Parametry modułów, kody diagnostyczne i oprogramowanie układowe specyficzne dla producentów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Hot swapping and module start-up times",
+          "text": "Wymiana modułów pod napięciem i czasy rozruchu modułów"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The module does not answer; none of its channels works",
+          "text": "Moduł nie odpowiada; żaden z jego kanałów nie działa"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Module status LEDs dark",
+          "text": "Diody stanu modułu nie świecą"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "CPU reports the module as not answering",
+          "text": "CPU zgłasza, że moduł nie odpowiada"
+        },
+        {
+          "path": "troubleshooting.symptoms.2",
+          "source": "All channels of one module dead at once",
+          "text": "Wszystkie kanały jednego modułu jednocześnie nie działają"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Module status in the hardware view",
+          "text": "Stan modułu w widoku sprzętu"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "CPU diagnostics",
+          "text": "Diagnostyka CPU"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Module seating and supply terminals",
+          "text": "Osadzenie modułu i zaciski zasilania"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare the module's state with its neighbours",
+          "text": "Porównaj stan modułu z sąsiednimi modułami"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Check the backplane connection and electronics supply",
+          "text": "Sprawdź połączenie z magistralą modułów i zasilanie elektroniki"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Engage the module or restore its electronics supply",
+          "text": "Osadź moduł lub przywróć jego zasilanie elektroniki"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Verify the module answers, then test its channels",
+          "text": "Sprawdź, czy moduł odpowiada, a następnie przetestuj jego kanały"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "A module needs its electronics supply to exchange data with the CPU; the field supply alone does not make it answer.",
+          "text": "Moduł potrzebuje zasilania elektroniki, aby wymieniać dane z CPU; samo zasilanie obiektowe nie sprawi, że zacznie odpowiadać."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.motor-overload-trip",
+      "file": "troubleshooting/motor-overload-trip.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Motor overload relay tripped",
+          "text": "Zadziałał przekaźnik przeciążeniowy silnika"
+        },
+        {
+          "path": "summary",
+          "source": "The thermal overload relay opened: the contactor drops out and the motor cannot restart until the relay is reset and the cause removed.",
+          "text": "Termiczny przekaźnik przeciążeniowy się otworzył: stycznik odpada, a silnika nie można ponownie uruchomić, dopóki przekaźnik nie zostanie zresetowany, a przyczyna usunięta."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The thermal overload relay opened: the contactor drops out and the motor cannot restart until the relay is reset and the cause removed.",
+          "text": "Termiczny przekaźnik przeciążeniowy się otworzył: stycznik odpada, a silnika nie można ponownie uruchomić, dopóki przekaźnik nie zostanie zresetowany, a przyczyna usunięta."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Motor stops; restart is blocked",
+          "text": "Silnik się zatrzymuje; ponowne uruchomienie jest zablokowane"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Motor stops during operation",
+          "text": "Silnik zatrzymuje się podczas pracy"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Overload contact input FALSE",
+          "text": "Wejście styku przeciążeniowego ma wartość FALSE"
+        },
+        {
+          "path": "troubleshooting.symptoms.2",
+          "source": "Repeated trips after reset",
+          "text": "Powtarzające się zadziałania po resecie"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Overload input in the PLC",
+          "text": "Wejście przekaźnika przeciążeniowego w PLC"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Motor current",
+          "text": "Prąd silnika"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Mechanical load (jammed conveyor, bearing)",
+          "text": "Obciążenie mechaniczne (zablokowany przenośnik, łożysko)"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Check the overload input",
+          "text": "Sprawdź wejście przekaźnika przeciążeniowego"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Measure motor current after restart",
+          "text": "Zmierz prąd silnika po ponownym uruchomieniu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Inspect the mechanics",
+          "text": "Sprawdź mechanikę"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Remove the mechanical cause",
+          "text": "Usuń przyczynę mechaniczną"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Reset the overload relay",
+          "text": "Zresetuj przekaźnik przeciążeniowy"
+        },
+        {
+          "path": "troubleshooting.repair.2",
+          "source": "Check the overload setting against the motor rating plate",
+          "text": "Porównaj nastawę przekaźnika przeciążeniowego z tabliczką znamionową silnika"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "The overload relay protects the motor winding against sustained overcurrent; resetting it without removing the cause leads to repeated trips or motor damage.",
+          "text": "Przekaźnik przeciążeniowy chroni uzwojenie silnika przed długotrwałym przetężeniem; zresetowanie go bez usunięcia przyczyny prowadzi do powtarzających się zadziałań lub uszkodzenia silnika."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.nc-contact-replaced-by-no",
+      "file": "troubleshooting/nc-contact-replaced-by-no.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Stop button contact replaced by a normally open block",
+          "text": "Styk przycisku Stop zastąpiony blokiem normalnie otwartym"
+        },
+        {
+          "path": "summary",
+          "source": "After maintenance a machine refuses to start although Start works electrically: the Stop circuit now reads 'pressed' all the time.",
+          "text": "Po konserwacji maszyna nie chce wystartować, choć Start działa elektrycznie: obwód Stop odczytuje teraz przez cały czas stan „naciśnięty”."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "After maintenance a machine refuses to start although Start works electrically: the Stop circuit now reads 'pressed' all the time.",
+          "text": "Po konserwacji maszyna nie chce wystartować, choć Start działa elektrycznie: obwód Stop odczytuje teraz przez cały czas stan „naciśnięty”."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "The run condition never becomes true",
+          "text": "Warunek pracy nigdy nie zostaje spełniony"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Start does nothing, no alarm",
+          "text": "Start nic nie robi, brak alarmu"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "The Stop input LED is off while nobody presses Stop",
+          "text": "Dioda wejścia Stop nie świeci, choć nikt nie naciska przycisku Stop"
+        },
+        {
+          "path": "troubleshooting.symptoms.2",
+          "source": "The Stop input tag is FALSE in the input image",
+          "text": "Tag wejścia Stop ma w obrazie wejść wartość FALSE"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Digital input LEDs",
+          "text": "Diody wejść cyfrowych"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "PLC input image of StopPB",
+          "text": "Obraz wejść PLC dla StopPB"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Voltage at the Stop input terminal with the button released (0 V instead of 24 V)",
+          "text": "Napięcie na zacisku wejścia Stop przy zwolnionym przycisku (0 V zamiast 24 V)"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Watch every input in the start condition while pressing Start",
+          "text": "Obserwuj każde wejście warunku startu podczas naciskania przycisku Start"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Compare the Stop input with the button state",
+          "text": "Porównaj wejście Stop ze stanem przycisku"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Measure the terminal voltage with the button released and pressed",
+          "text": "Zmierz napięcie na zacisku przy zwolnionym i naciśniętym przycisku"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Fit a normally closed contact block",
+          "text": "Zamontuj blok styków normalnie zamkniętych"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Retest Stop and Start",
+          "text": "Ponownie przetestuj Stop i Start"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "A normally closed Stop contact delivers 24 V at rest. A normally open block delivers 0 V at rest, which the program correctly interprets as 'Stop pressed'. The program is right; the hardware changed.",
+          "text": "Styk Stop normalnie zamknięty daje w spoczynku 24 V. Blok normalnie otwarty daje w spoczynku 0 V, co program poprawnie interpretuje jako „Stop naciśnięty”. Program jest poprawny; zmienił się sprzęt."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.output-overwritten",
+      "file": "troubleshooting/output-overwritten.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Output written in two places in the program",
+          "text": "Wyjście zapisywane w dwóch miejscach programu"
+        },
+        {
+          "path": "summary",
+          "source": "An output follows only the last assignment in the scan; earlier logic appears to have no effect.",
+          "text": "Wyjście podąża tylko za ostatnim przypisaniem w cyklu; wcześniejsza logika wydaje się nie działać."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "An output follows only the last assignment in the scan; earlier logic appears to have no effect.",
+          "text": "Wyjście podąża tylko za ostatnim przypisaniem w cyklu; wcześniejsza logika wydaje się nie działać."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Logic that should switch an output is ignored",
+          "text": "Logika, która powinna przełączać wyjście, jest ignorowana"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "The output reacts to one condition but not another",
+          "text": "Wyjście reaguje na jeden warunek, ale nie na inny"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Forcing shows the hardware works",
+          "text": "Wymuszenie pokazuje, że sprzęt działa"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Cross-reference of the output tag",
+          "text": "Odsyłacze (cross-reference) tagu wyjścia"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Cause-and-effect view: committed value at the end of the scan",
+          "text": "Widok przyczyny i skutku: wartość zatwierdzona na końcu cyklu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Search all assignments of the output",
+          "text": "Wyszukaj wszystkie przypisania wyjścia"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Trace which assignment executes last",
+          "text": "Prześledź, które przypisanie wykonuje się jako ostatnie"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Combine the conditions into one assignment",
+          "text": "Połącz warunki w jedno przypisanie"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Within one scan only the final value of an output is written to the output image.",
+          "text": "W jednym cyklu do obrazu wyjść zapisywana jest tylko końcowa wartość wyjścia."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.sensor-no-nc-assumption",
+      "file": "troubleshooting/sensor-no-nc-assumption.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Sensor output type differs from the program's assumption",
+          "text": "Typ wyjścia czujnika inny, niż zakłada program"
+        },
+        {
+          "path": "summary",
+          "source": "A presence sensor was replaced with a normally closed (light-operated vs dark-operated) variant: the PLC now sees 'part present' when nothing is there.",
+          "text": "Czujnik obecności wymieniono na wariant normalnie zamknięty (przełączanie jasnym zamiast ciemnym): PLC widzi teraz „detal obecny”, gdy niczego nie ma."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A presence sensor was replaced with a normally closed (light-operated vs dark-operated) variant: the PLC now sees 'part present' when nothing is there.",
+          "text": "Czujnik obecności wymieniono na wariant normalnie zamknięty (przełączanie jasnym zamiast ciemnym): PLC widzi teraz „detal obecny”, gdy niczego nie ma."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Inverted presence signal; counters and sequences go wrong",
+          "text": "Odwrócony sygnał obecności; liczniki i sekwencje działają błędnie"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Part counter counts when parts leave instead of when they arrive",
+          "text": "Licznik detali liczy, gdy detale odjeżdżają, a nie gdy przyjeżdżają"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Input is TRUE with no part in front of the sensor",
+          "text": "Wejście ma wartość TRUE, choć przed czujnikiem nie ma detalu"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Sensor LED and PLC input LED with and without a target",
+          "text": "Dioda czujnika i dioda wejścia PLC z obiektem i bez niego"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Sensor type label (NO/NC, PNP/NPN)",
+          "text": "Tabliczka typu czujnika (NO/NC, PNP/NPN)"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Input tag value in the Watch list",
+          "text": "Wartość tagu wejścia w tabeli podglądu (Watch)"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Place and remove a target while watching the input",
+          "text": "Umieść i usuń obiekt, obserwując wejście"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Compare with the data sheet of the original sensor",
+          "text": "Porównaj z kartą katalogową oryginalnego czujnika"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Install a sensor with the correct switching function or reconfigure it if it is programmable",
+          "text": "Zamontuj czujnik o właściwej funkcji przełączania lub przekonfiguruj go, jeśli jest programowalny"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Sensors exist as normally open and normally closed variants; replacing one with the other inverts the signal without any visible damage.",
+          "text": "Czujniki występują w wariantach normalnie otwartych i normalnie zamkniętych; zamiana jednego na drugi odwraca sygnał bez żadnego widocznego uszkodzenia."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.signal-on-wrong-terminal",
+      "file": "troubleshooting/signal-on-wrong-terminal.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Field signal on another terminal than drawn",
+          "text": "Sygnał obiektowy na innym zacisku, niż pokazuje schemat"
+        },
+        {
+          "path": "summary",
+          "source": "A working device is wired to a different terminal than the drawing shows, so its PLC symbol does not follow it.",
+          "text": "Działające urządzenie jest podłączone do innego zacisku, niż pokazuje schemat, więc jego symbol PLC za nim nie podąża."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The device works (it changes state), but its mapped channel and PLC symbol do not change. Another channel, often an unused one, changes instead.",
+          "text": "Urządzenie działa (zmienia stan), ale przypisany do niego kanał i symbol PLC się nie zmieniają. Zamiast nich zmienia się inny kanał, często nieużywany."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Operate the device and watch every channel LED of the module, not only the expected one. Compare the terminal with the drawing and land the wire as drawn.",
+          "text": "Uruchom urządzenie i obserwuj diody wszystkich kanałów modułu, a nie tylko oczekiwanego. Porównaj zacisk ze schematem i podłącz przewód zgodnie ze schematem."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic modular station: configured and detected modules compared per slot, module electronics supply and field supply as separate conditions, channel modes against the drawing, process image addresses, wiring from devices to terminals",
+          "text": "Ogólna stacja modułowa: moduły skonfigurowane i wykryte porównywane slot po slocie, zasilanie elektroniki modułu i zasilanie obiektowe jako osobne warunki, tryby kanałów porównywane ze schematem, adresy obrazu procesu, okablowanie od urządzeń do zacisków"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Module status and LEDs follow generic PLC Lab rules, not a vendor's indicator behavior",
+          "text": "Stan modułów i diody LED działają według ogólnych reguł PLC Lab, a nie według zachowania wskaźników konkretnego producenta"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "A module of the wrong type or in an unconfigured slot exchanges no data and its inputs hold substitute value 0",
+          "text": "Moduł niewłaściwego typu lub w nieskonfigurowanym slocie nie wymienia danych, a jego wejścia mają wartość zastępczą 0"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Vendor-specific module parameters, diagnostic codes and firmware",
+          "text": "Parametry modułów, kody diagnostyczne i oprogramowanie układowe specyficzne dla producentów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Hot swapping and module start-up times",
+          "text": "Wymiana modułów pod napięciem i czasy rozruchu modułów"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "A PLC symbol does not follow its device",
+          "text": "Symbol PLC nie podąża za swoim urządzeniem"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Device changes state, its symbol does not",
+          "text": "Urządzenie zmienia stan, a jego symbol nie"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "An unmapped channel follows the device",
+          "text": "Za urządzeniem podąża nieprzypisany kanał"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Channel LEDs while operating the device",
+          "text": "Diody kanałów podczas uruchamiania urządzenia"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Signal mapping: symbol, channel, drawn device",
+          "text": "Przypisanie sygnałów: symbol, kanał, urządzenie ze schematu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Operate one device at a time",
+          "text": "Uruchamiaj po jednym urządzeniu naraz"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Find the channel that follows it",
+          "text": "Znajdź kanał, który za nim podąża"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Land the wire on the drawn terminal, then repeat the I/O test",
+          "text": "Podłącz przewód do zacisku ze schematu, a następnie powtórz test we/wy"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "The program only sees the channel the project maps; a wire on another terminal reaches nobody.",
+          "text": "Program widzi tylko kanał przypisany w projekcie; przewód na innym zacisku do nikogo nie dociera."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.valve-stuck",
+      "file": "troubleshooting/valve-stuck.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Valve mechanically stuck",
+          "text": "Zawór zablokowany mechanicznie"
+        },
+        {
+          "path": "summary",
+          "source": "The valve is commanded but does not move; its position feedback contradicts the command.",
+          "text": "Zawór ma polecenie, ale się nie porusza; sygnał zwrotny jego położenia przeczy poleceniu."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The valve is commanded but does not move; its position feedback contradicts the command.",
+          "text": "Zawór ma polecenie, ale się nie porusza; sygnał zwrotny jego położenia przeczy poleceniu."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Process does not react; possible overflow or dry run",
+          "text": "Proces nie reaguje; możliwe przepełnienie lub praca na sucho"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Command TRUE, position stays closed (or the reverse)",
+          "text": "Polecenie TRUE, położenie pozostaje zamknięte (lub odwrotnie)"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Process value does not change",
+          "text": "Wartość procesowa się nie zmienia"
+        },
+        {
+          "path": "troubleshooting.symptoms.2",
+          "source": "Feedback alarm after the travel time",
+          "text": "Alarm sygnału zwrotnego po upływie czasu przesterowania"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Command and position feedback",
+          "text": "Polecenie i sygnał zwrotny położenia"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Process trend",
+          "text": "Trend procesowy"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Local inspection of the actuator",
+          "text": "Oględziny napędu zaworu na miejscu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare command and feedback over time",
+          "text": "Porównaj polecenie i sygnał zwrotny w czasie"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Check air or power supply to the actuator",
+          "text": "Sprawdź zasilanie napędu zaworu powietrzem lub energią elektryczną"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Operate the valve manually if safe",
+          "text": "Jeśli to bezpieczne, przestaw zawór ręcznie"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Repair or replace the actuator",
+          "text": "Napraw lub wymień napęd zaworu"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Add feedback supervision to the program",
+          "text": "Dodaj do programu nadzór sygnału zwrotnego"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Without feedback supervision the PLC cannot know that a commanded valve did not move.",
+          "text": "Bez nadzoru sygnału zwrotnego PLC nie może wiedzieć, że zawór z poleceniem się nie przestawił."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.vfd-local-remote",
+      "file": "troubleshooting/vfd-local-remote.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Variable frequency drive left in local control",
+          "text": "Przemiennik częstotliwości pozostawiony w sterowaniu lokalnym"
+        },
+        {
+          "path": "summary",
+          "source": "After maintenance the drive ignores PLC start commands because its control source is set to local (keypad).",
+          "text": "Po konserwacji przemiennik ignoruje polecenia startu z PLC, ponieważ jego źródło sterowania jest ustawione na lokalne (panel)."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "After maintenance the drive ignores PLC start commands because its control source is set to local (keypad).",
+          "text": "Po konserwacji przemiennik ignoruje polecenia startu z PLC, ponieważ jego źródło sterowania jest ustawione na lokalne (panel)."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "PLC commands have no effect; the drive runs from its keypad only",
+          "text": "Polecenia PLC nie działają; przemiennikiem można sterować tylko z panelu"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "PLC sends the run command, drive stays stopped",
+          "text": "PLC wysyła polecenie pracy, przemiennik pozostaje zatrzymany"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Drive display shows LOC or keypad control",
+          "text": "Wyświetlacz przemiennika pokazuje LOC lub sterowanie z panelu"
+        },
+        {
+          "path": "troubleshooting.symptoms.2",
+          "source": "Drive ready, no drive fault active",
+          "text": "Przemiennik gotowy, brak aktywnej usterki przemiennika"
+        },
+        {
+          "path": "troubleshooting.symptoms.3",
+          "source": "Remote-active feedback FALSE",
+          "text": "Sygnał zwrotny sterowania zdalnego ma wartość FALSE"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Drive display and status word",
+          "text": "Wyświetlacz przemiennika i słowo statusowe"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Run command, ready, running and remote feedback in the PLC",
+          "text": "Polecenie pracy oraz sygnały zwrotne gotowości, pracy i sterowania zdalnego w PLC"
+        },
+        {
+          "path": "troubleshooting.evidence.2",
+          "source": "Drive parameter or key for the control source",
+          "text": "Parametr lub przycisk przemiennika wybierający źródło sterowania"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Check that the PLC command reaches the drive (terminal or fieldbus)",
+          "text": "Sprawdź, czy polecenie z PLC dociera do przemiennika (zacisk lub magistrala polowa)"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Read the drive's control source (local/remote)",
+          "text": "Odczytaj źródło sterowania przemiennika (lokalne/zdalne)"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.2",
+          "source": "Compare with the commissioning record",
+          "text": "Porównaj z protokołem uruchomienia"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Switch the drive back to remote/terminal or fieldbus control",
+          "text": "Przełącz przemiennik z powrotem na sterowanie zdalne, z zacisków lub z magistrali polowej"
+        },
+        {
+          "path": "troubleshooting.repair.1",
+          "source": "Verify start and stop from the PLC",
+          "text": "Sprawdź start i stop z PLC"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "Drives can be controlled locally for maintenance. A forgotten local mode is not a fault for the drive, so it raises no alarm. PLC Lab simulates this case with a terminal-controlled drive (run terminal, ready, running and remote relay outputs); speed references and drive parameters are not simulated.",
+          "text": "Przemiennikami można sterować lokalnie podczas konserwacji. Zapomniany tryb lokalny nie jest dla przemiennika usterką, więc nie wywołuje alarmu. PLC Lab symuluje ten przypadek z przemiennikiem sterowanym z zacisków (zacisk pracy oraz wyjścia przekaźnikowe gotowości, pracy i sterowania zdalnego); wartości zadane prędkości i parametry przemiennika nie są symulowane."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.wrong-module-slot",
+      "file": "troubleshooting/wrong-module-slot.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Module installed in the wrong slot",
+          "text": "Moduł zamontowany w niewłaściwym slocie"
+        },
+        {
+          "path": "summary",
+          "source": "Two modules were swapped or a module sits in a different slot than configured; the CPU reports a configuration difference.",
+          "text": "Dwa moduły zostały zamienione miejscami albo moduł znajduje się w innym slocie, niż skonfigurowano; CPU zgłasza różnicę konfiguracji."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Summary",
+          "text": "Podsumowanie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Two modules were swapped or a module sits in a different slot than configured; the CPU reports a configuration difference.",
+          "text": "Dwa moduły zostały zamienione miejscami albo moduł znajduje się w innym slocie, niż skonfigurowano; CPU zgłasza różnicę konfiguracji."
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Affected channels deliver no valid values or wrong signals",
+          "text": "Kanały, których to dotyczy, nie dostarczają prawidłowych wartości lub dają błędne sygnały"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Module status: configured differs from installed",
+          "text": "Stan modułu: konfiguracja różni się od instalacji"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Several inputs or outputs stop working at once",
+          "text": "Kilka wejść lub wyjść przestaje działać jednocześnie"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Hardware view: configured versus installed module per slot",
+          "text": "Widok sprzętu: moduł skonfigurowany a zainstalowany w każdym slocie"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Diagnostic buffer",
+          "text": "Bufor diagnostyczny"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare the configuration with the physical rack",
+          "text": "Porównaj konfigurację z fizyczną kasetą"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.1",
+          "source": "Check wiring follows the module (front connector)",
+          "text": "Sprawdź, czy okablowanie przemieszcza się razem z modułem (złącze czołowe)"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Move the module to the configured slot or correct the configuration",
+          "text": "Przenieś moduł do skonfigurowanego slotu lub popraw konfigurację"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "The CPU checks each slot against the configuration; a mismatch keeps the module from exchanging data.",
+          "text": "CPU sprawdza każdy slot względem konfiguracji; niezgodność uniemożliwia modułowi wymianę danych."
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting.wrong-module-type",
+      "file": "troubleshooting/wrong-module-type.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Module of another type in a configured slot",
+          "text": "Moduł innego typu w skonfigurowanym slocie"
+        },
+        {
+          "path": "summary",
+          "source": "A slot holds a different module type than the project configures, so the CPU exchanges no data with it.",
+          "text": "W slocie znajduje się moduł innego typu, niż konfiguruje projekt, więc CPU nie wymienia z nim danych."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Recognize it",
+          "text": "Jak to rozpoznać"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The hardware comparison reports a type mismatch at one slot; every channel of that slot has bad quality and the inputs hold their substitute values. It typically appears after a module was replaced.",
+          "text": "Porównanie sprzętu zgłasza niezgodność typu w jednym slocie; każdy kanał tego slotu ma złą jakość, a wejścia mają wartości zastępcze. Zwykle pojawia się to po wymianie modułu."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Check",
+          "text": "Sprawdzenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Compare the module's type label with the project's configuration for that slot. Fit the configured type, or change the project deliberately if the design changed, and download it.",
+          "text": "Porównaj tabliczkę typu modułu z konfiguracją tego slotu w projekcie. Zamontuj skonfigurowany typ albo świadomie zmień projekt, jeśli zmienił się projekt instalacji, i wgraj go do PLC."
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic modular station: configured and detected modules compared per slot, module electronics supply and field supply as separate conditions, channel modes against the drawing, process image addresses, wiring from devices to terminals",
+          "text": "Ogólna stacja modułowa: moduły skonfigurowane i wykryte porównywane slot po slocie, zasilanie elektroniki modułu i zasilanie obiektowe jako osobne warunki, tryby kanałów porównywane ze schematem, adresy obrazu procesu, okablowanie od urządzeń do zacisków"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Module status and LEDs follow generic PLC Lab rules, not a vendor's indicator behavior",
+          "text": "Stan modułów i diody LED działają według ogólnych reguł PLC Lab, a nie według zachowania wskaźników konkretnego producenta"
+        },
+        {
+          "path": "fidelity.approximated.1",
+          "source": "A module of the wrong type or in an unconfigured slot exchanges no data and its inputs hold substitute value 0",
+          "text": "Moduł niewłaściwego typu lub w nieskonfigurowanym slocie nie wymienia danych, a jego wejścia mają wartość zastępczą 0"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Vendor-specific module parameters, diagnostic codes and firmware",
+          "text": "Parametry modułów, kody diagnostyczne i oprogramowanie układowe specyficzne dla producentów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Hot swapping and module start-up times",
+          "text": "Wymiana modułów pod napięciem i czasy rozruchu modułów"
+        },
+        {
+          "path": "troubleshooting.effect",
+          "source": "Every channel of the slot is invalid",
+          "text": "Każdy kanał slotu jest nieprawidłowy"
+        },
+        {
+          "path": "troubleshooting.symptoms.0",
+          "source": "Type mismatch at one slot",
+          "text": "Niezgodność typu w jednym slocie"
+        },
+        {
+          "path": "troubleshooting.symptoms.1",
+          "source": "Module fault quality on all its channels",
+          "text": "Jakość „usterka modułu” na wszystkich jego kanałach"
+        },
+        {
+          "path": "troubleshooting.evidence.0",
+          "source": "Hardware comparison: configured versus detected",
+          "text": "Porównanie sprzętu: skonfigurowany a wykryty"
+        },
+        {
+          "path": "troubleshooting.evidence.1",
+          "source": "Module type label",
+          "text": "Tabliczka typu modułu"
+        },
+        {
+          "path": "troubleshooting.diagnosticMethod.0",
+          "source": "Compare the detected station with the project",
+          "text": "Porównaj wykrytą stację z projektem"
+        },
+        {
+          "path": "troubleshooting.repair.0",
+          "source": "Fit the configured module type, or correct the project deliberately",
+          "text": "Zamontuj skonfigurowany typ modułu albo świadomie popraw projekt"
+        },
+        {
+          "path": "troubleshooting.explanation",
+          "source": "The CPU only exchanges data with a module whose type matches the configuration of its slot.",
+          "text": "CPU wymienia dane tylko z modułem, którego typ odpowiada konfiguracji jego slotu."
         }
       ]
     },
