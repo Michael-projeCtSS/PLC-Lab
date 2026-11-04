@@ -28,9 +28,13 @@
         "enum": [
           "exercise-catalogue",
           "practice",
-          "lessons",
           "troubleshooting-cases",
-          "instructions"
+          "lessons",
+          "fundamentals",
+          "instructions",
+          "protocols",
+          "troubleshooting",
+          "vendors"
         ]
       }
     },

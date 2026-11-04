@@ -79,7 +79,10 @@ it("every Polish investigation retains the backend repair and debrief gates", ()
     const shown = localizeContent(before, "pl");
     expect(shown.troubleshooting.repairs).toEqual([]);
     expect(shown.troubleshooting.debrief).toBeNull();
-    expect(shown.knowledgeRefs).toEqual(before.knowledgeRefs);
+    // The reference keeps its ID and gains only its Polish title; nothing is added.
+    expect(shown.knowledgeRefs).toEqual([
+      { id: "fundamentals.digital-io", title: "Wejścia i wyjścia cyfrowe" },
+    ]);
     expect(JSON.stringify(shown)).not.toContain(
       item.fields.find((f) => f.path === "troubleshooting.debrief.rootCause")!
         .text,

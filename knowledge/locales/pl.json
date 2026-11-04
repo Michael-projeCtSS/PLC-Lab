@@ -6,9 +6,12 @@
   "complete": [
     "exercise-catalogue",
     "practice",
-    "lessons",
     "troubleshooting-cases",
-    "instructions"
+    "lessons",
+    "fundamentals",
+    "instructions",
+    "protocols",
+    "vendors"
   ],
   "items": [
     {
@@ -2965,6 +2968,607 @@
       ]
     },
     {
+      "id": "fundamentals.0-10v",
+      "file": "fundamentals/0-10v.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "0-10 V voltage signals",
+          "text": "Sygnały napięciowe 0-10 V"
+        },
+        {
+          "path": "summary",
+          "source": "0-10 V signals are simple and common for setpoints and short cable runs, but they have no live zero and are more sensitive to voltage drops and noise than current loops.",
+          "text": "Sygnały 0-10 V są proste i popularne dla wartości zadanych i krótkich przewodów, ale nie mają żywego zera i są bardziej wrażliwe na spadki napięcia i zakłócenia niż pętle prądowe."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Use cases",
+          "text": "Zastosowania"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Voltage signals are typical for drive speed setpoints, potentiometers and sensors inside the control cabinet. The input has a high impedance, so it does not load the source.",
+          "text": "Sygnały napięciowe są typowe dla wartości zadanych prędkości napędów, potencjometrów i czujników wewnątrz szafy sterowniczej. Wejście ma dużą impedancję, więc nie obciąża źródła."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Limitations",
+          "text": "Ograniczenia"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "A broken wire reads as 0 V, which is indistinguishable from a real zero. Long cables and shared ground paths add errors. For field transmitters, 4-20 mA is usually preferred.",
+          "text": "Przerwany przewód daje odczyt 0 V, którego nie da się odróżnić od rzeczywistego zera. Długie przewody i wspólne ścieżki masy wprowadzają błędy. Dla przetworników obiektowych zwykle wybiera się 4-20 mA."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Wrong type on a channel",
+          "text": "Niewłaściwy typ kanału"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Connecting a current loop to a voltage input or the reverse produces nonsense: a current transmitter on a high-impedance voltage input drives the input towards the loop supply voltage. In PLC Lab this is simulated: configure the channel type to match the device.",
+          "text": "Podłączenie pętli prądowej do wejścia napięciowego lub odwrotnie daje bezsensowne wyniki: przetwornik prądowy na wejściu napięciowym o dużej impedancji wymusza na wejściu napięcie bliskie napięciu zasilania pętli. W PLC Lab jest to symulowane: skonfiguruj typ kanału zgodnie z urządzeniem."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.4-20ma",
+      "file": "fundamentals/4-20ma.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "The 4-20 mA current loop",
+          "text": "Pętla prądowa 4-20 mA"
+        },
+        {
+          "path": "summary",
+          "source": "A 4-20 mA transmitter represents its measuring range as a current. The live zero at 4 mA lets the PLC tell a real zero from a broken wire.",
+          "text": "Przetwornik 4-20 mA przedstawia swój zakres pomiarowy jako prąd. Żywe zero przy 4 mA pozwala PLC odróżnić rzeczywiste zero od przerwanego przewodu."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Why current, and why 4 mA",
+          "text": "Dlaczego prąd i dlaczego 4 mA"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A current is the same everywhere in a series loop, so cable resistance and moderate noise do not change the value. Starting at **4 mA** instead of 0 mA gives a **live zero**: 0 mA can only mean a fault (broken wire, missing supply), while 4 mA means the lower end of the range. Two-wire transmitters are even powered from the loop current.",
+          "text": "W pętli szeregowej prąd jest wszędzie taki sam, więc rezystancja przewodów i umiarkowane zakłócenia nie zmieniają wartości. Rozpoczęcie od **4 mA** zamiast 0 mA daje **żywe zero**: 0 mA może oznaczać tylko usterkę (przerwany przewód, brak zasilania), a 4 mA oznacza dolny koniec zakresu. Przetworniki dwuprzewodowe są wręcz zasilane prądem pętli."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "NAMUR NE 43 signal levels",
+          "text": "Poziomy sygnału według NAMUR NE 43"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "The NAMUR recommendation NE 43 separates measurement from failure information:\n\n| Current | Meaning |\n| --- | --- |\n| 3.8 to 20.5 mA | measurement information (including small under- and overrange) |\n| at or below 3.6 mA | failure information (low) |\n| at or above 21.0 mA | failure information (high) |\n\nA transmitter that follows NE 43 saturates at 3.8 and 20.5 mA during normal operation and drives the failure current when its self-diagnostics detect a fault.",
+          "text": "Zalecenie NAMUR NE 43 oddziela informację pomiarową od informacji o awarii:\n\n| Prąd | Znaczenie |\n| --- | --- |\n| od 3.8 do 20.5 mA | informacja pomiarowa (łącznie z niewielkim przekroczeniem zakresu w dół i w górę) |\n| 3.6 mA lub mniej | informacja o awarii (poziom niski) |\n| 21.0 mA lub więcej | informacja o awarii (poziom wysoki) |\n\nPrzetwornik zgodny z NE 43 podczas normalnej pracy nasyca się na poziomach 3.8 i 20.5 mA, a prąd awaryjny wystawia, gdy jego autodiagnostyka wykryje usterkę."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Converting current to percent",
+          "text": "Przeliczanie prądu na procenty"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "`percent = (I - 4 mA) / 16 mA * 100`. 12 mA is therefore 50 %, 8 mA is 25 %. PLC Lab's level transmitter saturates at the NE 43 limits; a broken loop delivers 0 mA, which the analog input reports as wire break when diagnostics are enabled.",
+          "text": "`percent = (I - 4 mA) / 16 mA * 100`. Zatem 12 mA to 50 %, a 8 mA to 25 %. Przetwornik poziomu w PLC Lab nasyca się na granicach NE 43; przerwana pętla daje 0 mA, które wejście analogowe zgłasza jako przerwanie przewodu, gdy diagnostyka jest włączona."
+        },
+        {
+          "path": "facts.0.label",
+          "source": "NE 43 measurement band",
+          "text": "Zakres pomiarowy NE 43"
+        },
+        {
+          "path": "facts.0.value",
+          "source": "3.8 mA to 20.5 mA",
+          "text": "od 3.8 mA do 20.5 mA"
+        },
+        {
+          "path": "facts.1.label",
+          "source": "NE 43 failure levels",
+          "text": "Poziomy awarii NE 43"
+        },
+        {
+          "path": "facts.1.value",
+          "source": "at or below 3.6 mA, at or above 21.0 mA",
+          "text": "3.6 mA lub mniej, 21.0 mA lub więcej"
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.addressing",
+      "file": "fundamentals/addressing.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "I/O addressing and tags",
+          "text": "Adresowanie we/wy i tagi"
+        },
+        {
+          "path": "summary",
+          "source": "PLC programs refer to I/O by addresses or symbolic tags. The hardware configuration ties a module channel to an address; the program ties the address to a meaningful name.",
+          "text": "Programy PLC odwołują się do we/wy przez adresy lub symboliczne tagi. Konfiguracja sprzętu wiąże kanał modułu z adresem; program wiąże adres ze znaczącą nazwą."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Address styles",
+          "text": "Sposoby adresowania"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "| Style | Example | Used by |\n| --- | --- | --- |\n| IEC direct address | `%IX0.0`, `%QX0.0`, `%IW64` | IEC 61131-3, many CODESYS-based systems |\n| Byte.bit process image | `%I0.0`, `%Q0.1`, `%IW64` | Siemens S7 |\n| Module-defined tags | `Local:1:I.Data.0` | Rockwell Logix |\n| Linked variables | variable linked to a terminal channel | Beckhoff TwinCAT |\n| Device addresses | `X0`, `Y0` (octal on FX) | Mitsubishi MELSEC |",
+          "text": "| Styl | Przykład | Stosowany przez |\n| --- | --- | --- |\n| Adres bezpośredni IEC | `%IX0.0`, `%QX0.0`, `%IW64` | IEC 61131-3, wiele systemów opartych na CODESYS |\n| Obraz procesu bajt.bit | `%I0.0`, `%Q0.1`, `%IW64` | Siemens S7 |\n| Tagi zdefiniowane przez moduł | `Local:1:I.Data.0` | Rockwell Logix |\n| Zmienne połączone (linked) | zmienna połączona z kanałem terminala | Beckhoff TwinCAT |\n| Adresy urządzeń | `X0`, `Y0` (ósemkowo w FX) | Mitsubishi MELSEC |"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Symbolic programming",
+          "text": "Programowanie symboliczne"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Modern projects program almost exclusively with **tags** (StartPB, LevelRaw). The address only appears in the I/O mapping. In PLC Lab the hardware view shows, for each channel, the address in the style of the selected platform profile and the tag mapped to it.",
+          "text": "Nowoczesne projekty programuje się niemal wyłącznie przy użyciu **tagów** (StartPB, LevelRaw). Adres pojawia się tylko w przypisaniu we/wy. W PLC Lab widok sprzętu pokazuje dla każdego kanału adres w stylu wybranego profilu platformy oraz przypisany do niego tag."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Start addresses",
+          "text": "Adresy początkowe"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Each module occupies an address range that starts at its configured **start address**. Moving a module to another slot, or changing its start address, changes all its addresses; programs that use tags survive this, programs that use absolute addresses break.",
+          "text": "Każdy moduł zajmuje zakres adresów, który zaczyna się od jego skonfigurowanego **adresu początkowego**. Przeniesienie modułu do innego slotu lub zmiana jego adresu początkowego zmienia wszystkie jego adresy; programy używające tagów to przetrwają, a programy używające adresów bezwzględnych przestaną działać."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.analog-io",
+      "file": "fundamentals/analog-io.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Analog inputs and outputs",
+          "text": "Wejścia i wyjścia analogowe"
+        },
+        {
+          "path": "summary",
+          "source": "Analog signals carry a value, not just on/off: 4-20 mA, 0-20 mA or 0-10 V. The module converts the signal into an integer (raw value) that the program scales into engineering units.",
+          "text": "Sygnały analogowe przenoszą wartość, a nie tylko stan włączony lub wyłączony: 4-20 mA, 0-20 mA lub 0-10 V. Moduł przetwarza sygnał na liczbę całkowitą (wartość surową), którą program skaluje na jednostki inżynierskie."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "From signal to number",
+          "text": "Od sygnału do liczby"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "An analog input module measures a current or voltage and converts it into an integer, the **raw value**. Each vendor uses its own representation. Examples:\n\n| Platform style | Nominal range of the raw value |\n| --- | --- |\n| Siemens S7-1200/S7-1500 | 0 to 27648 for the nominal signal range |\n| Beckhoff EL305x (default presentation) | 0 (4 mA) to 32767 (20 mA) |\n| PLC Lab generic profile | 0 to 10000 (= 0 to 100 %) |\n\nThe program must **scale** the raw value into the physical unit (%, bar, litres).",
+          "text": "Moduł wejść analogowych mierzy prąd lub napięcie i przetwarza je na liczbę całkowitą, **wartość surową**. Każdy producent stosuje własną reprezentację. Przykłady:\n\n| Styl platformy | Zakres nominalny wartości surowej |\n| --- | --- |\n| Siemens S7-1200/S7-1500 | od 0 do 27648 dla nominalnego zakresu sygnału |\n| Beckhoff EL305x (domyślna prezentacja) | od 0 (4 mA) do 32767 (20 mA) |\n| Ogólny profil PLC Lab | od 0 do 10000 (= od 0 do 100 %) |\n\nProgram musi **przeskalować** wartość surową na jednostkę fizyczną (%, bar, litry)."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Over- and underrange",
+          "text": "Przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Signals slightly outside the nominal range are still converted (**overrange/underrange**). Far outside, the module reports **overflow/underflow** with special values and, if diagnostics are enabled, a diagnostic event. With 4-20 mA inputs a current far below 4 mA is detected as **wire break**.",
+          "text": "Sygnały nieznacznie wykraczające poza zakres nominalny są nadal przetwarzane (**przekroczenie zakresu w górę lub w dół**, overrange/underrange). Daleko poza zakresem moduł zgłasza **przepełnienie lub niedomiar** (overflow/underflow) wartościami specjalnymi, a przy włączonej diagnostyce także zdarzeniem diagnostycznym. W wejściach 4-20 mA prąd znacznie poniżej 4 mA jest wykrywany jako **przerwanie przewodu**."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Configuration matters",
+          "text": "Konfiguracja ma znaczenie"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Each analog channel is configured for a measurement type (for example *current 4-20 mA* or *voltage 0-10 V*). A channel configured as 0-20 mA while the transmitter delivers 4-20 mA reads a value about 20 % too high at the bottom of the range: a frequent commissioning error.",
+          "text": "Każdy kanał analogowy konfiguruje się dla określonego typu pomiaru (na przykład *prąd 4-20 mA* lub *napięcie 0-10 V*). Kanał skonfigurowany jako 0-20 mA, gdy przetwornik dostarcza 4-20 mA, odczytuje w dolnej części zakresu wartość zawyżoną o około 20 %: to częsty błąd przy uruchamianiu."
+        },
+        {
+          "path": "facts.0.label",
+          "source": "S7-1500 nominal analog range",
+          "text": "Nominalny zakres analogowy S7-1500"
+        },
+        {
+          "path": "facts.0.value",
+          "source": "0 to 27648 (bipolar ranges -27648 to 27648); overrange up to 32511, overflow 32767 - check the module manual",
+          "text": "od 0 do 27648 (zakresy bipolarne od -27648 do 27648); przekroczenie zakresu do 32511, przepełnienie 32767 - sprawdź instrukcję modułu"
+        },
+        {
+          "path": "facts.1.label",
+          "source": "Beckhoff EL305x default presentation",
+          "text": "Domyślna prezentacja Beckhoff EL305x"
+        },
+        {
+          "path": "facts.1.value",
+          "source": "4 mA = 0x0000, 20 mA = 0x7FFF",
+          "text": "4 mA = 0x0000, 20 mA = 0x7FFF",
+          "keep": "value"
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.bool-logic",
+      "file": "fundamentals/bool-logic.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Boolean logic in PLC programs",
+          "text": "Logika boolowska w programach PLC"
+        },
+        {
+          "path": "summary",
+          "source": "AND, OR, NOT and XOR combine on/off signals. Almost every control function, from a lamp test to a safety interlock, is built from these four operations.",
+          "text": "AND, OR, NOT i XOR łączą sygnały dwustanowe. Niemal każda funkcja sterowania, od testu lampek po blokadę bezpieczeństwa, jest zbudowana z tych czterech operacji."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Signals as TRUE and FALSE",
+          "text": "Sygnały jako TRUE i FALSE"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A BOOL variable has exactly two values: **TRUE** (1, on) and **FALSE** (0, off). A pressed normally open button, a lit lamp and an energized coil are all TRUE. What a value *means* depends on the wiring: a normally closed stop button is TRUE while it is **not** pressed.",
+          "text": "Zmienna BOOL ma dokładnie dwie wartości: **TRUE** (1, włączony) i **FALSE** (0, wyłączony). Naciśnięty przycisk normalnie otwarty, świecąca lampka i zasilona cewka mają wartość TRUE. To, co wartość *oznacza*, zależy od okablowania: przycisk stop normalnie zamknięty ma wartość TRUE, gdy **nie** jest naciśnięty."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "The four basic operations",
+          "text": "Cztery podstawowe operacje"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "| Operation | Structured Text | TRUE when |\n| --- | --- | --- |\n| AND | `A AND B` | both A and B are TRUE |\n| OR | `A OR B` | at least one is TRUE |\n| NOT | `NOT A` | A is FALSE |\n| XOR | `A XOR B` | exactly one is TRUE |\n\nIn Ladder Diagram, contacts in series form an AND, contacts in parallel form an OR and a normally closed contact symbol forms a NOT.",
+          "text": "| Operacja | Structured Text | TRUE, gdy |\n| --- | --- | --- |\n| AND | `A AND B` | zarówno A, jak i B mają wartość TRUE |\n| OR | `A OR B` | co najmniej jedna ma wartość TRUE |\n| NOT | `NOT A` | A ma wartość FALSE |\n| XOR | `A XOR B` | dokładnie jedna ma wartość TRUE |\n\nW języku drabinkowym (LAD) styki połączone szeregowo tworzą AND, styki połączone równolegle tworzą OR, a symbol styku normalnie zamkniętego tworzy NOT."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Reading a logic line",
+          "text": "Czytanie linii logiki"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "`Motor := (Start OR Motor) AND Stop AND NOT Fault;` reads: the motor runs if Start is pressed **or** it is already running, **and** the stop circuit is healthy, **and** there is no fault. Brackets matter: without them AND binds stronger than OR, so `Start OR Motor AND Stop` would let Start bypass the stop circuit.",
+          "text": "`Motor := (Start OR Motor) AND Stop AND NOT Fault;` czyta się tak: silnik pracuje, jeśli naciśnięto Start **lub** już pracuje, **i** obwód stop jest sprawny, **i** nie ma usterki. Nawiasy mają znaczenie: bez nich AND wiąże silniej niż OR, więc `Start OR Motor AND Stop` pozwoliłoby przyciskowi Start ominąć obwód stop."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Truth tables and testing",
+          "text": "Tablice prawdy i testowanie"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "Write down every input combination and the expected output before testing. Two inputs give four combinations, three give eight. PLC Lab's practice exercises check such combinations automatically and report which case failed.",
+          "text": "Przed testem zapisz każdą kombinację wejść i oczekiwane wyjście. Dwa wejścia dają cztery kombinacje, trzy dają osiem. Ćwiczenia praktyczne w PLC Lab sprawdzają takie kombinacje automatycznie i zgłaszają, który przypadek nie przeszedł."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.commissioning",
+      "file": "fundamentals/commissioning.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Commissioning workflow",
+          "text": "Przebieg uruchamiania"
+        },
+        {
+          "path": "summary",
+          "source": "Commissioning brings a machine from installed hardware to verified operation in controlled steps: hardware check, I/O check, function test, process test and handover.",
+          "text": "Uruchamianie prowadzi maszynę od zainstalowanego sprzętu do sprawdzonej pracy w kontrolowanych krokach: kontrola sprzętu, kontrola we/wy, test funkcjonalny, test procesu i przekazanie."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "A proven sequence",
+          "text": "Sprawdzona kolejność"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "1. **Visual and power check**: supplies, terminals, module positions.\n2. **Hardware configuration**: download, compare configured and installed modules, clear diagnostics.\n3. **I/O check (loop check)**: actuate every sensor and force every output (with the machine made safe), confirm each tag reacts on the right address.\n4. **Analog check**: inject or simulate known values (for example 4, 12, 20 mA) and verify scaling.\n5. **Function test**: run each sequence step by step, then automatically.\n6. **Fault tests**: pull a sensor, open a stop circuit, simulate communication loss; the machine must react safely.\n7. **Documentation and handover**.",
+          "text": "1. **Oględziny i kontrola zasilania**: zasilacze, zaciski, położenie modułów.\n2. **Konfiguracja sprzętu**: załadowanie, porównanie modułów skonfigurowanych i zainstalowanych, skasowanie diagnostyki.\n3. **Kontrola we/wy (loop check)**: uruchom każdy czujnik i wymuś każde wyjście (po zabezpieczeniu maszyny), potwierdź, że każdy tag reaguje pod właściwym adresem.\n4. **Kontrola sygnałów analogowych**: podaj lub zasymuluj znane wartości (na przykład 4, 12, 20 mA) i sprawdź skalowanie.\n5. **Test funkcjonalny**: wykonaj każdą sekwencję krok po kroku, a potem automatycznie.\n6. **Testy usterek**: odłącz czujnik, otwórz obwód stop, zasymuluj utratę komunikacji; maszyna musi zareagować bezpiecznie.\n7. **Dokumentacja i przekazanie**."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Forcing with care",
+          "text": "Ostrożnie z wymuszeniami"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Forcing overrides inputs or outputs regardless of the program. It is indispensable for loop checks and dangerous when forgotten: a forced output stays on even when the program says off. PLC Lab shows active forces in the toolbar and the CPU FORCE LED.",
+          "text": "Wymuszenie (force) nadpisuje wejścia lub wyjścia niezależnie od programu. Jest niezbędne podczas kontroli we/wy i niebezpieczne, gdy się o nim zapomni: wymuszone wyjście pozostaje włączone, nawet gdy program je wyłącza. PLC Lab pokazuje aktywne wymuszenia na pasku narzędzi i diodą FORCE w CPU."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "The commissioning checklist in PLC Lab",
+          "text": "Lista kontrolna uruchamiania w PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The **Commissioning** tab of every workspace follows the same order an engineer works in: **Power**, **Hardware**, **Network**, **Inputs**, **Outputs**, **Drives** and **Process**. Each check shows what the installation reports right now and what your tests have shown:\n\n- **OK**: checked and as documented.\n- **To test**: needs a test you have not done yet, for example pressing a button or switching an output.\n- **Check**: deviates from the drawing, for example a contact that reads TRUE at rest although the drawing shows a normally open contact.\n- **Fault**: prevents correct operation, for example an output that is commanded ON while its terminal stays at 0 V.\n\nOperate every button and sensor in the Process view and switch every output (from the program or with a force). A device passes its input test when exactly its own input follows it. An actuator passes when its output switches 24 V, the device responds and its feedback changes.",
+          "text": "Karta **Uruchamianie** w każdym obszarze roboczym prowadzi w tej samej kolejności, w jakiej pracuje inżynier: **Zasilanie**, **Sprzęt**, **Sieć**, **Wejścia**, **Wyjścia**, **Napędy** i **Proces**. Każda kontrola pokazuje, co instalacja zgłasza w tej chwili i co wykazały twoje testy:\n\n- **OK**: sprawdzone i zgodne z dokumentacją.\n- **Do przetestowania**: wymaga testu, którego jeszcze nie wykonano, na przykład naciśnięcia przycisku lub przełączenia wyjścia.\n- **Sprawdź**: odbiega od schematu, na przykład styk ma w spoczynku wartość TRUE, choć schemat pokazuje styk normalnie otwarty.\n- **Usterka**: uniemożliwia poprawną pracę, na przykład wyjście ma polecenie ON, a jego zacisk pozostaje na 0 V.\n\nUruchom każdy przycisk i czujnik w widoku procesu i przełącz każde wyjście (z programu lub wymuszeniem). Urządzenie przechodzi test wejścia, gdy podąża za nim dokładnie jego własne wejście. Element wykonawczy przechodzi test, gdy jego wyjście przełącza 24 V, urządzenie reaguje, a jego sygnał zwrotny się zmienia."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "What the simulation shows",
+          "text": "Co pokazuje symulacja"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "The checklist uses only what you could also observe with the other tools: module status and LEDs, input values and their quality, output states, terminal voltages, device indications and the network status. It compares them with the machine's drawing, which in PLC Lab is the scene's documented wiring. It never reads the fault a lab has injected. The simulation is educational: field devices switch ideally, a terminal is either at 24 V or at 0 V, and missing feedback is reported after an actuator has been energized for 3 seconds. Real commissioning also includes safety-function tests, insulation and protective-earth checks and documented sign-off, which this checklist does not replace.",
+          "text": "Lista kontrolna korzysta tylko z informacji, które można zaobserwować także innymi narzędziami: stanu i diod modułów, wartości wejść i ich jakości, stanów wyjść, napięć na zaciskach, wskazań urządzeń i stanu sieci. Porównuje je ze schematem maszyny, którym w PLC Lab jest udokumentowane okablowanie sceny. Nigdy nie odczytuje usterki wprowadzonej przez ćwiczenie. Symulacja jest dydaktyczna: urządzenia obiektowe przełączają idealnie, zacisk ma albo 24 V, albo 0 V, a brak sygnału zwrotnego jest zgłaszany, gdy element wykonawczy jest zasilany przez 3 sekundy. Rzeczywiste uruchamianie obejmuje też testy funkcji bezpieczeństwa, pomiary izolacji i przewodów ochronnych oraz udokumentowany odbiór, których ta lista kontrolna nie zastępuje."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.counters-edges",
+      "file": "fundamentals/counters-edges.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Edges and counters",
+          "text": "Zbocza i liczniki"
+        },
+        {
+          "path": "summary",
+          "source": "An edge is the moment a signal changes. Counting events, reacting once per button press and detecting a part that arrives all depend on edges rather than on signal levels.",
+          "text": "Zbocze to chwila, w której sygnał zmienia stan. Zliczanie zdarzeń, jednorazowa reakcja na każde naciśnięcie przycisku i wykrywanie nadjeżdżającego detalu zależą od zboczy, a nie od poziomów sygnału."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Level versus edge",
+          "text": "Poziom a zbocze"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A **level** is the current value of a signal: the button is pressed. An **edge** is a change: the button has just been pressed (rising edge, FALSE to TRUE) or just released (falling edge, TRUE to FALSE). A rising edge is TRUE for exactly one scan.",
+          "text": "**Poziom** to bieżąca wartość sygnału: przycisk jest naciśnięty. **Zbocze** to zmiana: przycisk właśnie został naciśnięty (zbocze narastające, z FALSE na TRUE) lub właśnie zwolniony (zbocze opadające, z TRUE na FALSE). Zbocze narastające ma wartość TRUE przez dokładnie jeden cykl programu."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Edge detection",
+          "text": "Wykrywanie zboczy"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "IEC 61131-3 provides **R_TRIG** (rising edge) and **F_TRIG** (falling edge). Each instance remembers the previous value of its input and compares it with the current one. Without edge detection, a held button would trigger an action in every scan, which is why a counter fed by a raw level counts once per scan instead of once per press.",
+          "text": "IEC 61131-3 udostępnia bloki **R_TRIG** (zbocze narastające) i **F_TRIG** (zbocze opadające). Każda instancja pamięta poprzednią wartość swojego wejścia i porównuje ją z bieżącą. Bez wykrywania zboczy przytrzymany przycisk wyzwalałby akcję w każdym cyklu; dlatego licznik zasilany bezpośrednio poziomem sygnału liczy raz na cykl zamiast raz na naciśnięcie."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Counters",
+          "text": "Liczniki"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "- **CTU** counts up on each rising edge of CU and sets Q when the count reaches the preset PV. R resets the count.\n- **CTD** counts down on each rising edge of CD; LD loads the preset and Q signals that zero was reached.\n- **CTUD** combines both directions.\n\nThe standard counters detect the edge of their count input themselves, so a held button is counted once.",
+          "text": "- **CTU** zlicza w górę przy każdym zboczu narastającym wejścia CU i ustawia Q, gdy stan licznika osiągnie wartość zadaną PV. R zeruje licznik.\n- **CTD** zlicza w dół przy każdym zboczu narastającym wejścia CD; LD ładuje wartość zadaną, a Q sygnalizuje osiągnięcie zera.\n- **CTUD** łączy oba kierunki.\n\nStandardowe liczniki same wykrywają zbocze swojego wejścia zliczającego, więc przytrzymany przycisk jest liczony raz."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Signals faster than the scan",
+          "text": "Sygnały szybsze niż cykl"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "A PLC sees inputs only once per scan. A pulse shorter than one scan can be missed completely, and two pulses within one scan count as one. Real controllers use hardware counter modules for fast signals; PLC Lab's fixed scan makes the effect visible in the timeline.",
+          "text": "PLC widzi wejścia tylko raz na cykl. Impuls krótszy niż jeden cykl może zostać całkowicie pominięty, a dwa impulsy w jednym cyklu są liczone jako jeden. Rzeczywiste sterowniki obsługują szybkie sygnały sprzętowymi modułami liczników; stały czas cyklu w PLC Lab pozwala zobaczyć ten efekt na osi czasu."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.diagnostics",
+      "file": "fundamentals/diagnostics.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "PLC diagnostics",
+          "text": "Diagnostyka PLC"
+        },
+        {
+          "path": "summary",
+          "source": "Controllers and modules report problems through LEDs, a diagnostic buffer, channel status and quality information. Reading them first saves hours of guessing.",
+          "text": "Sterowniki i moduły zgłaszają problemy przez diody LED, bufor diagnostyczny, stan kanałów i informację o jakości sygnału. Odczytanie ich w pierwszej kolejności oszczędza godziny zgadywania."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Where diagnostic information lives",
+          "text": "Gdzie znajduje się informacja diagnostyczna"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "- **LEDs** on CPU and modules: RUN/STOP, ERROR, MAINT, per-channel status.\n- **Diagnostic buffer**: a time-stamped list of incoming and outgoing events (module missing, wire break, CPU stop with cause).\n- **Channel quality / status**: analog values with overflow or wire-break flags.\n- **Communication status**: connection timeouts, exception codes, link state.",
+          "text": "- **Diody LED** w CPU i modułach: RUN/STOP, ERROR, MAINT, stan poszczególnych kanałów.\n- **Bufor diagnostyczny**: lista zdarzeń przychodzących i wychodzących ze znacznikiem czasu (brak modułu, przerwanie przewodu, zatrzymanie CPU z podaniem przyczyny).\n- **Jakość i stan kanału**: wartości analogowe z flagami przepełnienia lub przerwania przewodu.\n- **Stan komunikacji**: przekroczenia czasu połączeń, kody wyjątków, stan łącza."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Incoming and outgoing",
+          "text": "Przychodzące i wychodzące"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "A diagnostic event is **incoming** when the problem appears and **outgoing** when it disappears. A list that shows a wire break going and coming every few seconds points to a loose terminal.",
+          "text": "Zdarzenie diagnostyczne jest **przychodzące**, gdy problem się pojawia, i **wychodzące**, gdy znika. Lista, na której przerwanie przewodu co kilka sekund znika i pojawia się ponownie, wskazuje na poluzowany zacisk."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Diagnostics in PLC Lab",
+          "text": "Diagnostyka w PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The Diagnostics tab shows the CPU diagnostic buffer and active process alarms. The hardware view shows module status, LEDs, channel values and quality, and offers a multimeter. Network faults appear as connection diagnostics and in the network message list.",
+          "text": "Karta Diagnostyka pokazuje bufor diagnostyczny CPU i aktywne alarmy procesowe. Widok sprzętu pokazuje stan modułów, diody LED, wartości kanałów i ich jakość oraz udostępnia multimetr. Usterki sieci pojawiają się jako diagnostyka połączeń i na liście komunikatów sieciowych."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.digital-io",
+      "file": "fundamentals/digital-io.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Digital inputs and outputs",
+          "text": "Wejścia i wyjścia cyfrowe"
+        },
+        {
+          "path": "summary",
+          "source": "Digital signals are either on or off. A 24 V DC input reads a voltage at its terminal; a digital output switches 24 V DC to a load such as a contactor coil or lamp.",
+          "text": "Sygnały cyfrowe są albo włączone, albo wyłączone. Wejście 24 V DC odczytuje napięcie na swoim zacisku; wyjście cyfrowe przełącza 24 V DC na obciążenie, takie jak cewka stycznika lub lampka."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Digital inputs",
+          "text": "Wejścia cyfrowe"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A typical industrial digital input is a 24 V DC input: a voltage above a threshold at the terminal means **1 / TRUE**, a voltage near 0 V means **0 / FALSE**. Each channel normally has an LED that shows the electrical state at the terminal, which is the first thing a technician checks.",
+          "text": "Typowe przemysłowe wejście cyfrowe to wejście 24 V DC: napięcie na zacisku powyżej progu oznacza **1 / TRUE**, a napięcie bliskie 0 V oznacza **0 / FALSE**. Każdy kanał ma zwykle diodę LED, która pokazuje stan elektryczny na zacisku; technik sprawdza ją w pierwszej kolejności."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Digital outputs",
+          "text": "Wyjścia cyfrowe"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Transistor outputs switch 24 V DC to a load up to a rated current (often 0.5 A). Relay outputs use a contact and can switch other voltages. Outputs only switch when the module has its **load supply**: without field power, the PLC may command an output TRUE and nothing happens in the field.",
+          "text": "Wyjścia tranzystorowe przełączają 24 V DC na obciążenie do prądu znamionowego (często 0.5 A). Wyjścia przekaźnikowe wykorzystują styk i mogą przełączać inne napięcia. Wyjścia przełączają tylko wtedy, gdy moduł ma **zasilanie obciążenia**: bez zasilania obiektowego PLC może wysterować wyjście na TRUE, a na obiekcie nic się nie dzieje."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "What the PLC sees is not the field",
+          "text": "To, co widzi PLC, to jeszcze nie obiekt"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The input LED and the PLC input image normally agree. When they do not, the problem is in the module, its configuration or the mapping to the program. When the LED is off although the sensor is active, the problem is in the field wiring or the sensor. This simple split is the core of digital I/O troubleshooting.",
+          "text": "Dioda wejścia i obraz wejść PLC zwykle są zgodne. Gdy nie są, problem leży w module, jego konfiguracji lub przypisaniu do programu. Gdy dioda nie świeci, choć czujnik jest aktywny, problem leży w okablowaniu obiektowym lub w czujniku. Ten prosty podział jest podstawą diagnozowania cyfrowych we/wy."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.drives-basics",
+      "file": "fundamentals/drives-basics.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Variable frequency drives",
+          "text": "Przemienniki częstotliwości"
+        },
+        {
+          "path": "summary",
+          "source": "A variable frequency drive (VFD) feeds an AC motor with adjustable frequency and voltage so that its speed can be controlled. The PLC commands the drive; the drive decides whether it accepts the command.",
+          "text": "Przemiennik częstotliwości (VFD) zasila silnik prądu przemiennego napięciem o regulowanej częstotliwości i wartości, dzięki czemu można sterować jego prędkością. PLC wydaje przemiennikowi polecenia; przemiennik decyduje, czy je przyjmie."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "What a drive does",
+          "text": "Co robi przemiennik"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A three-phase induction motor connected directly to the mains runs at a speed set by the mains frequency. A **variable frequency drive** rectifies the supply and generates a new output with adjustable frequency and voltage, so the motor speed can be changed and the motor can be started and stopped smoothly along **ramps** instead of with a current surge.",
+          "text": "Trójfazowy silnik indukcyjny podłączony bezpośrednio do sieci pracuje z prędkością wyznaczoną przez częstotliwość sieci. **Przemiennik częstotliwości** prostuje napięcie zasilania i wytwarza nowe napięcie wyjściowe o regulowanej częstotliwości i wartości, dzięki czemu można zmieniać prędkość silnika oraz łagodnie go uruchamiać i zatrzymywać wzdłuż **ramp** zamiast z udarem prądu."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Control interfaces",
+          "text": "Interfejsy sterowania"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "A drive can be commanded in several ways:\n- **Terminals**: digital inputs such as run/stop and direction, often with an analog speed reference (0-10 V or 4-20 mA).\n- **Fieldbus**: a control word and a speed setpoint sent over PROFINET, EtherNet/IP, EtherCAT, Modbus or similar.\n- **Keypad** (local control): buttons on the drive itself, used for commissioning and maintenance.\n\nA parameter or a local/remote key selects which source the drive obeys. In **local** control the drive ignores the PLC's commands; this is intended behavior, not a drive fault, so normally no alarm is raised.",
+          "text": "Przemiennikiem można sterować na kilka sposobów:\n- **Zaciski**: wejścia cyfrowe, takie jak praca/stop i kierunek, często z analogową wartością zadaną prędkości (0-10 V lub 4-20 mA).\n- **Magistrala polowa**: słowo sterujące i wartość zadana prędkości przesyłane przez PROFINET, EtherNet/IP, EtherCAT, Modbus lub podobną sieć.\n- **Panel** (sterowanie lokalne): przyciski na samym przemienniku, używane przy uruchamianiu i konserwacji.\n\nParametr lub przycisk lokalne/zdalne wybiera źródło, którego przemiennik słucha. W sterowaniu **lokalnym** przemiennik ignoruje polecenia PLC; jest to zamierzone zachowanie, a nie usterka przemiennika, więc zwykle nie jest zgłaszany żaden alarm."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Feedback to the PLC",
+          "text": "Sygnały zwrotne do PLC"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Drives report their state through relay outputs or a status word: typically **ready** (powered and not tripped), **running**, **fault** and often **remote control active**. A good program checks this feedback instead of assuming that a command was executed.",
+          "text": "Przemienniki zgłaszają swój stan przez wyjścia przekaźnikowe lub słowo statusowe: zwykle **gotowość** (zasilony i bez wyzwolenia), **praca**, **usterka** i często **sterowanie zdalne aktywne**. Dobry program sprawdza te sygnały zwrotne, zamiast zakładać, że polecenie zostało wykonane."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Safety note",
+          "text": "Uwaga dotycząca bezpieczeństwa"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "Stopping a drive through its run command is a functional stop, not a safety function. Many drives offer an integrated safety function such as Safe Torque Off that must be wired and validated according to the drive's safety documentation. PLC Lab does not simulate drive safety functions.",
+          "text": "Zatrzymanie przemiennika poleceniem pracy to zatrzymanie funkcjonalne, a nie funkcja bezpieczeństwa. Wiele przemienników ma zintegrowaną funkcję bezpieczeństwa, taką jak Safe Torque Off, którą trzeba podłączyć i zwalidować zgodnie z dokumentacją bezpieczeństwa przemiennika. PLC Lab nie symuluje funkcji bezpieczeństwa przemienników."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "The simulated drive has a run terminal and three relay outputs (ready, running, remote). It ramps linearly to full speed, shows LOC or REM, the output frequency based on a 50 Hz rated frequency and an approximate motor current on its display. Speed references, drive trips and parameters are not simulated. This is a **simulation approximation** intended for control and troubleshooting practice.",
+          "text": "Symulowany przemiennik ma zacisk pracy i trzy wyjścia przekaźnikowe (gotowość, praca, zdalne). Rozpędza się liniowo do pełnej prędkości i pokazuje na wyświetlaczu LOC lub REM, częstotliwość wyjściową liczoną względem częstotliwości znamionowej 50 Hz oraz przybliżony prąd silnika. Wartości zadane prędkości, wyzwolenia przemiennika i parametry nie są symulowane. Jest to **przybliżenie symulacyjne** przeznaczone do ćwiczenia sterowania i diagnozowania usterek."
+        },
+        {
+          "path": "sections.5.heading",
+          "source": "The generic VFD behavioral model",
+          "text": "Ogólny model behawioralny przemiennika"
+        },
+        {
+          "path": "sections.5.body",
+          "source": "PLC Lab's drive is a generic behavioral model, not a specific product. It shows the concepts most drives share: **control place** (local keypad or remote terminals), a **ready** chain (mains supply, no fault, run enable), a **run command**, a latched **fault** with a **fault reset** (acknowledge after removing the cause), a **speed reference** from the terminals (two preset speeds) or the keypad, a linear acceleration ramp and the **ready**, **running**, **remote** and **fault** relays. Real drives name, number and combine these differently, use other fault codes and add many parameters; the vendor manual decides.",
+          "text": "Przemiennik w PLC Lab to ogólny model behawioralny, a nie konkretny produkt. Pokazuje pojęcia wspólne dla większości przemienników: **miejsce sterowania** (lokalny panel lub zdalne zaciski), łańcuch **gotowości** (zasilanie sieciowe, brak usterki, zezwolenie na pracę), **polecenie pracy**, zatrzaśniętą **usterkę** z **kasowaniem usterki** (potwierdzenie po usunięciu przyczyny), **wartość zadaną prędkości** z zacisków (dwie prędkości stałe) lub z panelu, liniową rampę przyspieszania oraz przekaźniki **gotowość**, **praca**, **zdalne** i **usterka**. Rzeczywiste przemienniki nazywają, numerują i łączą te elementy inaczej, stosują inne kody usterek i mają wiele dodatkowych parametrów; rozstrzyga instrukcja producenta."
+        },
+        {
+          "path": "facts.0.label",
+          "source": "Simulated drive interface",
+          "text": "Interfejs symulowanego przemiennika"
+        },
+        {
+          "path": "facts.0.value",
+          "source": "Run terminal; relay outputs ready, running and remote; linear ramp; no speed reference",
+          "text": "Zacisk pracy; wyjścia przekaźnikowe gotowość, praca i zdalne; rampa liniowa; brak wartości zadanej prędkości"
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "Generic VFD behavioral model: local/remote control place, ready chain (supply, no fault, run enable), run command, latched trip with acknowledge, terminal or keypad speed reference with a preset speed, ready/running/remote/fault relays",
+          "text": "Ogólny model behawioralny przemiennika: miejsce sterowania lokalne/zdalne, łańcuch gotowości (zasilanie, brak usterki, zezwolenie na pracę), polecenie pracy, zatrzaśnięte wyzwolenie z potwierdzeniem, wartość zadana prędkości z zacisków lub panelu z prędkością stałą, przekaźniki gotowość/praca/zdalne/usterka"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Linear acceleration ramp, immediate deceleration, simple motor current",
+          "text": "Liniowa rampa przyspieszania, natychmiastowe zwalnianie, uproszczony prąd silnika"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Product parameters and fault codes",
+          "text": "Parametry i kody usterek konkretnych produktów"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "Fieldbus control and its communication monitoring",
+          "text": "Sterowanie przez magistralę polową i nadzór tej komunikacji"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Braking",
+          "text": "Hamowanie"
+        },
+        {
+          "path": "fidelity.omitted.3",
+          "source": "Safe torque off and other safety functions",
+          "text": "Safe Torque Off i inne funkcje bezpieczeństwa"
+        }
+      ]
+    },
+    {
       "id": "fundamentals.industrial-alarms",
       "file": "fundamentals/industrial-alarms.json",
       "fields": [
@@ -3027,6 +3631,220 @@
           "path": "sections.4.body",
           "source": "1. Read the alarm: source, priority, message and time.\n2. Acknowledge it, so others know it is being handled.\n3. Inspect the evidence: the measured value, the inputs and outputs, the diagnostic buffer.\n4. Find and correct the cause.\n5. Verify that the alarm returns to normal and that the process behaves as intended.",
           "text": "1. Odczytaj alarm: źródło, priorytet, komunikat i czas.\n2. Potwierdź go, aby inni wiedzieli, że ktoś się nim zajmuje.\n3. Sprawdź dowody: wartość mierzoną, wejścia i wyjścia, bufor diagnostyczny.\n4. Znajdź i usuń przyczynę.\n5. Sprawdź, czy alarm wraca do stanu normalnego i czy proces działa zgodnie z założeniami."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.industrial-networks",
+      "file": "fundamentals/industrial-networks.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Industrial network fundamentals",
+          "text": "Podstawy sieci przemysłowych"
+        },
+        {
+          "path": "summary",
+          "source": "How controllers exchange data with remote I/O, drives, transmitters and HMIs: addresses, subnets, cyclic and acyclic data, and how a communication fault shows up in a PLC.",
+          "text": "Jak sterowniki wymieniają dane z rozproszonymi we/wy, przemiennikami, przetwornikami i panelami HMI: adresy, podsieci, dane cykliczne i acykliczne oraz to, jak usterka komunikacji objawia się w PLC."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Why networks",
+          "text": "Po co sieci"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Instead of wiring every signal to the controller cabinet, modern machines connect remote I/O stations, drives and intelligent sensors over a network. Fewer wires are needed, devices can report diagnostics, and parameters can be changed from the engineering station.",
+          "text": "Zamiast prowadzić każdy sygnał osobnym przewodem do szafy sterownika, nowoczesne maszyny łączą przez sieć stacje rozproszonych we/wy, przemienniki i inteligentne czujniki. Potrzeba mniej przewodów, urządzenia mogą zgłaszać diagnostykę, a parametry można zmieniać ze stacji inżynierskiej."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Addresses on Ethernet-based networks",
+          "text": "Adresy w sieciach opartych na Ethernecie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Each Ethernet interface has a fixed hardware (MAC) address and a configured **IPv4 address** such as 192.168.0.20. The **subnet mask** (for example 255.255.255.0) decides which addresses are local: with that mask, 192.168.0.1 and 192.168.0.20 share a subnet, while 192.168.1.20 is in another one and can only be reached through a **gateway** (router). Two devices with the same IP address disturb each other. PROFINET additionally identifies IO devices by a **device name**; EtherNet/IP and Modbus TCP use the IP address directly.",
+          "text": "Każdy interfejs Ethernet ma stały adres sprzętowy (MAC) i skonfigurowany **adres IPv4**, na przykład 192.168.0.20. **Maska podsieci** (na przykład 255.255.255.0) decyduje, które adresy są lokalne: przy tej masce 192.168.0.1 i 192.168.0.20 należą do tej samej podsieci, a 192.168.1.20 do innej i jest osiągalny tylko przez **bramę** (router). Dwa urządzenia z tym samym adresem IP zakłócają się nawzajem. PROFINET dodatkowo identyfikuje urządzenia IO po **nazwie urządzenia**; EtherNet/IP i Modbus TCP używają bezpośrednio adresu IP."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Roles and data exchange",
+          "text": "Role i wymiana danych"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Industrial protocols use roles such as client/server (Modbus TCP: the client sends requests, the server answers), controller/device (PROFINET IO, EtherNet/IP) or a master that drives a frame through all slaves (EtherCAT). **Cyclic** data such as I/O values is exchanged at a fixed update time; **acyclic** data such as parameters or diagnostics is requested when needed.",
+          "text": "Protokoły przemysłowe stosują role takie jak klient/serwer (Modbus TCP: klient wysyła zapytania, serwer odpowiada), kontroler/urządzenie (PROFINET IO, EtherNet/IP) albo urządzenie nadrzędne (master), które przepuszcza ramkę przez wszystkie urządzenia podrzędne (EtherCAT). Dane **cykliczne**, takie jak wartości we/wy, są wymieniane ze stałym czasem odświeżania; dane **acykliczne**, takie jak parametry czy diagnostyka, są odczytywane na żądanie."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "How communication faults appear",
+          "text": "Jak objawiają się usterki komunikacji"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "The typical classes are: **no link** (cable, port), **no route** (address in another subnet, missing gateway), **timeout** (nobody answers at that address, or the device is offline), **refused** (device reachable but the service is not available) and **protocol exception** (device answers but rejects the request, for example an invalid register address). A value can also be transferred perfectly and still be wrong, for example when the wrong register is read. The program should always check a communication status before trusting remote values.",
+          "text": "Typowe klasy to: **brak łącza** (kabel, port), **brak trasy** (adres w innej podsieci, brak bramy), **przekroczenie czasu** (pod tym adresem nikt nie odpowiada albo urządzenie jest offline), **odmowa** (urządzenie jest osiągalne, ale usługa jest niedostępna) i **wyjątek protokołu** (urządzenie odpowiada, ale odrzuca zapytanie, na przykład z powodu nieprawidłowego adresu rejestru). Wartość może też zostać przesłana bezbłędnie i mimo to być błędna, na przykład gdy odczytano niewłaściwy rejestr. Program powinien zawsze sprawdzić stan komunikacji, zanim zaufa zdalnym wartościom."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "PLC Lab simulates Modbus TCP behavior with deterministic latency, timeouts, device offline and address faults, and offers ping and connection diagnostics. The other protocols in this knowledge pack are described conceptually and are not simulated.",
+          "text": "PLC Lab symuluje zachowanie Modbus TCP z deterministycznym opóźnieniem, przekroczeniami czasu, urządzeniem offline i błędami adresów oraz udostępnia ping i diagnostykę połączeń. Pozostałe protokoły opisane w tym pakiecie wiedzy są przedstawione koncepcyjnie i nie są symulowane."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.interlocks",
+      "file": "fundamentals/interlocks.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Interlocks and permissives",
+          "text": "Blokady i warunki zezwalające"
+        },
+        {
+          "path": "summary",
+          "source": "Interlocks prevent dangerous or damaging combinations: a pump must not run on an empty tank, two contactors must not close together, a valve must be open before a pump starts.",
+          "text": "Blokady zapobiegają niebezpiecznym lub szkodliwym kombinacjom: pompa nie może pracować przy pustym zbiorniku, dwa styczniki nie mogą zamknąć się jednocześnie, zawór musi być otwarty, zanim pompa wystartuje."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Permissive versus trip",
+          "text": "Warunek zezwalający a wyłączenie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "- A **permissive** is a condition required to **start** (for example: tank level above low-low).\n- A **trip** stops equipment that is already running when a condition is lost (for example: overload relay opened).\nMany interlocks are both: they block a start and stop a running device.",
+          "text": "- **Warunek zezwalający** (permissive) to warunek wymagany do **startu** (na przykład: poziom w zbiorniku powyżej progu bardzo niskiego).\n- **Wyłączenie** (trip) zatrzymuje już pracujące urządzenie, gdy warunek zostanie utracony (na przykład: zadziałał przekaźnik przeciążeniowy).\nWiele blokad pełni obie funkcje: blokuje start i zatrzymuje pracujące urządzenie."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Writing interlocks",
+          "text": "Pisanie blokad"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Collect interlocks in one place and AND them into the run condition, so they cannot be forgotten in one of several code paths:\n\n```\nPumpPermit := NOT LevelLowLow AND InletValveOpen;\nDrainPump := DrainRequest AND PumpPermit;\n```",
+          "text": "Zbierz blokady w jednym miejscu i połącz je operacją AND z warunkiem pracy, aby nie dało się o nich zapomnieć w żadnej z kilku ścieżek kodu:\n\n```\nPumpPermit := NOT LevelLowLow AND InletValveOpen;\nDrainPump := DrainRequest AND PumpPermit;\n```"
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Safety is separate",
+          "text": "Bezpieczeństwo to osobny system"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Standard PLC interlocks protect equipment and product. Protection of people is the job of a **safety system** (safety relays or safety PLCs designed to the relevant standards). PLC Lab does not model safety controllers.",
+          "text": "Standardowe blokady PLC chronią urządzenia i produkt. Ochrona ludzi jest zadaniem **systemu bezpieczeństwa** (przekaźników bezpieczeństwa lub sterowników bezpieczeństwa zaprojektowanych zgodnie z odpowiednimi normami). PLC Lab nie modeluje sterowników bezpieczeństwa."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.no-nc-contacts",
+      "file": "fundamentals/no-nc-contacts.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Normally open and normally closed contacts",
+          "text": "Styki normalnie otwarte i normalnie zamknięte"
+        },
+        {
+          "path": "summary",
+          "source": "A normally open (NO) contact closes when actuated; a normally closed (NC) contact opens when actuated. Stop buttons and safety-related signals use NC contacts so that a broken wire is noticed.",
+          "text": "Styk normalnie otwarty (NO) zamyka się po uruchomieniu; styk normalnie zamknięty (NC) otwiera się po uruchomieniu. Przyciski stop i sygnały związane z bezpieczeństwem wykorzystują styki NC, aby przerwany przewód został zauważony."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Definitions",
+          "text": "Definicje"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "- **Normally open (NO)**: open at rest, closed while actuated. A Start button is usually NO: the PLC input is TRUE only while it is pressed.\n- **Normally closed (NC)**: closed at rest, open while actuated. A Stop button is usually NC: the PLC input is TRUE while the button is **not** pressed.",
+          "text": "- **Normalnie otwarty (NO)**: otwarty w spoczynku, zamknięty podczas uruchomienia. Przycisk Start jest zwykle typu NO: wejście PLC ma wartość TRUE tylko wtedy, gdy przycisk jest naciśnięty.\n- **Normalnie zamknięty (NC)**: zamknięty w spoczynku, otwarty podczas uruchomienia. Przycisk Stop jest zwykle typu NC: wejście PLC ma wartość TRUE, gdy przycisk **nie** jest naciśnięty."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Why Stop uses NC",
+          "text": "Dlaczego Stop używa styku NC"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "If the wire to an NC Stop button breaks, the input drops to FALSE exactly as if Stop were pressed, so the machine stops. With an NO Stop button a broken wire would go unnoticed until someone needs to stop the machine. This principle is called **fail-safe** or **wire-break safe** signalling.",
+          "text": "Jeśli przewód do przycisku Stop typu NC zostanie przerwany, wejście spada do FALSE dokładnie tak, jakby naciśnięto Stop, więc maszyna się zatrzymuje. Przy przycisku Stop typu NO przerwany przewód pozostałby niezauważony aż do chwili, gdy ktoś będzie musiał zatrzymać maszynę. Tę zasadę nazywa się sygnalizacją **bezpieczną w razie awarii** (fail-safe) lub **odporną na przerwanie przewodu**."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Program consequences",
+          "text": "Konsekwencje dla programu"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "For an NC Stop button the program uses the input directly in the run condition:\n\n```\nMotorContactor := (StartPB OR MotorContactor) AND StopPB;\n```\n\nWriting `NOT StopPB` is a classic mistake: the motor then only runs while Stop is held down. When a contact block is replaced by the wrong type during maintenance, the input logic inverts and the machine behaves strangely although the program never changed.",
+          "text": "Dla przycisku Stop typu NC program używa wejścia bezpośrednio w warunku pracy:\n\n```\nMotorContactor := (StartPB OR MotorContactor) AND StopPB;\n```\n\nZapis `NOT StopPB` to klasyczny błąd: silnik pracuje wtedy tylko podczas przytrzymywania przycisku Stop. Gdy podczas konserwacji blok styków zostanie wymieniony na niewłaściwy typ, logika wejścia się odwraca i maszyna zachowuje się dziwnie, choć program się nie zmienił."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.plc-architecture",
+      "file": "fundamentals/plc-architecture.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "PLC architecture",
+          "text": "Budowa sterownika PLC"
+        },
+        {
+          "path": "summary",
+          "source": "What a programmable logic controller is made of: CPU, power supply, I/O modules, communication interfaces and the engineering software that programs it.",
+          "text": "Z czego składa się programowalny sterownik logiczny: CPU, zasilacz, moduły we/wy, interfejsy komunikacyjne oraz oprogramowanie inżynierskie, w którym się go programuje."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "The controller in the cabinet",
+          "text": "Sterownik w szafie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A programmable logic controller (PLC) is an industrial computer built to control machines and processes. It reads **inputs** (buttons, sensors, transmitters), runs a **user program** and drives **outputs** (contactors, valves, lamps, drives). Compared with an office computer it is designed for a hostile environment: wide temperature ranges, electrical noise, vibration and years of continuous operation.",
+          "text": "Programowalny sterownik logiczny (PLC) to komputer przemysłowy przeznaczony do sterowania maszynami i procesami. Odczytuje **wejścia** (przyciski, czujniki, przetworniki), wykonuje **program użytkownika** i steruje **wyjściami** (styczniki, zawory, lampki, przemienniki). W porównaniu z komputerem biurowym jest zaprojektowany do pracy w trudnym środowisku: w szerokim zakresie temperatur, przy zakłóceniach elektrycznych, drganiach i przez lata ciągłej pracy."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Main building blocks",
+          "text": "Główne elementy"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "- **CPU**: executes the program cyclically, holds the process images and the diagnostic buffer, and has a mode switch (RUN/STOP).\n- **Power supply**: usually 24 V DC for the CPU and the I/O (\"load\" or \"field\" supply).\n- **I/O modules**: convert field signals into data. Digital modules handle on/off signals, analog modules handle currents and voltages such as 4-20 mA.\n- **Communication**: Ethernet ports for programming and fieldbuses (PROFINET, EtherNet/IP, EtherCAT, Modbus TCP) for remote I/O, drives and HMIs.\n- **Rack or backplane**: holds the modules and gives each a **slot** number that the configuration refers to.",
+          "text": "- **CPU**: cyklicznie wykonuje program, przechowuje obrazy procesu i bufor diagnostyczny oraz ma przełącznik trybu (RUN/STOP).\n- **Zasilacz**: zwykle 24 V DC dla CPU i we/wy (zasilanie „obciążeń” lub „obiektowe”).\n- **Moduły we/wy**: przetwarzają sygnały obiektowe na dane. Moduły cyfrowe obsługują sygnały włącz/wyłącz, moduły analogowe obsługują prądy i napięcia, takie jak 4-20 mA.\n- **Komunikacja**: porty Ethernet do programowania oraz magistrale polowe (PROFINET, EtherNet/IP, EtherCAT, Modbus TCP) dla rozproszonych we/wy, przemienników i paneli HMI.\n- **Kaseta lub magistrala modułów**: utrzymuje moduły i nadaje każdemu numer **slotu**, do którego odwołuje się konfiguracja."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Configured versus installed hardware",
+          "text": "Sprzęt skonfigurowany a zainstalowany"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The engineer describes the hardware in the engineering software (the **hardware configuration**). The CPU compares this configuration with the modules really plugged in. A missing or wrong module is reported as a diagnostic event and the affected I/O delivers no valid values. PLC Lab models exactly this difference: the scene defines what is installed, the project defines what is configured.",
+          "text": "Inżynier opisuje sprzęt w oprogramowaniu inżynierskim (**konfiguracja sprzętu**). CPU porównuje tę konfigurację z modułami rzeczywiście zamontowanymi. Brakujący lub niewłaściwy moduł jest zgłaszany jako zdarzenie diagnostyczne, a jego we/wy nie dostarczają prawidłowych wartości. PLC Lab modeluje dokładnie tę różnicę: scena określa, co jest zainstalowane, a projekt określa, co jest skonfigurowane."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Compact and modular controllers",
+          "text": "Sterowniki kompaktowe i modułowe"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "Compact controllers integrate CPU, some I/O and the power input in one housing and are expanded with side-mounted modules. Modular controllers use a rack or DIN-rail backplane with separate modules and usually offer more memory, more communication and redundancy options. Both execute the same kind of cyclic program.",
+          "text": "Sterowniki kompaktowe łączą w jednej obudowie CPU, część we/wy i wejście zasilania, a rozbudowuje się je modułami montowanymi z boku. Sterowniki modułowe wykorzystują kasetę lub magistralę na szynie DIN z oddzielnymi modułami i zwykle oferują więcej pamięci, więcej komunikacji i opcje redundancji. Oba rodzaje wykonują ten sam typ programu cyklicznego."
         }
       ]
     },
@@ -3103,6 +3921,470 @@
           "path": "sections.5.body",
           "source": "PLC families differ in what STOP to RUN initializes, how retentive areas are configured, whether timers can be retentive and what outputs do in STOP. This is PLC Lab's generic educational model; check the documentation of the controller you work with.",
           "text": "Rodziny sterowników różnią się tym, co inicjalizuje przejście ze STOP na RUN, jak konfiguruje się obszary retencyjne, czy timery mogą być retencyjne i co robią wyjścia w STOP. To jest ogólny model dydaktyczny PLC Lab; sprawdzaj dokumentację sterownika, z którym pracujesz."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.scaling",
+      "file": "fundamentals/scaling.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Scaling analog values",
+          "text": "Skalowanie wartości analogowych"
+        },
+        {
+          "path": "summary",
+          "source": "Scaling converts the raw integer of an analog module into an engineering value. It is a straight-line conversion defined by two points.",
+          "text": "Skalowanie przelicza surową liczbę całkowitą z modułu analogowego na wartość w jednostkach inżynierskich. Jest to przeliczenie liniowe wyznaczone przez dwa punkty."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "The straight line",
+          "text": "Prosta"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "```\nvalue = (raw - rawMin) / (rawMax - rawMin) * (engMax - engMin) + engMin\n```\n\nFor PLC Lab's generic profile (0..10000 for the nominal range) and a level of 0..100 %:\n\n```\nLevelPercent := INT_TO_REAL(LevelRaw) / 100.0;\n```",
+          "text": "```\nvalue = (raw - rawMin) / (rawMax - rawMin) * (engMax - engMin) + engMin\n```\n\nDla ogólnego profilu PLC Lab (0..10000 dla zakresu nominalnego) i poziomu 0..100 %:\n\n```\nLevelPercent := INT_TO_REAL(LevelRaw) / 100.0;\n```"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Integer arithmetic traps",
+          "text": "Pułapki arytmetyki całkowitej"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "In INT arithmetic `LevelRaw / 10000 * 100` is 0 for every value below 10000, because the division truncates first. Multiply first or convert to REAL before dividing. Also watch the INT range (-32768..32767): `LevelRaw * 100` overflows above 327.",
+          "text": "W arytmetyce INT wyrażenie `LevelRaw / 10000 * 100` daje 0 dla każdej wartości poniżej 10000, ponieważ dzielenie najpierw obcina wynik. Najpierw mnóż albo przed dzieleniem przekształć wartość na REAL. Uważaj też na zakres INT (-32768..32767): `LevelRaw * 100` przepełnia się powyżej 327."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Vendor helpers",
+          "text": "Funkcje pomocnicze producentów"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Most platforms provide scaling functions, for example NORM_X/SCALE_X on Siemens S7-1200/S7-1500 or module-level scaling to engineering units on Logix analog modules. The underlying mathematics is always the same straight line; check the exact raw range of your module.",
+          "text": "Większość platform udostępnia funkcje skalowania, na przykład NORM_X/SCALE_X w Siemens S7-1200/S7-1500 albo skalowanie do jednostek inżynierskich na poziomie modułu w modułach analogowych Logix. Matematyka jest zawsze ta sama: prosta. Sprawdź dokładny zakres wartości surowych swojego modułu."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Checking the scaling during commissioning",
+          "text": "Sprawdzanie skalowania przy uruchamianiu"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "Compare the scaled value with an independent reference at two or more points: a sight glass, a second instrument or a calibrator that injects known signals (for example 4, 12 and 20 mA). An error that is the same everywhere is a **zero (offset)** error; an error that grows with the value is a **span** error. Some measurements have a **reversed range** on purpose, for example an ullage measurement where 4 mA means full: the scaling then runs from the upper value at the low signal to the lower value at the high signal, and must match the transmitter's configured range.",
+          "text": "Porównaj przeskalowaną wartość z niezależnym odniesieniem w co najmniej dwóch punktach: wziernikiem, drugim przyrządem lub kalibratorem, który podaje znane sygnały (na przykład 4, 12 i 20 mA). Błąd jednakowy w całym zakresie to błąd **zera (przesunięcia)**; błąd rosnący wraz z wartością to błąd **zakresu (span)**. Niektóre pomiary mają celowo **odwrócony zakres**, na przykład pomiar pustej przestrzeni nad cieczą, w którym 4 mA oznacza zbiornik pełny: skalowanie przebiega wtedy od wartości górnej przy niskim sygnale do wartości dolnej przy wysokim sygnale i musi odpowiadać zakresowi skonfigurowanemu w przetworniku."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.scan-cycle",
+      "file": "fundamentals/scan-cycle.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "The PLC scan cycle",
+          "text": "Cykl programu PLC"
+        },
+        {
+          "path": "summary",
+          "source": "A PLC repeatedly reads all inputs into an input image, runs the program against that image, then writes the output image to the outputs. Understanding this cycle explains most beginner surprises.",
+          "text": "PLC wielokrotnie odczytuje wszystkie wejścia do obrazu wejść, wykonuje program na tym obrazie, a następnie zapisuje obraz wyjść do wyjść. Zrozumienie tego cyklu wyjaśnia większość niespodzianek, które spotykają początkujących."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Read, execute, write",
+          "text": "Odczyt, wykonanie, zapis"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "1. **Read inputs**: the CPU copies the state of every input into the **process input image**.\n2. **Execute the program**: the program reads only the image, never the live terminal, so every instruction in one scan sees the same input values.\n3. **Write outputs**: the results are copied from the **process output image** to the output modules.\n4. **Housekeeping**: communication, diagnostics and timers are updated, then the cycle starts again.",
+          "text": "1. **Odczyt wejść**: CPU kopiuje stan każdego wejścia do **obrazu procesu wejść**.\n2. **Wykonanie programu**: program czyta tylko obraz, nigdy bieżący stan zacisku, więc każda instrukcja w jednym cyklu widzi te same wartości wejść.\n3. **Zapis wyjść**: wyniki są kopiowane z **obrazu procesu wyjść** do modułów wyjściowych.\n4. **Czynności systemowe**: aktualizowane są komunikacja, diagnostyka i timery, po czym cykl zaczyna się od nowa."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Why the image matters",
+          "text": "Dlaczego obraz ma znaczenie"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Because inputs are frozen during a scan, a button pressed in the middle of the program is only seen in the **next** scan. An output written twice in one scan only reaches the field with its **last** value. Both effects are visible in PLC Lab's five-step cause-and-effect view: *PLC read* shows the input image used by the scan, *PLC logic result* the committed values, *Output command* what the field devices received, *Process* the physical change, and *Next PLC input* what was sampled for the following scan.",
+          "text": "Ponieważ wejścia są zamrożone na czas cyklu, przycisk naciśnięty w połowie programu zostanie zauważony dopiero w **następnym** cyklu. Wyjście zapisane dwa razy w jednym cyklu trafia na obiekt tylko ze swoją **ostatnią** wartością. Oba efekty widać w pięcioetapowym widoku przyczyny i skutku w PLC Lab: *PLC odczytał* pokazuje obraz wejść użyty w cyklu, *Wynik programu PLC* zatwierdzone wartości, *Polecenie wyjściowe* to, co otrzymały urządzenia obiektowe, *Reakcja procesu* zmianę fizyczną, a *Następne wejście PLC* to, co zostało odczytane na potrzeby kolejnego cyklu."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Cycle time",
+          "text": "Czas cyklu"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The time for one complete cycle is the **cycle time** (typically a few milliseconds on real machines). Signals shorter than one cycle can be missed, which is why fast counters and interrupts exist on real hardware. PLC Lab uses a fixed, configurable cycle (100 ms by default) so that every step can be inspected; this is a **simulation approximation** of a real, variable cycle time.",
+          "text": "Czas jednego pełnego cyklu to **czas cyklu** (w rzeczywistych maszynach zwykle kilka milisekund). Sygnały krótsze niż jeden cykl mogą zostać pominięte, dlatego rzeczywisty sprzęt ma szybkie liczniki i przerwania. PLC Lab stosuje stały, konfigurowalny cykl (domyślnie 100 ms), aby każdy krok można było prześledzić; jest to **przybliżenie symulacyjne** rzeczywistego, zmiennego czasu cyklu."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "STOP and RUN",
+          "text": "STOP i RUN"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "In **STOP** the program is not executed and outputs go to their configured safe state (normally off). In **RUN** the cycle above repeats. A runtime error (for example division by zero) moves the CPU to **FAULT**/STOP until the cause is corrected and the CPU is reset. In PLC Lab the machine keeps running while the PLC is stopped: a motor coasts, a tank keeps draining. The simulation controls (Run, Pause, Step, Stop) are separate from the PLC's mode switch: they let simulated time pass, freeze it, advance one cycle or restore the machine's initial state.",
+          "text": "W trybie **STOP** program nie jest wykonywany, a wyjścia przechodzą w skonfigurowany stan bezpieczny (zwykle wyłączone). W trybie **RUN** opisany cykl się powtarza. Błąd wykonania (na przykład dzielenie przez zero) przełącza CPU w stan **FAULT**/STOP, dopóki przyczyna nie zostanie usunięta, a CPU zresetowany. W PLC Lab maszyna działa dalej, gdy PLC jest zatrzymany: silnik wybiega, a zbiornik nadal się opróżnia. Przyciski symulacji (Uruchom, Wstrzymaj, Krok, Zatrzymaj) są niezależne od przełącznika trybu PLC: pozwalają upływać czasowi symulacji, zamrozić go, przejść o jeden cykl albo przywrócić stan początkowy maszyny."
+        },
+        {
+          "path": "facts.0.label",
+          "source": "Default PLC Lab cycle",
+          "text": "Domyślny cykl w PLC Lab"
+        },
+        {
+          "path": "facts.0.value",
+          "source": "100 ms, configurable 10-1000 ms per project",
+          "text": "100 ms, konfigurowalny w projekcie w zakresie 10-1000 ms"
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.sourcing-sinking",
+      "file": "fundamentals/sourcing-sinking.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Sourcing and sinking I/O (PNP and NPN)",
+          "text": "Wejścia i wyjścia typu sourcing i sinking (PNP i NPN)"
+        },
+        {
+          "path": "summary",
+          "source": "Sinking inputs need a sensor that supplies +24 V (PNP); sourcing inputs need a sensor that switches to 0 V (NPN). A mismatch makes the input never switch.",
+          "text": "Wejścia typu sinking wymagają czujnika, który podaje +24 V (PNP); wejścia typu sourcing wymagają czujnika, który zwiera wejście do 0 V (NPN). Przy niezgodności wejście nigdy się nie przełącza."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Current direction",
+          "text": "Kierunek przepływu prądu"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The terms describe which side supplies current. A **sinking input** receives current: the sensor must connect the input to +24 V. A **PNP** (sourcing) sensor does exactly that. A **sourcing input** delivers current: the sensor must connect the input to 0 V, which an **NPN** (sinking) sensor does. Mechanical contacts work with both when wired accordingly.",
+          "text": "Te terminy opisują, która strona dostarcza prąd. **Wejście typu sinking** przyjmuje prąd: czujnik musi połączyć wejście z +24 V. Dokładnie to robi czujnik **PNP** (typu sourcing). **Wejście typu sourcing** oddaje prąd: czujnik musi połączyć wejście z 0 V, co robi czujnik **NPN** (typu sinking). Styki mechaniczne działają z oboma rodzajami wejść, jeśli są odpowiednio podłączone."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical regional practice",
+          "text": "Typowa praktyka w różnych regionach"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "PNP sensors with sinking inputs dominate in Europe; NPN is common in parts of Asia. Many modules can be wired either way through a common terminal. Always check the module and the sensor data sheet.",
+          "text": "W Europie dominują czujniki PNP z wejściami typu sinking; NPN jest powszechny w części Azji. Wiele modułów można podłączyć w obu konfiguracjach przez zacisk wspólny. Zawsze sprawdzaj kartę katalogową modułu i czujnika."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Symptom of a mismatch",
+          "text": "Objaw niezgodności"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The sensor's own LED switches, but the PLC input LED never does and the voltage at the input terminal does not change. In PLC Lab a PNP/NPN mismatch is a simulated fault: measure the input terminal to see it.",
+          "text": "Dioda na samym czujniku się przełącza, ale dioda wejścia PLC nigdy, a napięcie na zacisku wejściowym się nie zmienia. W PLC Lab niezgodność PNP/NPN jest symulowaną usterką: zmierz napięcie na zacisku wejściowym, aby ją zobaczyć."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.start-stop-latch",
+      "file": "fundamentals/start-stop-latch.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Start/stop circuits and seal-in",
+          "text": "Obwody start/stop z podtrzymaniem"
+        },
+        {
+          "path": "summary",
+          "source": "The motor start/stop circuit with a seal-in (self-holding) contact is the most important pattern in machine control. It turns two momentary buttons into a lasting run state with stop priority.",
+          "text": "Obwód start/stop silnika ze stykiem podtrzymania to najważniejszy wzorzec w sterowaniu maszynami. Zamienia dwa przyciski chwilowe w trwały stan pracy z priorytetem zatrzymania."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "The pattern",
+          "text": "Wzorzec"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A momentary Start button must start a motor that keeps running after the button is released. The output itself is used as a condition (\"seal-in\"):\n\n```\nMotorContactor := (StartPB OR MotorContactor) AND StopPB AND OverloadOK;\n```\n\nRead it as: *run if Start is pressed or we are already running, as long as Stop is not pressed and the overload relay is healthy.*",
+          "text": "Chwilowy przycisk Start musi uruchomić silnik, który pracuje dalej po zwolnieniu przycisku. Samo wyjście jest używane jako warunek („podtrzymanie”):\n\n```\nMotorContactor := (StartPB OR MotorContactor) AND StopPB AND OverloadOK;\n```\n\nCzyta się to tak: *pracuj, jeśli naciśnięto Start lub silnik już pracuje, dopóki Stop nie jest naciśnięty, a przekaźnik przeciążeniowy jest sprawny.*"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Stop priority",
+          "text": "Priorytet zatrzymania"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Because the stop conditions are AND-ed after the OR, Stop always wins when both buttons are pressed. Reversing the order (`StartPB OR (MotorContactor AND StopPB)`) gives **start priority**, which is unacceptable for a motor.",
+          "text": "Ponieważ warunki zatrzymania są połączone operacją AND za członem OR, Stop zawsze wygrywa, gdy naciśnięto oba przyciski. Odwrócenie kolejności (`StartPB OR (MotorContactor AND StopPB)`) daje **priorytet startu**, który jest niedopuszczalny dla silnika."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Feedback",
+          "text": "Sygnał zwrotny"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The contactor's auxiliary contact (MotorFeedback) tells the PLC that the contactor really pulled in. Comparing command and feedback detects a failed contactor or a missing supply. In PLC Lab you can watch command, feedback and motor speed side by side in the Watch and Waveforms views.",
+          "text": "Styk pomocniczy stycznika (MotorFeedback) informuje PLC, że stycznik rzeczywiście zadziałał. Porównanie polecenia z sygnałem zwrotnym wykrywa uszkodzony stycznik lub brak zasilania. W PLC Lab polecenie, sygnał zwrotny i prędkość silnika można obserwować obok siebie w widokach Tabela podglądu (Watch) i Przebiegi."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.station-configuration",
+      "file": "fundamentals/station-configuration.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Station configuration: configured, detected and the signal path",
+          "text": "Konfiguracja stacji: sprzęt skonfigurowany, wykryty i ścieżka sygnału"
+        },
+        {
+          "path": "summary",
+          "source": "How a PLC station is described in the project, how the CPU compares it with the installed modules, why modules need two supplies, and how to follow a signal from a PLC symbol to a field device.",
+          "text": "Jak stację PLC opisuje się w projekcie, jak CPU porównuje ją z zamontowanymi modułami, dlaczego moduły potrzebują dwóch zasilań i jak prześledzić sygnał od symbolu PLC do urządzenia obiektowego."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Configured and detected hardware",
+          "text": "Sprzęt skonfigurowany i wykryty"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The project describes the station the program expects: which module type sits in which slot, its start address and its channel settings. The CPU detects what is actually plugged in and compares the two slot by slot. Only a module whose type matches its slot's configuration exchanges data. A missing module, a module of another type, a module in an unconfigured slot and a module in another slot are different findings, and each affects every channel of that module at once.",
+          "text": "Projekt opisuje stację, której oczekuje program: jaki typ modułu znajduje się w którym slocie, jaki ma adres początkowy i jakie ustawienia kanałów. CPU wykrywa, co jest rzeczywiście zamontowane, i porównuje oba stany slot po slocie. Dane wymienia tylko moduł, którego typ zgadza się z konfiguracją jego slotu. Brakujący moduł, moduł innego typu, moduł w nieskonfigurowanym slocie i moduł w innym slocie to różne ustalenia, a każde z nich dotyczy jednocześnie wszystkich kanałów danego modułu."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Module identity, slots and addresses",
+          "text": "Tożsamość modułu, sloty i adresy"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "A configured module has an identity of its own, independent of the slot: if the module is moved in the project, its channel settings and the I/O mappings of its channels move with it. Each module occupies part of the process image from its start address on. Addresses are shown in a generic notation (for example %IX0.4 or %IW64); vendors use their own notations, but the idea of a start address and a channel offset is common.",
+          "text": "Skonfigurowany moduł ma własną tożsamość, niezależną od slotu: jeśli przeniesiesz moduł w projekcie, jego ustawienia kanałów i przypisania we/wy jego kanałów przenoszą się razem z nim. Każdy moduł zajmuje część obrazu procesu, począwszy od swojego adresu początkowego. Adresy są pokazywane w notacji ogólnej (na przykład %IX0.4 lub %IW64); producenci stosują własne notacje, ale idea adresu początkowego i przesunięcia kanału jest wspólna."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Electronics supply and field supply",
+          "text": "Zasilanie elektroniki i zasilanie obiektowe"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "An I/O module needs two supplies. The electronics supply (often through the backplane) lets the module talk to the CPU. The field or load supply lets the module switch its outputs or supply its sensors. Without the electronics supply the module is silent and the CPU reports it as not answering; without the field supply it answers and reports the missing voltage, but its channels cannot work. The program can command an output perfectly while the terminal stays at 0 V.",
+          "text": "Moduł we/wy potrzebuje dwóch zasilań. Zasilanie elektroniki (często doprowadzane przez magistralę modułów) pozwala modułowi komunikować się z CPU. Zasilanie obiektowe, czyli zasilanie obciążenia, pozwala modułowi przełączać wyjścia lub zasilać czujniki. Bez zasilania elektroniki moduł milczy, a CPU zgłasza, że moduł nie odpowiada; bez zasilania obiektowego moduł odpowiada i zgłasza brak napięcia, ale jego kanały nie mogą działać. Program może wtedy bezbłędnie wysterować wyjście, a zacisk pozostaje na 0 V."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Following a signal",
+          "text": "Śledzenie sygnału"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "A signal passes through several stages: PLC symbol, configured channel, channel value and quality, terminal, wire and field device. For an output: PLC tag, module command, field supply, terminal voltage, actuator, feedback. When something does not work, find the first stage where the expected state is missing. A device that works while its symbol does not change points to the wiring or the mapping; a symbol that changes while the terminal does not points to the module or its supply.",
+          "text": "Sygnał przechodzi przez kilka etapów: symbol PLC, skonfigurowany kanał, wartość kanału i jej jakość, zacisk, przewód i urządzenie obiektowe. Dla wyjścia: tag PLC, polecenie modułu, zasilanie obiektowe, napięcie na zacisku, element wykonawczy, sygnał zwrotny. Gdy coś nie działa, znajdź pierwszy etap, na którym brakuje oczekiwanego stanu. Urządzenie, które działa, choć jego symbol się nie zmienia, wskazuje na okablowanie lub przypisanie; symbol, który się zmienia, choć zacisk nie, wskazuje na moduł lub jego zasilanie."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "Indicators in PLC Lab",
+          "text": "Wskaźniki w PLC Lab"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "PLC Lab shows generic diagnostic indicators for the CPU (RUN, STOP, ERROR, I/O) and for every module and channel. They follow simple PLC Lab rules and do not reproduce the LED behavior of a particular vendor's hardware: on a real station, the module manual explains what each LED means.",
+          "text": "PLC Lab pokazuje ogólne wskaźniki diagnostyczne dla CPU (RUN, STOP, ERROR, I/O) oraz dla każdego modułu i kanału. Działają według prostych reguł PLC Lab i nie odwzorowują zachowania diod LED sprzętu konkretnego producenta: w rzeczywistej stacji znaczenie każdej diody wyjaśnia instrukcja modułu."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.timers",
+      "file": "fundamentals/timers.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Timers: on-delay, off-delay and pulse",
+          "text": "Timery: opóźnienie załączenia, opóźnienie wyłączenia i impuls"
+        },
+        {
+          "path": "summary",
+          "source": "Timers turn a signal into time-dependent behavior: start after a delay, keep running after a signal ends, or produce a pulse of fixed length. IEC 61131-3 defines TON, TOF and TP for this.",
+          "text": "Timery zamieniają sygnał w zachowanie zależne od czasu: start po opóźnieniu, dalsza praca po zaniku sygnału albo impuls o stałej długości. IEC 61131-3 definiuje do tego bloki TON, TOF i TP."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Why timers",
+          "text": "Po co timery"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Machines need time: a warning horn before a conveyor starts, a fan that keeps running after a heater switches off, a valve that may only stay open for a fixed time. Timers measure time in the PLC independently of the scan rate.",
+          "text": "Maszyny potrzebują czasu: sygnału ostrzegawczego przed startem przenośnika, wentylatora pracującego jeszcze chwilę po wyłączeniu grzałki, zaworu, który może być otwarty tylko przez określony czas. Timery mierzą czas w PLC niezależnie od częstotliwości cykli."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "The three standard timers",
+          "text": "Trzy standardowe timery"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "- **TON (on-delay)**: Q becomes TRUE when IN has been TRUE continuously for the preset time PT. If IN drops early, the timer resets and Q stays FALSE.\n- **TOF (off-delay)**: Q follows IN to TRUE at once and stays TRUE for PT after IN goes FALSE.\n- **TP (pulse)**: a rising edge on IN produces a pulse of exactly PT; further changes of IN during the pulse are ignored.\n\nAll three expose the elapsed time ET, which is useful for monitoring and HMI display.",
+          "text": "- **TON (opóźnienie załączenia)**: Q przyjmuje wartość TRUE, gdy IN ma wartość TRUE nieprzerwanie przez czas zadany PT. Jeśli IN spadnie wcześniej, timer się zeruje, a Q pozostaje FALSE.\n- **TOF (opóźnienie wyłączenia)**: Q natychmiast podąża za IN do TRUE i pozostaje TRUE przez czas PT po tym, jak IN przejdzie na FALSE.\n- **TP (impuls)**: zbocze narastające na IN wytwarza impuls o długości dokładnie PT; dalsze zmiany IN w trakcie impulsu są ignorowane.\n\nWszystkie trzy udostępniają czas, który upłynął, ET, przydatny do nadzoru i wyświetlania na HMI."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Using timers correctly",
+          "text": "Poprawne użycie timerów"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "A timer is a **function block instance**: it has memory and must be called every scan, for example `Delay(IN := Request, PT := T#3s);`. Calling it only inside an IF branch freezes its elapsed time while the branch is not executed, a common beginner error. Read the result through the instance: `Motor := Delay.Q;`.",
+          "text": "Timer to **instancja bloku funkcyjnego**: ma pamięć i musi być wywoływany w każdym cyklu, na przykład `Delay(IN := Request, PT := T#3s);`. Wywoływanie go tylko wewnątrz gałęzi IF zamraża jego czas, gdy gałąź nie jest wykonywana; to częsty błąd początkujących. Wynik odczytuj przez instancję: `Motor := Delay.Q;`."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Time in PLC Lab",
+          "text": "Czas w PLC Lab"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "PLC Lab advances timers with deterministic simulation time, never with the wall clock of your computer. The same program and inputs therefore always give the same timing, even when the simulation runs faster than real time or is stepped scan by scan.",
+          "text": "PLC Lab odmierza czas timerów deterministycznym czasem symulacji, nigdy zegarem twojego komputera. Ten sam program i te same wejścia dają więc zawsze te same zależności czasowe, nawet gdy symulacja działa szybciej niż w czasie rzeczywistym albo jest wykonywana krok po kroku, cykl po cyklu."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.transmitter-wiring",
+      "file": "fundamentals/transmitter-wiring.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "2-wire and 4-wire transmitters",
+          "text": "Przetworniki 2-przewodowe i 4-przewodowe"
+        },
+        {
+          "path": "summary",
+          "source": "Who powers a current loop: loop-powered 2-wire transmitters need a supplied loop, separately powered 4-wire transmitters need a passive input.",
+          "text": "Kto zasila pętlę prądową: przetworniki 2-przewodowe zasilane z pętli potrzebują pętli z zasilaniem, a przetworniki 4-przewodowe z oddzielnym zasilaniem potrzebują wejścia pasywnego."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Loop-powered and separately powered",
+          "text": "Zasilanie z pętli i zasilanie oddzielne"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A **2-wire** (loop-powered) transmitter has only the two loop wires. It takes its own power from the loop and regulates the loop current between 4 and 20 mA, which is why 4 mA is the lowest valid signal. Something must drive that current: an analog input that supplies the loop, or an external loop supply in series.\n\nA **4-wire** transmitter has a separate power supply and drives the loop current itself, so it needs a **passive** input that only measures. (A 3-wire device shares one conductor between supply and signal.)",
+          "text": "Przetwornik **2-przewodowy** (zasilany z pętli) ma tylko dwa przewody pętli. Pobiera zasilanie z pętli i reguluje prąd pętli w zakresie od 4 do 20 mA, dlatego 4 mA to najniższy prawidłowy sygnał. Coś musi wymusić ten prąd: wejście analogowe zasilające pętlę albo zewnętrzny zasilacz pętli włączony szeregowo.\n\nPrzetwornik **4-przewodowy** ma oddzielne zasilanie i sam wymusza prąd pętli, więc potrzebuje wejścia **pasywnego**, które tylko mierzy. (Urządzenie 3-przewodowe ma jeden przewód wspólny dla zasilania i sygnału.)"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab and on real modules",
+          "text": "W PLC Lab i w rzeczywistych modułach"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "In PLC Lab's generic model a current input either supplies the loop (for 2-wire devices) or is passive (for 4-wire devices), set per channel in the hardware configuration; the wrong combination carries no valid loop current. Real modules solve this differently: some provide separate terminals for 2-wire and 4-wire devices, some need an external loop supply, and connecting an active source to a supplied input can damage the transmitter or the module. Always follow the module and transmitter manuals.",
+          "text": "W ogólnym modelu PLC Lab wejście prądowe albo zasila pętlę (dla urządzeń 2-przewodowych), albo jest pasywne (dla urządzeń 4-przewodowych); ustawia się to dla każdego kanału w konfiguracji sprzętu, a niewłaściwe połączenie nie daje prawidłowego prądu pętli. Rzeczywiste moduły rozwiązują to różnie: niektóre mają oddzielne zaciski dla urządzeń 2-przewodowych i 4-przewodowych, inne wymagają zewnętrznego zasilacza pętli, a podłączenie aktywnego źródła do wejścia zasilającego może uszkodzić przetwornik lub moduł. Zawsze postępuj zgodnie z instrukcjami modułu i przetwornika."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.troubleshooting-method",
+      "file": "fundamentals/troubleshooting-method.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Troubleshooting methodology",
+          "text": "Metodyka diagnozowania usterek"
+        },
+        {
+          "path": "summary",
+          "source": "Systematic fault finding: reproduce the symptom, collect evidence, form a hypothesis that explains all of it, test it, repair, and verify the whole function.",
+          "text": "Systematyczne wyszukiwanie usterek: odtwórz objaw, zbierz dowody, sformułuj hipotezę, która wyjaśnia je wszystkie, sprawdź ją, napraw i zweryfikuj całą funkcję."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "The cycle",
+          "text": "Cykl postępowania"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "1. **Understand the symptom**: what exactly does not work, since when, after what change?\n2. **Reproduce** it safely.\n3. **Collect evidence** from the outside in: process (what does the machine do), field devices and wiring (measure), I/O module (LEDs, quality), PLC image (variables), program logic, communication.\n4. **Hypothesis**: one cause that explains *every* observation.\n5. **Test** the hypothesis with a measurement or a safe experiment.\n6. **Repair** the root cause, not the symptom.\n7. **Verify** the complete function, not only the part that failed.",
+          "text": "1. **Zrozum objaw**: co dokładnie nie działa, od kiedy, po jakiej zmianie?\n2. **Odtwórz** go w bezpieczny sposób.\n3. **Zbieraj dowody** od zewnątrz do wewnątrz: proces (co robi maszyna), urządzenia obiektowe i okablowanie (pomiary), moduł we/wy (diody LED, jakość sygnału), obraz PLC (zmienne), logika programu, komunikacja.\n4. **Hipoteza**: jedna przyczyna, która wyjaśnia *każdą* obserwację.\n5. **Sprawdź** hipotezę pomiarem lub bezpiecznym eksperymentem.\n6. **Napraw** przyczynę źródłową, a nie objaw.\n7. **Zweryfikuj** całą funkcję, a nie tylko tę część, która zawiodła."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Divide and conquer",
+          "text": "Dziel i zwyciężaj"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Split the signal path in the middle: if the input LED is on but the PLC tag is FALSE, the field side is fine and the fault is between module and program. If the LED is off, measure the terminal. Each test should halve the search space.",
+          "text": "Podziel ścieżkę sygnału w połowie: jeśli dioda wejścia świeci, a tag PLC ma wartość FALSE, strona obiektowa jest sprawna, a usterka leży między modułem a programem. Jeśli dioda nie świeci, zmierz napięcie na zacisku. Każdy test powinien zmniejszyć obszar poszukiwań o połowę."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "How PLC Lab grades it",
+          "text": "Jak ocenia to PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Troubleshooting labs record your diagnosis attempts, the evidence you looked at and the repairs you made. Points are given for a correct first diagnosis, a repaired installation and a verified system; guessing costs points.",
+          "text": "Laboratoria diagnozowania usterek rejestrują próby diagnozy, sprawdzone dowody i wykonane naprawy. Punkty przyznaje się za poprawną diagnozę za pierwszym razem, naprawioną instalację i zweryfikowany system; zgadywanie kosztuje punkty."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.wiring-principles",
+      "file": "fundamentals/wiring-principles.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Wiring principles for PLC I/O",
+          "text": "Zasady okablowania we/wy PLC"
+        },
+        {
+          "path": "summary",
+          "source": "Good wiring makes faults visible and keeps signals clean: separate supplies, commons, shielding and clear terminal designations.",
+          "text": "Dobre okablowanie sprawia, że usterki są widoczne, a sygnały czyste: oddzielne zasilania, zaciski wspólne, ekranowanie i jednoznaczne oznaczenia zacisków."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Supplies and commons",
+          "text": "Zasilania i zaciski wspólne"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Digital and analog modules often have separate **load supply** terminals. A module with missing load supply can be present and configured but its outputs do not switch and its inputs read nothing. Each group of channels shares a **common** (M or 0 V for sinking inputs).",
+          "text": "Moduły cyfrowe i analogowe często mają oddzielne zaciski **zasilania obciążenia**. Moduł bez zasilania obciążenia może być obecny i skonfigurowany, ale jego wyjścia się nie przełączają, a wejścia niczego nie odczytują. Każda grupa kanałów ma wspólny **zacisk wspólny** (M lub 0 V dla wejść typu sinking)."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Analog wiring",
+          "text": "Okablowanie analogowe"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Use shielded twisted pairs for analog signals, ground the shield at one end according to the vendor's rules and route analog cables away from motor cables. For two-wire transmitters the loop supply is in series with the transmitter and the analog input.",
+          "text": "Do sygnałów analogowych używaj ekranowanych par skręcanych, uziemiaj ekran z jednej strony zgodnie z zasadami producenta i prowadź przewody analogowe z dala od przewodów silnikowych. W przetwornikach dwuprzewodowych zasilacz pętli jest włączony szeregowo z przetwornikiem i wejściem analogowym."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Documentation",
+          "text": "Dokumentacja"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Every wire should be traceable from the circuit diagram to the terminal and to the PLC address and tag. Most commissioning faults (swapped wires, wrong slot, wrong channel) are found by comparing the diagram, the hardware configuration and a measurement at the terminal.",
+          "text": "Każdy przewód powinien być możliwy do prześledzenia od schematu ideowego do zacisku oraz do adresu i tagu PLC. Większość usterek przy uruchamianiu (zamienione przewody, niewłaściwy slot, niewłaściwy kanał) wykrywa się, porównując schemat, konfigurację sprzętu i pomiar na zacisku."
         }
       ]
     },

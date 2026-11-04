@@ -147,8 +147,8 @@ export function validateLocale(locale) {
       (locale.complete.includes("troubleshooting-cases") &&
         group === "exercises" &&
         data.kind === "troubleshooting") ||
-      (locale.complete.includes("lessons") && group === "lessons") ||
-      (locale.complete.includes("instructions") && group === "instructions")
+      // Article groups are declared complete by their own name.
+      (group !== "exercises" && locale.complete.includes(group))
     )
       required.push(...textFields(data).map((field) => field.path));
     for (const field of new Set(required))

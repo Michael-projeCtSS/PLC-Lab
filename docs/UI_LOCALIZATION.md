@@ -9,7 +9,9 @@ and the IPC contract are unchanged.
 ## Exact content coverage
 
 This is **partial product localization**. Complete content includes every approved prose
-field, not only titles. The canonical English knowledge pack remains byte-identical.
+field, not only titles. Localization never rewrites the canonical English knowledge pack;
+its only content change in this work was a factual correction of the retentive-memory
+wording in nine vendor family articles, recorded in the pack ZIP and its digest.
 
 | Category                                       | Complete Polish content | Polish title + summary |
 | ---------------------------------------------- | ----------------------: | ---------------------: |
@@ -18,19 +20,22 @@ field, not only titles. The canonical English knowledge pack remains byte-identi
 | Troubleshooting cases (subset)                 |                     8/8 |                    8/8 |
 | Commissioning (subset)                         |                    0/29 |                  29/29 |
 | Lessons                                        |                   25/25 |                  25/25 |
-| Fundamentals                                   |                    2/25 |                   2/25 |
+| Fundamentals                                   |                   25/25 |                  25/25 |
 | Instruction articles                           |                     7/7 |                    7/7 |
-| Protocol articles                              |                     0/9 |                    0/9 |
+| Protocol articles                              |                     9/9 |                    9/9 |
 | Troubleshooting articles (distinct from cases) |                    1/30 |                   1/30 |
-| Vendor/family articles                         |                    0/24 |                   0/24 |
+| Vendor/family articles                         |                   24/24 |                  24/24 |
 
 Lessons include objectives, section prose/diagrams and questions/options/explanations.
 Practice/case content includes instructions, hints, objectives, scenario names and grading
 titles/failure feedback. Cases include symptoms, diagnosis/repair labels and gated debriefs.
 Instruction articles include interfaces and equivalence notes for TON, TOF, TP, R_TRIG,
-F_TRIG, CTU and CTD. Source code remains original.
+F_TRIG, CTU and CTD. Fundamentals, protocol and vendor/family articles are complete,
+including facts and simulation fidelity lists. Source code remains original.
+Fields that stay identical to English (product names, code, values, identifiers) carry
+an explicit `keep` reason; `content:coverage` prints them per reason.
 
-`npm run content:coverage` lists **2,125 missing display fields**. The checked-in
+`npm run content:coverage` lists **1,532 missing display fields**. The checked-in
 [machine-readable report](validation/POLISH_CONTENT_COVERAGE.json) lists every item/path.
 The [UI literal audit](validation/POLISH_UI_AUDIT.md) lists remaining static candidates by
 file/line, with engineering tokens and localization keys excluded. It is a review aid,

@@ -25,7 +25,7 @@ test("the Polish overlay validates all declared complete categories and reports 
     [
       ["exercises", 49, 49, 20],
       ["lessons", 25, 25, 25],
-      ["fundamentals", 25, 2, 2],
+      ["fundamentals", 25, 25, 25],
       ["instructions", 7, 7, 7],
       ["protocols", 9, 9, 9],
       ["troubleshooting", 30, 1, 1],
@@ -33,7 +33,9 @@ test("the Polish overlay validates all declared complete categories and reports 
     ],
   );
   assert.ok(report.missing.length > 0, "do not claim full Polish coverage");
-  assert.ok(report.missing.some((field) => field.startsWith("fundamentals.")));
+  assert.ok(
+    report.missing.some((field) => field.startsWith("troubleshooting.")),
+  );
   for (const { data, group } of canonicalItems().filter(
     (x) => x.group === "exercises" || x.group === "lessons",
   )) {
@@ -156,4 +158,27 @@ test("an unchanged English text counts only with an explicit reason", () => {
   );
   const kept = locale.items.flatMap((i) => i.fields).filter((f) => f.keep);
   assert.ok(kept.every((f) => f.text === f.source));
+});
+
+test("a declared complete article group fails when one of its fields is missing", () => {
+  for (const group of ["fundamentals", "protocols", "vendors"]) {
+    assert.ok(locale.complete.includes(group), group);
+    const item = locale.items.find(
+      (i) => i.id.startsWith(`${group}.`) || i.file.startsWith(`${group}/`),
+    );
+    assert.ok(item, group);
+    const removed = item.fields.at(-1);
+    const report = validateLocale({
+      ...locale,
+      items: locale.items.map((i) =>
+        i === item ? { ...i, fields: i.fields.slice(0, -1) } : i,
+      ),
+    });
+    assert.ok(
+      report.errors.includes(
+        `${item.id}.${removed.path}: missing in a declared complete category`,
+      ),
+      report.errors.join("\n"),
+    );
+  }
 });
