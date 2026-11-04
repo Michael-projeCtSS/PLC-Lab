@@ -58,6 +58,7 @@ export function validateLocale(locale) {
   const byId = new Map(canonical.map((item) => [item.data.id, item]));
   const seen = new Set();
   const translated = new Map();
+  const kept = new Map();
   for (const item of locale.items) {
     const original = byId.get(item.id);
     if (!original || original.file !== item.file || seen.has(item.id)) {
@@ -74,6 +75,18 @@ export function validateLocale(locale) {
     for (const field of item.fields) {
       if (!field.text.trim())
         errors.push(`${item.id}.${field.path}: empty translation`);
+      // An unchanged text is a translation only when the field holds no prose to
+      // translate, and it must say why.
+      const identical = field.text.trim() === field.source.trim();
+      if (identical && !field.keep)
+        errors.push(
+          `${item.id}.${field.path}: identical to the English source; translate it or give keep: code | value | identifier | proper-name`,
+        );
+      if (!identical && field.keep)
+        errors.push(
+          `${item.id}.${field.path}: keep is only for text identical to the English source`,
+        );
+      if (field.keep) kept.set(field.keep, (kept.get(field.keep) ?? 0) + 1);
       if (paths.has(field.path) || allowed.get(field.path) !== field.source)
         errors.push(
           `${item.id}.${field.path}: duplicate, stale or forbidden text field`,
@@ -144,7 +157,7 @@ export function validateLocale(locale) {
           `${data.id}.${field}: missing in a declared complete category`,
         );
   }
-  return { errors, coverage, missing };
+  return { errors, coverage, missing, kept: Object.fromEntries(kept) };
 }
 if (
   process.argv[1] &&
@@ -165,6 +178,11 @@ if (
       `${row.group}: ${row.complete}/${row.total}; catalogue ${row.catalogue}/${row.total}`,
     );
   console.log(`Missing fields: ${report.missing.length}`);
+  const kept = Object.entries(report.kept ?? {});
+  if (kept.length)
+    console.log(
+      `Unchanged by design: ${kept.map(([reason, count]) => `${count} ${reason}`).join(", ")}`,
+    );
   if (process.argv.includes("--all")) console.log(report.missing.join("\n"));
   if (report.errors.length) {
     console.error(report.errors.join("\n"));

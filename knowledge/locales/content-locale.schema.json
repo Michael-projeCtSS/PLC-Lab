@@ -77,6 +77,15 @@
                 "text": {
                   "type": "string",
                   "minLength": 1
+                },
+                "keep": {
+                  "description": "Why the text is identical to the English source: code, value, identifier or proper-name. Required exactly when the text is unchanged.",
+                  "enum": [
+                    "code",
+                    "value",
+                    "identifier",
+                    "proper-name"
+                  ]
                 }
               }
             }

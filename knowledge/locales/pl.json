@@ -426,7 +426,8 @@
         {
           "path": "hints.1",
           "source": "Lamp1 := Presses.Q;",
-          "text": "Lamp1 := Presses.Q;"
+          "text": "Lamp1 := Presses.Q;",
+          "keep": "code"
         },
         {
           "path": "scenarios.0.title",
@@ -820,7 +821,8 @@
         {
           "path": "hints.1",
           "source": "MotorContactor := StartPB AND StopPB AND OverloadOK;",
-          "text": "MotorContactor := StartPB AND StopPB AND OverloadOK;"
+          "text": "MotorContactor := StartPB AND StopPB AND OverloadOK;",
+          "keep": "code"
         },
         {
           "path": "scenarios.0.title",
@@ -1541,7 +1543,8 @@
         {
           "path": "hints.0",
           "source": "CASE Step OF 0: ... 1: ... 2: ... END_CASE;",
-          "text": "CASE Step OF 0: ... 1: ... 2: ... END_CASE;"
+          "text": "CASE Step OF 0: ... 1: ... 2: ... END_CASE;",
+          "keep": "code"
         },
         {
           "path": "hints.1",
@@ -1743,6 +1746,1221 @@
           "path": "criteria.5.onFail",
           "source": "DrainPump was switched on.",
           "text": "DrainPump został załączony."
+        }
+      ]
+    },
+    {
+      "id": "family.beckhoff-ethercat",
+      "file": "vendors/family-beckhoff-ethercat.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "EtherCAT Terminals and I/O",
+          "text": "Terminale i we/wy EtherCAT"
+        },
+        {
+          "path": "summary",
+          "source": "EtherCAT Terminals (EL, ES, EP) and couplers that carry the I/O of Beckhoff systems.",
+          "text": "Terminale EtherCAT (EL, ES, EP) i sprzęgi, które obsługują we/wy systemów Beckhoff."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Terminals are processed on the fly as the EtherCAT frame passes through them. Each terminal has an EtherCAT state machine (INIT, PREOP, SAFEOP, OP); a terminal that does not reach OP delivers no valid data.",
+          "text": "Terminale przetwarzają dane w locie, gdy przechodzi przez nie ramka EtherCAT. Każdy terminal ma maszynę stanów EtherCAT (INIT, PREOP, SAFEOP, OP); terminal, który nie osiągnie stanu OP, nie dostarcza poprawnych danych."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "EtherCAT is not simulated (see the EtherCAT protocol article). The `beckhoff.twincat3` profile presents the generic rack's channels as linked terminal channels. **CONCEPTUAL** only.",
+          "text": "EtherCAT nie jest symulowany (zobacz artykuł o protokole EtherCAT). Profil `beckhoff.twincat3` przedstawia kanały ogólnego racka jako połączone (linked) kanały terminali. Wyłącznie **KONCEPCYJNIE**."
+        }
+      ]
+    },
+    {
+      "id": "family.beckhoff-twincat3",
+      "file": "vendors/family-beckhoff-twincat3.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "CX Embedded PC with TwinCAT 3",
+          "text": "CX Embedded PC z TwinCAT 3"
+        },
+        {
+          "path": "summary",
+          "source": "PC-based controller running the TwinCAT 3 runtime with EtherCAT Terminal I/O.",
+          "text": "Sterownik oparty na komputerze PC z runtime TwinCAT 3 i we/wy na terminalach EtherCAT."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A CX Embedded PC sits on the DIN rail with a power supply and an EtherCAT coupler; EL terminals follow on the right. TwinCAT 3 programs are IEC 61131-3 and run in real-time tasks.",
+          "text": "CX Embedded PC montuje się na szynie DIN razem z zasilaczem i sprzęgiem EtherCAT; terminale EL dołącza się po prawej stronie. Programy TwinCAT 3 są zgodne z IEC 61131-3 i działają w zadaniach czasu rzeczywistego."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Choose the profile `beckhoff.twincat3` for a Free Lab project to see I/O as linked terminal channels such as `Term 2 (<terminal>).Channel 1.Input`, and analog raw values 0..32767 for the nominal range. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product.",
+          "text": "Wybierz profil `beckhoff.twincat3` dla projektu Laboratorium, aby zobaczyć we/wy jako połączone kanały terminali, na przykład `Term 2 (<terminal>).Channel 1.Input`, a surowe wartości analogowe jako 0..32767 dla zakresu nominalnego. PLC to nadal jeden ogólny runtime IEC 61131-3 PLC Lab; programy pisze się w Structured Text PLC Lab, a nie w dialekcie producenta. **PRZYBLIŻENIE SYMULACYJNE**: teksty diagnostyczne, czasy i parametry modułów różnią się od rzeczywistego produktu."
+        },
+        {
+          "path": "facts.0.label",
+          "source": "EL305x default presentation",
+          "text": "Domyślna prezentacja EL305x"
+        },
+        {
+          "path": "facts.0.value",
+          "source": "4 mA = 0, 20 mA = 32767",
+          "text": "4 mA = 0, 20 mA = 32767",
+          "keep": "value"
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Analog values use 0..32767 for the nominal range",
+          "text": "Wartości analogowe stosują 0..32767 dla zakresu nominalnego"
+        },
+        {
+          "path": "simulation.fidelity.approximated.1",
+          "source": "EtherCAT is not simulated; terminals behave like local modules",
+          "text": "EtherCAT nie jest symulowany; terminale zachowują się jak moduły lokalne"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        },
+        {
+          "path": "simulation.products.0.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.1.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.2.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.3.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.4.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        }
+      ]
+    },
+    {
+      "id": "family.mitsubishi-fx5",
+      "file": "vendors/family-mitsubishi-fx5.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "MELSEC iQ-F (FX5)",
+          "text": "MELSEC iQ-F (FX5)",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Compact Mitsubishi controllers with expansion modules; X/Y devices numbered in octal.",
+          "text": "Kompaktowe sterowniki Mitsubishi z modułami rozszerzeń; urządzenia X/Y numerowane ósemkowo."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "An FX5 CPU module carries integrated I/O; expansion modules are added on the right and continue the X/Y numbering.",
+          "text": "Moduł CPU FX5 ma zintegrowane we/wy; moduły rozszerzeń dołącza się po prawej stronie i kontynuują one numerację X/Y."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Tier B knowledge profile: addresses are shown as octal X/Y devices. **SIMULATION APPROXIMATION** of presentation only.",
+          "text": "Profil wiedzy poziomu B: adresy są wyświetlane jako ósemkowe urządzenia X/Y. **PRZYBLIŻENIE SYMULACYJNE** wyłącznie w zakresie prezentacji."
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Octal X/Y device numbering is presented; analog uses the PLC Lab 0..10000 convention",
+          "text": "Prezentowana jest ósemkowa numeracja urządzeń X/Y; wartości analogowe stosują konwencję PLC Lab 0..10000"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        }
+      ]
+    },
+    {
+      "id": "family.mitsubishi-iq-r",
+      "file": "vendors/family-mitsubishi-iq-r.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "MELSEC iQ-R",
+          "text": "MELSEC iQ-R",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Modular Mitsubishi controllers on a base unit with CPU, power supply and I/O modules.",
+          "text": "Modułowe sterowniki Mitsubishi na płycie bazowej z CPU, zasilaczem i modułami we/wy."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "iQ-R systems use a base unit with power supply, one or more CPUs and I/O modules; CC-Link IE networks connect remote stations.",
+          "text": "Systemy iQ-R wykorzystują płytę bazową z zasilaczem, jednym lub kilkoma CPU i modułami we/wy; sieci CC-Link IE łączą stacje zdalne."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "No simulation profile. The multi-CPU base unit and CC-Link IE networks are not modeled. **CONCEPTUAL**.",
+          "text": "Brak profilu symulacji. Płyta bazowa z wieloma CPU i sieci CC-Link IE nie są modelowane. **KONCEPCYJNIE**."
+        }
+      ]
+    },
+    {
+      "id": "family.omron-nx-nj",
+      "file": "vendors/family-omron-nx-nj.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "OMRON NX / NJ",
+          "text": "OMRON NX / NJ",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Machine automation controllers with NX I/O units, programmed in Sysmac Studio.",
+          "text": "Sterowniki automatyki maszyn z modułami we/wy NX, programowane w Sysmac Studio."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "I/O ports of NX units are assigned to device variables; EtherCAT is the native I/O and motion network.",
+          "text": "Porty we/wy modułów NX przypisuje się do zmiennych urządzeń; natywną siecią we/wy i ruchu jest EtherCAT."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Tier B knowledge profile `omron.nx-nj`: I/O channels are shown as unit ports such as `Unit2_Ch1_In` and analog raw values as 0..10000. **CONCEPTUAL**.",
+          "text": "Profil wiedzy poziomu B `omron.nx-nj`: kanały we/wy są wyświetlane jako porty modułów, na przykład `Unit2_Ch1_In`, a surowe wartości analogowe jako 0..10000. **KONCEPCYJNIE**."
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Unit port names are generated by PLC Lab",
+          "text": "Nazwy portów modułów generuje PLC Lab"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        }
+      ]
+    },
+    {
+      "id": "family.phoenix-plcnext",
+      "file": "vendors/family-phoenix-plcnext.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "PLCnext Control",
+          "text": "PLCnext Control",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Open Linux-based controllers with Axioline F I/O.",
+          "text": "Otwarte sterowniki oparte na systemie Linux z we/wy Axioline F."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Controllers run a real-time Linux; IEC 61131-3 programs and high-level language programs share the Global Data Space.",
+          "text": "Sterowniki pracują pod kontrolą Linuksa czasu rzeczywistego; programy IEC 61131-3 i programy w językach wysokiego poziomu współdzielą Global Data Space."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "No simulation profile. The Global Data Space and high-level-language programs have no counterpart in PLC Lab, which runs Structured Text in its generic IEC 61131-3 runtime. **CONCEPTUAL**.",
+          "text": "Brak profilu symulacji. Global Data Space i programy w językach wysokiego poziomu nie mają odpowiednika w PLC Lab, który wykonuje Structured Text w swoim ogólnym runtime IEC 61131-3. **KONCEPCYJNIE**."
+        }
+      ]
+    },
+    {
+      "id": "family.rockwell-compactlogix",
+      "file": "vendors/family-rockwell-compactlogix.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "CompactLogix",
+          "text": "CompactLogix",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Logix controller family for small and mid-size machines with local I/O and EtherNet/IP.",
+          "text": "Rodzina sterowników Logix dla małych i średnich maszyn z lokalnymi we/wy i EtherNet/IP."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "CompactLogix controllers carry local I/O modules on the right side (1769 Compact I/O on older models, 5069 Compact 5000 I/O on newer ones). Each module's data is visible as structured tags.",
+          "text": "Sterowniki CompactLogix mają lokalne moduły we/wy po prawej stronie (1769 Compact I/O w starszych modelach, 5069 Compact 5000 I/O w nowszych). Dane każdego modułu są widoczne jako tagi strukturalne."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Choose the profile `rockwell.compactlogix` for a Free Lab project to see I/O as module-defined tags such as `Local:1:I.Data.0` and `Local:3:I.Ch0Data`, and analog channels as REAL engineering values. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product. Engineering values reflect the scaling that Logix analog modules are typically configured with.",
+          "text": "Wybierz profil `rockwell.compactlogix` dla projektu Laboratorium, aby zobaczyć we/wy jako tagi zdefiniowane przez moduł, na przykład `Local:1:I.Data.0` i `Local:3:I.Ch0Data`, a kanały analogowe jako wartości REAL w jednostkach inżynierskich. PLC to nadal jeden ogólny runtime IEC 61131-3 PLC Lab; programy pisze się w Structured Text PLC Lab, a nie w dialekcie producenta. **PRZYBLIŻENIE SYMULACYJNE**: teksty diagnostyczne, czasy i parametry modułów różnią się od rzeczywistego produktu. Wartości inżynierskie odpowiadają skalowaniu, z jakim zwykle konfiguruje się moduły analogowe Logix."
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Analog channels deliver REAL engineering units (mA or V)",
+          "text": "Kanały analogowe dostarczają wartości REAL w jednostkach inżynierskich (mA lub V)"
+        },
+        {
+          "path": "simulation.fidelity.approximated.1",
+          "source": "Module-defined tag names are generated by PLC Lab",
+          "text": "Nazwy tagów zdefiniowanych przez moduł generuje PLC Lab"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        },
+        {
+          "path": "simulation.products.0.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.1.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.2.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.3.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.4.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        }
+      ]
+    },
+    {
+      "id": "family.rockwell-controllogix",
+      "file": "vendors/family-rockwell-controllogix.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "ControlLogix",
+          "text": "ControlLogix",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Chassis-based Logix controllers (1756) for large machines and process applications.",
+          "text": "Sterowniki Logix montowane w kasecie (1756) dla dużych maszyn i aplikacji procesowych."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "ControlLogix controllers and I/O modules share a chassis backplane; modules can be inserted under power. Several controllers can share one chassis.",
+          "text": "Sterowniki ControlLogix i moduły we/wy współdzielą magistralę kasety; moduły można wkładać pod napięciem. W jednej kasecie może pracować kilka sterowników."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Choose the profile `rockwell.controllogix` for a Free Lab project to see I/O as module-defined tags such as `Local:1:I.Data.0` and `Local:3:I.Ch0Data`, and analog channels as REAL engineering values. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product.",
+          "text": "Wybierz profil `rockwell.controllogix` dla projektu Laboratorium, aby zobaczyć we/wy jako tagi zdefiniowane przez moduł, na przykład `Local:1:I.Data.0` i `Local:3:I.Ch0Data`, a kanały analogowe jako wartości REAL w jednostkach inżynierskich. PLC to nadal jeden ogólny runtime IEC 61131-3 PLC Lab; programy pisze się w Structured Text PLC Lab, a nie w dialekcie producenta. **PRZYBLIŻENIE SYMULACYJNE**: teksty diagnostyczne, czasy i parametry modułów różnią się od rzeczywistego produktu."
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Analog channels deliver REAL engineering units (mA or V)",
+          "text": "Kanały analogowe dostarczają wartości REAL w jednostkach inżynierskich (mA lub V)"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        },
+        {
+          "path": "simulation.products.0.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.1.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.2.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.3.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        }
+      ]
+    },
+    {
+      "id": "family.rockwell-point-io",
+      "file": "vendors/family-rockwell-point-io.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "POINT I/O",
+          "text": "POINT I/O",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Modular distributed I/O connected over EtherNet/IP through an adapter.",
+          "text": "Modułowe rozproszone we/wy podłączane do EtherNet/IP przez adapter."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "An adapter module connects a row of small I/O modules to EtherNet/IP. The controller owns the connection and receives the I/O data cyclically.",
+          "text": "Moduł adaptera łączy rząd małych modułów we/wy z siecią EtherNet/IP. Połączenie należy do sterownika, który cyklicznie odbiera dane we/wy."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "No simulation profile, and EtherNet/IP is not simulated. Distributed I/O with configured versus installed modules is practiced on the generic rack in the Hardware tab. **CONCEPTUAL**.",
+          "text": "Brak profilu symulacji, a EtherNet/IP nie jest symulowany. Rozproszone we/wy z modułami skonfigurowanymi i zainstalowanymi ćwiczy się na ogólnym racku na karcie Sprzęt. **KONCEPCYJNIE**."
+        }
+      ]
+    },
+    {
+      "id": "family.schneider-m200",
+      "file": "vendors/family-schneider-m200.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Modicon M241 / M251 / M262",
+          "text": "Modicon M241 / M251 / M262",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Machine controllers with TM3 expansion modules, programmed in EcoStruxure Machine Expert.",
+          "text": "Sterowniki maszynowe z modułami rozszerzeń TM3, programowane w EcoStruxure Machine Expert."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A logic controller base carries integrated I/O; TM3 digital and analog expansion modules are added on the right.",
+          "text": "Baza sterownika logicznego ma zintegrowane we/wy; cyfrowe i analogowe moduły rozszerzeń TM3 dołącza się po prawej stronie."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Choose the profile `schneider.m200` for a Free Lab project to see digital I/O as IEC direct addresses such as `%IX0.0` and `%QX0.1` and analog channels as `%IW` words, and analog raw values 0..10000 for the nominal range. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product.",
+          "text": "Wybierz profil `schneider.m200` dla projektu Laboratorium, aby zobaczyć cyfrowe we/wy jako bezpośrednie adresy IEC, na przykład `%IX0.0` i `%QX0.1`, kanały analogowe jako słowa `%IW`, a surowe wartości analogowe jako 0..10000 dla zakresu nominalnego. PLC to nadal jeden ogólny runtime IEC 61131-3 PLC Lab; programy pisze się w Structured Text PLC Lab, a nie w dialekcie producenta. **PRZYBLIŻENIE SYMULACYJNE**: teksty diagnostyczne, czasy i parametry modułów różnią się od rzeczywistego produktu."
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Analog values use the PLC Lab 0..10000 convention; the real modules use a configurable range",
+          "text": "Wartości analogowe stosują konwencję PLC Lab 0..10000; rzeczywiste moduły mają konfigurowalny zakres"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        },
+        {
+          "path": "simulation.products.0.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.1.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.2.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.3.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.4.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        }
+      ]
+    },
+    {
+      "id": "family.schneider-m580",
+      "file": "vendors/family-schneider-m580.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Modicon M580",
+          "text": "Modicon M580",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Ethernet-based process controller with X80 I/O, engineered in EcoStruxure Control Expert.",
+          "text": "Sterownik procesowy oparty na Ethernecie z we/wy X80, konfigurowany w EcoStruxure Control Expert."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "M580 CPUs sit in an Ethernet backplane with X80 I/O modules; remote drops connect over Ethernet. Hot standby configurations are common in process plants.",
+          "text": "Procesory M580 montuje się w kasecie z magistralą Ethernet razem z modułami we/wy X80; stacje zdalne łączą się przez Ethernet. W instalacjach procesowych powszechne są konfiguracje z rezerwą gorącą (hot standby)."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Choose the profile `schneider.m580` for a Free Lab project to see digital I/O as IEC direct addresses such as `%IX0.0` and `%QX0.1` and analog channels as `%IW` words, and analog raw values 0..10000 for the nominal range. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product.",
+          "text": "Wybierz profil `schneider.m580` dla projektu Laboratorium, aby zobaczyć cyfrowe we/wy jako bezpośrednie adresy IEC, na przykład `%IX0.0` i `%QX0.1`, kanały analogowe jako słowa `%IW`, a surowe wartości analogowe jako 0..10000 dla zakresu nominalnego. PLC to nadal jeden ogólny runtime IEC 61131-3 PLC Lab; programy pisze się w Structured Text PLC Lab, a nie w dialekcie producenta. **PRZYBLIŻENIE SYMULACYJNE**: teksty diagnostyczne, czasy i parametry modułów różnią się od rzeczywistego produktu."
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Analog values use the PLC Lab 0..10000 convention",
+          "text": "Wartości analogowe stosują konwencję PLC Lab 0..10000"
+        },
+        {
+          "path": "simulation.fidelity.approximated.1",
+          "source": "Hot standby and remote drops are not simulated",
+          "text": "Rezerwa gorąca (hot standby) i stacje zdalne nie są symulowane"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        },
+        {
+          "path": "simulation.products.0.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.1.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.2.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.3.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.4.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        }
+      ]
+    },
+    {
+      "id": "family.siemens-et200sp",
+      "file": "vendors/family-siemens-et200sp.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "SIMATIC ET 200SP",
+          "text": "SIMATIC ET 200SP",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Fine-granular distributed I/O system: an interface module plus BaseUnits with plugged I/O modules, usually connected over PROFINET.",
+          "text": "Drobnoziarnisty system rozproszonych we/wy: moduł interfejsowy oraz moduły BaseUnit z osadzonymi modułami we/wy, zwykle podłączany przez PROFINET."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "An ET 200SP station consists of an interface module (for example a PROFINET IM), BaseUnits that carry the wiring and the potential groups, and electronic I/O modules plugged onto them. Light-colored BaseUnits open a new potential group and feed the load voltage.",
+          "text": "Stacja ET 200SP składa się z modułu interfejsowego (na przykład PROFINET IM), modułów BaseUnit, które przenoszą okablowanie i grupy potencjałowe, oraz osadzonych na nich elektronicznych modułów we/wy. Jasne moduły BaseUnit otwierają nową grupę potencjałową i doprowadzają napięcie obciążenia."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "A missing load voltage on a potential group, a module plugged on the wrong BaseUnit type or a configuration that differs from the installed modules are reported by the IM and appear in the CPU diagnostics.",
+          "text": "Brak napięcia obciążenia w grupie potencjałowej, moduł osadzony na niewłaściwym typie BaseUnit lub konfiguracja różniąca się od zainstalowanych modułów są zgłaszane przez IM i pojawiają się w diagnostyce CPU."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate PROFINET. ET 200SP concepts (potential groups, configured versus installed modules) are represented by the generic rack model. **CONCEPTUAL** only.",
+          "text": "PLC Lab nie symuluje PROFINET. Pojęcia ET 200SP (grupy potencjałowe, moduły skonfigurowane i zainstalowane) odwzorowuje ogólny model racka. Wyłącznie **KONCEPCYJNIE**."
+        }
+      ]
+    },
+    {
+      "id": "family.siemens-s7-1200",
+      "file": "vendors/family-siemens-s7-1200.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "SIMATIC S7-1200",
+          "text": "SIMATIC S7-1200",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Compact Siemens controller with integrated I/O and side-mounted signal modules (SM 12xx).",
+          "text": "Kompaktowy sterownik Siemens ze zintegrowanymi we/wy i modułami sygnałowymi montowanymi z boku (SM 12xx)."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The S7-1200 combines CPU, integrated digital/analog I/O and an Ethernet/PROFINET port in one housing. Signal modules (SM) are added on the right, signal boards on the front. It is the common entry platform in vocational training.",
+          "text": "S7-1200 łączy w jednej obudowie CPU, zintegrowane cyfrowe i analogowe we/wy oraz port Ethernet/PROFINET. Moduły sygnałowe (SM) dołącza się po prawej stronie, a płytki sygnałowe z przodu. To popularna platforma startowa w szkoleniach zawodowych."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Addressing and analog values",
+          "text": "Adresowanie i wartości analogowe"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Integrated inputs typically start at `%I0.0`, outputs at `%Q0.0`. Analog inputs deliver a word in the nominal range 0 to 27648. PLC Lab's S7-1200 profile presents addresses as byte.bit and analog values in this banded representation.",
+          "text": "Zintegrowane wejścia zwykle zaczynają się od `%I0.0`, a wyjścia od `%Q0.0`. Wejścia analogowe dostarczają słowo w zakresie nominalnym od 0 do 27648. Profil S7-1200 w PLC Lab przedstawia adresy jako bajt.bit, a wartości analogowe w tej reprezentacji zakresów."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Choose the profile `siemens.s7-1200` for a Free Lab project to see digital I/O as byte.bit addresses such as `%I0.0` and `%Q0.1` and analog channels as words such as `%IW64`, and analog raw values in the nominal range 0..27648 with overrange up to 32511 and overflow 32767. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product.",
+          "text": "Wybierz profil `siemens.s7-1200` dla projektu Laboratorium, aby zobaczyć cyfrowe we/wy jako adresy bajt.bit, na przykład `%I0.0` i `%Q0.1`, kanały analogowe jako słowa, na przykład `%IW64`, a surowe wartości analogowe w zakresie nominalnym 0..27648 z przekroczeniem zakresu do 32511 i przepełnieniem 32767. PLC to nadal jeden ogólny runtime IEC 61131-3 PLC Lab; programy pisze się w Structured Text PLC Lab, a nie w dialekcie producenta. **PRZYBLIŻENIE SYMULACYJNE**: teksty diagnostyczne, czasy i parametry modułów różnią się od rzeczywistego produktu."
+        },
+        {
+          "path": "facts.0.label",
+          "source": "Analog nominal range",
+          "text": "Nominalny zakres analogowy"
+        },
+        {
+          "path": "facts.0.value",
+          "source": "0 to 27648",
+          "text": "od 0 do 27648"
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Analog values use the S7 nominal band 0..27648 with overrange to 32511 and overflow 32767",
+          "text": "Wartości analogowe stosują nominalny zakres S7 0..27648 z przekroczeniem zakresu do 32511 i przepełnieniem 32767"
+        },
+        {
+          "path": "simulation.fidelity.approximated.1",
+          "source": "Diagnostic texts are PLC Lab texts",
+          "text": "Teksty diagnostyczne są tekstami PLC Lab"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        },
+        {
+          "path": "simulation.products.0.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.1.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.2.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.3.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.4.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        }
+      ]
+    },
+    {
+      "id": "family.siemens-s7-1500",
+      "file": "vendors/family-siemens-s7-1500.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "SIMATIC S7-1500",
+          "text": "SIMATIC S7-1500",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Modular Siemens controller on a mounting rail with I/O modules in the central rack and ET 200 distributed I/O.",
+          "text": "Modułowy sterownik Siemens na szynie montażowej z modułami we/wy w kasecie centralnej i rozproszonymi we/wy ET 200."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "S7-1500 CPUs sit in slot 1 of a rail; I/O modules follow in slots 2 onwards. A system power supply may sit in slot 0. Distributed I/O such as ET 200SP or ET 200MP connects over PROFINET.",
+          "text": "Procesory S7-1500 zajmują slot 1 szyny; moduły we/wy zajmują kolejne sloty od 2. W slocie 0 może znajdować się zasilacz systemowy. Rozproszone we/wy, takie jak ET 200SP lub ET 200MP, łączą się przez PROFINET."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Diagnostics",
+          "text": "Diagnostyka"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "The CPU display and the diagnostic buffer show module and channel events (missing module, wire break, overflow). Analog channels can enable diagnostics such as wire break per channel.",
+          "text": "Wyświetlacz CPU i bufor diagnostyczny pokazują zdarzenia modułów i kanałów (brak modułu, przerwanie przewodu, przepełnienie). Kanały analogowe mogą mieć włączoną diagnostykę, na przykład wykrywanie przerwania przewodu dla każdego kanału."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Choose the profile `siemens.s7-1500` for a Free Lab project to see digital I/O as byte.bit addresses such as `%I0.0` and `%Q0.1` and analog channels as words such as `%IW64`, and analog raw values in the nominal range 0..27648 with overrange up to 32511 and overflow 32767. The PLC is still PLC Lab's single generic IEC 61131-3 runtime; programs are PLC Lab Structured Text, not the vendor's dialect. **SIMULATION APPROXIMATION**: diagnostic texts, timing and module parameters differ from the real product.",
+          "text": "Wybierz profil `siemens.s7-1500` dla projektu Laboratorium, aby zobaczyć cyfrowe we/wy jako adresy bajt.bit, na przykład `%I0.0` i `%Q0.1`, kanały analogowe jako słowa, na przykład `%IW64`, a surowe wartości analogowe w zakresie nominalnym 0..27648 z przekroczeniem zakresu do 32511 i przepełnieniem 32767. PLC to nadal jeden ogólny runtime IEC 61131-3 PLC Lab; programy pisze się w Structured Text PLC Lab, a nie w dialekcie producenta. **PRZYBLIŻENIE SYMULACYJNE**: teksty diagnostyczne, czasy i parametry modułów różnią się od rzeczywistego produktu."
+        },
+        {
+          "path": "facts.0.label",
+          "source": "Analog overrange / overflow",
+          "text": "Przekroczenie zakresu / przepełnienie analogowe"
+        },
+        {
+          "path": "facts.0.value",
+          "source": "overrange up to 32511, overflow 32767 (check module manual)",
+          "text": "przekroczenie zakresu do 32511, przepełnienie 32767 (sprawdź instrukcję modułu)"
+        },
+        {
+          "path": "simulation.fidelity.modeled.0",
+          "source": "Cyclic scan with input image, transactional program execution and output update",
+          "text": "Cykl PLC z obrazem wejść, transakcyjnym wykonaniem programu i aktualizacją wyjść"
+        },
+        {
+          "path": "simulation.fidelity.modeled.1",
+          "source": "Configured versus installed modules, module status LEDs and diagnostic buffer events",
+          "text": "Moduły skonfigurowane i zainstalowane, diody stanu modułów i zdarzenia bufora diagnostycznego"
+        },
+        {
+          "path": "simulation.fidelity.modeled.2",
+          "source": "Digital and analog channel behavior including wire break and over/underrange",
+          "text": "Zachowanie kanałów cyfrowych i analogowych, w tym przerwanie przewodu oraz przekroczenie zakresu w górę i w dół"
+        },
+        {
+          "path": "simulation.fidelity.approximated.0",
+          "source": "Analog values use the S7 nominal band 0..27648 with overrange to 32511 and overflow 32767",
+          "text": "Wartości analogowe stosują nominalny zakres S7 0..27648 z przekroczeniem zakresu do 32511 i przepełnieniem 32767"
+        },
+        {
+          "path": "simulation.fidelity.approximated.1",
+          "source": "Wire break reports 32767 with an incoming diagnostic event when diagnostics are enabled",
+          "text": "Przerwanie przewodu zgłasza 32767 wraz ze zdarzeniem diagnostycznym pojawienia się, gdy diagnostyka jest włączona"
+        },
+        {
+          "path": "simulation.fidelity.omitted.0",
+          "source": "Vendor firmware, memory model, task model and instruction set",
+          "text": "Firmware producenta, model pamięci, model zadań i lista instrukcji"
+        },
+        {
+          "path": "simulation.fidelity.omitted.1",
+          "source": "Vendor engineering software project formats",
+          "text": "Formaty projektów oprogramowania inżynierskiego producenta"
+        },
+        {
+          "path": "simulation.fidelity.omitted.2",
+          "source": "Online editing, vendor retentive memory configuration and multiple tasks",
+          "text": "Edycja online, konfiguracja pamięci retencyjnej producenta i wiele zadań"
+        },
+        {
+          "path": "simulation.fidelity.omitted.3",
+          "source": "Safety and redundancy functions",
+          "text": "Funkcje bezpieczeństwa i redundancji"
+        },
+        {
+          "path": "simulation.products.0.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.1.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.2.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.3.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.4.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.5.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        },
+        {
+          "path": "simulation.products.6.note",
+          "source": "Representative product family name for presentation; not a vendor-validated configuration.",
+          "text": "Reprezentatywna nazwa rodziny produktów służąca prezentacji; nie jest to konfiguracja zatwierdzona przez producenta."
+        }
+      ]
+    },
+    {
+      "id": "family.siemens-s7-300-400",
+      "file": "vendors/family-siemens-s7-300-400.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "SIMATIC S7-300 / S7-400 (legacy)",
+          "text": "SIMATIC S7-300 / S7-400 (starsza generacja)"
+        },
+        {
+          "path": "summary",
+          "source": "The previous Siemens generation engineered with STEP 7 Classic (or TIA Portal for S7-300/400 in later versions). Still common in existing plants.",
+          "text": "Poprzednia generacja Siemens, konfigurowana w STEP 7 Classic (lub w późniejszych wersjach TIA Portal dla S7-300/400). Nadal powszechna w istniejących instalacjach."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Why it still matters",
+          "text": "Dlaczego nadal ma znaczenie"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Many installed machines run S7-300 or S7-400 CPUs. Programs often use STL (statement list) and absolute addressing (`I 0.0`, `Q 4.0`, `DB10.DBW2`). Migration to S7-1500 is a frequent project.",
+          "text": "Wiele zainstalowanych maszyn pracuje z procesorami S7-300 lub S7-400. Programy często używają STL (listy instrukcji) i adresowania bezwzględnego (`I 0.0`, `Q 4.0`, `DB10.DBW2`). Migracja na S7-1500 to częsty projekt."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "No simulation profile. The S7-1200 and S7-1500 profiles show byte.bit addressing; S7-300/400 hardware, MPI/PROFIBUS networks and STEP 7 Classic projects are not modeled. **CONCEPTUAL**.",
+          "text": "Brak profilu symulacji. Profile S7-1200 i S7-1500 pokazują adresowanie bajt.bit; sprzęt S7-300/400, sieci MPI/PROFIBUS i projekty STEP 7 Classic nie są modelowane. **KONCEPCYJNIE**."
+        }
+      ]
+    },
+    {
+      "id": "family.wago-pfc200",
+      "file": "vendors/family-wago-pfc200.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "WAGO PFC200",
+          "text": "WAGO PFC200",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Compact DIN-rail controllers with WAGO I/O System 750 modules.",
+          "text": "Kompaktowe sterowniki na szynę DIN z modułami WAGO I/O System 750."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Overview",
+          "text": "Przegląd"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "I/O modules snap onto the controller and form the local bus; power supply modules feed potential groups.",
+          "text": "Moduły we/wy zatrzaskuje się na sterowniku i tworzą one magistralę lokalną; moduły zasilające doprowadzają zasilanie do grup potencjałowych."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "No simulation profile; use the `generic.iec` profile. Modules with their own field supply appear in the Hardware tab, and a missing load supply is practiced in the lab `ts.outputs-dead`. **CONCEPTUAL**.",
+          "text": "Brak profilu symulacji; użyj profilu `generic.iec`. Moduły z własnym zasilaniem obiektowym pojawiają się na karcie Sprzęt, a brak zasilania obciążenia ćwiczy się w ćwiczeniu `ts.outputs-dead`. **KONCEPCYJNIE**."
         }
       ]
     },
@@ -2036,7 +3254,8 @@
         {
           "path": "instruction.outputs.0.description",
           "source": "CV <= 0",
-          "text": "CV <= 0"
+          "text": "CV <= 0",
+          "keep": "identifier"
         },
         {
           "path": "instruction.outputs.1.description",
@@ -2112,7 +3331,8 @@
         {
           "path": "sections.1.body",
           "source": "```\nVAR Parts : CTU; END_VAR\nParts(CU := PartPresent, R := ResetButton, PV := 10);\nBatchComplete := Parts.Q;\n```",
-          "text": "```\nVAR Parts : CTU; END_VAR\nParts(CU := PartPresent, R := ResetButton, PV := 10);\nBatchComplete := Parts.Q;\n```"
+          "text": "```\nVAR Parts : CTU; END_VAR\nParts(CU := PartPresent, R := ResetButton, PV := 10);\nBatchComplete := Parts.Q;\n```",
+          "keep": "code"
         },
         {
           "path": "instruction.inputs.0.description",
@@ -2132,7 +3352,8 @@
         {
           "path": "instruction.outputs.0.description",
           "source": "CV >= PV",
-          "text": "CV >= PV"
+          "text": "CV >= PV",
+          "keep": "identifier"
         },
         {
           "path": "instruction.outputs.1.description",
@@ -2476,7 +3697,8 @@
         {
           "path": "sections.1.body",
           "source": "```\nVAR StartDelay : TON; END_VAR\nStartDelay(IN := StartRequest, PT := T#3s);\nMotorContactor := StartDelay.Q AND StopPB;\n```",
-          "text": "```\nVAR StartDelay : TON; END_VAR\nStartDelay(IN := StartRequest, PT := T#3s);\nMotorContactor := StartDelay.Q AND StopPB;\n```"
+          "text": "```\nVAR StartDelay : TON; END_VAR\nStartDelay(IN := StartRequest, PT := T#3s);\nMotorContactor := StartDelay.Q AND StopPB;\n```",
+          "keep": "code"
         },
         {
           "path": "sections.2.heading",
@@ -2733,22 +3955,26 @@
         {
           "path": "sections.4.question.options.0",
           "source": "50 %",
-          "text": "50 %"
+          "text": "50 %",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "60 %",
-          "text": "60 %"
+          "text": "60 %",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.2",
           "source": "75 %",
-          "text": "75 %"
+          "text": "75 %",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.explanation",
           "source": "(12 - 4) / 16 = 0.5.",
-          "text": "(12 - 4) / 16 = 0.5."
+          "text": "(12 - 4) / 16 = 0.5.",
+          "keep": "value"
         },
         {
           "path": "sections.5.heading",
@@ -2778,7 +4004,8 @@
         {
           "path": "checkpoint.0.options.0",
           "source": "0 %",
-          "text": "0 %"
+          "text": "0 %",
+          "keep": "value"
         },
         {
           "path": "checkpoint.0.options.1",
@@ -2788,7 +4015,8 @@
         {
           "path": "checkpoint.0.options.2",
           "source": "100 %",
-          "text": "100 %"
+          "text": "100 %",
+          "keep": "value"
         },
         {
           "path": "checkpoint.0.explanation",
@@ -2803,17 +4031,20 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "3.0 mA",
-          "text": "3.0 mA"
+          "text": "3.0 mA",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "12.0 mA",
-          "text": "12.0 mA"
+          "text": "12.0 mA",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.2",
           "source": "22.0 mA",
-          "text": "22.0 mA"
+          "text": "22.0 mA",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -3085,17 +4316,20 @@
         {
           "path": "sections.4.question.options.0",
           "source": "%I0.0",
-          "text": "%I0.0"
+          "text": "%I0.0",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "Local:1:I.Data.0",
-          "text": "Local:1:I.Data.0"
+          "text": "Local:1:I.Data.0",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.options.2",
           "source": "X0",
-          "text": "X0"
+          "text": "X0",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.explanation",
@@ -3261,22 +4495,26 @@
         {
           "path": "sections.4.question.options.0",
           "source": "25",
-          "text": "25"
+          "text": "25",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "250",
-          "text": "250"
+          "text": "250",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.2",
           "source": "2500",
-          "text": "2500"
+          "text": "2500",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.3",
           "source": "6912",
-          "text": "6912"
+          "text": "6912",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.explanation",
@@ -3336,7 +4574,8 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "4-20 mA",
-          "text": "4-20 mA"
+          "text": "4-20 mA",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.1",
@@ -3346,7 +4585,8 @@
         {
           "path": "checkpoint.1.options.2",
           "source": "RS-485",
-          "text": "RS-485"
+          "text": "RS-485",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -3402,7 +4642,8 @@
         {
           "path": "sections.1.diagram",
           "source": "  A     B     | A AND B | A OR B | A XOR B\n  FALSE FALSE |  FALSE  | FALSE  |  FALSE\n  FALSE TRUE  |  FALSE  | TRUE   |  TRUE\n  TRUE  FALSE |  FALSE  | TRUE   |  TRUE\n  TRUE  TRUE  |  TRUE   | TRUE   |  FALSE",
-          "text": "  A     B     | A AND B | A OR B | A XOR B\n  FALSE FALSE |  FALSE  | FALSE  |  FALSE\n  FALSE TRUE  |  FALSE  | TRUE   |  TRUE\n  TRUE  FALSE |  FALSE  | TRUE   |  TRUE\n  TRUE  TRUE  |  TRUE   | TRUE   |  FALSE"
+          "text": "  A     B     | A AND B | A OR B | A XOR B\n  FALSE FALSE |  FALSE  | FALSE  |  FALSE\n  FALSE TRUE  |  FALSE  | TRUE   |  TRUE\n  TRUE  FALSE |  FALSE  | TRUE   |  TRUE\n  TRUE  TRUE  |  TRUE   | TRUE   |  FALSE",
+          "keep": "code"
         },
         {
           "path": "sections.2.heading",
@@ -3442,12 +4683,14 @@
         {
           "path": "sections.4.question.options.0",
           "source": "TRUE",
-          "text": "TRUE"
+          "text": "TRUE",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "FALSE",
-          "text": "FALSE"
+          "text": "FALSE",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.explanation",
@@ -3482,17 +4725,20 @@
         {
           "path": "checkpoint.0.options.0",
           "source": "A TRUE, B TRUE",
-          "text": "A TRUE, B TRUE"
+          "text": "A TRUE, B TRUE",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.0.options.1",
           "source": "A TRUE, B FALSE",
-          "text": "A TRUE, B FALSE"
+          "text": "A TRUE, B FALSE",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.0.options.2",
           "source": "A FALSE, B FALSE",
-          "text": "A FALSE, B FALSE"
+          "text": "A FALSE, B FALSE",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.0.options.3",
@@ -3512,22 +4758,26 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "AND",
-          "text": "AND"
+          "text": "AND",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "OR",
-          "text": "OR"
+          "text": "OR",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.options.2",
           "source": "XOR",
-          "text": "XOR"
+          "text": "XOR",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.options.3",
           "source": "NOT",
-          "text": "NOT"
+          "text": "NOT",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -3799,17 +5049,20 @@
         {
           "path": "sections.4.question.options.0",
           "source": "192.168.1.20",
-          "text": "192.168.1.20"
+          "text": "192.168.1.20",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "192.168.0.20",
-          "text": "192.168.0.20"
+          "text": "192.168.0.20",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.2",
           "source": "10.0.0.20",
-          "text": "10.0.0.20"
+          "text": "10.0.0.20",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.explanation",
@@ -3869,17 +5122,20 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "01",
-          "text": "01"
+          "text": "01",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "03",
-          "text": "03"
+          "text": "03",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.2",
           "source": "05",
-          "text": "05"
+          "text": "05",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -4020,7 +5276,8 @@
         {
           "path": "checkpoint.0.options.0",
           "source": "CV >= PV",
-          "text": "CV >= PV"
+          "text": "CV >= PV",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.0.options.1",
@@ -4045,17 +5302,20 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "R_TRIG",
-          "text": "R_TRIG"
+          "text": "R_TRIG",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "F_TRIG",
-          "text": "F_TRIG"
+          "text": "F_TRIG",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.options.2",
           "source": "TOF",
-          "text": "TOF"
+          "text": "TOF",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -4649,7 +5909,8 @@
         {
           "path": "sections.1.diagram",
           "source": "  | slot 0 | slot 1        | slot 2        | slot 3       |\n  |  CPU   | DI 8x24 V DC  | DO 8x24 V DC  | AI 4xU/I     |\n           %I0.0..%I0.7    %Q0.0..%Q0.7    %IW64..",
-          "text": "  | slot 0 | slot 1        | slot 2        | slot 3       |\n  |  CPU   | DI 8x24 V DC  | DO 8x24 V DC  | AI 4xU/I     |\n           %I0.0..%I0.7    %Q0.0..%Q0.7    %IW64.."
+          "text": "  | slot 0 | slot 1        | slot 2        | slot 3       |\n  |  CPU   | DI 8x24 V DC  | DO 8x24 V DC  | AI 4xU/I     |\n           %I0.0..%I0.7    %Q0.0..%Q0.7    %IW64..",
+          "keep": "code"
         },
         {
           "path": "sections.2.heading",
@@ -5076,12 +6337,14 @@
         {
           "path": "sections.4.question.options.0",
           "source": "FALSE",
-          "text": "FALSE"
+          "text": "FALSE",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "TRUE",
-          "text": "TRUE"
+          "text": "TRUE",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.options.2",
@@ -5156,22 +6419,26 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "Button1 := Lamp1;",
-          "text": "Button1 := Lamp1;"
+          "text": "Button1 := Lamp1;",
+          "keep": "code"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "Lamp1 := Button1;",
-          "text": "Lamp1 := Button1;"
+          "text": "Lamp1 := Button1;",
+          "keep": "code"
         },
         {
           "path": "checkpoint.1.options.2",
           "source": "IF Lamp1 THEN END_IF;",
-          "text": "IF Lamp1 THEN END_IF;"
+          "text": "IF Lamp1 THEN END_IF;",
+          "keep": "code"
         },
         {
           "path": "checkpoint.1.options.3",
           "source": "Lamp1 = Button1",
-          "text": "Lamp1 = Button1"
+          "text": "Lamp1 = Button1",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -5403,7 +6670,8 @@
         {
           "path": "sections.1.diagram",
           "source": "  ---+--[ StartPB ]--------+--[ StopPB ]--[ OverloadOK ]--( MotorContactor )\n      |                     |\n      +--[ MotorContactor ]-+",
-          "text": "  ---+--[ StartPB ]--------+--[ StopPB ]--[ OverloadOK ]--( MotorContactor )\n      |                     |\n      +--[ MotorContactor ]-+"
+          "text": "  ---+--[ StartPB ]--------+--[ StopPB ]--[ OverloadOK ]--( MotorContactor )\n      |                     |\n      +--[ MotorContactor ]-+",
+          "keep": "code"
         },
         {
           "path": "sections.2.heading",
@@ -5664,7 +6932,7 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "Build & Load",
-          "text": "Build & Load"
+          "text": "Wgraj do PLC (Build & Load)"
         },
         {
           "path": "checkpoint.1.options.1",
@@ -5770,17 +7038,20 @@
         {
           "path": "sections.4.question.options.0",
           "source": "50",
-          "text": "50"
+          "text": "50",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "0",
-          "text": "0"
+          "text": "0",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.options.2",
           "source": "5000",
-          "text": "5000"
+          "text": "5000",
+          "keep": "value"
         },
         {
           "path": "sections.4.question.explanation",
@@ -5840,17 +7111,20 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "25 %",
-          "text": "25 %"
+          "text": "25 %",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "50 %",
-          "text": "50 %"
+          "text": "50 %",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.2",
           "source": "100 %",
-          "text": "100 %"
+          "text": "100 %",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -6207,12 +7481,14 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "0 V",
-          "text": "0 V"
+          "text": "0 V",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "+24 V",
-          "text": "+24 V"
+          "text": "+24 V",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -6308,12 +7584,14 @@
         {
           "path": "sections.4.question.options.0",
           "source": "FALSE",
-          "text": "FALSE"
+          "text": "FALSE",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "TRUE",
-          "text": "TRUE"
+          "text": "TRUE",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.explanation",
@@ -6378,12 +7656,14 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "Motor := Start AND NOT StopPB;",
-          "text": "Motor := Start AND NOT StopPB;"
+          "text": "Motor := Start AND NOT StopPB;",
+          "keep": "code"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "Motor := Start AND StopPB;",
-          "text": "Motor := Start AND StopPB;"
+          "text": "Motor := Start AND StopPB;",
+          "keep": "code"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -6645,7 +7925,8 @@
         {
           "path": "sections.1.diagram",
           "source": "  IN  ____/~~~~~~~~~~~~~~~~\\________\n  ET  ____/ / / / /PT________\\_______\n  Q   ____________/~~~~~~~~~~\\________\n           |<- PT ->|",
-          "text": "  IN  ____/~~~~~~~~~~~~~~~~\\________\n  ET  ____/ / / / /PT________\\_______\n  Q   ____________/~~~~~~~~~~\\________\n           |<- PT ->|"
+          "text": "  IN  ____/~~~~~~~~~~~~~~~~\\________\n  ET  ____/ / / / /PT________\\_______\n  Q   ____________/~~~~~~~~~~\\________\n           |<- PT ->|",
+          "keep": "code"
         },
         {
           "path": "sections.2.heading",
@@ -6685,17 +7966,20 @@
         {
           "path": "sections.4.question.options.0",
           "source": "TON",
-          "text": "TON"
+          "text": "TON",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.options.1",
           "source": "TOF",
-          "text": "TOF"
+          "text": "TOF",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.options.2",
           "source": "TP",
-          "text": "TP"
+          "text": "TP",
+          "keep": "identifier"
         },
         {
           "path": "sections.4.question.explanation",
@@ -6730,12 +8014,14 @@
         {
           "path": "checkpoint.0.options.0",
           "source": "PT",
-          "text": "PT"
+          "text": "PT",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.0.options.1",
           "source": "0",
-          "text": "0"
+          "text": "0",
+          "keep": "value"
         },
         {
           "path": "checkpoint.0.options.2",
@@ -6755,17 +8041,20 @@
         {
           "path": "checkpoint.1.options.0",
           "source": "2.5s",
-          "text": "2.5s"
+          "text": "2.5s",
+          "keep": "value"
         },
         {
           "path": "checkpoint.1.options.1",
           "source": "T#2s500ms",
-          "text": "T#2s500ms"
+          "text": "T#2s500ms",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.options.2",
           "source": "TIME(2.5)",
-          "text": "TIME(2.5)"
+          "text": "TIME(2.5)",
+          "keep": "identifier"
         },
         {
           "path": "checkpoint.1.explanation",
@@ -7138,6 +8427,510 @@
           "path": "checkpoint.1.explanation",
           "source": "Robustness and deterministic cyclic operation matter in industry.",
           "text": "W przemyśle ważne są odporność i deterministyczna praca cykliczna."
+        }
+      ]
+    },
+    {
+      "id": "protocol.canopen",
+      "file": "protocols/canopen.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "CANopen",
+          "text": "CANopen",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "CANopen is a higher-layer protocol on CAN with an object dictionary, process data objects (PDO) and service data objects (SDO).",
+          "text": "CANopen to protokół warstw wyższych oparty na magistrali CAN, ze słownikiem obiektów, obiektami danych procesowych (PDO) i obiektami danych serwisowych (SDO)."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Key ideas",
+          "text": "Najważniejsze pojęcia"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Each node has a node ID and an object dictionary. PDOs carry real-time process data, SDOs access the dictionary, NMT controls the node state, heartbeat or node guarding monitor presence.",
+          "text": "Każdy węzeł ma identyfikator węzła (node ID) i słownik obiektów. PDO przenoszą dane procesowe w czasie rzeczywistym, SDO zapewniają dostęp do słownika, NMT steruje stanem węzła, a heartbeat lub node guarding nadzorują jego obecność w sieci."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Bit rate mismatch, duplicate node IDs, missing termination (120 ohm at both ends) and error-passive or bus-off nodes.",
+          "text": "Niezgodna prędkość transmisji, powielone identyfikatory węzłów, brak terminacji (120 omów na obu końcach) oraz węzły w stanie error-passive lub bus-off."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. Object dictionaries, PDO/SDO, NMT, bit rate and termination are not modeled.",
+          "text": "PLC Lab nie symuluje tego protokołu i nie deklaruje zgodności ani interoperacyjności. Słowniki obiektów, PDO/SDO, NMT, prędkość transmisji i terminacja nie są modelowane."
+        }
+      ]
+    },
+    {
+      "id": "protocol.ethercat",
+      "file": "protocols/ethercat.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "EtherCAT",
+          "text": "EtherCAT",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "EtherCAT is a fast Ethernet fieldbus in which the frame passes through every device, which reads and writes its data on the fly.",
+          "text": "EtherCAT to szybka magistrala polowa oparta na Ethernecie, w której ramka przechodzi przez każde urządzenie, a ono odczytuje i zapisuje swoje dane w locie."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Key ideas",
+          "text": "Najważniejsze pojęcia"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "The master sends frames that travel through all slaves in a logical ring. Each slave runs a state machine (INIT, PRE-OPERATIONAL, SAFE-OPERATIONAL, OPERATIONAL). Distributed clocks synchronize devices for motion control. The working counter tells the master how many slaves processed the data.",
+          "text": "Master wysyła ramki, które przechodzą przez wszystkie urządzenia slave w logicznym pierścieniu. Każdy slave realizuje maszynę stanów (INIT, PRE-OPERATIONAL, SAFE-OPERATIONAL, OPERATIONAL). Zegary rozproszone (distributed clocks) synchronizują urządzenia na potrzeby sterowania ruchem. Licznik roboczy (working counter) informuje mastera, ile urządzeń slave przetworzyło dane."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "A slave stuck in PREOP or SAFEOP, wrong configuration (device revision), cable faults that break the ring at a given position, and working-counter errors.",
+          "text": "Slave zatrzymany w stanie PREOP lub SAFEOP, błędna konfiguracja (rewizja urządzenia), uszkodzenia kabli przerywające pierścień w określonym miejscu oraz błędy licznika roboczego."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. The slave state machine, working counter and distributed clocks are not modeled. The TwinCAT 3 profile only changes presentation; its I/O is the generic rack.",
+          "text": "PLC Lab nie symuluje tego protokołu i nie deklaruje zgodności ani interoperacyjności. Maszyna stanów urządzeń slave, licznik roboczy i zegary rozproszone nie są modelowane. Profil TwinCAT 3 zmienia jedynie sposób prezentacji; jego we/wy to ogólny rack."
+        }
+      ]
+    },
+    {
+      "id": "protocol.ethernet-ip",
+      "file": "protocols/ethernet-ip.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "EtherNet/IP",
+          "text": "EtherNet/IP",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "EtherNet/IP carries the Common Industrial Protocol (CIP) over standard Ethernet. Cyclic I/O uses implicit connections with a requested packet interval (RPI).",
+          "text": "EtherNet/IP przenosi protokół Common Industrial Protocol (CIP) przez standardowy Ethernet. Cykliczne we/wy wykorzystują połączenia niejawne (implicit) z żądanym interwałem pakietów (RPI)."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Key ideas",
+          "text": "Najważniejsze pojęcia"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "A scanner (controller) opens connections to adapters (I/O, drives). Explicit messaging reads or writes data on request; implicit (I/O) connections send data cyclically at the RPI. Devices are described by EDS files.",
+          "text": "Skaner (sterownik) otwiera połączenia z adapterami (we/wy, napędy). Komunikacja jawna (explicit messaging) odczytuje lub zapisuje dane na żądanie; połączenia niejawne (I/O) wysyłają dane cyklicznie z okresem RPI. Urządzenia opisują pliki EDS."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Connection timeouts because of a wrong IP address, a duplicate address, an RPI too fast for the device or network congestion; electronic keying mismatches after a module replacement.",
+          "text": "Przekroczenia czasu połączenia z powodu błędnego adresu IP, powielonego adresu, zbyt krótkiego RPI dla danego urządzenia lub przeciążenia sieci; niezgodności electronic keying po wymianie modułu."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. CIP connections, RPI and electronic keying are not modeled. The CompactLogix and ControlLogix profiles only change how addresses and analog values are presented; their I/O is the generic rack.",
+          "text": "PLC Lab nie symuluje tego protokołu i nie deklaruje zgodności ani interoperacyjności. Połączenia CIP, RPI i electronic keying nie są modelowane. Profile CompactLogix i ControlLogix zmieniają jedynie sposób prezentacji adresów i wartości analogowych; ich we/wy to ogólny rack."
+        }
+      ]
+    },
+    {
+      "id": "protocol.io-link",
+      "file": "protocols/io-link.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "IO-Link",
+          "text": "IO-Link",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "IO-Link is a point-to-point communication for sensors and actuators over standard unshielded cables, standardized as IEC 61131-9 (SDCI).",
+          "text": "IO-Link to komunikacja punkt-punkt dla czujników i elementów wykonawczych przez standardowe nieekranowane kable, znormalizowana jako IEC 61131-9 (SDCI)."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Key ideas",
+          "text": "Najważniejsze pojęcia"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "An IO-Link master port connects one device. The device can work as a plain switching sensor or exchange process data, parameters and diagnostics. IODD files describe devices; parameter servers allow automatic re-parameterization after replacement.",
+          "text": "Do portu mastera IO-Link podłącza się jedno urządzenie. Urządzenie może pracować jako zwykły czujnik przełączający albo wymieniać dane procesowe, parametry i diagnostykę. Pliki IODD opisują urządzenia; serwery parametrów umożliwiają automatyczną ponowną parametryzację po wymianie."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Wrong port mode (digital input instead of IO-Link), device replaced with a different variant, parameter server conflicts.",
+          "text": "Błędny tryb portu (wejście cyfrowe zamiast IO-Link), wymiana urządzenia na inny wariant, konflikty serwera parametrów."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. Port modes, IODD files and parameter servers are not modeled. PLC Lab's sensors are plain switching devices, as an IO-Link device behaves in digital input mode; an inverted switching function is practiced in `ts.part-sensor-inverted`.",
+          "text": "PLC Lab nie symuluje tego protokołu i nie deklaruje zgodności ani interoperacyjności. Tryby portów, pliki IODD i serwery parametrów nie są modelowane. Czujniki w PLC Lab to zwykłe urządzenia przełączające, tak jak urządzenie IO-Link pracujące w trybie wejścia cyfrowego; odwróconą funkcję przełączania ćwiczy się w `ts.part-sensor-inverted`."
+        }
+      ]
+    },
+    {
+      "id": "protocol.modbus-rtu",
+      "file": "protocols/modbus-rtu.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Modbus RTU",
+          "text": "Modbus RTU",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Modbus RTU is the serial form of Modbus, usually on RS-485 multi-drop lines with one client and up to 247 server addresses.",
+          "text": "Modbus RTU to szeregowa odmiana protokołu Modbus, zwykle na wielopunktowych liniach RS-485 z jednym klientem i maksymalnie 247 adresami serwerów."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Framing",
+          "text": "Budowa ramki"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "RTU frames contain the server address, the PDU and a CRC-16. Silent intervals of at least 3.5 character times separate frames, so baud rate and parity must match on every device.",
+          "text": "Ramki RTU zawierają adres serwera, PDU i sumę kontrolną CRC-16. Ramki oddzielają przerwy o długości co najmniej 3.5 czasu znaku, dlatego prędkość transmisji i parzystość muszą być zgodne we wszystkich urządzeniach."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Wrong baud rate or parity, missing termination resistors, swapped A/B lines and duplicate server addresses. A protocol analyzer or the client's timeout counters help to separate wiring from configuration problems.",
+          "text": "Błędna prędkość transmisji lub parzystość, brak rezystorów terminujących, zamienione linie A/B i powielone adresy serwerów. Analizator protokołu lub liczniki przekroczeń czasu w kliencie pomagają oddzielić problemy z okablowaniem od problemów z konfiguracją."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. The register model and exception codes are the same as in Modbus TCP, which PLC Lab simulates: practice them in `ex.modbus-level` and `ts.remote-level-wrong`. Serial framing, baud rate and RS-485 wiring are not modeled.",
+          "text": "PLC Lab nie symuluje tego protokołu i nie deklaruje zgodności ani interoperacyjności. Model rejestrów i kody wyjątków są takie same jak w Modbus TCP, który PLC Lab symuluje: ćwicz je w `ex.modbus-level` i `ts.remote-level-wrong`. Ramkowanie szeregowe, prędkość transmisji i okablowanie RS-485 nie są modelowane."
+        }
+      ]
+    },
+    {
+      "id": "protocol.modbus-tcp",
+      "file": "protocols/modbus-tcp.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Modbus TCP",
+          "text": "Modbus TCP",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Modbus TCP carries the simple Modbus request/response protocol over TCP/IP (port 502). A client (often the PLC) polls registers in a server (a transmitter, drive or meter).",
+          "text": "Modbus TCP przenosi prosty protokół żądanie-odpowiedź Modbus przez TCP/IP (port 502). Klient (często PLC) cyklicznie odpytuje rejestry serwera (przetwornika, napędu lub licznika energii)."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Data model",
+          "text": "Model danych"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Modbus defines four tables: coils (read/write bits), discrete inputs (read-only bits), holding registers (read/write 16-bit words) and input registers (read-only words). Each request names a **function code**, a start **address** and a **quantity**. Common function codes: 01 read coils, 02 read discrete inputs, **03 read holding registers**, **04 read input registers**, 05/06 write single, 15/16 write multiple.",
+          "text": "Modbus definiuje cztery tablice: cewki (coils, bity do odczytu i zapisu), wejścia dyskretne (bity tylko do odczytu), rejestry podtrzymujące (holding registers, 16-bitowe słowa do odczytu i zapisu) i rejestry wejściowe (słowa tylko do odczytu). Każde żądanie zawiera **kod funkcji**, początkowy **adres** i **liczbę** elementów. Typowe kody funkcji: 01 odczyt cewek, 02 odczyt wejść dyskretnych, **03 odczyt rejestrów podtrzymujących**, **04 odczyt rejestrów wejściowych**, 05/06 zapis pojedynczy, 15/16 zapis wielu elementów."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "The MBAP header",
+          "text": "Nagłówek MBAP"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Modbus TCP prefixes each PDU with the MBAP header: transaction identifier (matches responses to requests), protocol identifier (0), length and **unit identifier**. Gateways use the unit identifier to address serial devices behind them; many TCP devices ignore it.",
+          "text": "Modbus TCP poprzedza każde PDU nagłówkiem MBAP: identyfikator transakcji (przypisuje odpowiedzi do żądań), identyfikator protokołu (0), długość i **identyfikator jednostki** (unit identifier). Bramki używają identyfikatora jednostki do adresowania urządzeń szeregowych za nimi; wiele urządzeń TCP go ignoruje."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Addressing pitfalls",
+          "text": "Pułapki adresowania"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The protocol uses **zero-based** addresses. Documentation often shows the classic notation 40001 for the first holding register, which is protocol address 0. Mixing the two shifts every value by one register. 32-bit values (REAL, DINT) occupy two registers and the **word order** differs between devices.",
+          "text": "Protokół używa adresów liczonych **od zera**. Dokumentacja często pokazuje klasyczny zapis 40001 dla pierwszego rejestru podtrzymującego, który w protokole ma adres 0. Pomylenie obu zapisów przesuwa każdą wartość o jeden rejestr. Wartości 32-bitowe (REAL, DINT) zajmują dwa rejestry, a **kolejność słów** różni się między urządzeniami."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Exception responses",
+          "text": "Odpowiedzi wyjątków"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "| Code | Meaning |\n| --- | --- |\n| 01 | Illegal function (function code not supported) |\n| 02 | Illegal data address (register not available) |\n| 03 | Illegal data value |\n| 04 | Server device failure |\n| 0A | Gateway path unavailable |\n| 0B | Gateway target device failed to respond |",
+          "text": "| Kod | Znaczenie |\n| --- | --- |\n| 01 | Niedozwolona funkcja (kod funkcji nieobsługiwany) |\n| 02 | Niedozwolony adres danych (rejestr niedostępny) |\n| 03 | Niedozwolona wartość danych |\n| 04 | Awaria urządzenia serwera |\n| 0A | Ścieżka bramki niedostępna |\n| 0B | Urządzenie docelowe za bramką nie odpowiedziało |"
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "PLC Lab simulates Modbus TCP behaviorally: the PLC polls servers with FC03/FC04, honors subnet rules, ARP resolution, connection refusal, timeouts, exception codes 01/02/0B, unit identifier handling and word order. Latency is a fixed educational value. **SIMULATION APPROXIMATION**: this is not a conformance-tested implementation.",
+          "text": "PLC Lab symuluje Modbus TCP behawioralnie: PLC odpytuje serwery funkcjami FC03/FC04, uwzględnia reguły podsieci, rozwiązywanie adresów ARP, odmowę połączenia, przekroczenia czasu, kody wyjątków 01/02/0B, obsługę identyfikatora jednostki i kolejność słów. Opóźnienie ma stałą wartość dydaktyczną. **PRZYBLIŻENIE SYMULACYJNE**: nie jest to implementacja przetestowana pod kątem zgodności."
+        },
+        {
+          "path": "facts.0.label",
+          "source": "TCP port",
+          "text": "Port TCP"
+        },
+        {
+          "path": "facts.0.value",
+          "source": "502",
+          "text": "502",
+          "keep": "value"
+        },
+        {
+          "path": "facts.1.label",
+          "source": "Read holding registers",
+          "text": "Odczyt rejestrów podtrzymujących"
+        },
+        {
+          "path": "facts.1.value",
+          "source": "function code 03",
+          "text": "kod funkcji 03"
+        },
+        {
+          "path": "fidelity.modeled.0",
+          "source": "FC03/FC04 polling with transaction identifiers",
+          "text": "Odpytywanie FC03/FC04 z identyfikatorami transakcji"
+        },
+        {
+          "path": "fidelity.modeled.1",
+          "source": "Zero-based addressing and word order",
+          "text": "Adresowanie od zera i kolejność słów"
+        },
+        {
+          "path": "fidelity.modeled.2",
+          "source": "Exception codes 01, 02 and 0B",
+          "text": "Kody wyjątków 01, 02 i 0B"
+        },
+        {
+          "path": "fidelity.modeled.3",
+          "source": "Subnet, gateway, ARP, connection refused and timeout behavior",
+          "text": "Zachowanie podsieci, bramki, ARP, odmowy połączenia i przekroczenia czasu"
+        },
+        {
+          "path": "fidelity.approximated.0",
+          "source": "Fixed one-way latency; TCP connection setup abstracted to round trips",
+          "text": "Stałe opóźnienie w jedną stronę; nawiązywanie połączenia TCP uproszczone do wymian żądanie-odpowiedź"
+        },
+        {
+          "path": "fidelity.omitted.0",
+          "source": "Write function codes",
+          "text": "Kody funkcji zapisu"
+        },
+        {
+          "path": "fidelity.omitted.1",
+          "source": "TCP segmentation, retransmission and congestion",
+          "text": "Segmentacja, retransmisja i kontrola przeciążenia TCP"
+        },
+        {
+          "path": "fidelity.omitted.2",
+          "source": "Security (Modbus/TCP Security)",
+          "text": "Zabezpieczenia (Modbus/TCP Security)"
+        }
+      ]
+    },
+    {
+      "id": "protocol.opc-ua",
+      "file": "protocols/opc-ua.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "OPC UA",
+          "text": "OPC UA",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "OPC UA is a platform-independent standard for secure information exchange from the field to the enterprise, with an information model, services and built-in security.",
+          "text": "OPC UA to niezależny od platformy standard bezpiecznej wymiany informacji od poziomu obiektowego po poziom przedsiębiorstwa, z modelem informacyjnym, usługami i wbudowanymi zabezpieczeniami."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Key ideas",
+          "text": "Najważniejsze pojęcia"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Servers expose an address space of nodes (variables, objects, methods). Clients browse, read, write and subscribe to changes. Security uses certificates and policies; PubSub adds broker-based or UDP communication.",
+          "text": "Serwery udostępniają przestrzeń adresową węzłów (zmienne, obiekty, metody). Klienci przeglądają, odczytują i zapisują węzły oraz subskrybują ich zmiany. Zabezpieczenia wykorzystują certyfikaty i polityki bezpieczeństwa; PubSub dodaje komunikację przez brokera lub UDP."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Untrusted certificates, mismatched security policies, wrong endpoint URLs, firewall rules blocking port 4840 and subscriptions with too-short sampling intervals.",
+          "text": "Niezaufane certyfikaty, niezgodne polityki bezpieczeństwa, błędne adresy URL punktów końcowych, reguły zapory blokujące port 4840 i subskrypcje ze zbyt krótkimi interwałami próbkowania."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. PLC Lab has no OPC UA server or client; information models, certificates and subscriptions are not modeled.",
+          "text": "PLC Lab nie symuluje tego protokołu i nie deklaruje zgodności ani interoperacyjności. PLC Lab nie ma serwera ani klienta OPC UA; modele informacyjne, certyfikaty i subskrypcje nie są modelowane."
+        }
+      ]
+    },
+    {
+      "id": "protocol.profibus-dp",
+      "file": "protocols/profibus-dp.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "PROFIBUS DP",
+          "text": "PROFIBUS DP",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "PROFIBUS DP is a serial fieldbus (RS-485) with a master polling slaves cyclically by address. It remains common in existing plants.",
+          "text": "PROFIBUS DP to szeregowa magistrala polowa (RS-485), w której master cyklicznie odpytuje urządzenia slave według adresów. Nadal jest powszechna w istniejących instalacjach."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Key ideas",
+          "text": "Najważniejsze pojęcia"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Each slave has an address (typically 1..125) and a GSD file describing it. The bus needs termination at both physical ends; baud rate is set on the master.",
+          "text": "Każdy slave ma adres (zwykle 1..125) i opisujący go plik GSD. Magistrala wymaga terminacji na obu fizycznych końcach; prędkość transmisji ustawia się w masterze."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Missing or extra termination, wrong addresses, cable damage and connectors with termination switched on in the middle of a segment.",
+          "text": "Brak terminacji lub terminacja nadmiarowa, błędne adresy, uszkodzenia kabla oraz złącza z włączoną terminacją w środku segmentu."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. Termination, GSD files and DP addresses are not modeled. Address faults on a network can be practiced with Modbus TCP in `ts.remote-level-lost`.",
+          "text": "PLC Lab nie symuluje tego protokołu i nie deklaruje zgodności ani interoperacyjności. Terminacja, pliki GSD i adresy DP nie są modelowane. Błędy adresowania w sieci można przećwiczyć z Modbus TCP w `ts.remote-level-lost`."
+        }
+      ]
+    },
+    {
+      "id": "protocol.profinet",
+      "file": "protocols/profinet.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "PROFINET IO",
+          "text": "PROFINET IO",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "PROFINET IO is an Industrial Ethernet standard from PI. An IO controller (PLC) exchanges cyclic data with IO devices that it identifies by device name.",
+          "text": "PROFINET IO to standard Industrial Ethernet organizacji PI. Kontroler IO (PLC) wymienia dane cykliczne z urządzeniami IO, które identyfikuje po nazwie urządzenia."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Key ideas",
+          "text": "Najważniejsze pojęcia"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Devices are identified by a **device name** assigned during commissioning; the controller assigns the IP address. Cyclic real-time data is exchanged at the configured update time; alarms and diagnostics are acyclic. Topology information (neighbors, ports) supports device replacement without an engineering tool.",
+          "text": "Urządzenia są identyfikowane przez **nazwę urządzenia** nadaną podczas uruchamiania; adres IP przydziela kontroler. Dane czasu rzeczywistego są wymieniane cyklicznie ze skonfigurowanym czasem odświeżania (update time); alarmy i diagnostyka są przesyłane acyklicznie. Informacje o topologii (sąsiedzi, porty) umożliwiają wymianę urządzenia bez narzędzia inżynierskiego."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Typical faults",
+          "text": "Typowe usterki"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Device name missing or duplicated, wrong device type or firmware in the configuration, topology mismatch, watchdog timeouts caused by network load or bad cabling.",
+          "text": "Brak lub powielenie nazwy urządzenia, błędny typ urządzenia lub wersja firmware w konfiguracji, niezgodność topologii, przekroczenia czasu watchdoga spowodowane obciążeniem sieci lub złym okablowaniem."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "PLC Lab does not simulate this protocol and claims no conformance or interoperability. Device-name assignment and topology have no counterpart in the simulator. The closest practice is IP addressing and connection diagnostics with Modbus TCP in `ts.remote-level-lost`; distributed I/O appears only as the generic rack in the Hardware tab.",
+          "text": "PLC Lab nie symuluje tego protokołu i nie deklaruje zgodności ani interoperacyjności. Nadawanie nazw urządzeń i topologia nie mają odpowiednika w symulatorze. Najbliższe ćwiczenie to adresowanie IP i diagnostyka połączeń z Modbus TCP w `ts.remote-level-lost`; rozproszone we/wy występują tylko jako ogólny rack na karcie Sprzęt."
         }
       ]
     },
@@ -8697,6 +10490,342 @@
           "path": "troubleshooting.debrief.reasoning",
           "source": "When a command reaches a device but the device does not act, check the device's own state before the wiring or the program. Drives, valves with manual overrides and local panels all have a local/remote selection that overrides the PLC.",
           "text": "Najpierw sprawdź stan urządzenia, zanim zmienisz przewody lub program. Polecenie może docierać prawidłowo, lecz urządzenie może je ignorować, ponieważ sterowanie lokalne ma pierwszeństwo."
+        }
+      ]
+    },
+    {
+      "id": "vendor.beckhoff",
+      "file": "vendors/vendor-beckhoff.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Beckhoff",
+          "text": "Beckhoff",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Beckhoff builds PC-based control: Embedded PCs (CX) or industrial PCs run TwinCAT 3, and EtherCAT Terminals provide the I/O.",
+          "text": "Beckhoff tworzy sterowanie oparte na komputerach PC: komputery wbudowane (CX) lub komputery przemysłowe pracują z TwinCAT 3, a we/wy zapewniają terminale EtherCAT."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Platforms",
+          "text": "Platformy"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "| Component | Role |\n| --- | --- |\n| CX Embedded PC | DIN-rail PC running TwinCAT |\n| TwinCAT 3 | Engineering and runtime (IEC 61131-3, integrated in Visual Studio) |\n| EtherCAT Terminals (EL) | I/O terminals on the EtherCAT fieldbus |",
+          "text": "| Komponent | Rola |\n| --- | --- |\n| CX Embedded PC | Komputer na szynę DIN z TwinCAT |\n| TwinCAT 3 | Środowisko inżynierskie i runtime (IEC 61131-3, zintegrowane z Visual Studio) |\n| Terminale EtherCAT (EL) | Terminale we/wy na magistrali polowej EtherCAT |"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Conventions worth knowing",
+          "text": "Konwencje, które warto znać"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "- Variables are declared with `AT %I*` / `AT %Q*` and **linked** to terminal channels in the I/O tree.\n- Analog terminals for 4..20 mA represent 4 mA as 0 and 20 mA as 32767 in the default presentation.\n- EtherCAT diagnostics (WcState, terminal state machine) are part of every fault investigation.",
+          "text": "- Zmienne deklaruje się z `AT %I*` / `AT %Q*` i **łączy** (link) z kanałami terminali w drzewie we/wy.\n- Terminale analogowe 4..20 mA w domyślnej prezentacji odwzorowują 4 mA jako 0, a 20 mA jako 32767.\n- Diagnostyka EtherCAT (WcState, maszyna stanów terminala) jest częścią każdej analizy usterki."
+        }
+      ]
+    },
+    {
+      "id": "vendor.mitsubishi",
+      "file": "vendors/vendor-mitsubishi.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Mitsubishi Electric MELSEC",
+          "text": "Mitsubishi Electric MELSEC",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "MELSEC controllers include the compact iQ-F (FX5) series and the modular iQ-R series, programmed with GX Works3.",
+          "text": "Sterowniki MELSEC obejmują kompaktową serię iQ-F (FX5) i modułową serię iQ-R, programowane w GX Works3."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Platforms",
+          "text": "Platformy"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "| Family | Role |\n| --- | --- |\n| MELSEC iQ-F (FX5) | Compact controllers for small machines |\n| MELSEC iQ-R | Modular high-performance controllers |",
+          "text": "| Rodzina | Rola |\n| --- | --- |\n| MELSEC iQ-F (FX5) | Sterowniki kompaktowe dla małych maszyn |\n| MELSEC iQ-R | Modułowe sterowniki o wysokiej wydajności |"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Conventions worth knowing",
+          "text": "Konwencje, które warto znać"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Devices such as X (inputs), Y (outputs), M (internal relays) and D (data registers) are addressed by number; on FX5 the X/Y devices are numbered in octal. Ladder is dominant; ST and FBD are available in GX Works3.",
+          "text": "Urządzenia takie jak X (wejścia), Y (wyjścia), M (przekaźniki wewnętrzne) i D (rejestry danych) adresuje się numerami; w FX5 urządzenia X/Y są numerowane ósemkowo. Dominuje język drabinkowy; ST i FBD są dostępne w GX Works3."
+        }
+      ]
+    },
+    {
+      "id": "vendor.omron",
+      "file": "vendors/vendor-omron.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "OMRON Sysmac",
+          "text": "OMRON Sysmac",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "OMRON's NX and NJ machine automation controllers are programmed in Sysmac Studio and use EtherCAT for I/O and motion.",
+          "text": "Sterowniki automatyki maszyn OMRON NX i NJ programuje się w Sysmac Studio; do obsługi we/wy i ruchu wykorzystują EtherCAT."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Platforms",
+          "text": "Platformy"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "NX1P/NX102 compact controllers and NJ controllers; NX I/O units are connected locally or through EtherCAT couplers.",
+          "text": "Sterowniki kompaktowe NX1P/NX102 oraz sterowniki NJ; moduły we/wy NX podłącza się lokalnie lub przez sprzęgi EtherCAT."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Conventions worth knowing",
+          "text": "Konwencje, które warto znać"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Variables are mapped to I/O ports of NX units; programming follows IEC 61131-3.",
+          "text": "Zmienne odwzorowuje się na porty we/wy modułów NX; programowanie jest zgodne z IEC 61131-3."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The `omron.nx-nj` knowledge profile presents the generic rack's channels as unit ports such as `Unit2_Ch1_In`. Sysmac Studio projects, EtherCAT and motion control are not modeled. **CONCEPTUAL**.",
+          "text": "Profil wiedzy `omron.nx-nj` przedstawia kanały ogólnego racka jako porty modułów, na przykład `Unit2_Ch1_In`. Projekty Sysmac Studio, EtherCAT i sterowanie ruchem nie są modelowane. **KONCEPCYJNIE**."
+        }
+      ]
+    },
+    {
+      "id": "vendor.phoenix-contact",
+      "file": "vendors/vendor-phoenix-contact.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Phoenix Contact PLCnext",
+          "text": "Phoenix Contact PLCnext",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "PLCnext Technology is Phoenix Contact's open control platform: PLCnext Control devices with Axioline F I/O, programmed with PLCnext Engineer and high-level languages.",
+          "text": "PLCnext Technology to otwarta platforma sterowania firmy Phoenix Contact: urządzenia PLCnext Control z we/wy Axioline F, programowane w PLCnext Engineer oraz w językach wysokiego poziomu."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Platforms",
+          "text": "Platformy"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "PLCnext Control devices (for example the AXC F family) with Axioline F I/O modules; PROFINET is the usual fieldbus.",
+          "text": "Urządzenia PLCnext Control (na przykład rodzina AXC F) z modułami we/wy Axioline F; typową magistralą polową jest PROFINET."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Engineering",
+          "text": "Inżynieria"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "PLCnext Engineer for IEC 61131-3; C++, C# and MATLAB Simulink programs can run alongside.",
+          "text": "PLCnext Engineer dla IEC 61131-3; równolegle mogą działać programy w C++, C# i MATLAB Simulink."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "No simulation profile; PLCnext concepts are background knowledge. Programs written for the `generic.iec` profile use the same IEC 61131-3 Structured Text ideas. **CONCEPTUAL**.",
+          "text": "Brak profilu symulacji; pojęcia PLCnext to wiedza uzupełniająca. Programy napisane dla profilu `generic.iec` wykorzystują te same idee tekstu strukturalnego (Structured Text) IEC 61131-3. **KONCEPCYJNIE**."
+        }
+      ]
+    },
+    {
+      "id": "vendor.rockwell",
+      "file": "vendors/vendor-rockwell.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Rockwell Automation / Allen-Bradley",
+          "text": "Rockwell Automation / Allen-Bradley",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Allen-Bradley Logix controllers (CompactLogix, ControlLogix) are programmed with Studio 5000 Logix Designer and use tag-based memory and EtherNet/IP.",
+          "text": "Sterowniki Allen-Bradley Logix (CompactLogix, ControlLogix) programuje się w Studio 5000 Logix Designer; wykorzystują pamięć opartą na tagach i EtherNet/IP."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Platforms",
+          "text": "Platformy"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "| Family | Role |\n| --- | --- |\n| CompactLogix | Mid-range controllers with local Compact I/O (1769) or 5069 I/O |\n| ControlLogix | Chassis-based high-end controllers (1756) |\n| POINT I/O / FLEX I/O | Distributed I/O on EtherNet/IP |",
+          "text": "| Rodzina | Rola |\n| --- | --- |\n| CompactLogix | Sterowniki średniej klasy z lokalnymi we/wy Compact I/O (1769) lub 5069 |\n| ControlLogix | Sterowniki wyższej klasy w kasecie (1756) |\n| POINT I/O / FLEX I/O | Rozproszone we/wy na EtherNet/IP |"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Conventions worth knowing",
+          "text": "Konwencje, które warto znać"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "- Memory is **tag-based**; I/O appears as module-defined tags such as `Local:1:I.Data.0`.\n- Ladder Diagram is dominant; Structured Text, FBD and SFC are available.\n- Timers use a TIMER structure with PRE, ACC and DN bits.\n- Analog modules can scale to engineering units in the module configuration.",
+          "text": "- Pamięć jest **oparta na tagach**; we/wy występują jako tagi zdefiniowane przez moduł, na przykład `Local:1:I.Data.0`.\n- Dominuje język drabinkowy (Ladder Diagram); dostępne są też Structured Text, FBD i SFC.\n- Timery wykorzystują strukturę TIMER z bitami PRE, ACC i DN.\n- Moduły analogowe mogą skalować wartości do jednostek inżynierskich w konfiguracji modułu."
+        }
+      ]
+    },
+    {
+      "id": "vendor.schneider",
+      "file": "vendors/vendor-schneider.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Schneider Electric Modicon",
+          "text": "Schneider Electric Modicon",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "Modicon controllers range from M241/M251/M262 logic and motion controllers (EcoStruxure Machine Expert) to the M580 process ePAC (EcoStruxure Control Expert).",
+          "text": "Sterowniki Modicon obejmują sterowniki logiczne i ruchu M241/M251/M262 (EcoStruxure Machine Expert) oraz procesowy kontroler ePAC M580 (EcoStruxure Control Expert)."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Platforms",
+          "text": "Platformy"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "| Family | Role |\n| --- | --- |\n| Modicon M241 / M251 | Logic controllers for machines, TM3 expansion I/O |\n| Modicon M262 | Logic and motion controller |\n| Modicon M580 | Ethernet-based process controller (ePAC), X80 I/O |",
+          "text": "| Rodzina | Rola |\n| --- | --- |\n| Modicon M241 / M251 | Sterowniki logiczne dla maszyn, we/wy rozszerzeń TM3 |\n| Modicon M262 | Sterownik logiczny i ruchu |\n| Modicon M580 | Sterownik procesowy oparty na Ethernecie (ePAC), we/wy X80 |"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Engineering",
+          "text": "Inżynieria"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Machine controllers are programmed in EcoStruxure Machine Expert (CODESYS-based); M580 in EcoStruxure Control Expert. Both follow IEC 61131-3 languages.",
+          "text": "Sterowniki maszynowe programuje się w EcoStruxure Machine Expert (opartym na CODESYS), a M580 w EcoStruxure Control Expert. Oba środowiska stosują języki IEC 61131-3."
+        }
+      ]
+    },
+    {
+      "id": "vendor.siemens",
+      "file": "vendors/vendor-siemens.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Siemens SIMATIC",
+          "text": "Siemens SIMATIC",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "SIMATIC is Siemens' automation family. Current controllers are the S7-1200 (compact) and S7-1500 (modular), with ET 200SP distributed I/O, all engineered in TIA Portal. S7-300/400 are the previous generation.",
+          "text": "SIMATIC to rodzina produktów automatyki firmy Siemens. Obecne sterowniki to S7-1200 (kompaktowy) i S7-1500 (modułowy) z rozproszonymi we/wy ET 200SP, konfigurowane w TIA Portal. S7-300/400 to poprzednia generacja."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Platforms",
+          "text": "Platformy"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "| Family | Role |\n| --- | --- |\n| S7-1200 | Compact controller for small machines, side-mounted signal modules |\n| S7-1500 | Modular controller for medium to large machines and lines |\n| ET 200SP | Fine-granular distributed I/O, usually on PROFINET |\n| S7-300 / S7-400 | Previous generation, still widespread in existing plants |",
+          "text": "| Rodzina | Rola |\n| --- | --- |\n| S7-1200 | Sterownik kompaktowy dla małych maszyn, z modułami sygnałowymi montowanymi z boku |\n| S7-1500 | Sterownik modułowy dla średnich i dużych maszyn oraz linii |\n| ET 200SP | Drobnoziarniste rozproszone we/wy, zwykle na PROFINET |\n| S7-300 / S7-400 | Poprzednia generacja, nadal powszechna w istniejących instalacjach |"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Engineering",
+          "text": "Inżynieria"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Projects are created in **TIA Portal** (STEP 7 for programming, WinCC for HMI). Languages include LAD, FBD, SCL (Structured Text), STL (S7-300/400/1500) and GRAPH. Hardware is configured in the device view: rack, slots, start addresses and channel parameters.",
+          "text": "Projekty tworzy się w **TIA Portal** (STEP 7 do programowania, WinCC do HMI). Dostępne języki to LAD, FBD, SCL (Structured Text), STL (S7-300/400/1500) i GRAPH. Sprzęt konfiguruje się w widoku urządzenia: kaseta (rack), sloty, adresy początkowe i parametry kanałów."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Conventions worth knowing",
+          "text": "Konwencje, które warto znać"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "- Process image addresses in byte.bit form: `%I0.0`, `%Q0.0`, analog words such as `%IW64`.\n- Analog values use a nominal range of 0 to 27648 (bipolar -27648 to 27648) independent of the module resolution.\n- Communication: PROFINET is the native fieldbus; PROFIBUS DP on older systems.",
+          "text": "- Adresy obrazu procesu w postaci bajt.bit: `%I0.0`, `%Q0.0`, słowa analogowe takie jak `%IW64`.\n- Wartości analogowe używają zakresu nominalnego od 0 do 27648 (bipolarnie od -27648 do 27648) niezależnie od rozdzielczości modułu.\n- Komunikacja: natywną magistralą polową jest PROFINET; w starszych systemach PROFIBUS DP."
+        }
+      ]
+    },
+    {
+      "id": "vendor.wago",
+      "file": "vendors/vendor-wago.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "WAGO",
+          "text": "WAGO",
+          "keep": "proper-name"
+        },
+        {
+          "path": "summary",
+          "source": "WAGO PFC200 controllers run CODESYS-based runtimes with the WAGO I/O System 750 modules.",
+          "text": "Sterowniki WAGO PFC200 pracują ze środowiskami uruchomieniowymi opartymi na CODESYS i modułami WAGO I/O System 750."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Platforms",
+          "text": "Platformy"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "PFC200 controllers with 750/753 I/O modules on the same rail; Ethernet and fieldbus variants exist.",
+          "text": "Sterowniki PFC200 z modułami we/wy 750/753 na tej samej szynie; istnieją warianty z Ethernetem i z magistralami polowymi."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Engineering",
+          "text": "Inżynieria"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "e!COCKPIT and CODESYS (IEC 61131-3).",
+          "text": "e!COCKPIT i CODESYS (IEC 61131-3)."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "In PLC Lab",
+          "text": "W PLC Lab"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "No simulation profile; WAGO concepts are background knowledge. Programs written for the `generic.iec` profile use the same IEC 61131-3 Structured Text ideas. **CONCEPTUAL**.",
+          "text": "Brak profilu symulacji; pojęcia WAGO to wiedza uzupełniająca. Programy napisane dla profilu `generic.iec` wykorzystują te same idee tekstu strukturalnego (Structured Text) IEC 61131-3. **KONCEPCYJNIE**."
         }
       ]
     }
