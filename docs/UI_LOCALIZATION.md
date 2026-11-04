@@ -8,17 +8,19 @@ and the IPC contract are unchanged.
 
 ## Exact content coverage
 
-This is **partial product localization**. Complete content includes every approved prose
-field, not only titles. Localization never rewrites the canonical English knowledge pack;
+Educational content is **completely localized**: every approved prose field of every
+exercise, lesson and article has Polish text or an explicit `keep` reason, and every group
+is declared complete so a removed field fails validation. Complete content includes
+every approved prose field, not only titles. Localization never rewrites the canonical English knowledge pack;
 its only content change in this work was a factual correction of the retentive-memory
 wording in nine vendor family articles, recorded in the pack ZIP and its digest.
 
 | Category                                       | Complete Polish content | Polish title + summary |
 | ---------------------------------------------- | ----------------------: | ---------------------: |
-| Exercises, total                               |                   20/49 |                  49/49 |
+| Exercises, total                               |                   49/49 |                  49/49 |
 | Practice (subset)                              |                   12/12 |                  12/12 |
 | Troubleshooting cases (subset)                 |                     8/8 |                    8/8 |
-| Commissioning (subset)                         |                    0/29 |                  29/29 |
+| Commissioning (subset)                         |                   29/29 |                  29/29 |
 | Lessons                                        |                   25/25 |                  25/25 |
 | Fundamentals                                   |                   25/25 |                  25/25 |
 | Instruction articles                           |                     7/7 |                    7/7 |
@@ -36,7 +38,7 @@ including facts and simulation fidelity lists. Source code remains original.
 Fields that stay identical to English (product names, code, values, identifiers) carry
 an explicit `keep` reason; `content:coverage` prints them per reason.
 
-`npm run content:coverage` lists **1,005 missing display fields**. The checked-in
+`npm run content:coverage` lists **0 missing display fields**. The checked-in
 [machine-readable report](validation/POLISH_CONTENT_COVERAGE.json) lists every item/path.
 The [UI literal audit](validation/POLISH_UI_AUDIT.md) lists remaining static candidates by
 file/line, with engineering tokens and localization keys excluded. It is a review aid,
@@ -49,7 +51,8 @@ The strict sibling sidecar `knowledge/locales/pl.json` is bundled into the UI. S
 exact English source match. Missing/stale/custom fields retain English; English mode
 uses originals. Switching language updates open cards, lessons, articles and exercise
 instructions without refetching or mutating stored data or the PLC. Fallback notices mark
-untranslated article/commissioning instructions. No second Polish pack is registered.
+any field that falls back to English (a stale or newly added canonical text). No second
+Polish pack is registered.
 
 The desktop build, `content:validate`, `knowledge:validate` and `knowledge:verify` validate
 the overlay. Tests enforce declared complete categories and report incomplete categories.
@@ -58,10 +61,11 @@ Canonical pack schemas, IDs and deterministic ZIP remain unchanged.
 Polish search merges public localized prose from installed library/catalog entries with
 backend English search. Accent-insensitive matching supports `opóźnione załączenie` and
 `żywe zero`; aliases include `falownik` to `VFD`, `sterownik` to `PLC` and `wymuszenie` to
-`force`. Untranslated bodies still require English terms or aliases: search coverage is
-**partial**. Filters/ranking are deterministic. Hidden diagnosis/repair/debrief content
+`force`. All public bodies are translated, so Polish words find every article and
+exercise. Filters/ranking are deterministic. Hidden diagnosis/repair/debrief content
 is never indexed. Projection cannot introduce absent repair/debrief data or references.
-All eight cases have projection anti-leak tests; native smoke verifies real backend gates
+All 37 investigations (8 troubleshooting cases, 29 commissioning labs) have projection
+and search anti-leak tests; native smoke verifies real backend gates
 before diagnosis and translated repair/debrief availability after successful verification.
 
 ## Interface and remaining gaps
@@ -77,9 +81,8 @@ remain visible. Settings has focus handling and accessible selectors. Card wrapp
 readable article widths, section spacing, code/table scrolling and provenance layout
 support longer Polish text without shrinking fonts.
 
-Remaining localization gaps: full commissioning instructions/findings; fundamentals,
-protocol/troubleshooting/vendor article titles and bodies; process scene/device names;
-deep Hardware, Network, Watch, Force, variable detail and Diagnostic Buffer forms/messages.
+Remaining localization gaps: process scene/device names; deep Hardware, Network, Watch,
+Force, variable detail, Commissioning findings and Diagnostic Buffer forms/messages.
 These are tracked gaps, not permanent English exceptions. No accurate whole-product
 percentage is claimed. Template source comments remain English because user/template
 comments are not distinguished by rewriting code.
@@ -122,5 +125,5 @@ release evidence and hosted CI. The Windows policy still blocks some generated R
 executables (4551); no security policy change is made. Hosted CI runs full debug/release
 Rust suites.
 
-Next safe dependency: full commissioning localization, then the remaining article
-categories and engineering inspectors. No new PLC/editor/protocol functionality is needed.
+Next safe dependency: the engineering inspectors and backend messages. No new
+PLC/editor/protocol functionality is needed.

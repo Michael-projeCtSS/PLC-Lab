@@ -147,6 +147,9 @@ export function validateLocale(locale) {
       (locale.complete.includes("troubleshooting-cases") &&
         group === "exercises" &&
         data.kind === "troubleshooting") ||
+      (locale.complete.includes("commissioning") &&
+        group === "exercises" &&
+        data.kind === "commissioning") ||
       // Article groups are declared complete by their own name.
       (group !== "exercises" && locale.complete.includes(group))
     )

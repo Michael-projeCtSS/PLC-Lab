@@ -57,9 +57,14 @@ it("missing and stale translations fall back field by field without adding hidde
   ).toBe("New TON title");
   expect(localizeContent(null, "pl")).toBeNull();
 });
+// Troubleshooting cases and commissioning labs: every item with a gated debrief.
+const investigations = raw.items.filter((item) =>
+  item.fields.some((f) => f.path === "troubleshooting.debrief.rootCause"),
+);
 it("every Polish investigation retains the backend repair and debrief gates", () => {
-  const cases = raw.items.filter((item) => item.id.startsWith("ts."));
-  expect(cases).toHaveLength(8);
+  const cases = investigations;
+  expect(cases).toHaveLength(37);
+  expect(cases.filter((item) => item.id.startsWith("ts."))).toHaveLength(8);
   for (const item of cases) {
     const source = canonical(item);
     const brief = source.troubleshooting as Record<string, unknown>;
@@ -133,7 +138,7 @@ it("Polish search includes installed public prose and aliases with deterministic
   expect(searchPolishContent(query, available, null)).toEqual(
     searchPolishContent(query, available, null),
   );
-  for (const item of raw.items.filter((item) => item.id.startsWith("ts."))) {
+  for (const item of investigations) {
     const secret = item.fields.find(
       (f) => f.path === "troubleshooting.debrief.rootCause",
     )!.text;

@@ -23,7 +23,7 @@ test("the Polish overlay validates all declared complete categories and reports 
       complete,
     ]),
     [
-      ["exercises", 49, 49, 20],
+      ["exercises", 49, 49, 49],
       ["lessons", 25, 25, 25],
       ["fundamentals", 25, 25, 25],
       ["instructions", 7, 7, 7],
@@ -32,8 +32,8 @@ test("the Polish overlay validates all declared complete categories and reports 
       ["vendors", 24, 24, 24],
     ],
   );
-  assert.ok(report.missing.length > 0, "do not claim full Polish coverage");
-  assert.ok(report.missing.some((field) => field.startsWith("cm.")));
+  // Every approved prose field has Polish text or an explicit keep reason.
+  assert.deepEqual(report.missing, []);
   for (const { data, group } of canonicalItems().filter(
     (x) => x.group === "exercises" || x.group === "lessons",
   )) {
@@ -158,18 +158,17 @@ test("an unchanged English text counts only with an explicit reason", () => {
   assert.ok(kept.every((f) => f.text === f.source));
 });
 
-test("a declared complete article group fails when one of its fields is missing", () => {
-  for (const group of [
-    "fundamentals",
-    "protocols",
-    "troubleshooting",
-    "vendors",
+test("a declared complete group fails when one of its fields is missing", () => {
+  for (const [declared, prefix] of [
+    ["commissioning", "cm."],
+    ["fundamentals", "fundamentals."],
+    ["protocols", "protocol."],
+    ["troubleshooting", "troubleshooting."],
+    ["vendors", "vendor."],
   ]) {
-    assert.ok(locale.complete.includes(group), group);
-    const item = locale.items.find(
-      (i) => i.id.startsWith(`${group}.`) || i.file.startsWith(`${group}/`),
-    );
-    assert.ok(item, group);
+    assert.ok(locale.complete.includes(declared), declared);
+    const item = locale.items.find((i) => i.id.startsWith(prefix));
+    assert.ok(item, prefix);
     const removed = item.fields.at(-1);
     const report = validateLocale({
       ...locale,
@@ -181,7 +180,7 @@ test("a declared complete article group fails when one of its fields is missing"
       report.errors.includes(
         `${item.id}.${removed.path}: missing in a declared complete category`,
       ),
-      report.errors.join("\n"),
+      `${declared}: ${report.errors.join(" | ")}`,
     );
   }
 });
