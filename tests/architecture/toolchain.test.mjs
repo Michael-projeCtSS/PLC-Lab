@@ -11,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import test from "node:test";
 import {
+  PROBE_TIMEOUT_MS,
   root,
   readToolchain,
   selectToolchain,
@@ -64,7 +65,7 @@ function install(rustupHome, names = tools) {
 
 // Only unit tests simulate version probes. The BAT regression below uses real processes.
 function versions(file, args, options) {
-  assert.equal(options.timeout, 5_000);
+  assert.equal(options.timeout, PROBE_TIMEOUT_MS);
   assert.equal(options.env.RUSTUP_AUTO_INSTALL, "0");
   assert.equal(options.env.RUSTUP_TOOLCHAIN, pin);
   const command = path.basename(file, ".exe");
@@ -231,6 +232,12 @@ test("wrong compiler release, host, component commit, failed execution and timeo
     options.run = (...args) => fail(versions(...args));
     assert.throws(() => selectToolchain(options), /Unusable:/);
   }
+  // A timeout says what happened instead of looking like a broken installation.
+  options.run = () => ({
+    status: null,
+    error: Object.assign(new Error("probe timed out"), { code: "ETIMEDOUT" }),
+  });
+  assert.throws(() => selectToolchain(options), /no answer within 60 s/);
 });
 
 test("missing required formatter and clippy entry points are diagnosed without executing proxies", (t) => {

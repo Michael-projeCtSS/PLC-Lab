@@ -18,6 +18,7 @@ React user interface only displays authoritative state and sends operator action
 | Use the application                 | Double-click **`PLC Lab.exe`** in this folder                |
 | Open a project file                 | `PLC Lab.exe "<file.plclab>"`, or **FREE LAB → Import**      |
 | Build the release from source first | Double-click `BUILD_PLC_LAB_RELEASE.bat`, then `PLC Lab.exe` |
+| Test the native application         | Double-click `TEST_PLC_LAB.bat`                              |
 | Develop with hot reload             | `RUN_PLC_LAB_DEV.bat` or `npm run dev`                       |
 | Preview the UI without a native EXE | Double-click `TEST_PLC_LAB_WEB.bat`                          |
 | Run every check                     | `RUN_ALL_CHECKS.bat` or `npm run validate`                   |

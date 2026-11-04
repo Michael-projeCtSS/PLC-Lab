@@ -4,6 +4,8 @@ import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
+/** How long one toolchain version probe may take (a cold first start is slow). */
+export const PROBE_TIMEOUT_MS = 60_000;
 export const root = fileURLToPath(new URL("../", import.meta.url));
 
 // Shared with explicit CI setup. Ordinary build commands never install Rust.
@@ -110,11 +112,13 @@ export function inspectToolchain(
       env,
       encoding: "utf8",
       windowsHide: true,
-      timeout: 5_000,
+      timeout: PROBE_TIMEOUT_MS,
     });
     const output = result.stdout?.trim() ?? "";
     let problem;
-    if (result.error || result.status !== 0)
+    if (result.error?.code === "ETIMEDOUT")
+      problem = `${result.error.message}: no answer within ${PROBE_TIMEOUT_MS / 1000} s. The first start after a reboot can be slow while security software scans the toolchain; run the command again.`;
+    else if (result.error || result.status !== 0)
       problem =
         result.error?.message ??
         `exit ${result.status}: ${result.stderr || output}`;

@@ -1,6 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+} from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { root, selectToolchain, toolchainEnvironment } from "./toolchain.mjs";
 
@@ -65,16 +70,17 @@ function prepare(mode) {
     throw new Error(
       "npm is missing beside Node.js. Install the standard Node.js distribution with npm.",
     );
-  const applicationNames =
-    mode === "dev"
-      ? ["plc-lab-desktop.exe"]
-      : [
-          "plc-lab-desktop.exe",
-          "PLC Lab.exe",
-          // Entry points of earlier distributions: staging removes their files.
-          "PLC Lab Desktop.exe",
-          "Launcher.exe",
-        ];
+  // The development application shares the single-instance identity of PLC Lab.exe: with
+  // either one open, a development start would hand over to it and quit.
+  const applicationNames = native(mode)
+    ? ["plc-lab-desktop.exe", "PLC Lab.exe"]
+    : [
+        "plc-lab-desktop.exe",
+        "PLC Lab.exe",
+        // Entry points of earlier distributions: staging removes their files.
+        "PLC Lab Desktop.exe",
+        "Launcher.exe",
+      ];
   for (const name of applicationNames) {
     const query = spawnSync(
       path.join(
@@ -91,7 +97,9 @@ function prepare(mode) {
       );
     if (taskListContainsApplication(query.stdout, name))
       throw new Error(
-        `Close the running ${name} window before this operation. Native validation/builds must be able to replace their executable files.`,
+        native(mode)
+          ? `PLC Lab is already running (${name}). Use its window, or close it and start again: a second start would only hand over to the running one.`
+          : `Close the running ${name} window before this operation. Native validation/builds must be able to replace their executable files.`,
       );
   }
   console.log("Checking the pinned Rust toolchain...");
@@ -156,10 +164,96 @@ function prepare(mode) {
   return npmCli;
 }
 
+/** Modes that start the native Tauri development application. */
+export function native(mode) {
+  return mode === "dev" || mode === "test";
+}
+
+/** Windows Code Integrity blocks of PLC Lab build outputs since `since` (read-only). */
+export function codeIntegrityBlocks(since) {
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    `$since = [datetime]::Parse('${since.toISOString()}').ToLocalTime()`,
+    "Get-WinEvent -FilterHashtable @{ LogName = 'Microsoft-Windows-CodeIntegrity/Operational'; Id = 3033, 3077; StartTime = $since } -ErrorAction SilentlyContinue |",
+    "  ForEach-Object { if ($_.Message -match 'load (\\\\Device\\\\.*?\\.(exe|dll))') { \"$($_.Id) $($Matches[1])\" } } |",
+    "  Where-Object { $_ -match 'PLC_Student|plc-lab' } | Select-Object -Unique",
+  ].join("\n");
+  const result = spawnSync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-Command", script],
+    { encoding: "utf8", windowsHide: true, timeout: 60_000 },
+  );
+  if (result.error || result.status !== 0) return null;
+  return result.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+/** Explain a failed native start: a Windows execution block or an application error. */
+function explainNativeFailure(started, log) {
+  const blocks = codeIntegrityBlocks(started);
+  if (blocks === null)
+    console.error(
+      "The Windows Code Integrity log could not be read, so a Windows execution block cannot be ruled out.",
+    );
+  else if (blocks.length) {
+    console.error(
+      [
+        "============================================================",
+        "WINDOWS BLOCKED A PLC LAB FILE (Code Integrity, Smart App Control).",
+        ...blocks.map((b) => `  event ${b}`),
+        "Windows refused to run this unsigned build output. PLC Lab does not change",
+        "security settings and no script can lift this block. See",
+        "docs/HUMAN_TESTING.md#smart-app-control for the legitimate options.",
+        "============================================================",
+      ].join("\n"),
+    );
+  } else
+    console.error(
+      "Windows Code Integrity recorded no block of PLC Lab files: the failure above is a build or application error.",
+    );
+  if (log) console.error(`Full output of this run: ${log}`);
+}
+
+/** Run the development application, mirroring its output into a log file. */
+function runLogged(npmCli, script, log) {
+  mkdirSync(path.dirname(log), { recursive: true });
+  const file = createWriteStream(log);
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      ["--use-system-ca", npmCli, "run", script],
+      { cwd: root, env: toolchainEnvironment(), windowsHide: false },
+    );
+    for (const [from, to] of [
+      [child.stdout, process.stdout],
+      [child.stderr, process.stderr],
+    ])
+      from.on("data", (chunk) => {
+        to.write(chunk);
+        file.write(chunk);
+      });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      file.end();
+      if (code === 0) resolve();
+      else {
+        const error = new Error(
+          `The development application ended with exit ${code}.`,
+        );
+        error.exitCode = code ?? 1;
+        reject(error);
+      }
+    });
+  });
+}
+
 async function main() {
   const mode = process.argv[2];
   const commands = {
     dev: "dev",
+    test: "dev",
     checks: "validate",
     "build-release": "build:release",
   };
@@ -167,12 +261,23 @@ async function main() {
     throw new Error(`Unknown human-test mode: ${mode}`);
   const npmCli = prepare(mode);
   console.log(
-    mode === "dev"
-      ? "[DEV] Starting the real Tauri development application. Close its window to finish."
+    native(mode)
+      ? "[DEV] Starting the native PLC Lab application (Tauri development build, real Rust backend). Its window opens when the build is ready; close it to finish."
       : `Running canonical repository command: npm run ${commands[mode]}`,
   );
-  runNode(["--use-system-ca", npmCli, "run", commands[mode]]);
-  if (mode === "dev")
+  const started = new Date();
+  const log =
+    mode === "test"
+      ? path.join(root, "artifacts", "test-plc-lab", "last-run.log")
+      : null;
+  try {
+    if (log) await runLogged(npmCli, commands[mode], log);
+    else runNode(["--use-system-ca", npmCli, "run", commands[mode]]);
+  } catch (error) {
+    if (native(mode)) explainNativeFailure(started, log);
+    throw error;
+  }
+  if (native(mode))
     console.log(
       "[DEV] Application closed successfully. The development server has stopped.",
     );

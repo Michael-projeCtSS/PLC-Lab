@@ -12,6 +12,7 @@ build), not a launcher, and it starts no other executable (ADR-0030).
 | `resources/` (root)         | Data the application reads: knowledge pack and `product.json`        |
 | `RUN_PLC_LAB.bat` (root)    | Optional fallback that only starts `PLC Lab.exe` next to it          |
 | `BUILD_PLC_LAB_RELEASE.bat` | Validates, builds, signs, verifies and stages the production release |
+| `TEST_PLC_LAB.bat`          | Native development test: Tauri window, Rust backend, kept log        |
 | `RUN_PLC_LAB_DEV.bat`       | Development application with hot reload (`npm run dev`)              |
 | `TEST_PLC_LAB_WEB.bat`      | Browser UI preview with live updates; no native runtime or EXE       |
 | `RUN_ALL_CHECKS.bat`        | Complete validation (`npm run validate`)                             |

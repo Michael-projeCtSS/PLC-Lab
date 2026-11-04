@@ -3,7 +3,13 @@
 Routine testing needs no typed commands. Keep the terminal window of a BAT helper open
 while testing; it explains what runs and preserves errors.
 
-For UI testing on a host that blocks unsigned native builds, double-click
+**To test PLC Lab, double-click TEST_PLC_LAB.bat.** It starts the complete native
+application from this checkout: the Tauri desktop window with the real Rust backend (PLC
+runtime, ST compiler, hardware, process and network simulation, alarms, forces,
+diagnostics, restarts). No browser and no signing certificate are involved. See
+[native development test](#native-development-test-test_plc_labbat).
+
+For UI-only testing on a host that blocks every unsigned native build, double-click
 **TEST_PLC_LAB_WEB.bat**. It opens the real browser UI with an explicit preview banner,
 PL/EN content and live updates, without starting PLC Lab.exe. PLC simulation remains
 native. See [local testing](LOCAL_TESTING.md) for capabilities, shutdown, troubleshooting
@@ -38,11 +44,45 @@ App Control. To obtain a production executable from protected CI, extract its
 `SIGNED-production` artifact and run `npm run release:install -- <extracted-directory>`.
 This verifies and stages the signed application at the normal root path.
 
-## Development application
+## Native development test (TEST_PLC_LAB.bat)
 
-Double-click **RUN_PLC_LAB_DEV.bat**: the Tauri development application from the current
-source tree with hot reload. Dependencies are installed with `npm ci` only when they
-differ from the lockfile.
+Double-click **TEST_PLC_LAB.bat**. It finds the repository from its own folder (spaces in
+paths are fine), checks Node.js and the pinned Rust toolchain, installs JavaScript
+dependencies with `npm ci` only when they differ from the lockfile, and runs the normal
+Tauri development workflow (`npm run dev`). Cargo builds the development application
+incrementally; when it is ready the PLC Lab window opens. The page inside the window is
+served by Tauri's development server, but it is the native window with the Rust backend,
+not a browser. Close the window to finish: the development server stops with it.
+
+- Only one PLC Lab runs at a time. If `plc-lab-desktop.exe` or `PLC Lab.exe` is already
+  open, the BAT says so and does nothing: both share one single-instance identity, so a
+  second start would only hand over to the running window.
+- The whole output of the last run is kept in `artifacts\test-plc-lab\last-run.log`, and
+  the window stays open after a failure until you press a key.
+- After a failed start the launcher reads the Windows Code Integrity log: it either names
+  the exact file Windows refused to run (see [Smart App Control](#smart-app-control)) or
+  states that Windows recorded no block, so the problem is a build or application error.
+
+**RUN_PLC_LAB_DEV.bat** runs the same development application without the log file.
+
+`node tests/e2e/dev-session-check.mjs` verifies a whole session on this machine: it starts
+`TEST_PLC_LAB.bat` from another folder, attaches to the native window and checks the Rust
+IPC, the Polish interface, a Free Lab ST program with `VAR RETAIN` and `FIRST_SCAN` in RUN,
+backend values, the alarm view, warm and cold restarts with their diagnostics and a clean
+close, with its data kept in `artifacts\dev-session-check`.
+
+## Smart App Control
+
+Smart App Control decides per executable file. The root `PLC Lab.exe` (a staged, unsigned
+release build) and the development application `target\debug\plc-lab-desktop.exe` are
+different files and can be treated differently; on the development machine the release
+build is refused while the development build runs. A BAT file cannot lift a block of the
+executable it starts, and PLC Lab never changes security settings. If Windows blocks the
+development application too, the launcher prints the file and the Code Integrity event
+(3033 or 3077). The legitimate options are then a signed production release (see
+[Windows code signing](WINDOWS_CODE_SIGNING.md)), the browser UI preview
+(**TEST_PLC_LAB_WEB.bat**), or testing in a separate Windows Sandbox/VM
+([local testing](LOCAL_TESTING.md)).
 
 ## Validate
 
@@ -75,7 +115,8 @@ Windows x64 host `x86_64-pc-windows-msvc`, minimal profile with rustfmt and clip
 
 A `cargo.exe` proxy alone is insufficient. The selector checks the installed toolchain
 files, then runs the actual compiler, Cargo, rustfmt, clippy-driver and rustdoc with a
-five-second timeout per command. It verifies the compiler release/host, Cargo and rustdoc
+60-second timeout per command (the first start after a reboot can be slow while security
+software scans the toolchain; a timeout is reported as such). It verifies the compiler release/host, Cargo and rustdoc
 release, and the formatter/clippy compiler commit. Cargo's formatter/clippy entry points
 must also exist. It never calls rustup proxies to test availability. The selected
 environment places the actual toolchain binaries first, sets explicit compiler/doc paths,

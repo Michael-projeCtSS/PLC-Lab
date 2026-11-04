@@ -216,6 +216,7 @@ test("root BAT helpers resolve every path from their own folder", async () => {
   for (const name of [
     "RUN_PLC_LAB.bat",
     "RUN_PLC_LAB_DEV.bat",
+    "TEST_PLC_LAB.bat",
     "RUN_ALL_CHECKS.bat",
     "BUILD_PLC_LAB_RELEASE.bat",
   ]) {
@@ -229,4 +230,29 @@ test("root BAT helpers resolve every path from their own folder", async () => {
     for (const line of text.split(/\r?\n/).filter((l) => l.includes("%~dp0")))
       assert.match(line, /"[^"]*%~dp0/, `${name}: unquoted %~dp0 in ${line}`);
   }
+});
+
+test("TEST_PLC_LAB.bat starts the native development application without signing", async () => {
+  const { native } = await import("../../scripts/human-test.mjs");
+  assert.ok(native("test") && native("dev"));
+  assert.ok(!native("build-release") && !native("checks"));
+  const bat = await readFile(path.join(root, "TEST_PLC_LAB.bat"), "utf8");
+  assert.match(bat, /scripts\\human-launcher\.bat" "%~dp0" test/);
+  assert.match(bat, /artifacts\\test-plc-lab\\last-run\.log/);
+  // Its commands need no signing, open no browser and start no other executable.
+  const commands = bat
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*rem\b/i.test(line))
+    .join("\n");
+  assert.doesNotMatch(commands, /sign|certificate|vite|http|start ""/i);
+  // The test mode runs the same Tauri development command as RUN_PLC_LAB_DEV.bat.
+  const manifest = JSON.parse(
+    await readFile(path.join(root, "package.json"), "utf8"),
+  );
+  assert.equal(manifest.scripts.dev, "node scripts/native.mjs dev");
+  const launcher = await readFile(
+    path.join(root, "scripts/human-test.mjs"),
+    "utf8",
+  );
+  assert.match(launcher, /test: "dev",/);
 });
