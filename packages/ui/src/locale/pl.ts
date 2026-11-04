@@ -1,22 +1,5 @@
 import type { TranslationKey } from "./en";
 export const pl = {
-  "preview.title": "TRYB PODGLĄDU INTERFEJSU",
-  "preview.description":
-    "Aplikacja działa bez natywnego zaplecza Rust. Symulacja PLC, narzędzia sprzętowe i ocenianie są niedostępne.",
-  "preview.nativeTitle": "Wymagane natywne zaplecze",
-  "preview.nativeRequired":
-    "Do wykonywania programów PLC, symulacji, obsługi plików projektów i zapisywania postępów użyj aplikacji desktopowej w izolowanym środowisku testowym Windows.",
-  "preview.isolation":
-    "Instrukcja testowania w Windows Sandbox i maszynie wirtualnej: docs/LOCAL_TESTING.md.",
-  "preview.editor":
-    "Testuj edytor i nawigację Podstawowy/Zaawansowany. Tekst nie jest kompilowany ani wykonywany.",
-  "preview.unsaved":
-    "Tekst podglądu jest tymczasowy; projekt nie jest zapisywany.",
-  "preview.noProgress":
-    "Projekty desktopowe i postępy użytkownika nie są wczytywane w podglądzie interfejsu.",
-  "preview.details": "Podgląd szczegółów",
-  "preview.sourceContent":
-    "Podgląd odczytuje publiczne lekcje, artykuły i metadane katalogów z repozytorium. Nie odczytuje natywnych, zainstalowanych pakietów wiedzy.",
   "about.indexed": "Zindeksowane elementy: {count}",
   "about.counts":
     "Artykuły: {articles} · Lekcje: {lessons} · Ćwiczenia: {exercises} · Sceny: {scenes} · Źródła: {sources} · Profile platform: {profiles}",

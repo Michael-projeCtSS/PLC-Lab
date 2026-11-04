@@ -47,7 +47,6 @@ export function validationPlan(lane, platform = process.platform) {
       npm("release-native", ["run", "test:desktop:release"], platform),
       npm("release-relocated", ["run", "test:release:relocated"], platform),
       npm("release-bat", ["run", "test:release:bat"], platform),
-      npm("web-preview", ["run", "test:web"], platform),
     ];
   if (lane === "core")
     return [

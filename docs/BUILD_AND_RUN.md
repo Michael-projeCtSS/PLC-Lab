@@ -14,12 +14,12 @@ build), not a launcher, and it starts no other executable (ADR-0030).
 | `BUILD_PLC_LAB_RELEASE.bat` | Validates, builds, signs, verifies and stages the production release |
 | `TEST_PLC_LAB.bat`          | Native development test: Tauri window, Rust backend, kept log        |
 | `RUN_PLC_LAB_DEV.bat`       | Development application with hot reload (`npm run dev`)              |
-| `TEST_PLC_LAB_WEB.bat`      | Browser UI preview with live updates; no native runtime or EXE       |
 | `RUN_ALL_CHECKS.bat`        | Complete validation (`npm run validate`)                             |
 
-For a host that blocks unsigned EXEs, use the browser preview for UI work and a
-separate Sandbox/VM for native simulation. These workflows preserve host security
-and production signing: [local testing guide](LOCAL_TESTING.md).
+On a host whose Smart App Control refuses the staged unsigned `PLC Lab.exe`, test with
+`TEST_PLC_LAB.bat`: the development build is a different file and may be allowed. See
+[human testing](HUMAN_TESTING.md#smart-app-control); PLC Lab never changes security
+settings.
 
 `PLC Lab.exe` resolves everything relative to its own location, so it works when started
 from Explorer, CMD or PowerShell, from any working directory, from a folder whose path

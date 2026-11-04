@@ -1,6 +1,10 @@
 # ADR-0040: Read-only development browser presentation
 
-Status: Accepted within the authorized local testing recovery task.
+Status: Superseded (2026-11-04). The standalone browser preview, its read-only Vite
+content endpoint, preview pages and the isolated Windows guest helpers were retired: PLC
+Lab is a Windows desktop application, and `TEST_PLC_LAB.bat` runs the native development
+application with the real Rust backend. The Tauri WebView frontend is unaffected. The
+decision below is kept as history.
 
 ## Context
 

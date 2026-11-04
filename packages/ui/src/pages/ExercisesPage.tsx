@@ -1,9 +1,7 @@
 import { useInterface } from "../locale";
 import { useState } from "react";
-import { type ExerciseSummaryDto } from "@plc-lab/ipc";
-import { Badge, Empty, ErrorNotice, Modal } from "../ui";
-import { presentation, uiPreview } from "../presentation";
-import { NativeRequired } from "../preview/Preview";
+import { api, type ExerciseSummaryDto } from "@plc-lab/ipc";
+import { Badge, Empty, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
 import {
   openExercise,
@@ -37,17 +35,12 @@ export function ExercisesPage({
   navigate: Navigate;
 }) {
   const { t } = useInterface();
-  const library = useLoad(() => presentation.library(), []);
-  const [preview, setPreview] = useState<ExerciseSummaryDto | null>(null);
+  const library = useLoad(() => api.library(), []);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const items = (library.data?.exercises ?? []).filter((e) => e.kind === kind);
   const section = sectionOf(kind);
   const start = (e: ExerciseSummaryDto) => {
-    if (uiPreview()) {
-      setPreview(e);
-      return;
-    }
     setBusy(e.id);
     openExercise(e.id, navigate, section).catch((err: unknown) => {
       setError(err);
@@ -108,11 +101,9 @@ export function ExercisesPage({
                     <span>
                       {busy === e.id
                         ? t("common.opening")
-                        : uiPreview()
-                          ? t("preview.details")
-                          : e.attempts > 0
-                            ? t("common.continue")
-                            : t("common.start")}
+                        : e.attempts > 0
+                          ? t("common.continue")
+                          : t("common.start")}
                     </span>
                   </div>
                 </button>
@@ -121,15 +112,6 @@ export function ExercisesPage({
           </section>
         );
       })}
-      {preview && (
-        <Modal title={preview.title} onClose={() => setPreview(null)}>
-          <p>{preview.summary}</p>
-          <NativeRequired />
-          <button className="btn" onClick={() => setPreview(null)}>
-            {t("common.close")}
-          </button>
-        </Modal>
-      )}
     </div>
   );
 }

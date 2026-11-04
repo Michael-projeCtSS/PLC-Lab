@@ -5,8 +5,6 @@ import { Markdown } from "../Markdown";
 import { Badge, Empty, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
 import { openExercise, type Navigate } from "../route";
-import { presentation, uiPreview } from "../presentation";
-import { NativeRequired } from "../preview/Preview";
 
 export function LearnPage({
   lessonId,
@@ -16,7 +14,7 @@ export function LearnPage({
   navigate: Navigate;
 }) {
   const { t } = useInterface();
-  const library = useLoad(() => presentation.library(), []);
+  const library = useLoad(() => api.library(), []);
   const lessons = library.data?.lessons ?? [];
   const current =
     lessonId ?? lessons.find((l) => !l.completed)?.id ?? lessons[0]?.id ?? null;
@@ -122,7 +120,7 @@ function LessonView({
   onCompleted: () => void;
 }) {
   const { t } = useInterface();
-  const lesson = useLoad<LessonDto>(() => presentation.lesson(id), [id]);
+  const lesson = useLoad<LessonDto>(() => api.lesson(id), [id]);
   const [answers, setAnswers] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<boolean>(false);
   const [error, setError] = useState<unknown>(null);
@@ -165,7 +163,6 @@ function LessonView({
         </div>
       )}
       <ErrorNotice error={error} onDismiss={() => setError(null)} />
-      {uiPreview() && <NativeRequired />}
       {l.sections.map((s, i) => (
         <section key={i}>
           <h4 style={{ marginTop: 22 }}>
@@ -189,7 +186,6 @@ function LessonView({
           {s.scene && (
             <button
               className="btn"
-              disabled={uiPreview()}
               onClick={() => void openScene(s.scene ?? "")}
             >
               {t("learn.sandbox")}
@@ -198,7 +194,6 @@ function LessonView({
           {s.exercise && (
             <button
               className="btn btn-primary"
-              disabled={uiPreview()}
               onClick={() =>
                 void openExercise(s.exercise ?? "", navigate, "learn").catch(
                   setError,
@@ -225,7 +220,7 @@ function LessonView({
       <div className="row" style={{ marginTop: 16 }}>
         <button
           className="btn btn-primary"
-          disabled={uiPreview() || answered < l.checkpoint.length}
+          disabled={answered < l.checkpoint.length}
           onClick={() =>
             api.completeLesson(l.id, correct, l.checkpoint.length).then(() => {
               setSaved(true);

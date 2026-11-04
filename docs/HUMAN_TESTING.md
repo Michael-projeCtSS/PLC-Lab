@@ -9,12 +9,6 @@ runtime, ST compiler, hardware, process and network simulation, alarms, forces,
 diagnostics, restarts). No browser and no signing certificate are involved. See
 [native development test](#native-development-test-test_plc_labbat).
 
-For UI-only testing on a host that blocks every unsigned native build, double-click
-**TEST_PLC_LAB_WEB.bat**. It opens the real browser UI with an explicit preview banner,
-PL/EN content and live updates, without starting PLC Lab.exe. PLC simulation remains
-native. See [local testing](LOCAL_TESTING.md) for capabilities, shutdown, troubleshooting
-and verified unsigned testing in a separate Windows Sandbox/VM.
-
 ## Start the release
 
 Double-click **PLC Lab.exe** in the repository root. It is the application itself (the
@@ -79,10 +73,9 @@ different files and can be treated differently; on the development machine the r
 build is refused while the development build runs. A BAT file cannot lift a block of the
 executable it starts, and PLC Lab never changes security settings. If Windows blocks the
 development application too, the launcher prints the file and the Code Integrity event
-(3033 or 3077). The legitimate options are then a signed production release (see
-[Windows code signing](WINDOWS_CODE_SIGNING.md)), the browser UI preview
-(**TEST_PLC_LAB_WEB.bat**), or testing in a separate Windows Sandbox/VM
-([local testing](LOCAL_TESTING.md)).
+(3033 or 3077). The legitimate option is then a signed production release (see
+[Windows code signing](WINDOWS_CODE_SIGNING.md)) or another Windows machine whose policy
+allows the development build.
 
 ## Validate
 

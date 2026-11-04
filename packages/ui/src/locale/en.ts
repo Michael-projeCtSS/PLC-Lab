@@ -1,20 +1,4 @@
 export const en = {
-  "preview.title": "UI PREVIEW",
-  "preview.description":
-    "Running without the native Rust backend. PLC simulation, hardware tools and grading are unavailable.",
-  "preview.nativeTitle": "Native backend required",
-  "preview.nativeRequired":
-    "Use the real desktop application in an isolated Windows test environment for PLC execution, simulation, project files and saved progress.",
-  "preview.isolation":
-    "See docs/LOCAL_TESTING.md for Windows Sandbox and virtual machine testing.",
-  "preview.editor":
-    "Test the editor and Basic/Advanced navigation. The text is not compiled or executed.",
-  "preview.unsaved": "Preview text is temporary; no project is saved.",
-  "preview.noProgress":
-    "Desktop projects and learner progress are not loaded in UI preview.",
-  "preview.details": "Preview details",
-  "preview.sourceContent":
-    "This preview reads the repository's public lessons, articles and catalogue metadata. It does not read installed native knowledge packs.",
   "about.indexed": "{count} indexed items",
   "about.counts":
     "{articles} articles · {lessons} lessons · {exercises} exercises · {scenes} scenes · {sources} sources · {profiles} platform profiles",

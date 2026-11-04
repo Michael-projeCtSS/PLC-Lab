@@ -11,12 +11,6 @@ import { WorkspacePage } from "./workspace/WorkspacePage";
 import type { Navigate, Route } from "./route";
 import { PreferencesProvider, useInterface } from "./locale";
 import { Settings } from "./pages/Settings";
-import { uiPreview } from "./presentation";
-import {
-  PreviewBanner,
-  PreviewUnavailable,
-  PreviewWorkspace,
-} from "./preview/Preview";
 
 const NAV = [
   "home",
@@ -59,7 +53,6 @@ function Application() {
   // A project requested by a launch (root launcher, second instance) opens here; the host
   // resolved and validated the file, the view only takes the result.
   useEffect(() => {
-    if (!api.available()) return;
     let active = true;
     const take = () =>
       api.takeOpenRequest().then(
@@ -94,7 +87,6 @@ function Application() {
       className="app"
       data-density={preferences.density}
       data-explanations={preferences.explanations}
-      data-preview={uiPreview()}
     >
       <header className="topbar">
         <div className="brand">
@@ -116,7 +108,7 @@ function Application() {
         </nav>
         <div className="topbar-right">
           {!api.available() && (
-            <span className="badge warning">{t("preview.title")}</span>
+            <span className="badge warning">{t("common.preview")}</span>
           )}
           <button
             className="btn btn-ghost btn-sm"
@@ -134,7 +126,6 @@ function Application() {
           </button>
         </div>
       </header>
-      {uiPreview() && <PreviewBanner />}
       <main className="page" id="main">
         {openProblem && (
           <div className="notice error" role="alert" style={{ margin: 16 }}>
@@ -160,12 +151,7 @@ function Application() {
         {route.page === "troubleshoot" && (
           <ExercisesPage kind="troubleshooting" navigate={navigate} />
         )}
-        {route.page === "freelab" &&
-          (uiPreview() ? (
-            <PreviewWorkspace />
-          ) : (
-            <FreeLabPage navigate={navigate} />
-          ))}
+        {route.page === "freelab" && <FreeLabPage navigate={navigate} />}
         {route.page === "knowledge" && (
           <KnowledgePage
             articleId={route.article}
@@ -173,24 +159,16 @@ function Application() {
             navigate={navigate}
           />
         )}
-        {route.page === "progress" &&
-          (uiPreview() ? (
-            <PreviewUnavailable title={t("progress.title")} />
-          ) : (
-            <ProgressPage navigate={navigate} />
-          ))}
+        {route.page === "progress" && <ProgressPage navigate={navigate} />}
         {route.page === "about" && <AboutPage />}
-        {route.page === "workspace" &&
-          (uiPreview() ? (
-            <PreviewWorkspace />
-          ) : (
-            <WorkspacePage
-              key={route.projectId}
-              projectId={route.projectId}
-              navigate={navigate}
-              back={route.section}
-            />
-          ))}
+        {route.page === "workspace" && (
+          <WorkspacePage
+            key={route.projectId}
+            projectId={route.projectId}
+            navigate={navigate}
+            back={route.section}
+          />
+        )}
       </main>
       {settings && <Settings onClose={() => setSettings(false)} />}
     </div>

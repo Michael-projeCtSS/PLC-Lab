@@ -20,7 +20,6 @@ React user interface only displays authoritative state and sends operator action
 | Build the release from source first | Double-click `BUILD_PLC_LAB_RELEASE.bat`, then `PLC Lab.exe` |
 | Test the native application         | Double-click `TEST_PLC_LAB.bat`                              |
 | Develop with hot reload             | `RUN_PLC_LAB_DEV.bat` or `npm run dev`                       |
-| Preview the UI without a native EXE | Double-click `TEST_PLC_LAB_WEB.bat`                          |
 | Run every check                     | `RUN_ALL_CHECKS.bat` or `npm run validate`                   |
 
 `PLC Lab.exe` is the application itself, not a launcher: double-click it and PLC Lab
@@ -36,10 +35,9 @@ current Windows). The executable is not code-signed; Windows Smart App Control o
 SmartScreen may refuse to start a locally built copy. See
 [build and run](docs/BUILD_AND_RUN.md).
 
-**TEST_PLC_LAB_WEB.bat** opens the local UI preview with PL/EN, real lessons/articles,
-Settings and live updates. PLC execution and grading require the native Rust backend.
-For unsigned native testing in a separate Windows Sandbox/VM, see
-[local testing](docs/LOCAL_TESTING.md). Host security and production signing stay unchanged.
+**TEST_PLC_LAB.bat** starts the same native application from the source tree: the Tauri
+window with the real Rust backend, with no signing certificate. It is the everyday way to
+test PLC Lab on a development machine; see [human testing](docs/HUMAN_TESTING.md).
 
 ## How to learn with it
 
