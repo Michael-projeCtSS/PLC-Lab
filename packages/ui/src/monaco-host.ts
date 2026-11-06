@@ -111,15 +111,44 @@ monaco.editor.defineTheme("plc-lab-dark", {
   },
 });
 
+monaco.editor.defineTheme("plc-lab-light", {
+  base: "vs",
+  inherit: true,
+  rules: [
+    { token: "keyword", foreground: "1b5fa8" },
+    { token: "type", foreground: "17734f" },
+    { token: "constant", foreground: "855a00" },
+    { token: "number", foreground: "7440a6" },
+    { token: "comment", foreground: "5d6c79", fontStyle: "italic" },
+  ],
+  colors: {
+    "editor.background": "#ffffff",
+    "editor.lineHighlightBackground": "#eef2f6",
+    "editorLineNumber.foreground": "#6b7987",
+  },
+});
+
+export type EditorTheme = "dark" | "light";
+const MONACO_THEME: Record<EditorTheme, string> = {
+  dark: "plc-lab-dark",
+  light: "plc-lab-light",
+};
+
+/** Switch every editor's theme in place: models, undo history and selections stay. */
+export function setEditorTheme(theme: EditorTheme) {
+  monaco.editor.setTheme(MONACO_THEME[theme]);
+}
+
 export function createStEditor(
   element: HTMLElement,
   source: string,
   onChange: (source: string) => void,
+  theme: EditorTheme = "dark",
 ) {
   const model = monaco.editor.createModel(source, ST_LANGUAGE_ID);
   const editor = monaco.editor.create(element, {
     model,
-    theme: "plc-lab-dark",
+    theme: MONACO_THEME[theme],
     automaticLayout: true,
     minimap: { enabled: false },
     fontFamily: "Cascadia Mono, Consolas, monospace",

@@ -1194,7 +1194,7 @@ try {
 
   if (!values.bat)
     await step(
-      "language and density survive closing and restarting the real application",
+      "language, density and theme survive closing and restarting the real application",
       async () => {
         const answers = async () => {
           try {
@@ -1260,6 +1260,18 @@ try {
                 await view.locator(".app").getAttribute("data-explanations"),
                 "false",
               );
+              assert.equal(
+                await view.evaluate(
+                  () => document.documentElement.dataset.theme,
+                ),
+                "light",
+              );
+              assert.equal(
+                await view.evaluate(
+                  () => getComputedStyle(document.body).backgroundColor,
+                ),
+                "rgb(238, 241, 244)",
+              );
             }
             await view
               .getByRole("button", {
@@ -1282,6 +1294,9 @@ try {
                   : "Beginner explanations",
               )
               .setChecked(expected !== "en");
+            await view
+              .getByLabel(expected === "en" ? "Motyw" : "Theme")
+              .selectOption(expected === "en" ? "light" : "dark");
             await current.close();
             current = undefined;
             const close = spawnSync(

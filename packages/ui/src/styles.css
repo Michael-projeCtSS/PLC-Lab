@@ -12,7 +12,7 @@
   --text-0: #e4eaef;
   --text-1: #b5c1cb;
   --text-2: #8696a4;
-  --text-3: #5c6b78;
+  --text-3: #8494a3;
   --accent: #4f9be0;
   --accent-dim: #24496b;
   --st-normal: #8696a4;
@@ -22,15 +22,172 @@
   --st-manual: #c99a4a;
   --st-auto: #5aa0e6;
   --st-warning: #e2a43a;
-  --st-fault: #e5534b;
+  --st-fault: #ec635b;
   --st-bad: #b47be0;
   --st-comm: #df7a45;
   --st-forced: #e3c443;
   --fluid: #3d8fd6;
   --metal: #7d8a96;
+  --brand-from: #3a7fc0;
+  --brand-to: #2b5d8c;
+  --primary-bg: #2b6aa5;
+  --primary-border: #3a7dbd;
+  --primary-hover: #3277b8;
+  --danger-line: #7a3533;
+  --danger-bg: #3a1f1f;
+  --danger-tint: #2a1717;
+  --danger-text: #f2c4c1;
+  --ok-line: #275e4a;
+  --ok-tint: #15291f;
+  --ok-notice: #13261d;
+  --ok-text: #bfe9d6;
+  --ok-strong: #2f7a5a;
+  --ok-done: #1d3b2e;
+  --stopped-line: #6b5524;
+  --stopped-tint: #2a2214;
+  --warn-line: #6b5220;
+  --warn-tint: #2b2312;
+  --warn-notice: #2a2213;
+  --warn-text: #f0d9a8;
+  --on-fault: #fff;
+  --fault-line: #b43e37;
+  --fault-fill: #8e2b26;
+  --bad-line: #5c3f75;
+  --bad-tint: #241a2d;
+  --comm-line: #6d3c23;
+  --comm-tint: #2c1b12;
+  --on-forced: #1b1a10;
+  --glow-active: #3dbb8a88;
+  --glow-fault: #e5534b88;
+  --changed-bg: #23405d;
+  --hero-from: #18222c;
+  --hero-to: #121920;
+  --diagram-text: #a9c6de;
+  --canvas: #11171c;
+  --symbol-stroke: #8a98a5;
+  --symbol-fill: #1e262e;
+  --pipe: #4a5866;
+  --module-bg: #1c242c;
+  --node-stroke: #6f7d8a;
+  --plot-grid: #1f2830;
+  --trace-num: #5aa0e6;
+  --plot-cursor: #d8dee4;
+  --event-error: #f2b8b4;
+  --event-warning: #ecd29c;
+  --on-primary: #e4eaef;
+  --backdrop: #0008;
+  --shadow: #0008;
+  --lamp-green: #3dbb8a;
+  --lamp-red: #e5534b;
+  --lamp-amber: #e2a43a;
+  --lamp-white: #e8edf1;
+  --lamp-blue: #4f9be0;
+  --svg-shadow: #0008;
+  --hmi-cap: #c9d2da;
+  --hmi-off: #2a3138;
+  --hmi-edge: #2a3540;
+  --hmi-panel: #232c35;
+  --hmi-beam-off: #3a4652;
+  --hmi-target: #4b5a68;
+  --display-bg: #0d1a14;
+  --display-text: #8fe0b8;
   --radius: 4px;
   --font: "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+/* Light theme: the same semantic tokens with light-surface values. Colours meet WCAG
+   AA (text 4.5:1, large text and controls 3:1); scripts/theme-contrast.mjs checks them. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-0: #eef1f4;
+  --bg-1: #ffffff;
+  --bg-2: #f5f7f9;
+  --bg-3: #e6ebf0;
+  --bg-4: #d8dfe6;
+  --line: #d5dce3;
+  --line-strong: #b4bfca;
+  --text-0: #15202b;
+  --text-1: #2f3d4a;
+  --text-2: #4d5d6b;
+  --text-3: #56657a;
+  --accent: #1b66b1;
+  --accent-dim: #d4e5f7;
+  --st-normal: #4d5d6b;
+  --st-active: #137a52;
+  --st-running: #137a52;
+  --st-stopped: #8a6410;
+  --st-manual: #8a6014;
+  --st-auto: #1f64ad;
+  --st-warning: #8f5f00;
+  --st-fault: #b02f29;
+  --st-bad: #7b48a8;
+  --st-comm: #a24a1a;
+  --st-forced: #e3c443;
+  --fluid: #3d8fd6;
+  --metal: #8794a0;
+  --brand-from: #3a7fc0;
+  --brand-to: #2b5d8c;
+  --primary-bg: #1b66b1;
+  --primary-border: #17599b;
+  --primary-hover: #1e70c2;
+  --on-primary: #ffffff;
+  --danger-line: #e0a7a3;
+  --danger-bg: #fbeaea;
+  --danger-tint: #fdf0ef;
+  --danger-text: #8f241e;
+  --ok-line: #9fd2bb;
+  --ok-tint: #e7f5ee;
+  --ok-notice: #e9f6f0;
+  --ok-text: #135c3f;
+  --ok-strong: #5fb08c;
+  --ok-done: #dff1e8;
+  --stopped-line: #e2c98f;
+  --stopped-tint: #fbf3e1;
+  --warn-line: #e6c27e;
+  --warn-tint: #fcf3df;
+  --warn-notice: #fdf5e3;
+  --warn-text: #6e4a00;
+  --on-fault: #ffffff;
+  --fault-line: #8f241e;
+  --fault-fill: #b02f29;
+  --bad-line: #c9b0e2;
+  --bad-tint: #f3ecfa;
+  --comm-line: #ecbb9d;
+  --comm-tint: #fcefe6;
+  --on-forced: #1b1a10;
+  --glow-active: #13a06a66;
+  --glow-fault: #d8443c66;
+  --changed-bg: #d3e6fa;
+  --hero-from: #ffffff;
+  --hero-to: #eef3f8;
+  --diagram-text: #1f4e7a;
+  --canvas: #f7f9fb;
+  --symbol-stroke: #5b6a78;
+  --symbol-fill: #ffffff;
+  --pipe: #93a2b0;
+  --module-bg: #ffffff;
+  --node-stroke: #6d7c8a;
+  --plot-grid: #e1e7ec;
+  --trace-num: #1f64ad;
+  --plot-cursor: #3b4a57;
+  --event-error: #a3281f;
+  --event-warning: #7a5200;
+  --backdrop: #0f1a2466;
+  --shadow: #0f1a2433;
+  --lamp-green: #1fa36d;
+  --lamp-red: #d8443c;
+  --lamp-amber: #d99128;
+  --lamp-white: #fffdf0;
+  --lamp-blue: #2f7fd0;
+  --svg-shadow: #0f1a2455;
+  --hmi-cap: #d2d9e0;
+  --hmi-off: #cfd6dd;
+  --hmi-edge: #b9c3cc;
+  --hmi-panel: #e9edf1;
+  --hmi-beam-off: #c3ccd5;
+  --hmi-target: #8a98a5;
+  --display-bg: #0d1a14;
+  --display-text: #8fe0b8;
 }
 
 * {
@@ -149,7 +306,7 @@ textarea {
   width: 20px;
   height: 20px;
   border-radius: 3px;
-  background: linear-gradient(135deg, #3a7fc0, #2b5d8c);
+  background: linear-gradient(135deg, var(--brand-from), var(--brand-to));
   display: grid;
   place-items: center;
   font-size: 10px;
@@ -228,11 +385,12 @@ textarea {
   cursor: default;
 }
 .btn-primary {
-  background: #2b6aa5;
-  border-color: #3a7dbd;
+  background: var(--primary-bg);
+  border-color: var(--primary-border);
+  color: var(--on-primary);
 }
 .btn-primary:hover:not(:disabled) {
-  background: #3277b8;
+  background: var(--primary-hover);
 }
 .btn-ghost {
   background: transparent;
@@ -243,8 +401,8 @@ textarea {
   background: var(--bg-3);
 }
 .btn-danger {
-  border-color: #7a3533;
-  background: #3a1f1f;
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
 }
 .btn-sm {
   height: 24px;
@@ -327,36 +485,36 @@ textarea.input {
 .badge.active,
 .badge.running {
   color: var(--st-running);
-  border-color: #275e4a;
-  background: #15291f;
+  border-color: var(--ok-line);
+  background: var(--ok-tint);
 }
 .badge.stopped {
   color: var(--st-stopped);
-  border-color: #6b5524;
-  background: #2a2214;
+  border-color: var(--stopped-line);
+  background: var(--stopped-tint);
 }
 .badge.warning {
   color: var(--st-warning);
-  border-color: #6b5220;
-  background: #2b2312;
+  border-color: var(--warn-line);
+  background: var(--warn-tint);
 }
 .badge.fault {
-  color: #fff;
-  border-color: #b43e37;
-  background: #8e2b26;
+  color: var(--on-fault);
+  border-color: var(--fault-line);
+  background: var(--fault-fill);
 }
 .badge.bad {
   color: var(--st-bad);
-  border-color: #5c3f75;
-  background: #241a2d;
+  border-color: var(--bad-line);
+  background: var(--bad-tint);
 }
 .badge.comm {
   color: var(--st-comm);
-  border-color: #6d3c23;
-  background: #2c1b12;
+  border-color: var(--comm-line);
+  background: var(--comm-tint);
 }
 .badge.forced {
-  color: #1b1a10;
+  color: var(--on-forced);
   background: var(--st-forced);
   border-color: var(--st-forced);
 }
@@ -376,14 +534,14 @@ textarea.input {
 }
 .dot.on {
   background: var(--st-active);
-  box-shadow: 0 0 6px #3dbb8a88;
+  box-shadow: 0 0 6px var(--glow-active);
 }
 .dot.amber {
   background: var(--st-stopped);
 }
 .dot.red {
   background: var(--st-fault);
-  box-shadow: 0 0 6px #e5534b88;
+  box-shadow: 0 0 6px var(--glow-fault);
 }
 .dot.flash {
   animation: flash 1s steps(2, start) infinite;
@@ -421,19 +579,19 @@ textarea.input {
   color: var(--text-1);
 }
 .notice.error {
-  border-color: #7a3533;
-  background: #2a1717;
-  color: #f2c4c1;
+  border-color: var(--danger-line);
+  background: var(--danger-tint);
+  color: var(--danger-text);
 }
 .notice.warning {
-  border-color: #6b5220;
-  background: #2a2213;
-  color: #f0d9a8;
+  border-color: var(--warn-line);
+  background: var(--warn-notice);
+  color: var(--warn-text);
 }
 .notice.success {
-  border-color: #275e4a;
-  background: #13261d;
-  color: #bfe9d6;
+  border-color: var(--ok-line);
+  background: var(--ok-notice);
+  color: var(--ok-text);
 }
 .tabs {
   display: flex;
@@ -503,7 +661,7 @@ textarea.input {
   color: var(--text-2);
 }
 .value.changed {
-  background: #23405d;
+  background: var(--changed-bg);
   border-radius: 2px;
   padding: 0 3px;
 }
@@ -519,7 +677,7 @@ textarea.input {
   padding: 24px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: linear-gradient(160deg, #18222c 0%, #121920 100%);
+  background: linear-gradient(160deg, var(--hero-from) 0%, var(--hero-to) 100%);
 }
 .hero-main h1 {
   font-size: 26px;
@@ -622,8 +780,8 @@ textarea.input {
   flex: none;
 }
 .lesson-number.done {
-  background: #1d3b2e;
-  border-color: #2f7a5a;
+  background: var(--ok-done);
+  border-color: var(--ok-strong);
   color: var(--st-active);
 }
 .progress-bar {
@@ -784,12 +942,12 @@ textarea.input {
   color: var(--text-0);
 }
 .quiz-option.correct {
-  border-color: #2f7a5a;
-  background: #15291f;
+  border-color: var(--ok-strong);
+  background: var(--ok-tint);
 }
 .quiz-option.wrong {
-  border-color: #7a3533;
-  background: #2a1717;
+  border-color: var(--danger-line);
+  background: var(--danger-tint);
 }
 .diagram {
   font-family: var(--mono);
@@ -801,7 +959,7 @@ textarea.input {
   border-radius: var(--radius);
   padding: 12px;
   overflow: auto;
-  color: #a9c6de;
+  color: var(--diagram-text);
 }
 
 /* ---- engineering workspace ------------------------------------------------------------ */
@@ -1035,7 +1193,7 @@ textarea.input {
   width: 100%;
   height: 100%;
   min-height: 360px;
-  background: #11171c;
+  background: var(--canvas);
 }
 .hmi text {
   font-family: var(--font);
@@ -1052,9 +1210,9 @@ textarea.input {
   font-size: 12px;
 }
 .hmi .symbol {
-  stroke: #8a98a5;
+  stroke: var(--symbol-stroke);
   stroke-width: 1.6;
-  fill: #1e262e;
+  fill: var(--symbol-fill);
 }
 .hmi .symbol.on {
   stroke: var(--st-active);
@@ -1063,7 +1221,7 @@ textarea.input {
   stroke: var(--st-fault);
 }
 .hmi .pipe {
-  stroke: #4a5866;
+  stroke: var(--pipe);
   stroke-width: 6;
   fill: none;
 }
@@ -1096,7 +1254,7 @@ textarea.input {
 .module {
   width: 136px;
   flex: none;
-  background: #1c242c;
+  background: var(--module-bg);
   border: 1px solid var(--line-strong);
   border-radius: 3px;
   display: flex;
@@ -1115,7 +1273,7 @@ textarea.input {
   background: transparent;
 }
 .module.fault {
-  border-color: #8e2b26;
+  border-color: var(--fault-fill);
 }
 .module-head {
   /* A button: the card is selectable from the keyboard (Tab, Enter or Space). */
@@ -1167,7 +1325,7 @@ textarea.input {
 .topology {
   width: 100%;
   min-height: 300px;
-  background: #11171c;
+  background: var(--canvas);
 }
 .topology text {
   font-family: var(--font);
@@ -1175,8 +1333,8 @@ textarea.input {
   fill: var(--text-1);
 }
 .topology .node {
-  fill: #1c242c;
-  stroke: #6f7d8a;
+  fill: var(--module-bg);
+  stroke: var(--node-stroke);
   stroke-width: 1.4;
 }
 .topology .node.down {
@@ -1184,7 +1342,7 @@ textarea.input {
   stroke-dasharray: 4 3;
 }
 .topology .link {
-  stroke: #4a5866;
+  stroke: var(--pipe);
   stroke-width: 2;
 }
 .topology .link.up {
@@ -1199,10 +1357,10 @@ textarea.input {
 .wave {
   width: 100%;
   display: block;
-  background: #11171c;
+  background: var(--canvas);
 }
 .wave .grid {
-  stroke: #1f2830;
+  stroke: var(--plot-grid);
 }
 .wave .trace-bool {
   stroke: var(--st-active);
@@ -1210,12 +1368,12 @@ textarea.input {
   stroke-width: 1.5;
 }
 .wave .trace-num {
-  stroke: #5aa0e6;
+  stroke: var(--trace-num);
   fill: none;
   stroke-width: 1.5;
 }
 .wave .cursor {
-  stroke: #d8dee4;
+  stroke: var(--plot-cursor);
   stroke-dasharray: 3 3;
 }
 .wave text {
@@ -1244,10 +1402,10 @@ textarea.input {
   text-overflow: ellipsis;
 }
 .event-row.error {
-  color: #f2b8b4;
+  color: var(--event-error);
 }
 .event-row.warning {
-  color: #ecd29c;
+  color: var(--event-warning);
 }
 .score {
   font-size: 28px;
@@ -1266,7 +1424,7 @@ textarea.input {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: #0008;
+  background: var(--backdrop);
   display: grid;
   place-items: center;
   z-index: 50;
@@ -1481,7 +1639,7 @@ textarea.input {
   border-radius: 6px;
   background: var(--bg-3);
   color: var(--text-0);
-  box-shadow: 0 6px 24px #0008;
+  box-shadow: 0 6px 24px var(--shadow);
   z-index: 3000;
   pointer-events: none;
   font-size: 13px;

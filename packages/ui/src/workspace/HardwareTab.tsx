@@ -178,7 +178,7 @@ export function HardwareTab({
       >
         <strong>{station.name}</strong>
         <span className="muted">
-          {data.cpuName}
+          {moduleText(t, data.cpuName)}
           {data.cpuProduct
             ? ` · ${t("hw.profile", { product: data.cpuProduct })}`
             : ""}
@@ -309,7 +309,9 @@ export function HardwareTab({
             >
               <span className="slot">{t("hw.slot", { slot: 0 })}</span>
               <strong>CPU</strong>
-              <span className="dim">{data.cpuProduct ?? data.cpuName}</span>
+              <span className="dim">
+                {data.cpuProduct ?? moduleText(t, data.cpuName)}
+              </span>
             </button>
             <div className="module-channels">
               {data.cpuLeds.map((l) => (

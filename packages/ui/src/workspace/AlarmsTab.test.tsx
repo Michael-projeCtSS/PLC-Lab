@@ -84,7 +84,9 @@ function lab(alarms: AlarmDto[] = active): Lab {
 function inLanguage(language: "en" | "pl", children: ReactNode) {
   const preferences = defaults(language);
   return (
-    <Context.Provider value={{ preferences, update: vi.fn(), problem: null }}>
+    <Context.Provider
+      value={{ preferences, update: vi.fn(), problem: null, theme: "dark" }}
+    >
       {children}
     </Context.Provider>
   );

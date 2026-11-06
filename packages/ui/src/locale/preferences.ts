@@ -2,7 +2,8 @@
 export type Preferences = {
   version: 1;
   language: "pl" | "en";
-  theme: "dark";
+  /** "system" follows the operating system's light or dark appearance. */
+  theme: "dark" | "light" | "system";
   density: "comfortable" | "compact";
   explanations: boolean;
 };
@@ -24,7 +25,7 @@ export function parsePreferences(text: string, language: string): Preferences {
   if (
     p.version !== 1 ||
     !["pl", "en"].includes(String(p.language)) ||
-    p.theme !== "dark" ||
+    !["dark", "light", "system"].includes(String(p.theme)) ||
     !["comfortable", "compact"].includes(String(p.density)) ||
     typeof p.explanations !== "boolean"
   )
@@ -32,6 +33,7 @@ export function parsePreferences(text: string, language: string): Preferences {
   return {
     ...defaults(language),
     language: p.language as Preferences["language"],
+    theme: p.theme as Preferences["theme"],
     density: p.density as Preferences["density"],
     explanations: p.explanations,
   };

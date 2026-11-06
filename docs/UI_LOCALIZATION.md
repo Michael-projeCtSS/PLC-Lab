@@ -2,9 +2,10 @@
 
 The interface uses typed English/Polish dictionaries in `packages/ui/src/locale/`.
 Settings persists language, density and beginner explanations in a versioned WebView
-record. Dark is the supported appearance. Changes apply immediately; native smoke also
-verifies persistence through fresh processes. PLC semantics, project formats, protocols
-and the IPC contract are unchanged.
+record. The theme is Dark, Light or System (System follows Windows and its later changes;
+[ADR-0042](adr/0042-semantic-colour-tokens-and-light-theme.md)). Changes apply immediately; native smoke also
+verifies persistence through fresh processes. PLC semantics, project formats and protocols are unchanged; the IPC contract only
+gained additive message fields ([ADR-0041](adr/0041-coded-backend-messages.md)).
 
 ## Exact content coverage
 

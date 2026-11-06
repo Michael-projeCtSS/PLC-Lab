@@ -13,7 +13,7 @@ import {
   type OptionDto,
 } from "@plc-lab/ipc";
 import { formatValue, quantityUnit, valueClass } from "../format";
-import { processLabel } from "../locale/messages";
+import { processLabel, translateCode } from "../locale/messages";
 import { Badge, Tabs } from "../ui";
 import { isFaultFinding, type Navigate } from "../route";
 import { CauseEffect } from "./CauseEffect";
@@ -278,11 +278,17 @@ function TaskBrief({
         <h4>{t("brief.required")}</h4>
         <table className="table">
           <tbody>
-            {exercise.requiredInterface.map((t) => (
-              <tr key={t.tag}>
-                <td className="mono">{t.tag}</td>
-                <td>{t.dataType}</td>
-                <td className="muted">{t.direction}</td>
+            {exercise.requiredInterface.map((signal) => (
+              <tr key={signal.tag}>
+                <td className="mono">{signal.tag}</td>
+                <td>{signal.dataType}</td>
+                <td className="muted">
+                  {translateCode(
+                    t,
+                    `direction.${signal.direction}`,
+                    signal.direction,
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

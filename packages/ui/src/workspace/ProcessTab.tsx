@@ -17,11 +17,11 @@ import type { Lab } from "./useLab";
 
 type Q = Record<string, SignalValueDto>;
 const LAMP: Record<string, string> = {
-  green: "#3dbb8a",
-  red: "#e5534b",
-  amber: "#e2a43a",
-  white: "#e8edf1",
-  blue: "#4f9be0",
+  green: "var(--lamp-green)",
+  red: "var(--lamp-red)",
+  amber: "var(--lamp-amber)",
+  white: "var(--lamp-white)",
+  blue: "var(--lamp-blue)",
 };
 
 function b(q: Q, name: string): boolean {
@@ -98,7 +98,7 @@ export function ProcessTab({
         viewBox="0 0 1000 620"
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label={`Process view: ${workspace.scene.title}`}
+        aria-label={t("process.view", { title: workspace.scene.title })}
         style={{ flex: 1 }}
       >
         {workspace.scene.couplings.map((c) => {
@@ -183,14 +183,14 @@ function Symbol({
   switch (c.kind) {
     case "pushButton": {
       const pressed = b(q, "pressed");
-      const color = LAMP[c.color ?? "white"] ?? "#8a98a5";
+      const color = LAMP[c.color ?? "white"] ?? "var(--symbol-stroke)";
       const press = () => operate(c.id, { type: "press" });
       const release = () => operate(c.id, { type: "release" });
       return (
         <g
           role="button"
           tabIndex={0}
-          aria-label={`${c.label} (hold to press)`}
+          aria-label={t("process.hold", { label: c.label })}
           aria-pressed={pressed}
           onPointerDown={(e) => {
             (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -214,9 +214,8 @@ function Symbol({
             cx={l.x}
             cy={l.y}
             r={pressed ? 19 : 22}
-            fill={color}
+            style={{ fill: color, stroke: "var(--svg-shadow)" }}
             opacity={pressed ? 1 : 0.75}
-            stroke="#0008"
             strokeWidth={pressed ? 4 : 2}
           />
           <text x={l.x} y={l.y + 46} textAnchor="middle" className="label">
@@ -229,7 +228,11 @@ function Symbol({
             className="label"
             style={{ fontSize: 10 }}
           >
-            {config.contact === "normallyClosed" ? "NC contact" : "NO contact"}
+            {t(
+              config.contact === "normallyClosed"
+                ? "process.ncContact"
+                : "process.noContact",
+            )}
           </text>
         </g>
       );
@@ -254,7 +257,7 @@ function Symbol({
             width={8}
             height={28}
             rx={3}
-            fill="#c9d2da"
+            style={{ fill: "var(--hmi-cap)" }}
             transform={`rotate(${angle} ${l.x} ${l.y})`}
           />
           {c.positions.map((p, i) => {
@@ -280,17 +283,22 @@ function Symbol({
     }
     case "pilotLamp": {
       const lit = b(q, "lit");
-      const color = LAMP[c.color ?? "white"] ?? "#e8edf1";
+      const color = LAMP[c.color ?? "white"] ?? "var(--lamp-white)";
       return (
-        <g aria-label={`${c.label}: ${lit ? "on" : "off"}`}>
+        <g
+          aria-label={t(lit ? "process.lampOn" : "process.lampOff", {
+            label: c.label,
+          })}
+        >
           <circle cx={l.x} cy={l.y} r={22} className="symbol" />
           <circle
             cx={l.x}
             cy={l.y}
             r={16}
-            fill={lit ? color : "#2a3138"}
             style={
-              lit ? { filter: `drop-shadow(0 0 8px ${color})` } : undefined
+              lit
+                ? { fill: color, filter: `drop-shadow(0 0 8px ${color})` }
+                : { fill: "var(--hmi-off)" }
             }
           />
           {label(46)}
@@ -306,7 +314,7 @@ function Symbol({
       const cy = l.y + h / 2 - 10;
       return (
         <g
-          aria-label={`${c.label}: ${running ? "running" : "stopped"}${tripped ? ", overload tripped" : ""}`}
+          aria-label={`${t(running ? "process.running" : "process.stopped", { label: c.label })}${tripped ? t("process.overloadSuffix") : ""}`}
         >
           <rect
             x={l.x}
@@ -315,7 +323,7 @@ function Symbol({
             height={h}
             rx={4}
             fill="none"
-            stroke="#2a3540"
+            style={{ stroke: "var(--hmi-edge)" }}
           />
           <circle
             cx={cx}
@@ -337,7 +345,7 @@ function Symbol({
             width={w - 32}
             height={6}
             rx={3}
-            fill="#232c35"
+            style={{ fill: "var(--hmi-panel)" }}
           />
           <rect
             x={l.x + 16}
@@ -345,7 +353,7 @@ function Symbol({
             width={((w - 32) * n(q, "speedPermille")) / 1000}
             height={6}
             rx={3}
-            fill="#3dbb8a"
+            style={{ fill: "var(--st-active)" }}
           />
           <text x={l.x + 16} y={l.y + h - 12} className="value-text">
             {t("process.speed", {
@@ -361,7 +369,7 @@ function Symbol({
               x={l.x + w - 8}
               y={l.y + 16}
               textAnchor="end"
-              style={{ fill: "#e5534b", fontWeight: 700, fontSize: 11 }}
+              style={{ fill: "var(--st-fault)", fontWeight: 700, fontSize: 11 }}
             >
               {t("process.overload")}
             </text>
@@ -373,13 +381,17 @@ function Symbol({
     case "onOffValve": {
       const pos = n(q, "positionPermille");
       const open = pos >= 1000;
-      const color = pos > 0 ? "#3dbb8a" : "#8a98a5";
+      const color = pos > 0 ? "var(--st-active)" : "var(--symbol-stroke)";
       return (
-        <g aria-label={`${c.label}: ${(pos / 10).toFixed(0)} % open`}>
+        <g
+          aria-label={t("process.valveOpen", {
+            label: c.label,
+            percent: (pos / 10).toFixed(0),
+          })}
+        >
           <path
             d={`M ${l.x - 24} ${l.y - 14} L ${l.x + 24} ${l.y + 14} L ${l.x + 24} ${l.y - 14} L ${l.x - 24} ${l.y + 14} Z`}
-            fill="#1e262e"
-            stroke={color}
+            style={{ fill: "var(--symbol-fill)", stroke: color }}
             strokeWidth={1.8}
           />
           <line
@@ -387,7 +399,7 @@ function Symbol({
             y1={l.y}
             x2={l.x}
             y2={l.y - 26}
-            stroke="#8a98a5"
+            style={{ stroke: "var(--symbol-stroke)" }}
             strokeWidth={1.6}
           />
           <rect
@@ -395,8 +407,12 @@ function Symbol({
             y={l.y - 38}
             width={24}
             height={12}
-            fill={b(q, "command") ? "#2b6aa5" : "#1e262e"}
-            stroke="#8a98a5"
+            style={{
+              fill: b(q, "command")
+                ? "var(--primary-bg)"
+                : "var(--symbol-fill)",
+              stroke: "var(--symbol-stroke)",
+            }}
           />
           <text x={l.x} y={l.y + 34} textAnchor="middle" className="value-text">
             {open
@@ -414,7 +430,7 @@ function Symbol({
       const dry = b(q, "dry");
       return (
         <g
-          aria-label={`${c.label}: ${running ? "running" : "stopped"}${dry ? ", running dry" : ""}`}
+          aria-label={`${t(running ? "process.running" : "process.stopped", { label: c.label })}${dry ? t("process.drySuffix") : ""}`}
         >
           <circle
             cx={l.x}
@@ -425,7 +441,9 @@ function Symbol({
           <path
             d={`M ${l.x - 12} ${l.y - 18} L ${l.x + 22} ${l.y} L ${l.x - 12} ${l.y + 18}`}
             fill="none"
-            stroke={running ? "#3dbb8a" : "#8a98a5"}
+            style={{
+              stroke: running ? "var(--st-active)" : "var(--symbol-stroke)",
+            }}
             strokeWidth={1.6}
           />
           <text x={l.x} y={l.y + 44} textAnchor="middle" className="value-text">
@@ -446,7 +464,13 @@ function Symbol({
         const y = l.y + h - (h * Number(ml)) / cap;
         return (
           <g>
-            <line x1={l.x - 8} y1={y} x2={l.x} y2={y} stroke="#e2a43a" />
+            <line
+              x1={l.x - 8}
+              y1={y}
+              x2={l.x}
+              y2={y}
+              style={{ stroke: "var(--st-warning)" }}
+            />
             <text x={l.x - 12} y={y + 4} textAnchor="end" className="label">
               {text}
             </text>
@@ -496,7 +520,7 @@ function Symbol({
               x={l.x + w / 2}
               y={l.y + h + 32}
               textAnchor="middle"
-              style={{ fill: "#e5534b", fontSize: 11 }}
+              style={{ fill: "var(--st-fault)", fontSize: 11 }}
             >
               {t("process.spilled", {
                 amount: formatQuantity(n(q, "spilledMl"), "ml"),
@@ -511,14 +535,19 @@ function Symbol({
       const conducting = b(q, "conducting");
       const tank = config.tank ? layout.get(config.tank) : undefined;
       return (
-        <g aria-label={`${c.label}: contact ${conducting ? "closed" : "open"}`}>
+        <g
+          aria-label={t(
+            conducting ? "process.contactClosed" : "process.contactOpen",
+            { label: c.label },
+          )}
+        >
           {tank && (
             <line
               x1={tank.x + (tank.width ?? 0)}
               y1={l.y}
               x2={l.x - 14}
               y2={l.y}
-              stroke="#4a5866"
+              style={{ stroke: "var(--pipe)" }}
               strokeWidth={2}
             />
           )}
@@ -534,7 +563,9 @@ function Symbol({
             cx={l.x + 22}
             cy={l.y}
             r={4}
-            fill={conducting ? "#3dbb8a" : "#2a3138"}
+            style={{
+              fill: conducting ? "var(--st-active)" : "var(--hmi-off)",
+            }}
           />
           <text x={l.x + 32} y={l.y + 4} className="label">
             {c.label}
@@ -581,7 +612,10 @@ function Symbol({
         <g
           role="button"
           tabIndex={0}
-          aria-label={`${c.label}: target ${present ? "present" : "absent"} (click to change)`}
+          aria-label={t(
+            present ? "process.targetPresent" : "process.targetAbsent",
+            { label: c.label },
+          )}
           onClick={() => operate(c.id, { type: "presence", present: !present })}
         >
           <rect
@@ -597,7 +631,9 @@ function Symbol({
             y1={l.y}
             x2={l.x + 120}
             y2={l.y}
-            stroke={present ? "#e2a43a" : "#3a4652"}
+            style={{
+              stroke: present ? "var(--st-warning)" : "var(--hmi-beam-off)",
+            }}
             strokeDasharray="5 4"
           />
           <rect
@@ -606,15 +642,19 @@ function Symbol({
             width={40}
             height={30}
             rx={3}
-            fill={present ? "#4b5a68" : "transparent"}
-            stroke={present ? "#7d8a96" : "#2a3540"}
+            style={{
+              fill: present ? "var(--hmi-target)" : "transparent",
+              stroke: present ? "var(--metal)" : "var(--hmi-edge)",
+            }}
             strokeDasharray={present ? undefined : "3 3"}
           />
           <circle
             cx={l.x - 26}
             cy={l.y}
             r={4}
-            fill={conducting ? "#e2a43a" : "#2a3138"}
+            style={{
+              fill: conducting ? "var(--st-warning)" : "var(--hmi-off)",
+            }}
           />
           {label(40)}
         </g>
@@ -639,7 +679,18 @@ function Symbol({
       const reference = n(q, "referencePermille");
       return (
         <g
-          aria-label={`${c.label}: ${running ? "running" : "stopped"}, ${remote ? "remote" : "local"} control, ${b(q, "tripped") ? "faulted" : b(q, "ready") ? "ready" : "not ready"}`}
+          aria-label={t("process.driveLabel", {
+            label: c.label,
+            state: t(running ? "process.driveRunning" : "process.driveStopped"),
+            place: t(remote ? "process.driveRemote" : "process.driveLocal"),
+            ready: t(
+              b(q, "tripped")
+                ? "process.driveFaulted"
+                : b(q, "ready")
+                  ? "process.driveReady"
+                  : "process.driveNotReady",
+            ),
+          })}
         >
           <rect
             x={l.x}
@@ -655,14 +706,13 @@ function Symbol({
             width={w * 0.42 - 20}
             height={44}
             rx={2}
-            fill="#0d1a14"
-            stroke="#2a3540"
+            style={{ fill: "var(--display-bg)", stroke: "var(--hmi-edge)" }}
           />
           <text
             x={l.x + 16}
             y={l.y + 30}
             className="value-text"
-            style={{ fontSize: 11, fill: "#8fe0b8" }}
+            style={{ fontSize: 11, fill: "var(--display-text)" }}
           >
             {remote ? "REM" : "LOC"} {state}
           </text>
@@ -670,7 +720,7 @@ function Symbol({
             x={l.x + 16}
             y={l.y + 48}
             className="value-text"
-            style={{ fontSize: 11, fill: "#8fe0b8" }}
+            style={{ fontSize: 11, fill: "var(--display-text)" }}
           >
             {t("process.drive", {
               hz: ((speed * 50) / 1000).toFixed(1),

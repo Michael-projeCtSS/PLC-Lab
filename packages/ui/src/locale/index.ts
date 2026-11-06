@@ -26,5 +26,5 @@ export function useInterface() {
       translate(preferences.language, key, values),
     [preferences.language],
   );
-  return { t, preferences };
+  return { t, preferences, theme: context?.theme ?? "dark" };
 }

@@ -31,12 +31,27 @@ export function Settings({ onClose }: { onClose: () => void }) {
           </select>
         </label>
         <label className="field">
-          {t("settings.appearance")}
-          <select className="input" value="dark" disabled>
+          {t("settings.theme")}
+          <select
+            className="input"
+            value={preferences.theme}
+            onChange={(e) =>
+              context.update({
+                theme:
+                  e.target.value === "light"
+                    ? "light"
+                    : e.target.value === "system"
+                      ? "system"
+                      : "dark",
+              })
+            }
+          >
             <option value="dark">{t("settings.dark")}</option>
+            <option value="light">{t("settings.light")}</option>
+            <option value="system">{t("settings.system")}</option>
           </select>
         </label>
-        <p className="muted">{t("settings.darkHelp")}</p>
+        <p className="muted">{t("settings.themeHelp")}</p>
         <label className="field">
           {t("settings.density")}
           <select

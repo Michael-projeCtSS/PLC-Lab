@@ -19,7 +19,7 @@ export function StructuredTextEditor({
   runtimeDiagnostics?: DiagnosticDto[];
   focusedDiagnostic: DiagnosticDto | null;
 }) {
-  const { t } = useInterface();
+  const { t, theme } = useInterface();
   const container = useRef<HTMLDivElement>(null);
   const instance = useRef<ReturnType<typeof createStEditor> | null>(null);
   const latest = useRef({
@@ -28,7 +28,9 @@ export function StructuredTextEditor({
     onChange,
     diagnostics,
     runtimeDiagnostics,
+    theme,
   });
+  const host = useRef<typeof import("./monaco-host") | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     latest.current = {
@@ -37,17 +39,23 @@ export function StructuredTextEditor({
       onChange,
       diagnostics,
       runtimeDiagnostics,
+      theme,
     };
     instance.current?.update(source, diagnostics, runtimeDiagnostics, readOnly);
-  }, [source, readOnly, onChange, diagnostics, runtimeDiagnostics]);
+  }, [source, readOnly, onChange, diagnostics, runtimeDiagnostics, theme]);
   useEffect(() => {
     if (focusedDiagnostic) instance.current?.focus(focusedDiagnostic.span);
   }, [focusedDiagnostic]);
+  // A theme change restyles the existing editor; the program and its history stay.
+  useEffect(() => {
+    host.current?.setEditorTheme(theme);
+  }, [theme]);
   useEffect(() => {
     let active = true;
     import("./monaco-host")
       .then((module) => {
         if (!active || !container.current) return;
+        host.current = module;
         const current = latest.current;
         instance.current = module.createStEditor(
           container.current,
@@ -55,6 +63,7 @@ export function StructuredTextEditor({
           (value) => {
             if (!latest.current.readOnly) latest.current.onChange(value);
           },
+          current.theme,
         );
         instance.current.update(
           current.source,
