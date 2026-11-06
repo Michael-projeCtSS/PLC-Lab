@@ -18,7 +18,9 @@ import {
   type WorkspaceDto,
 } from "@plc-lab/ipc";
 import { useCoalescedRead } from "../useCoalescedRead";
-import { useInterface } from "../locale";
+import { translate, useInterface } from "../locale";
+import type { TranslationKey } from "../locale/en";
+import { diagnosticLine } from "../locale/messages";
 import { localizeContent } from "../locale/content";
 import { newTableId, newTableName, setRows, updateTable } from "./watchEdit";
 
@@ -34,6 +36,11 @@ export type Lab = ReturnType<typeof useLab>;
 
 export function useLab(projectId: string) {
   const { preferences } = useInterface();
+  const say = useCallback(
+    (key: TranslationKey, values?: Record<string, string | number>) =>
+      translate(preferences.language, key, values),
+    [preferences.language],
+  );
   const [workspace, setWorkspace] = useState<WorkspaceDto | null>(null);
   const [project, setProject] = useState<ProjectDto | null>(null);
   const [frame, setFrame] = useState<LiveFrameDto | null>(null);
@@ -216,12 +223,14 @@ export function useLab(projectId: string) {
         (e: unknown) =>
           log(
             "error",
-            `Autosave failed: ${e instanceof Error ? e.message : String(e)}`,
+            say("build.autosave", {
+              error: e instanceof Error ? e.message : String(e),
+            }),
           ),
       );
     }, 800);
     return () => clearTimeout(timer);
-  }, [source, project, log]);
+  }, [source, project, log, say]);
 
   const applyBuild = useCallback(
     (r: BuildLoadResultDto) => {
@@ -230,30 +239,28 @@ export function useLab(projectId: string) {
       const issues = r.bindingIssues
         .map((i) => `${i.tag}: ${i.message}`)
         .join("\n");
+      const program = r.frame.plc.programName;
       if (r.outcome === "LOADED")
-        log("success", r.message ?? "Program loaded.", issues || undefined);
+        log(
+          "success",
+          program
+            ? say("build.loaded", { name: program })
+            : say("build.loadedPlain"),
+          issues || undefined,
+        );
       else if (r.outcome === "COMPILE_FAILED")
         log(
           "error",
-          `Build failed: ${r.diagnostics.length} compiler error(s). The PLC keeps its previous program.`,
-          r.diagnostics
-            .map(
-              (d) =>
-                `${d.span ? `line ${d.span.start.line}: ` : ""}${d.message}`,
-            )
-            .join("\n"),
+          say("build.failed", { count: r.diagnostics.length }),
+          r.diagnostics.map((d) => diagnosticLine(say, d)).join("\n"),
         );
       else if (r.outcome === "BINDING_FAILED")
-        log(
-          "error",
-          "The program does not match the I/O configuration. Nothing was loaded.",
-          issues,
-        );
+        log("error", say("build.binding"), issues);
       else if (r.outcome === "HARDWARE_REJECTED")
-        log("error", r.message ?? "The hardware configuration was rejected.");
+        log("error", say("build.hardware"), r.message ?? undefined);
       return r.frame;
     },
-    [log],
+    [log, say],
   );
 
   const buildAndLoad = useCallback(
@@ -282,15 +289,20 @@ export function useLab(projectId: string) {
     if (r.outcome === "GRADED")
       log(
         r.passed ? "success" : "warning",
-        `Check: ${r.score} / ${r.maxScore} points${r.passed ? " — passed" : ""}.`,
+        say(r.passed ? "check.passed" : "check.score", {
+          score: r.score,
+          max: r.maxScore,
+        }),
       );
     else
       log(
         "error",
-        `Check could not run: ${r.outcome.replaceAll("_", " ").toLowerCase()}.`,
+        say("check.notRun", {
+          reason: r.outcome.replaceAll("_", " ").toLowerCase(),
+        }),
         [...r.problems, ...r.diagnostics.map((d) => d.message)].join("\n"),
       );
-  }, [ws, source, act, log]);
+  }, [ws, source, act, log, say]);
 
   /** Save an edited station configuration into the project. The backend validates it;
    * the returned project is the authoritative state (it reaches the PLC on download). */

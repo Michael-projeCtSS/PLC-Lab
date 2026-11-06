@@ -5,6 +5,7 @@
  */
 import { useState } from "react";
 import type { StationDto } from "@plc-lab/ipc";
+import { useInterface } from "../locale";
 import type { Lab } from "./useLab";
 
 function num(value: string, fallback: number) {
@@ -13,6 +14,7 @@ function num(value: string, fallback: number) {
 }
 
 export function NetworkConfig({ lab }: { lab: Lab }) {
+  const { t } = useInterface();
   const station = lab.project?.station ?? null;
   const [draft, setDraft] = useState<StationDto | null>(null);
   if (!station) return null;
@@ -26,7 +28,7 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
   return (
     <div className="panel">
       <div className="panel-head">
-        <h4>Network configuration</h4>
+        <h4>{t("netcfg.title")}</h4>
         <span className="spacer" />
         {draft && (
           <>
@@ -41,10 +43,10 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
                   .then((r) => r?.outcome === "LOADED" && setDraft(null))
               }
             >
-              Download configuration
+              {t("netcfg.download")}
             </button>
             <button className="btn btn-sm" onClick={() => setDraft(null)}>
-              Discard
+              {t("netcfg.discard")}
             </button>
           </>
         )}
@@ -52,7 +54,7 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
       <div className="panel-body col">
         <div className="row wrap">
           <label className="field">
-            PLC IP address
+            {t("netcfg.ip")}
             <input
               className="input mono"
               value={iface?.ip ?? ""}
@@ -68,7 +70,7 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
             />
           </label>
           <label className="field">
-            Subnet mask
+            {t("netcfg.mask")}
             <input
               className="input mono"
               value={iface?.mask ?? ""}
@@ -82,12 +84,12 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
             />
           </label>
           <label className="field">
-            Gateway
+            {t("netcfg.gateway")}
             <input
               className="input mono"
               value={iface?.gateway ?? ""}
               disabled={!iface}
-              placeholder="none"
+              placeholder={t("netcfg.none")}
               onChange={(e) =>
                 edit((n) => {
                   if (n.network.interface)
@@ -99,10 +101,10 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
         </div>
         {s.network.modbusTcp.map((scan, i) => (
           <div key={scan.id} className="source-card col">
-            <strong>Modbus TCP client connection “{scan.id}”</strong>
+            <strong>{t("netcfg.connection", { id: scan.id })}</strong>
             <div className="row wrap">
               <label className="field">
-                Server IP
+                {t("netcfg.server")}
                 <input
                   className="input mono"
                   value={scan.server}
@@ -115,7 +117,7 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
                 />
               </label>
               <label className="field">
-                Unit ID
+                {t("netcfg.unit")}
                 <input
                   className="input mono"
                   style={{ width: 70 }}
@@ -133,7 +135,7 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
                 />
               </label>
               <label className="field">
-                Function
+                {t("netcfg.function")}
                 <select
                   className="input"
                   value={scan.function}
@@ -147,15 +149,13 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
                   }
                 >
                   <option value="readHoldingRegisters">
-                    03 Read holding registers
+                    {t("netcfg.fc03")}
                   </option>
-                  <option value="readInputRegisters">
-                    04 Read input registers
-                  </option>
+                  <option value="readInputRegisters">{t("netcfg.fc04")}</option>
                 </select>
               </label>
               <label className="field">
-                Start address (0-based)
+                {t("netcfg.start")}
                 <input
                   className="input mono"
                   style={{ width: 90 }}
@@ -173,7 +173,7 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
                 />
               </label>
               <label className="field">
-                Quantity
+                {t("netcfg.quantity")}
                 <input
                   className="input mono"
                   style={{ width: 70 }}
@@ -194,9 +194,9 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Tag</th>
-                  <th>Offset in the response</th>
-                  <th>Data type</th>
+                  <th>{t("netcfg.tag")}</th>
+                  <th>{t("netcfg.offset")}</th>
+                  <th>{t("netcfg.type")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -208,7 +208,7 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
                         className="input mono"
                         style={{ width: 70, height: 22 }}
                         value={v.offset}
-                        aria-label={`Offset of ${v.tag}`}
+                        aria-label={t("netcfg.offsetOf", { tag: v.tag })}
                         onChange={(e) =>
                           edit((n) => {
                             const value = n.network.modbusTcp[i]?.values[j];
@@ -221,15 +221,20 @@ export function NetworkConfig({ lab }: { lab: Lab }) {
                     <td>
                       {v.dataType.type === "int16"
                         ? "INT16"
-                        : `FLOAT32 (${v.dataType.wordOrder === "highWordFirst" ? "high word first" : "low word first"})`}
+                        : t("netcfg.float", {
+                            order: t(
+                              v.dataType.wordOrder === "highWordFirst"
+                                ? "net.highFirst"
+                                : "net.lowFirst",
+                            ),
+                          })}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <span className="dim" style={{ fontSize: 11 }}>
-              Register n of the response is protocol address startAddress + n
-              (documentation often writes 40001 for address 0).
+              {t("netcfg.help")}
             </span>
           </div>
         ))}

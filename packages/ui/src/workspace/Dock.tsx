@@ -1,4 +1,5 @@
 import { useInterface } from "../locale";
+import { eventKind, eventText, qualityLabel } from "../locale/messages";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
@@ -147,6 +148,7 @@ export function NumericForce({
   valueType: "INT" | "REAL";
   force: (value: SignalValueDto) => void;
 }) {
+  const { t } = useInterface();
   const [text, setText] = useState("");
   const number = Number(text);
   const valid =
@@ -159,7 +161,7 @@ export function NumericForce({
       <input
         className="input mono"
         style={{ width: 70, height: 22 }}
-        aria-label={`Force value (${valueType})`}
+        aria-label={t("dock.forceValue", { type: valueType })}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
@@ -174,7 +176,7 @@ export function NumericForce({
           )
         }
       >
-        Force
+        {t("dock.forceButton")}
       </button>
     </span>
   );
@@ -274,7 +276,7 @@ function Variables({
                       {advanced ? (
                         <button
                           className="btn btn-sm btn-ghost mono"
-                          title="Show the online detail of this variable"
+                          title={t("dock.detailHelp")}
                           onClick={() =>
                             select({ kind: "signal", id: r.signal })
                           }
@@ -322,7 +324,7 @@ function Variables({
                       <td>
                         {r.quality && r.quality !== "GOOD" ? (
                           <Badge kind="bad">
-                            {r.quality.replaceAll("_", " ")}
+                            {qualityLabel(t, r.quality).toUpperCase()}
                           </Badge>
                         ) : (
                           ""
@@ -352,7 +354,7 @@ function Variables({
                                 )
                               }
                             >
-                              {watched ? "Unwatch" : "Watch"}
+                              {watched ? t("dock.unwatch") : t("dock.watchAdd")}
                             </button>
                           )}
                         </td>
@@ -377,6 +379,7 @@ const WINDOWS = [
 ];
 
 function Waveforms({ lab }: { lab: Lab }) {
+  const { t } = useInterface();
   const [windowIndex, setWindowIndex] = useState(1);
   const [cursor, setCursor] = useState<number | null>(null);
   const ws = lab.ws;
@@ -403,17 +406,12 @@ function Waveforms({ lab }: { lab: Lab }) {
     return () => o.disconnect();
   }, []);
   if (tracked.length === 0)
-    return (
-      <div className="empty">
-        Waveforms show watched signals. Add signals in the Watch tab or with
-        “Watch” in Variables.
-      </div>
-    );
+    return <div className="empty">{t("dock.wavesEmpty")}</div>;
   const left = 150;
   const plotW = width - left - 10;
   const rowH = 44;
-  const x = (t: bigint) =>
-    left + (Number(t - from) / Number(span || 1n)) * plotW;
+  const x = (at: bigint) =>
+    left + (Number(at - from) / Number(span || 1n)) * plotW;
   const series = trend.data?.series ?? [];
   const cursorT =
     cursor === null
@@ -422,7 +420,7 @@ function Waveforms({ lab }: { lab: Lab }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div className="row" style={{ padding: "4px 8px" }}>
-        <div className="segmented" role="group" aria-label="Time window">
+        <div className="segmented" role="group" aria-label={t("dock.window")}>
           {WINDOWS.map((w, i) => (
             <button
               key={w.label}
@@ -435,12 +433,12 @@ function Waveforms({ lab }: { lab: Lab }) {
         </div>
         <span className="muted" style={{ fontSize: 12 }}>
           {cursorT !== null
-            ? `Cursor ${seconds(cursorT > 0n ? cursorT : 0n)}`
-            : "Hover the plot for values"}
+            ? t("dock.cursor", { time: seconds(cursorT > 0n ? cursorT : 0n) })
+            : t("dock.hover")}
         </span>
         <span className="spacer" />
         <span className="dim" style={{ fontSize: 11 }}>
-          PLC values at scan time · process values at cycle end
+          {t("dock.sampling")}
         </span>
       </div>
       <div ref={box} style={{ flex: 1, overflow: "auto" }}>
@@ -455,7 +453,7 @@ function Waveforms({ lab }: { lab: Lab }) {
           }
           onMouseLeave={() => setCursor(null)}
           role="img"
-          aria-label="Waveforms"
+          aria-label={t("dock.wavesLabel")}
         >
           {[0, 0.25, 0.5, 0.75, 1].map((f) => (
             <g key={f}>
@@ -541,7 +539,18 @@ function Waveforms({ lab }: { lab: Lab }) {
   );
 }
 
+const EVENT_FILTERS = [
+  "all",
+  "alarms",
+  "PROCESS",
+  "DIAGNOSTIC",
+  "NETWORK",
+  "PLC_MODE",
+  "OPERATOR",
+] as const;
+
 function Events({ lab }: { lab: Lab }) {
+  const { t } = useInterface();
   const [events, setEvents] = useState<EventDto[]>([]);
   const [gap, setGap] = useState(false);
   const [filter, setFilter] = useState<string>("all");
@@ -585,29 +594,23 @@ function Events({ lab }: { lab: Lab }) {
           className="input"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          aria-label="Event filter"
+          aria-label={t("dock.eventFilter")}
         >
-          <option value="all">All events</option>
-          <option value="alarms">Warnings and errors</option>
-          <option value="PROCESS">Process</option>
-          <option value="DIAGNOSTIC">Diagnostics</option>
-          <option value="NETWORK">Network</option>
-          <option value="PLC_MODE">PLC mode</option>
-          <option value="OPERATOR">Operator</option>
+          {EVENT_FILTERS.map((f) => (
+            <option key={f} value={f}>
+              {t(`dock.filter.${f}`)}
+            </option>
+          ))}
         </select>
-        {gap && (
-          <span className="badge warning">
-            Older events were discarded (bounded log)
-          </span>
-        )}
+        {gap && <span className="badge warning">{t("dock.gap")}</span>}
         <span className="spacer" />
         <span className="dim" style={{ fontSize: 11 }}>
-          {shown.length} events
+          {t("dock.eventCount", { count: shown.length })}
         </span>
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <VirtualList
-          label="Event log"
+          label={t("dock.eventLog")}
           items={shown}
           rowHeight={24}
           stickToEnd
@@ -615,11 +618,9 @@ function Events({ lab }: { lab: Lab }) {
             <div className={`event-row ${e.severity}`} style={{ height: 24 }}>
               <span className="mono dim">{seconds(e.timeUs)}</span>
               <span className="mono dim">#{e.cycle}</span>
-              <span className="dim">
-                {e.kind.replaceAll("_", " ").toLowerCase()}
-              </span>
+              <span className="dim">{eventKind(t, e.kind)}</span>
               <span className="text" title={e.source ?? undefined}>
-                {e.text}
+                {eventText(t, e)}
                 {e.source ? <span className="dim"> · {e.source}</span> : null}
               </span>
             </div>

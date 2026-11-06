@@ -101,10 +101,11 @@ export function ProjectTree({
             aria-current={tab === "network"}
             onClick={() => setTab("network")}
           >
-            ⇄ Ethernet{" "}
-            {station.network.interface
-              ? station.network.interface.ip
-              : "(not configured)"}
+            {t("tree.ethernet", {
+              address: station.network.interface
+                ? station.network.interface.ip
+                : t("tree.notConfigured"),
+            })}
           </button>
           {station.network.modbusTcp.map((s) => (
             <button
@@ -112,13 +113,13 @@ export function ProjectTree({
               className="indent"
               onClick={() => setTab("network")}
             >
-              Modbus TCP → {s.server}
+              {t("tree.modbus", { server: s.server })}
             </button>
           ))}
         </>
       )}
       <div className="tree-title" style={{ marginTop: 8 }}>
-        Online
+        {t("tree.online")}
       </div>
       <button
         aria-current={tab === "diagnostics"}

@@ -2,6 +2,7 @@
 import { PlcModeBadge } from "../ui";
 import { useEvidence } from "./useFrameQuery";
 import { useInterface } from "../locale";
+import { diagnosticTitle } from "../locale/messages";
 import { AlarmSummary } from "./AlarmsTab";
 import { DiagnosticBuffer } from "./DiagnosticBuffer";
 import type { Lab } from "./useLab";
@@ -24,25 +25,26 @@ export function DiagnosticsTab({ lab }: { lab: Lab }) {
             <PlcModeBadge mode={frame.plc.mode} />
           </div>
           <dl className="kv panel-body">
-            <dt>Mode switch</dt>
+            <dt>{t("cpu.switch")}</dt>
             <dd>{frame.plc.switch}</dd>
-            <dt>Program</dt>
-            <dd>{frame.plc.programName ?? "none loaded"}</dd>
-            <dt>Completed scans</dt>
+            <dt>{t("cpu.program")}</dt>
+            <dd>{frame.plc.programName ?? t("cpu.noProgram")}</dd>
+            <dt>{t("cpu.scans")}</dt>
             <dd>{frame.plc.scans}</dd>
-            <dt>Start segment</dt>
+            <dt>{t("cpu.segment")}</dt>
             <dd>{frame.plc.segment}</dd>
-            <dt>Forced values</dt>
+            <dt>{t("cpu.forces")}</dt>
             <dd>{frame.plc.forces}</dd>
           </dl>
           {frame.plc.fault && (
             <div className="notice error" style={{ margin: 12 }}>
-              <strong>{frame.plc.fault.code}</strong>: {frame.plc.fault.message}
+              <strong>{frame.plc.fault.code}</strong>
+              {diagnosticTitle(t, frame.plc.fault.code)}:{" "}
+              {frame.plc.fault.message}
               {frame.plc.fault.span &&
-                ` (program line ${frame.plc.fault.span.start.line})`}
+                t("cpu.line", { line: frame.plc.fault.span.start.line })}
               <div className="muted" style={{ marginTop: 4 }}>
-                Correct the program or the cause, then use Reset PLC before
-                switching to RUN.
+                {t("cpu.faultHelp")}
               </div>
             </div>
           )}

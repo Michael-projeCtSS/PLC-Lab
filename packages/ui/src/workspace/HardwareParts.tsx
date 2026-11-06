@@ -13,21 +13,25 @@ import type {
   StationDto,
 } from "@plc-lab/ipc";
 import { formatValue } from "../format";
+import { useInterface } from "../locale";
+import {
+  diagnosticText,
+  translateCode,
+  type Translate,
+} from "../locale/messages";
 import { Badge } from "../ui";
 import { addModule, freeSlots } from "./stationEdit";
 
-const CATEGORY_LABEL: Record<string, string> = {
-  MODULE_MISSING: "Module missing",
-  UNEXPECTED_MODULE: "Unexpected module",
-  WRONG_MODULE_TYPE: "Wrong module type",
-  WRONG_SLOT: "Module in another slot",
-  MODULE_POWER_MISSING: "Module not answering",
-  FIELD_POWER_MISSING: "Field supply missing",
-  CHANNEL_MODE_MISMATCH: "Channel mode mismatch",
-  LOOP_SUPPLY_MISMATCH: "Loop supply mismatch",
-  ADDRESS_OVERLAP: "Address overlap",
-  SIGNAL_BINDING_MISMATCH: "Signal mapping",
-};
+function categoryLabel(t: Translate, category: string): string {
+  return translateCode(t, `hwp.category.${category}`, category);
+}
+function qualityWord(t: Translate, quality: string): string {
+  return translateCode(
+    t,
+    `q.${quality}`,
+    quality.replaceAll("_", " ").toLowerCase(),
+  );
+}
 
 /** A finding's identity: its category and the typed hardware it is about. */
 function findingKey(f: HardwareFindingDto): string {
@@ -45,29 +49,27 @@ export function FindingsPanel({
 }: {
   findings: readonly HardwareFindingDto[];
 }) {
+  const { t } = useInterface();
   return (
-    <section className="panel" aria-label="Configured versus actual">
+    <section className="panel" aria-label={t("hwp.compare")}>
       <div className="panel-head">
-        <h4>Configured versus actual</h4>
+        <h4>{t("hwp.compare")}</h4>
         <span className="spacer" />
-        <span className="muted">
-          project, detected modules and the drawing compared
-        </span>
+        <span className="muted">{t("hwp.compareHelp")}</span>
       </div>
       {findings.length === 0 ? (
         <p className="panel-body muted" style={{ margin: 0 }}>
-          The detected hardware matches the project configuration and the
-          drawing.
+          {t("hwp.matches")}
         </p>
       ) : (
         <table className="table">
           <thead>
             <tr>
-              <th>Severity</th>
-              <th>Finding</th>
-              <th>Expected</th>
-              <th>Detected</th>
-              <th>Details</th>
+              <th>{t("hwp.severity")}</th>
+              <th>{t("hwp.finding")}</th>
+              <th>{t("hwp.expected")}</th>
+              <th>{t("hwp.detected")}</th>
+              <th>{t("hwp.details")}</th>
             </tr>
           </thead>
           <tbody>
@@ -75,10 +77,10 @@ export function FindingsPanel({
               <tr key={findingKey(f)}>
                 <td>
                   <Badge kind={f.severity === "error" ? "fault" : "warning"}>
-                    {f.severity}
+                    {t(`diag.severity.${f.severity}`)}
                   </Badge>
                 </td>
-                <td>{CATEGORY_LABEL[f.category] ?? f.category}</td>
+                <td>{categoryLabel(t, f.category)}</td>
                 <td>{f.expected ?? "—"}</td>
                 <td>{f.detected ?? "—"}</td>
                 <td>{f.message}</td>
@@ -96,32 +98,31 @@ export function SignalMapPanel({
 }: {
   signals: readonly SignalMapRowDto[];
 }) {
+  const { t } = useInterface();
   return (
-    <section className="panel" aria-label="Signal mapping">
+    <section className="panel" aria-label={t("hwp.signals")}>
       <div className="panel-head">
-        <h4>Signal mapping</h4>
+        <h4>{t("hwp.signals")}</h4>
         <span className="spacer" />
-        <span className="muted">
-          PLC symbol → configured channel → device on the drawing
-        </span>
+        <span className="muted">{t("hwp.signalsHelp")}</span>
       </div>
       <table className="table">
         <thead>
           <tr>
-            <th>PLC symbol</th>
-            <th>Channel</th>
-            <th>Address</th>
-            <th>Channel value</th>
-            <th>Quality</th>
-            <th>Device on the drawing</th>
-            <th>Device state</th>
+            <th>{t("hwp.symbol")}</th>
+            <th>{t("hwp.channel")}</th>
+            <th>{t("hwp.address")}</th>
+            <th>{t("hwp.channelValue")}</th>
+            <th>{t("hwp.quality")}</th>
+            <th>{t("hwp.device")}</th>
+            <th>{t("hwp.deviceState")}</th>
           </tr>
         </thead>
         <tbody>
           {signals.length === 0 && (
             <tr>
               <td colSpan={7} className="muted">
-                No I/O mapping is configured.
+                {t("hwp.noMapping")}
               </td>
             </tr>
           )}
@@ -133,21 +134,15 @@ export function SignalMapPanel({
               <td className="mono">
                 {s.output !== null
                   ? s.output
-                    ? "ON"
-                    : "OFF"
+                    ? t("hw.on")
+                    : t("hw.off")
                   : formatValue(s.value)}
               </td>
-              <td>
-                {s.quality && s.quality !== "GOOD"
-                  ? s.quality.replaceAll("_", " ").toLowerCase()
-                  : s.quality
-                    ? "good"
-                    : "—"}
-              </td>
+              <td>{s.quality ? qualityWord(t, s.quality) : "—"}</td>
               <td>
                 {s.drawnDevice
                   ? `${s.drawnDevice} (${s.drawnPort ?? ""})`
-                  : "not on the drawing"}
+                  : t("hwp.notDrawn")}
               </td>
               <td>{s.deviceState ?? "—"}</td>
             </tr>
@@ -172,26 +167,27 @@ export function StationEditor({
   const [type, setType] = useState(catalog[0]?.id ?? "");
   const [slot, setSlot] = useState<number | null>(null);
   const target = slot ?? slots[0] ?? null;
-  const chosen = catalog.find((t) => t.id === type);
+  const chosen = catalog.find((m) => m.id === type);
+  const { t } = useInterface();
   return (
     <div className="row wrap" style={{ gap: 8, padding: "8px 16px" }}>
-      <strong style={{ fontSize: 12 }}>Add module</strong>
+      <strong style={{ fontSize: 12 }}>{t("hwp.add")}</strong>
       <label className="row muted" style={{ fontSize: 12 }}>
-        Type
+        {t("hwp.type")}
         <select
           className="input"
           value={type}
           onChange={(e) => setType(e.target.value)}
         >
-          {catalog.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+          {catalog.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
             </option>
           ))}
         </select>
       </label>
       <label className="row muted" style={{ fontSize: 12 }}>
-        Slot
+        {t("hwp.slot")}
         <select
           className="input"
           value={target ?? ""}
@@ -213,7 +209,7 @@ export function StationEditor({
           setSlot(null);
         }}
       >
-        Add to configuration
+        {t("hwp.addButton")}
       </button>
     </div>
   );
@@ -221,29 +217,27 @@ export function StationEditor({
 
 /** What the module's supplies show (evidence, not the cause). */
 export function PowerSection({ module }: { module: ModuleViewDto }) {
+  const { t } = useInterface();
   const electronics =
     module.status === "MISSING"
-      ? "no module answers at this slot"
+      ? t("hwp.noAnswer")
       : module.status === "NO_MODULE_POWER"
-        ? "a module is installed but does not answer; its status LEDs are dark"
-        : "the module answers the CPU";
+        ? t("hwp.silent")
+        : t("hwp.answers");
   const field =
     module.status === "NO_FIELD_POWER"
-      ? "missing: the module reports no field (load) supply"
+      ? t("hwp.fieldMissing")
       : module.status === "OK"
-        ? "present"
-        : "unknown while the module does not answer correctly";
+        ? t("hwp.present")
+        : t("hwp.unknown");
   return (
     <dl className="kv" style={{ padding: 12 }}>
-      <dt>Electronics (backplane)</dt>
+      <dt>{t("hwp.electronics")}</dt>
       <dd>{electronics}</dd>
-      <dt>Field / load supply</dt>
+      <dt>{t("hwp.field")}</dt>
       <dd>{field}</dd>
-      <dt>Note</dt>
-      <dd className="muted">
-        Outputs need the field supply to switch their terminals; inputs need it
-        to supply their sensors. Measure the supply terminals to confirm.
-      </dd>
+      <dt>{t("hwp.note")}</dt>
+      <dd className="muted">{t("hwp.noteText")}</dd>
     </dl>
   );
 }
@@ -255,6 +249,7 @@ export function ModuleDiagnostics({
   module: ModuleViewDto;
   data: HardwareDto;
 }) {
+  const { t } = useInterface();
   const here = data.findings.filter(
     (f) =>
       f.slot?.rack === module.position.rack &&
@@ -272,11 +267,11 @@ export function ModuleDiagnostics({
     <section
       className="col"
       style={{ padding: 12 }}
-      aria-label="Module diagnostics"
+      aria-label={t("hwp.moduleDiagnostics")}
     >
       {here.length === 0 && entries.length === 0 && (
         <p className="muted" style={{ margin: 0 }}>
-          No finding and no diagnostic for this module.
+          {t("hwp.noDiagnostics")}
         </p>
       )}
       {here.map((f) => (
@@ -284,8 +279,7 @@ export function ModuleDiagnostics({
           key={findingKey(f)}
           className={`notice ${f.severity === "error" ? "error" : "warning"}`}
         >
-          <strong>{CATEGORY_LABEL[f.category] ?? f.category}:</strong>{" "}
-          {f.message}
+          <strong>{categoryLabel(t, f.category)}:</strong> {f.message}
         </div>
       ))}
       {entries.length > 0 && (
@@ -293,8 +287,8 @@ export function ModuleDiagnostics({
           <tbody>
             {entries.map((d, i) => (
               <tr key={i}>
-                <td className="mono dim">{d.event}</td>
-                <td>{d.text}</td>
+                <td className="mono dim">{t(`hwp.event.${d.event}`)}</td>
+                <td title={d.text}>{diagnosticText(t, d)}</td>
               </tr>
             ))}
           </tbody>

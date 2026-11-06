@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useInterface } from "../locale";
+import { diagnosticTitle } from "../locale/messages";
 import type { DiagnosticDto } from "@plc-lab/ipc";
 import { StructuredTextEditor } from "../StructuredTextEditor";
 import type { Lab } from "./useLab";
@@ -27,7 +28,8 @@ export function ProgramTab({ lab }: { lab: Lab }) {
               onClick={() => setFocused(d)}
             >
               {d.span ? `${d.span.start.line}: ` : ""}
-              {d.code} · {d.message}
+              {d.code}
+              {diagnosticTitle(t, d.code)} · {d.message}
             </button>
           ))}
         </div>

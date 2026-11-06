@@ -61,12 +61,12 @@ export function ForceBanner({ lab }: { lab: Lab }) {
         </button>
       </div>
       {open && list.data && (
-        <table className="table" aria-label="Active forces">
+        <table className="table" aria-label={t("force.table")}>
           <thead>
             <tr>
-              <th>Signal</th>
-              <th>Replaces</th>
-              <th>Forced value</th>
+              <th>{t("force.signal")}</th>
+              <th>{t("force.replaces")}</th>
+              <th>{t("force.value")}</th>
               <th />
             </tr>
           </thead>

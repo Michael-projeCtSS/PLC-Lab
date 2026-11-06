@@ -6,6 +6,12 @@
  */
 import { useState } from "react";
 import { api, type WatchTableDto } from "@plc-lab/ipc";
+import { useInterface } from "../locale";
+import {
+  qualityLabel,
+  translateCode,
+  type Translate,
+} from "../locale/messages";
 import { formatValue, seconds, valueClass } from "../format";
 import { Badge, Tabs } from "../ui";
 import { useFrameQuery } from "./useFrameQuery";
@@ -33,18 +39,18 @@ type Column =
   | "next"
   | "forced"
   | "time";
-const COLUMNS: { id: Column; label: string }[] = [
-  { id: "symbol", label: "Symbol" },
-  { id: "path", label: "Canonical ID" },
-  { id: "value", label: "Value" },
-  { id: "type", label: "Type" },
-  { id: "quality", label: "Quality" },
-  { id: "source", label: "Source" },
-  { id: "scan", label: "Scan input" },
-  { id: "committed", label: "Committed" },
-  { id: "next", label: "Next input" },
-  { id: "forced", label: "Forced" },
-  { id: "time", label: "World time" },
+const COLUMNS: { id: Column }[] = [
+  { id: "symbol" },
+  { id: "path" },
+  { id: "value" },
+  { id: "type" },
+  { id: "quality" },
+  { id: "source" },
+  { id: "scan" },
+  { id: "committed" },
+  { id: "next" },
+  { id: "forced" },
+  { id: "time" },
 ];
 const DEFAULT_COLUMNS: Column[] = [
   "symbol",
@@ -54,14 +60,9 @@ const DEFAULT_COLUMNS: Column[] = [
   "forced",
 ];
 const FORMATS: WatchFormat[] = ["auto", "decimal", "hex", "binary"];
-const KIND_LABEL: Record<string, string> = {
-  PLC_INPUT: "PLC input",
-  PLC_OUTPUT: "PLC output",
-  PLC_LOCAL: "PLC",
-  BLOCK_OUTPUT: "Block output",
-  PHYSICAL: "Process",
-  CHANNEL: "I/O channel",
-};
+function kindLabel(t: Translate, kind: string): string {
+  return translateCode(t, `watch.kind.${kind}`, kind);
+}
 const STORAGE = "plclab.watch.columns";
 
 /** Visible columns are a per-viewer preference, so browser storage is enough. */
@@ -95,12 +96,13 @@ export function WatchTables({
   lab: Lab;
   select?: (s: Selection) => void;
 }) {
+  const { t } = useInterface();
   const ws = lab.ws;
   const [columns, setColumns] = useState<Column[]>(loadColumns);
   const [search, setSearch] = useState("");
   const [name, setName] = useState<string | null>(null);
   const tables = lab.watchTables;
-  const table = tables.find((t) => t.id === lab.activeTable) ?? null;
+  const table = tables.find((x) => x.id === lab.activeTable) ?? null;
   const byPath = new Map(lab.signals.map((s) => [s.path, s]));
   const ids = (table?.rows ?? [])
     .map((r) => byPath.get(r.signal)?.id)
@@ -137,13 +139,13 @@ export function WatchTables({
       <div className="row wrap" style={{ padding: "4px 8px", gap: 8 }}>
         {tables.length > 0 && (
           <Tabs<string>
-            label="Watch tables"
+            label={t("watch.tables")}
             active={table?.id ?? ""}
             onSelect={(id) => {
               lab.selectTable(id);
               setName(null);
             }}
-            tabs={tables.map((t) => ({ id: t.id, label: t.name }))}
+            tabs={tables.map((x) => ({ id: x.id, label: x.name }))}
           />
         )}
         <button
@@ -155,12 +157,12 @@ export function WatchTables({
             setName(null);
           }}
         >
-          New table
+          {t("watch.new")}
         </button>
         {table && (
           <>
             <label className="row muted" style={{ fontSize: 12, gap: 4 }}>
-              Name
+              {t("watch.name")}
               <input
                 className="input"
                 value={name ?? table.name}
@@ -176,23 +178,23 @@ export function WatchTables({
                 setName(null);
               }}
             >
-              Rename
+              {t("watch.rename")}
             </button>
             <button
               className="btn btn-sm btn-ghost"
               onClick={() => {
-                const rest = tables.filter((t) => t.id !== table.id);
+                const rest = tables.filter((x) => x.id !== table.id);
                 lab.saveWatchTables(rest, rest[0]?.id ?? null);
               }}
             >
-              Delete table
+              {t("watch.delete")}
             </button>
           </>
         )}
         <span className="spacer" />
         <details>
           <summary className="muted" style={{ fontSize: 12 }}>
-            Columns
+            {t("watch.columns")}
           </summary>
           <div className="col" style={{ padding: 4 }} role="group">
             {COLUMNS.map((c) => (
@@ -202,7 +204,7 @@ export function WatchTables({
                   checked={columns.includes(c.id)}
                   onChange={() => toggle(c.id)}
                 />
-                {c.label}
+                {t(`watch.col.${c.id}`)}
               </label>
             ))}
           </div>
@@ -213,15 +215,15 @@ export function WatchTables({
           <input
             className="input"
             type="search"
-            placeholder="Find a PLC tag, block output, process value or I/O channel…"
-            aria-label="Find a signal"
+            placeholder={t("watch.searchPlaceholder")}
+            aria-label={t("watch.search")}
             value={search}
             disabled={table.rows.length >= MAX_ROWS}
             onChange={(e) => setSearch(e.target.value)}
             style={{ maxWidth: 420 }}
           />
           {matches.length > 0 && (
-            <ul className="list" aria-label="Matching signals">
+            <ul className="list" aria-label={t("watch.matches")}>
               {matches.map((s) => (
                 <li key={s.path}>
                   <button
@@ -236,10 +238,8 @@ export function WatchTables({
                       setSearch("");
                     }}
                   >
-                    Add {s.label}{" "}
-                    <span className="dim">
-                      ({KIND_LABEL[s.kind] ?? s.kind})
-                    </span>
+                    {t("watch.add", { label: s.label })}{" "}
+                    <span className="dim">({kindLabel(t, s.kind)})</span>
                   </button>
                 </li>
               ))}
@@ -249,23 +249,20 @@ export function WatchTables({
       )}
       <div style={{ flex: 1, overflow: "auto" }}>
         {!table ? (
-          <div className="empty">
-            Create a watch table to follow PLC tags, block outputs, process
-            values and I/O channels together. Rows are saved with the project.
-          </div>
+          <div className="empty">{t("watch.empty")}</div>
         ) : table.rows.length === 0 ? (
-          <div className="empty">
-            Find a signal above to add it. The active table also feeds the
-            waveforms.
-          </div>
+          <div className="empty">{t("watch.noRows")}</div>
         ) : (
-          <table className="table" aria-label={`Watch table ${table.name}`}>
+          <table
+            className="table"
+            aria-label={t("watch.table", { name: table.name })}
+          >
             <thead>
               <tr>
                 {visible.map((c) => (
-                  <th key={c.id}>{c.label}</th>
+                  <th key={c.id}>{t(`watch.col.${c.id}`)}</th>
                 ))}
-                <th>Format</th>
+                <th>{t("watch.format")}</th>
                 <th />
               </tr>
             </thead>
@@ -280,12 +277,12 @@ export function WatchTables({
                         <>
                           {e?.label ?? known.label}{" "}
                           <span className="dim">
-                            {KIND_LABEL[known.kind] ?? known.kind}
+                            {kindLabel(t, known.kind)}
                           </span>
                         </>
                       ) : (
                         <span className="dim">
-                          {row.signal}: not in the loaded program or station
+                          {t("watch.unknown", { signal: row.signal })}
                         </span>
                       );
                     case "path":
@@ -306,11 +303,9 @@ export function WatchTables({
                       return !e?.quality ? (
                         "—"
                       ) : e.quality === "GOOD" ? (
-                        <span className="dim">good</span>
+                        <span className="dim">{t("watch.good")}</span>
                       ) : (
-                        <Badge kind="bad">
-                          {e.quality.replaceAll("_", " ").toLowerCase()}
-                        </Badge>
+                        <Badge kind="bad">{qualityLabel(t, e.quality)}</Badge>
                       );
                     case "source":
                       return e?.source ?? "—";
@@ -339,7 +334,9 @@ export function WatchTables({
                       <select
                         className="input"
                         style={{ height: 22 }}
-                        aria-label={`Format of ${known?.label ?? row.signal}`}
+                        aria-label={t("watch.formatOf", {
+                          label: known?.label ?? row.signal,
+                        })}
                         value={row.format}
                         onChange={(ev) =>
                           save({
@@ -357,7 +354,7 @@ export function WatchTables({
                       >
                         {FORMATS.map((f) => (
                           <option key={f} value={f}>
-                            {f}
+                            {t(`watch.format.${f}`)}
                           </option>
                         ))}
                       </select>
@@ -370,7 +367,7 @@ export function WatchTables({
                             select({ kind: "signal", id: known.id })
                           }
                         >
-                          Details
+                          {t("watch.details")}
                         </button>
                       )}
                       <button
@@ -386,7 +383,7 @@ export function WatchTables({
                           )
                         }
                       >
-                        Remove
+                        {t("watch.remove")}
                       </button>
                     </td>
                   </tr>

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { auditUi } from "../../scripts/ui-locale-audit.mjs";
@@ -107,8 +108,33 @@ test("coverage includes article-specific instructions, evidence, fidelity and fa
 });
 
 test("the literal audit reports actionable engineering gaps without treating dictionary keys as prose", () => {
+  // A fixture proves detection now that the real screens have no gaps left.
+  const fixture = mkdtempSync(path.join(tmpdir(), "plclab-audit-"));
+  try {
+    writeFileSync(
+      path.join(fixture, "Panel.tsx"),
+      [
+        "export const Panel = () => (",
+        '  <div title="Module status">',
+        "    <h4>Configured versus actual</h4>",
+        '    <span aria-label="hw.status">RUN</span>',
+        "    <span>TID</span>",
+        "  </div>",
+        ");",
+        "",
+      ].join("\n"),
+    );
+    assert.deepEqual(
+      auditUi(fixture).map((row) => [row.line, row.text]),
+      [
+        [2, "Module status"],
+        [3, "Configured versus actual"],
+      ],
+    );
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
   const rows = auditUi();
-  assert.ok(rows.some((row) => row.file.endsWith("HardwareTab.tsx")));
   for (const row of rows) {
     assert.ok(row.line > 0 && row.text.trim());
     assert.ok(!/^[a-z]+\.[a-zA-Z.]+$/.test(row.text));

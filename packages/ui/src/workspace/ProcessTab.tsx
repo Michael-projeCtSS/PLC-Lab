@@ -9,6 +9,7 @@ import {
   type SignalValueDto,
 } from "@plc-lab/ipc";
 import { formatQuantity, humanize } from "../format";
+import { useInterface } from "../locale";
 import { AlarmSummary } from "./AlarmsTab";
 import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
@@ -44,6 +45,7 @@ export function ProcessTab({
   select: (s: Selection) => void;
   troubleshooting: boolean;
 }) {
+  const { t } = useInterface();
   const { workspace, frame, ws } = lab;
   if (!workspace || !frame || !ws) return null;
   const states = new Map(
@@ -148,7 +150,7 @@ export function ProcessTab({
         })}
         {troubleshooting && (
           <text x={990} y={612} textAnchor="end" className="label">
-            Field view: what you would see and hear at the machine
+            {t("process.fieldView")}
           </text>
         )}
       </svg>
@@ -171,6 +173,7 @@ function Symbol({
   config: Record<string, string>;
   layout: Map<string, LayoutDto>;
 }) {
+  const { t } = useInterface();
   const label = (dy: number, x = l.x) => (
     <text x={x} y={l.y + dy} textAnchor="middle" className="label">
       {c.label}
@@ -344,8 +347,10 @@ function Symbol({
             fill="#3dbb8a"
           />
           <text x={l.x + 16} y={l.y + h - 12} className="value-text">
-            {(n(q, "speedPermille") / 10).toFixed(0)} % speed ·{" "}
-            {formatQuantity(n(q, "currentMa"), "mA")}
+            {t("process.speed", {
+              value: (n(q, "speedPermille") / 10).toFixed(0),
+              current: formatQuantity(n(q, "currentMa"), "mA"),
+            })}
           </text>
           <text x={l.x + 8} y={l.y + 16} className="label">
             K1 {b(q, "command") ? "energized" : "de-energized"}
@@ -357,7 +362,7 @@ function Symbol({
               textAnchor="end"
               style={{ fill: "#e5534b", fontWeight: 700, fontSize: 11 }}
             >
-              OVERLOAD
+              {t("process.overload")}
             </text>
           )}
           {label(h + 16, cx)}
@@ -492,7 +497,9 @@ function Symbol({
               textAnchor="middle"
               style={{ fill: "#e5534b", fontSize: 11 }}
             >
-              spilled {formatQuantity(n(q, "spilledMl"), "ml")}
+              {t("process.spilled", {
+                amount: formatQuantity(n(q, "spilledMl"), "ml"),
+              })}
             </text>
           )}
           {label(h + 16, l.x + w / 2)}
@@ -664,8 +671,10 @@ function Symbol({
             className="value-text"
             style={{ fontSize: 11, fill: "#8fe0b8" }}
           >
-            {((speed * 50) / 1000).toFixed(1)} Hz · ref{" "}
-            {((reference * 50) / 1000).toFixed(1)}
+            {t("process.drive", {
+              hz: ((speed * 50) / 1000).toFixed(1),
+              ref: ((reference * 50) / 1000).toFixed(1),
+            })}
             {b(q, "keypadReference") ? " KP" : ""}
           </text>
           <text

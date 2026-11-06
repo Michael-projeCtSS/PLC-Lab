@@ -50,6 +50,12 @@ const technical = new Set([
   "Tier",
   "Polski",
   "English",
+  // IEC 61131-3 keyword shown as the retention marker of a variable.
+  "RETAIN",
+  // Modbus TCP transaction identifier: the protocol's own field name.
+  "TID",
+  // Time window lengths: the unit symbol is the same in Polish.
+  "5 min",
 ]);
 export function auditUi(directory = path.join(root, "packages/ui/src")) {
   const results = [];

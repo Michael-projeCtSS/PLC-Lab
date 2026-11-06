@@ -5,6 +5,7 @@
  * Nothing is recomputed here.
  */
 import { useInterface } from "../locale";
+import { diagnosticTitle } from "../locale/messages";
 import type { CauseEffectDto, EffectDto, SignalDto } from "@plc-lab/ipc";
 import { formatValue, seconds, valueClass } from "../format";
 
@@ -100,7 +101,8 @@ export function CauseEffect({
         </h5>
         {ce.fault ? (
           <div className="notice error">
-            {ce.fault.code}: {ce.fault.message}
+            {ce.fault.code}
+            {diagnosticTitle(t, ce.fault.code)}: {ce.fault.message}
           </div>
         ) : (
           <Items

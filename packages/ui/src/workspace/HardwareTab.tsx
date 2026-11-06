@@ -16,6 +16,8 @@ import {
   type StationDto,
 } from "@plc-lab/ipc";
 import { formatValue, valueClass } from "../format";
+import { useInterface } from "../locale";
+import { moduleStatus, qualityLabel, type Translate } from "../locale/messages";
 import { Badge, ErrorNotice, Tabs } from "../ui";
 import {
   FindingsPanel,
@@ -59,14 +61,22 @@ const MODES: ChannelConfigDto["mode"][] = [
   "voltage0To10V",
   "disabled",
 ];
-const MODE_LABEL: Record<string, string> = {
-  digital: "Digital",
-  current4To20mA: "4–20 mA",
-  current0To20mA: "0–20 mA",
-  voltage0To10V: "0–10 V",
-  disabled: "Disabled",
-};
-
+function modeLabel(t: Translate, mode: string): string {
+  switch (mode) {
+    case "digital":
+      return t("hw.mode.digital");
+    case "current4To20mA":
+      return "4–20 mA";
+    case "current0To20mA":
+      return "0–20 mA";
+    case "voltage0To10V":
+      return "0–10 V";
+    case "disabled":
+      return t("hw.mode.disabled");
+    default:
+      return mode;
+  }
+}
 export function HardwareTab({
   lab,
   selection,
@@ -78,11 +88,16 @@ export function HardwareTab({
   select: (s: Selection) => void;
   advanced: boolean;
 }) {
+  const { t } = useInterface();
   const { ws } = lab;
   const hw = useFrameQuery<HardwareDto>(lab, () =>
     ws ? api.hardware(ws) : Promise.reject(new Error("No workspace")),
   );
-  const [measurement, setMeasurement] = useState<MeasurementDto | null>(null);
+  const [measurement, setMeasurement] = useState<{
+    channel: string;
+    address: string;
+    dto: MeasurementDto;
+  } | null>(null);
   const [view, setView] = useState<View>("compare");
   const [section, setSection] = useState<Section>("overview");
   useEvidence(lab, "hardware view");
@@ -159,7 +174,9 @@ export function HardwareTab({
         <strong>{station.name}</strong>
         <span className="muted">
           {data.cpuName}
-          {data.cpuProduct ? ` · profile: ${data.cpuProduct}` : ""}
+          {data.cpuProduct
+            ? ` · ${t("hw.profile", { product: data.cpuProduct })}`
+            : ""}
         </span>
         <span className="spacer" />
         {data.cpuLeds.map((l) => (
@@ -170,9 +187,9 @@ export function HardwareTab({
         <span
           className="muted"
           style={{ fontSize: 11 }}
-          title="Simulated indicators; they do not reproduce a vendor's LED behavior."
+          title={t("hw.ledsHelp")}
         >
-          generic PLC Lab indicators
+          {t("hw.leds")}
         </span>
       </div>
       {pending && project && (
@@ -181,40 +198,36 @@ export function HardwareTab({
           style={{ margin: "8px 16px" }}
           role="status"
         >
-          <span className="grow">
-            The project's hardware configuration differs from the one loaded in
-            the PLC. Download it to take effect; Compare shows the PLC&apos;s
-            configuration.
-          </span>
+          <span className="grow">{t("hw.pending")}</span>
           <button
             className="btn btn-sm btn-primary"
             disabled={lab.busy !== null}
             onClick={() => void lab.buildAndLoad(false, project.station)}
           >
-            Download configuration
+            {t("hw.download")}
           </button>
           <button className="btn btn-sm" onClick={() => edit(data.station)}>
-            Discard changes
+            {t("hw.discard")}
           </button>
         </div>
       )}
       <Tabs<View>
-        label="Station views"
+        label={t("hw.views")}
         active={view}
         onSelect={setView}
         tabs={[
           {
             id: "compare",
-            label: "Compare",
+            label: t("hw.view.compare"),
             ...(data.findings.length > 0
               ? {
                   badge: <Badge kind="warning">{data.findings.length}</Badge>,
                 }
               : {}),
           },
-          { id: "configured", label: "Configured (project)" },
-          { id: "actual", label: "Actual (detected)" },
-          { id: "signals", label: "Signals" },
+          { id: "configured", label: t("hw.view.configured") },
+          { id: "actual", label: t("hw.view.actual") },
+          { id: "signals", label: t("hw.view.signals") },
         ]}
       />
       {advanced && view !== "actual" && view !== "signals" && (
@@ -230,7 +243,11 @@ export function HardwareTab({
         </div>
       )}
       {view === "configured" && (
-        <div className="rack" role="list" aria-label="Configured station">
+        <div
+          className="rack"
+          role="list"
+          aria-label={t("hw.configuredStation")}
+        >
           {station.modules.map((m) => {
             const type = data.catalog.find((t) => t.id === m.module);
             return (
@@ -251,10 +268,14 @@ export function HardwareTab({
                   className="module-head"
                   aria-pressed={selected?.position.slot === m.position.slot}
                 >
-                  <span className="slot">Slot {m.position.slot}</span>
+                  <span className="slot">
+                    {t("hw.slot", { slot: m.position.slot })}
+                  </span>
                   <strong style={{ fontSize: 11 }}>{m.id}</strong>
                   <span className="dim">{type?.name ?? m.module}</span>
-                  <span className="dim">start address {m.startAddress}</span>
+                  <span className="dim">
+                    {t("hw.startAddress", { address: m.startAddress })}
+                  </span>
                 </button>
               </div>
             );
@@ -265,7 +286,9 @@ export function HardwareTab({
         <div
           className="rack"
           role="list"
-          aria-label={view === "actual" ? "Detected station" : "Rack"}
+          aria-label={
+            view === "actual" ? t("hw.detectedStation") : t("hw.rack")
+          }
         >
           <div
             className={`module cpu${selection === null ? " selected" : ""}`}
@@ -277,7 +300,7 @@ export function HardwareTab({
               className="module-head"
               aria-pressed={selection === null}
             >
-              <span className="slot">Slot 0</span>
+              <span className="slot">{t("hw.slot", { slot: 0 })}</span>
               <strong>CPU</strong>
               <span className="dim">{data.cpuProduct ?? data.cpuName}</span>
             </button>
@@ -314,17 +337,19 @@ export function HardwareTab({
                   aria-pressed={isSelected}
                 >
                   <span className="row slot">
-                    Slot {m.position.slot}
+                    {t("hw.slot", { slot: m.position.slot })}
                     <span className="spacer" />
                     <span
                       className={LED_CLASS[m.statusLed] ?? "dot"}
-                      title={`Status ${m.status}`}
+                      title={t("hw.statusTitle", {
+                        status: moduleStatus(t, m.status),
+                      })}
                     />
                   </span>
                   <strong style={{ fontSize: 11 }}>
                     {view === "actual"
                       ? m.status === "MISSING"
-                        ? "EMPTY SLOT"
+                        ? t("hw.emptySlot")
                         : (m.installed ?? "").toUpperCase()
                       : (m.configured ?? m.installed ?? "").toUpperCase()}
                   </strong>
@@ -337,7 +362,7 @@ export function HardwareTab({
                       (f) =>
                         f.slot?.rack === m.position.rack &&
                         f.slot.slot === m.position.slot,
-                    ) && <Badge kind="warning">finding</Badge>}
+                    ) && <Badge kind="warning">{t("hw.finding")}</Badge>}
                 </button>
                 <div className="module-channels">
                   {m.channels.map((c) => (
@@ -362,45 +387,47 @@ export function HardwareTab({
         <div className="panel" style={{ margin: "0 16px 16px" }}>
           <div className="panel-head">
             <strong>
-              Slot {selected.position.slot}:{" "}
-              {selected.configuredName ?? "not configured"}
+              {t("hw.slotTitle", {
+                slot: selected.position.slot,
+                name: selected.configuredName ?? t("hw.notConfigured"),
+              })}
             </strong>
             <Badge kind={STATUS_KIND[selected.status] ?? "normal"}>
-              {selected.status.replaceAll("_", " ")}
+              {moduleStatus(t, selected.status)}
             </Badge>
             <span className="spacer" />
           </div>
           <div className="panel-body" style={{ padding: 0 }}>
             <Tabs<Section>
-              label="Module"
+              label={t("hw.moduleTabs")}
               active={section}
               onSelect={setSection}
               tabs={[
-                { id: "overview", label: "Overview" },
-                { id: "configuration", label: "Configuration" },
-                { id: "channels", label: "Channels" },
-                { id: "power", label: "Power" },
-                { id: "diagnostics", label: "Diagnostics" },
+                { id: "overview", label: t("hw.section.overview") },
+                { id: "configuration", label: t("hw.section.configuration") },
+                { id: "channels", label: t("hw.section.channels") },
+                { id: "power", label: t("hw.section.power") },
+                { id: "diagnostics", label: t("hw.section.diagnostics") },
               ]}
             />
             {section === "overview" && (
               <dl className="kv" style={{ padding: 12 }}>
-                <dt>Module id</dt>
+                <dt>{t("hw.moduleId")}</dt>
                 <dd className="mono">
-                  {selected.moduleId ?? "not configured"}
+                  {selected.moduleId ?? t("hw.notConfigured")}
                 </dd>
-                <dt>Configured</dt>
+                <dt>{t("hw.configured")}</dt>
                 <dd>{selected.configuredName ?? "—"}</dd>
-                <dt>Detected</dt>
+                <dt>{t("hw.detected")}</dt>
                 <dd>
                   {selected.status === "MISSING"
-                    ? "nothing answers at this slot"
+                    ? t("hw.nothingAnswers")
                     : selected.status === "NO_MODULE_POWER"
-                      ? "installed, not answering"
+                      ? t("hw.notAnswering")
                       : (selected.installedName ?? "—")}
                 </dd>
-                <dt>Status</dt>
-                <dd>{selected.status.replaceAll("_", " ").toLowerCase()}</dd>
+                <dt>{t("hw.status")}</dt>
+                <dd>{moduleStatus(t, selected.status).toLowerCase()}</dd>
               </dl>
             )}
             {section === "configuration" &&
@@ -408,7 +435,7 @@ export function HardwareTab({
                 <div className="col" style={{ padding: 12, gap: 8 }}>
                   {selected.configured && (
                     <label className="row muted" style={{ fontSize: 12 }}>
-                      Configured type
+                      {t("hw.configuredType")}
                       <select
                         className="input"
                         value={configuredOf(station, selected)?.module ?? ""}
@@ -426,7 +453,7 @@ export function HardwareTab({
                   {selected.moduleId && (
                     <div className="row" style={{ gap: 8 }}>
                       <label className="row muted" style={{ fontSize: 12 }}>
-                        Move to slot
+                        {t("hw.moveTo")}
                         <select
                           className="input"
                           value=""
@@ -441,7 +468,7 @@ export function HardwareTab({
                           }
                         >
                           <option value="" disabled>
-                            choose
+                            {t("hw.choose")}
                           </option>
                           {freeSlots(station).map((slot) => (
                             <option key={slot} value={slot}>
@@ -456,20 +483,17 @@ export function HardwareTab({
                           edit(removeModule(station, selected.moduleId ?? ""))
                         }
                       >
-                        Remove from configuration
+                        {t("hw.remove")}
                       </button>
                     </div>
                   )}
                   <p className="muted" style={{ margin: 0 }}>
-                    Changes are saved in the project configuration; download it
-                    to the PLC to take effect. The installed hardware does not
-                    change.
+                    {t("hw.savedHelp")}
                   </p>
                 </div>
               ) : (
                 <p className="muted" style={{ padding: 12, margin: 0 }}>
-                  Switch to Advanced to change the module type, move or remove
-                  the module, or add modules.
+                  {t("hw.advancedEdit")}
                 </p>
               ))}
             {section === "power" && <PowerSection module={selected} />}
@@ -480,13 +504,13 @@ export function HardwareTab({
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Ch</th>
-                    <th>LED</th>
-                    <th>Mode</th>
-                    <th>Tag</th>
-                    <th>Address</th>
-                    <th>Value</th>
-                    <th>Quality</th>
+                    <th>{t("hw.ch")}</th>
+                    <th>{t("hw.led")}</th>
+                    <th>{t("hw.mode")}</th>
+                    <th>{t("hw.tag")}</th>
+                    <th>{t("hw.address")}</th>
+                    <th>{t("hw.value")}</th>
+                    <th>{t("hw.quality")}</th>
                     <th />
                   </tr>
                 </thead>
@@ -522,18 +546,18 @@ export function HardwareTab({
                             >
                               {MODES.map((m) => (
                                 <option key={m} value={m}>
-                                  {MODE_LABEL[m]}
+                                  {modeLabel(t, m)}
                                 </option>
                               ))}
                             </select>
                           ) : (
-                            (MODE_LABEL[c.mode] ?? c.mode)
+                            modeLabel(t, c.mode)
                           )}
                           {advanced && current && config && (
                             <label
                               className="row"
                               style={{ gap: 4, fontSize: 11 }}
-                              title="On: the input supplies the loop for a 2-wire transmitter. Off: passive input for a separately powered 4-wire transmitter. Follow the module manual: terminal designs differ between products."
+                              title={t("hw.loopHelp")}
                             >
                               <input
                                 type="checkbox"
@@ -546,7 +570,7 @@ export function HardwareTab({
                                   )
                                 }
                               />
-                              Loop supply (2-wire)
+                              {t("hw.loop")}
                             </label>
                           )}
                         </td>
@@ -555,17 +579,17 @@ export function HardwareTab({
                         <td className={valueClass(c.value)}>
                           {c.output !== null
                             ? c.output
-                              ? "ON"
-                              : "OFF"
+                              ? t("hw.on")
+                              : t("hw.off")
                             : formatValue(c.value)}
                         </td>
                         <td>
                           {c.quality && c.quality !== "GOOD" ? (
                             <Badge kind="bad">
-                              {c.quality.replaceAll("_", " ")}
+                              {qualityLabel(t, c.quality).toUpperCase()}
                             </Badge>
                           ) : c.quality ? (
-                            <span className="dim">good</span>
+                            <span className="dim">{t("hw.good")}</span>
                           ) : (
                             ""
                           )}
@@ -580,13 +604,19 @@ export function HardwareTab({
                                   slot: selected.position.slot,
                                   channel: c.channel,
                                 })
-                                .then(setMeasurement, (e: unknown) =>
-                                  lab.log("error", String(e)),
+                                .then(
+                                  (dto) =>
+                                    setMeasurement({
+                                      channel: `R${selected.position.rack}/S${selected.position.slot}/CH${c.channel}`,
+                                      address: c.address,
+                                      dto,
+                                    }),
+                                  (e: unknown) => lab.log("error", String(e)),
                                 )
                             }
-                            title="Measure at the terminal with a multimeter"
+                            title={t("hw.measureHelp")}
                           >
-                            Measure
+                            {t("hw.measure")}
                           </button>
                         </td>
                       </tr>
@@ -597,18 +627,34 @@ export function HardwareTab({
             )}
             {section === "channels" && measurement && (
               <div className="notice" style={{ margin: 12 }} role="status">
-                Multimeter: <strong className="mono">{measurement.text}</strong>
+                {t("hw.multimeter")}{" "}
+                <strong className="mono" title={measurement.dto.text}>
+                  {measurementText(t, measurement)}
+                </strong>
               </div>
             )}
           </div>
         </div>
       ) : (
         <p className="muted" style={{ padding: "0 16px" }}>
-          Select a module to see its channels, live values and diagnostics. Use
-          “Measure” to check a terminal like a technician with a multimeter.
-          {!advanced && " Switch to Advanced to edit the configuration."}
+          {t("hw.selectHelp")}
+          {!advanced && t("hw.selectAdvanced")}
         </p>
       )}
     </div>
   );
+}
+
+/** The multimeter reading from the measured value; the backend text stays the original. */
+function measurementText(
+  t: Translate,
+  m: { channel: string; address: string; dto: MeasurementDto },
+): string {
+  const value =
+    m.dto.kind === "NO_MODULE" ? "" : (m.dto.value / 1000).toFixed(2);
+  return t(`hw.measure.${m.dto.kind}`, {
+    value,
+    channel: m.channel,
+    address: m.address,
+  });
 }

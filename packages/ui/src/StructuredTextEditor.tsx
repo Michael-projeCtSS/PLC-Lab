@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { DiagnosticDto } from "@plc-lab/ipc";
 import type { createStEditor } from "./monaco-host";
+import { useInterface } from "./locale";
 
 /** Monaco-based Structured Text editor. Markers come only from the Rust compiler/runtime. */
 export function StructuredTextEditor({
@@ -18,6 +19,7 @@ export function StructuredTextEditor({
   runtimeDiagnostics?: DiagnosticDto[];
   focusedDiagnostic: DiagnosticDto | null;
 }) {
+  const { t } = useInterface();
   const container = useRef<HTMLDivElement>(null);
   const instance = useRef<ReturnType<typeof createStEditor> | null>(null);
   const latest = useRef({
@@ -77,17 +79,14 @@ export function StructuredTextEditor({
     <div
       className="st-editor"
       data-testid="st-editor"
-      aria-label="Structured Text editor"
+      aria-label={t("editor.label")}
     >
       <div className="monaco-surface" ref={container} />
       {error && (
         <div className="st-editor-fallback">
-          <p role="alert">
-            The code editor could not load ({error}). A plain text editor is
-            shown instead.
-          </p>
+          <p role="alert">{t("editor.failed", { error })}</p>
           <textarea
-            aria-label="Structured Text source"
+            aria-label={t("editor.source")}
             value={source}
             readOnly={readOnly}
             spellCheck={false}

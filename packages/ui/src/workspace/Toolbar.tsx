@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useInterface } from "../locale";
+import { diagnosticLine } from "../locale/messages";
 import { api } from "@plc-lab/ipc";
 import { seconds } from "../format";
 import { Badge, PlcModeBadge, SimulationBadge } from "../ui";
@@ -105,13 +106,12 @@ export function Toolbar({
                       lab.log(
                         r.success ? "success" : "error",
                         r.success
-                          ? `Compiled ${r.programName ?? ""} without errors.`
-                          : `${r.diagnostics.length} compiler error(s).`,
+                          ? t("toolbar.compiled", { name: r.programName ?? "" })
+                          : t("toolbar.compileErrors", {
+                              count: r.diagnostics.length,
+                            }),
                         r.diagnostics
-                          .map(
-                            (d) =>
-                              `${d.span ? `line ${d.span.start.line}: ` : ""}${d.message}`,
-                          )
+                          .map((d) => diagnosticLine(t, d))
                           .join("\n") || undefined,
                       );
                   })
@@ -184,7 +184,9 @@ export function Toolbar({
         </div>
         <RestartControls lab={lab} advanced={mode === "advanced"} />
         {frame.plc.forces > 0 && (
-          <Badge kind="forced">{frame.plc.forces} forced</Badge>
+          <Badge kind="forced">
+            {t("toolbar.forced", { count: frame.plc.forces })}
+          </Badge>
         )}
       </div>
       <div
