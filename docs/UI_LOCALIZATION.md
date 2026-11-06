@@ -70,7 +70,7 @@ before diagnosis and translated repair/debrief availability after successful ver
 
 ## Interface and remaining gaps
 
-The dictionary contains **1,023 keys in each language** (parity and interpolation
+The dictionary contains **1,099 keys in each language** (parity and interpolation
 parameters verified). Every screen takes its labels from it: navigation, Home, exercises,
 lessons, knowledge, progress, Settings and About, and the engineering views — Hardware
 (compare, configured, detected, signals, module inspector, channel and loop
@@ -93,7 +93,8 @@ Backend text is worded from codes, never from English sentences ([ADR-0041](adr/
 - Compiler and runtime diagnostics show a Polish title for each of the 42 `PLC-*` codes
   next to the compiler's original technical message (names, types and positions).
 
-Text that stays as sent: scene and device labels, tags, project and program names, the
+Process view component kinds, live quantities and configuration keys are worded by their
+identifiers. Text that stays as sent: scene and device labels, tags, project and program names, the
 compiler's and runtime's detailed messages, I/O binding issues, hardware validation
 errors and knowledge-pack load errors. An unknown code shows the backend's English text.
 

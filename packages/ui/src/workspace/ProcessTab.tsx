@@ -8,7 +8,8 @@ import {
   type LayoutDto,
   type SignalValueDto,
 } from "@plc-lab/ipc";
-import { formatQuantity, humanize } from "../format";
+import { formatQuantity } from "../format";
+import { processLabel } from "../locale/messages";
 import { useInterface } from "../locale";
 import { AlarmSummary } from "./AlarmsTab";
 import type { Selection } from "./ProjectTree";
@@ -730,7 +731,7 @@ function Symbol({
             className="symbol"
           />
           <text x={l.x} y={l.y + 4} textAnchor="middle" className="label">
-            {humanize(c.kind)}
+            {processLabel(t, "kind", c.kind)}
           </text>
           {label(36)}
         </g>

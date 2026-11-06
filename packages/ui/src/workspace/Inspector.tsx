@@ -12,7 +12,8 @@ import {
   type GradeReportDto,
   type OptionDto,
 } from "@plc-lab/ipc";
-import { formatValue, humanize, quantityUnit, valueClass } from "../format";
+import { formatValue, quantityUnit, valueClass } from "../format";
+import { processLabel } from "../locale/messages";
 import { Badge, Tabs } from "../ui";
 import { isFaultFinding, type Navigate } from "../route";
 import { CauseEffect } from "./CauseEffect";
@@ -496,9 +497,13 @@ function Properties({ lab, selection }: { lab: Lab; selection: Selection }) {
         <h4>{c.label}</h4>
         <dl className="kv">
           <dt>{t("knowledge.type")}</dt>
-          <dd>{humanize(c.kind)}</dd>
+          <dd>{processLabel(t, "kind", c.kind)}</dd>
           {c.config.map((k) => (
-            <Fragmentish key={k.key} k={humanize(k.key)} v={k.value} />
+            <Fragmentish
+              key={k.key}
+              k={processLabel(t, "config", k.key)}
+              v={k.value}
+            />
           ))}
         </dl>
         <h4 style={{ marginTop: 12 }}>{t("properties.live")}</h4>
@@ -506,7 +511,7 @@ function Properties({ lab, selection }: { lab: Lab; selection: Selection }) {
           {state?.quantities.map((q) => (
             <Fragmentish
               key={q.name}
-              k={humanize(q.name)}
+              k={processLabel(t, "quantity", q.name)}
               v={formatValue(q.value, quantityUnit(q.name))}
               cls={valueClass(q.value)}
             />

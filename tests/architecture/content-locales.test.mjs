@@ -137,7 +137,7 @@ test("the literal audit reports actionable engineering gaps without treating dic
   const rows = auditUi();
   for (const row of rows) {
     assert.ok(row.line > 0 && row.text.trim());
-    assert.ok(!/^[a-z]+\.[a-zA-Z.]+$/.test(row.text));
+    assert.ok(!/^[a-z]+\.[a-zA-Z_.]+$/.test(row.text));
     assert.ok(
       !["PLC", "RUN", "Modbus TCP", "PROFINET", "TON"].includes(row.text),
     );

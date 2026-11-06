@@ -11,6 +11,7 @@ import type {
   MessageArgDto,
   MessageDto,
 } from "@plc-lab/ipc";
+import { humanize } from "../format";
 import { translate } from ".";
 import { backendPl } from "./backend-pl";
 import { en, type TranslationKey } from "./en";
@@ -196,4 +197,14 @@ export function moduleText(t: Translate, text: string): string {
   let out = text;
   for (const key of MODULE_TYPES) out = out.replaceAll(en[key], t(key));
   return out;
+}
+
+/** A component kind, live quantity or configuration key: its dictionary label, else the
+ * readable identifier the interface has always shown. */
+export function processLabel(
+  t: Translate,
+  group: "kind" | "quantity" | "config",
+  name: string,
+): string {
+  return translateCode(t, `${group}.${name}`, humanize(name));
 }
