@@ -24,7 +24,7 @@ AGENTS.md remains byte-identical to the supplied contract (SHA-256: 24AB582DDC05
 - [ADRs](adr/README.md), [feature matrix](spec/PLC_FEATURE_MATRIX.md), [architecture](architecture/ARCHITECTURE.md), [IPC boundary](architecture/FRONTEND_BACKEND_BOUNDARY.md).
 - [Development](DEVELOPMENT.md), [diagnostics](spec/DIAGNOSTICS.md), [test strategy](spec/TEST_STRATEGY.md), [roadmap](ROADMAP.md).
 - [Cargo workspace](../Cargo.toml), [npm workspace/commands](../package.json), [pinned Rust toolchain](../rust-toolchain.toml), [quality workflow](../.github/workflows/quality.yml).
-- [Native host](../apps/desktop/src-tauri/src/lib.rs), [command adapter](../apps/desktop/src-tauri/src/commands.rs), [React shell](../packages/ui/src/LabShell.tsx).
+- [Native host](../apps/desktop/src-tauri/src/lib.rs), [command adapter](../apps/desktop/src-tauri/src/commands.rs), React shell (`LabShell.tsx`, replaced by [`App.tsx`](../packages/ui/src/App.tsx) in `4b1b127`).
 - [Rust IPC contract](../crates/app-contract/src/lib.rs), [generated TypeScript](../packages/ipc/src/generated.ts), [typed IPC client](../packages/ipc/src/index.ts), [diagnostic types](../crates/plc-types/src/diagnostics.rs).
 - [Architecture tests](../tests/architecture/boundaries.test.mjs), [Rust integration tests](../tests/conformance/tests/foundation.rs), [native smoke harness](../tests/e2e/desktop-smoke.mjs).
 

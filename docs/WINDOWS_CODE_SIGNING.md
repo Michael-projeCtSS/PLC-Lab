@@ -187,8 +187,12 @@ remains unverified until onboarding and a successful production run.
 
 ## Signing configuration
 
-Use the supplied nonsecret configuration example, copy it to an ignored file such as
-`config/windows-signing.local.json`, and set `PLC_LAB_SIGNING_CONFIG` to its absolute path.
+Use the supplied nonsecret configuration example for your provider —
+`config/windows-signing.example.json` (SSL.com eSigner),
+`config/windows-signing.azure.example.json` (Azure Artifact Signing) or
+`config/windows-signing.certificate-store.example.json` (a certificate in the Windows
+store) — copy it to an ignored file such as `config/windows-signing.local.json`, and set
+`PLC_LAB_SIGNING_CONFIG` to its absolute path.
 Replace every example value. Never infer the expected publisher/root solely from an
 unknown EXE.
 

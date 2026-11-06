@@ -148,6 +148,7 @@ const step = async (name, work) => {
 };
 
 let browser;
+let passed = false;
 try {
   const endpoint = `http://127.0.0.1:${port}`;
   await step("native host exposes WebView2", async () => {
@@ -1321,6 +1322,7 @@ try {
     );
 
   await result("PASS");
+  passed = true;
   console.log(
     `Native smoke PASS (${path.relative(root, target) || target}, ${steps.length} steps)`,
   );
@@ -1349,4 +1351,23 @@ try {
       }
     }
   }
+  // A passing run leaves no browser profile or data behind; a failing one keeps both.
+  if (passed)
+    await removeProfile(
+      path.join(directory, `webview-${stamp}`),
+      path.join(directory, `data-${stamp}`),
+    );
+}
+
+async function removeProfile(...folders) {
+  for (const folder of folders)
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        await rm(folder, { recursive: true, force: true });
+        break;
+      } catch {
+        // WebView2 may release its files a moment after the process exits.
+        await delay(250);
+      }
+    }
 }

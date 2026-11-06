@@ -402,6 +402,29 @@ previous green run; `1356125` moves it to 1.14.1 and changes nothing else.
   (Free Lab retentive counter: RUN, warm restart, first scan, cold restart, diagnostic
   buffer), hosted CI PASS on the final SHA, then rebuild and stage the root `PLC Lab.exe`.
 
+## Product consolidation (Claude, 2026-11-04 to 2026-11-06)
+
+No PLC functionality was added. Commits on `claude/product-development-v2`:
+
+- `c81bd49`, `966c036`: `TEST_PLC_LAB.bat` starts the native Tauri application with its
+  Rust backend without signing; the release smoke waits for the closed WebView to
+  release its debugging port before a restart.
+- `90662fb`: the standalone browser preview is retired (ADR-0040 superseded); the Tauri
+  frontend (React, Vite, WebView2, Monaco, IPC) is unchanged.
+- `aaebc26`, `5b00579`, `b96e0cc`, `1c46b30`: every educational text is in Polish —
+  49 exercises (practice, troubleshooting, 29 commissioning labs), 25 lessons,
+  25 fundamentals, 7 instructions, 9 protocols, 30 troubleshooting and 24 vendor/family
+  articles; 0 missing prose fields, every group declared complete, identical texts need
+  a `keep` reason.
+- `ffed1c5`, `9bd1da1`, `2500031`: every screen takes its labels from the EN/PL
+  dictionaries (no literal left in the UI audit); diagnostic buffer, compiler/runtime
+  codes, connection states, qualities and module names are worded by code; commissioning
+  findings, hardware findings, the signal map and events carry coded messages from Rust
+  (ADR-0041, IPC contract 8 additive, 307 Polish message and term codes).
+- `2aaf54a`: light and system themes on semantic colour tokens, Monaco light theme,
+  WCAG AA for 57 token pairs per theme (ADR-0042).
+- Repository cleanup: see `docs/validation/REPOSITORY_CLEANUP.md`.
+
 ## Local machine limits
 
 Smart App Control blocks freshly built release build scripts and some generated test

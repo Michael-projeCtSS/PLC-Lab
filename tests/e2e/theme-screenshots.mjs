@@ -7,7 +7,7 @@
 // Usage: node tests/e2e/theme-screenshots.mjs [--exe target/debug/plc-lab-desktop.exe]
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -169,6 +169,16 @@ await writeFile(
   path.join(directory, "screenshots.json"),
   `${JSON.stringify(shots, null, 2)}\n`,
 );
+// The screenshots stay; the run's browser profile and data do not.
+for (const folder of [`webview-${stamp}`, `data-${stamp}`])
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try {
+      await rm(path.join(directory, folder), { recursive: true, force: true });
+      break;
+    } catch {
+      await delay(250);
+    }
+  }
 const problems = shots.filter((s) => s.problems.length);
 for (const s of shots)
   console.log(

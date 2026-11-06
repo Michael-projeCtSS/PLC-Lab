@@ -2,11 +2,12 @@
 // Tauri window and Rust backend (no browser), started from another working directory.
 // It verifies the Polish interface, a Free Lab project whose ST program uses VAR RETAIN and
 // FIRST_SCAN, PLC RUN with a running simulation, online values from the backend, the
-// alarm view, warm and cold restarts with their diagnostics, and a clean close. Data and
+// alarm view, warm and cold restarts with their diagnostics, switching between the light
+// and dark themes without touching the program, and a clean close. Data and
 // WebView2 state stay in artifacts/dev-session-check. Run: node tests/e2e/dev-session-check.mjs
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright-core";
@@ -276,6 +277,41 @@ try {
     await page.screenshot({ path: path.join(directory, "restarts.png") });
   });
 
+  await check(
+    "light and dark themes switch without touching the program",
+    async () => {
+      const lines = page.locator('[data-testid="st-editor"] .view-lines');
+      const views = page.getByRole("tablist", { name: "Workspace views" });
+      await views.getByRole("tab", { name: "Program" }).click();
+      const before = await lines.innerText();
+      const theme = async (value, background, monaco) => {
+        await page
+          .getByRole("button", { name: "Settings", exact: true })
+          .click();
+        await page.getByRole("combobox", { name: "Theme" }).selectOption(value);
+        await page.getByRole("button", { name: "Close", exact: true }).click();
+        assert.equal(
+          await page.evaluate(() => document.documentElement.dataset.theme),
+          value,
+        );
+        assert.equal(
+          await page.evaluate(
+            () => getComputedStyle(document.body).backgroundColor,
+          ),
+          background,
+        );
+        await page.locator(`.monaco-editor.${monaco}`).first().waitFor();
+        assert.equal(await lines.innerText(), before, "program unchanged");
+      };
+      await theme("light", "rgb(238, 241, 244)", "vs");
+      await page.screenshot({
+        path: path.join(directory, "workspace-light.png"),
+      });
+      await theme("dark", "rgb(14, 19, 23)", "vs-dark");
+      await page.getByText("Sim running", { exact: true }).waitFor();
+    },
+  );
+
   await check("restart controls in Polish", async () => {
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("combobox", { name: "Language" }).selectOption("pl");
@@ -322,4 +358,18 @@ try {
         stdio: "ignore",
       });
   }
+  // A passing check leaves no browser profile or data behind; a failing one keeps both.
+  if (!process.exitCode)
+    for (const folder of [`webview-${stamp}`, `data-${stamp}`])
+      for (let attempt = 0; attempt < 20; attempt++) {
+        try {
+          await rm(path.join(directory, folder), {
+            recursive: true,
+            force: true,
+          });
+          break;
+        } catch {
+          await delay(250);
+        }
+      }
 }
