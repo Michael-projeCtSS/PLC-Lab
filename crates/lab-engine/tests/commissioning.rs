@@ -123,7 +123,13 @@ fn findings(list: &Checklist, category: &str, item: &str) -> String {
         .iter()
         .find(|c| c.id == category)
         .and_then(|c| c.items.iter().find(|i| i.id == item))
-        .map(|i| i.findings.join("\n"))
+        .map(|i| {
+            i.findings
+                .iter()
+                .map(|f| f.text.as_str())
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
         .unwrap()
 }
 
@@ -243,7 +249,12 @@ fn findings_are_observations_and_never_name_the_injected_fault() {
             .categories
             .iter()
             .flat_map(|c| c.items.iter())
-            .flat_map(|i| i.findings.iter().map(String::as_str).chain([i.how]))
+            .flat_map(|i| {
+                i.findings
+                    .iter()
+                    .chain(i.how.as_ref())
+                    .map(|m| m.text.as_str())
+            })
             .collect::<Vec<_>>()
             .join("\n")
             .to_lowercase();

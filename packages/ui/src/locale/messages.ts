@@ -4,8 +4,17 @@
  * as the technical original. Unknown codes fall back to that English text, never to a
  * guess.
  */
-import type { DiagnosticDto, DiagnosticEntryDto, EventDto } from "@plc-lab/ipc";
+import type {
+  DiagnosticDto,
+  DiagnosticEntryDto,
+  EventDto,
+  MessageArgDto,
+  MessageDto,
+} from "@plc-lab/ipc";
+import { translate } from ".";
+import { backendPl } from "./backend-pl";
 import { en, type TranslationKey } from "./en";
+import type { Preferences } from "./preferences";
 
 export type Translate = (
   key: TranslationKey,
@@ -52,8 +61,11 @@ export function diagnosticText(
   switch (entry.kind) {
     case "ModuleMismatch":
       return t("diag.kind.ModuleMismatch", {
-        configured: value(t, detail(entry, "configured") ?? "none"),
-        installed: detail(entry, "installed") ?? "",
+        configured: moduleText(
+          t,
+          value(t, detail(entry, "configured") ?? "none"),
+        ),
+        installed: moduleText(t, detail(entry, "installed") ?? ""),
       });
     case "ModbusException": {
       const code = detail(entry, "exception") ?? "";
@@ -95,7 +107,7 @@ export function diagnosticDetails(
   return entry.details
     .map(
       (d) =>
-        `${translateCode(t, `diag.detail.${d.name}`, d.name)}: ${value(t, d.value)}`,
+        `${translateCode(t, `diag.detail.${d.name}`, d.name)}: ${moduleText(t, value(t, d.value))}`,
     )
     .join(", ");
 }
@@ -122,9 +134,12 @@ export function eventKind(t: Translate, kind: string): string {
   );
 }
 
-/** The event text: its structured message when the backend sent one, else the original. */
-export function eventText(_t: Translate, event: EventDto): string {
-  return event.text;
+/** The event text: its coded message when the backend sent one, else the original. */
+export function eventText(
+  language: Preferences["language"],
+  event: EventDto,
+): string {
+  return backendText(language, event.message, event.text);
 }
 
 /** The localized title of a compiler or runtime diagnostic code, after a separator. */
@@ -137,4 +152,48 @@ export function diagnosticTitle(t: Translate, code: string): string {
 export function diagnosticLine(t: Translate, d: DiagnosticDto): string {
   const line = d.span ? t("toolbar.line", { line: d.span.start.line }) : "";
   return `${line}${d.code}${diagnosticTitle(t, d.code)}: ${d.message}`;
+}
+
+/**
+ * A coded backend message in the viewer's language. English is the backend's own text;
+ * Polish words the code from `backendPl` and each value by its kind: data as it is,
+ * terms by their vocabulary code, nested messages recursively. A code without Polish
+ * wording shows the English original.
+ */
+export function backendText(
+  language: Preferences["language"],
+  m: MessageDto | null | undefined,
+  fallback = "",
+): string {
+  if (!m) return fallback;
+  if (language !== "pl") return m.text;
+  const value = (a: MessageArgDto): string => {
+    if (a.message) return backendText(language, a.message);
+    if (a.term === null) return a.text;
+    const word = backendPl[a.term];
+    if (word !== undefined) return word;
+    return isTranslationKey(a.term) ? translate("pl", a.term) : a.text;
+  };
+  if (m.code === "list") return m.args.map(value).join(", ");
+  const template = backendPl[m.code];
+  if (template === undefined) return m.text;
+  const values = new Map(m.args.map((a) => [a.name, value(a)]));
+  return template.replace(
+    /\{(\w+)\}/g,
+    (match, name: string) => values.get(name) ?? match,
+  );
+}
+
+const MODULE_TYPES = Object.keys(en).filter((key) =>
+  /^module\.(cpu|ps|di|do|ai|ao)/.test(key),
+) as TranslationKey[];
+
+/**
+ * A backend module name in the viewer's language: every generic module name inside it
+ * ("Analog input 4 x U/I") is worded by its type; product names around it stay as sent.
+ */
+export function moduleText(t: Translate, text: string): string {
+  let out = text;
+  for (const key of MODULE_TYPES) out = out.replaceAll(en[key], t(key));
+  return out;
 }

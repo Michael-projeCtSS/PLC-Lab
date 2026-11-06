@@ -70,27 +70,38 @@ before diagnosis and translated repair/debrief availability after successful ver
 
 ## Interface and remaining gaps
 
-The dictionary contains **368 keys in each language** (parity verified). Translated UI includes navigation, Home, exercise cards, lesson/knowledge/progress chrome,
-Settings/About, task/investigation/results, primary PLC/simulation controls, variable
-headings, force banner and causal explanations. All dictionary keys have Polish entries
-with matching interpolation parameters; not every component uses the dictionary yet.
+The dictionary contains **1,023 keys in each language** (parity and interpolation
+parameters verified). Every screen takes its labels from it: navigation, Home, exercises,
+lessons, knowledge, progress, Settings and About, and the engineering views — Hardware
+(compare, configured, detected, signals, module inspector, channel and loop
+configuration), Network (topology, nodes, connection inspector, traffic, ping, network
+configuration), Watch tables, variables and online detail, force banner, waveforms, event
+log, Diagnostic Buffer, CPU diagnostics, Commissioning, process view labels, toolbar and
+editor. `node scripts/ui-locale-audit.mjs` reports no literal candidates; `RETAIN`, `TID`
+and `5 min` are listed as identical in Polish with their reasons.
+
+Backend text is worded from codes, never from English sentences ([ADR-0041](adr/0041-coded-backend-messages.md)):
+
+- Commissioning findings and hints, hardware findings (message, expected, detected), the
+  signal map's device state and every event carry a coded message with named values.
+  `packages/ui/src/locale/backend-pl.ts` words all 307 message and term codes the Rust
+  sources contain; a test fails when a code has no Polish wording, when placeholders
+  differ, or when a Polish text equals the English one without a stated reason.
+- CPU diagnostic buffer entries are worded from their kind and typed details, connection
+  states, ping results, Modbus exceptions, channel qualities and module states from their
+  codes, and module type names by type, keeping vendor product names as sent.
+- Compiler and runtime diagnostics show a Polish title for each of the 42 `PLC-*` codes
+  next to the compiler's original technical message (names, types and positions).
+
+Text that stays as sent: scene and device labels, tags, project and program names, the
+compiler's and runtime's detailed messages, I/O binding issues, hardware validation
+errors and knowledge-pack load errors. An unknown code shows the backend's English text.
 
 Basic Free Lab prioritizes Program, Process, variables and causal explanations. Advanced
 retains all engineering tools. Lessons keep required views; active fault/force warnings
 remain visible. Settings has focus handling and accessible selectors. Card wrapping,
 readable article widths, section spacing, code/table scrolling and provenance layout
 support longer Polish text without shrinking fonts.
-
-Remaining localization gaps: process scene/device names; deep Hardware, Network, Watch,
-Force, variable detail, Commissioning findings and Diagnostic Buffer forms/messages.
-These are tracked gaps, not permanent English exceptions. No accurate whole-product
-percentage is claimed. Template source comments remain English because user/template
-comments are not distinguished by rewriting code.
-
-Error notices have a localized primary heading with expandable original detail.
-Compile/interface/binding failures and diagnosis feedback have localized primary guidance.
-Structured compiler/runtime messages, dynamic grading details and many operation-specific
-errors remain English. The Rust backend and technical diagnostics are preserved.
 
 Intentionally unchanged: ST syntax, code/user comments, names/tags, serialized enums,
 vendor/protocol/product names and official titles/URLs/revisions. Provenance records,
@@ -125,5 +136,5 @@ release evidence and hosted CI. The Windows policy still blocks some generated R
 executables (4551); no security policy change is made. Hosted CI runs full debug/release
 Rust suites.
 
-Next safe dependency: the engineering inspectors and backend messages. No new
-PLC/editor/protocol functionality is needed.
+Next safe dependency: the light theme. No new PLC/editor/protocol functionality is
+needed.

@@ -21,6 +21,31 @@ import {
 
 const u16n = u16;
 
+/** Backend messages nest (a list of terms, a message inside a message): at most 4 deep. */
+function message(depth: number): Validator<G.MessageDto> {
+  const nested: Validator<G.MessageDto | null> =
+    depth > 0
+      ? nullable(message(depth - 1))
+      : (v, p) => {
+          if (v !== null) throw new Error(`${p}: message nested too deep`);
+          return null;
+        };
+  return obj<G.MessageDto>({
+    code: str,
+    text: str,
+    args: arr(
+      obj<G.MessageArgDto>({
+        name: str,
+        text: str,
+        term: nullable(str),
+        message: nested,
+      }),
+      32,
+    ),
+  });
+}
+export const messageDto = message(4);
+
 export const signalValue: Validator<G.SignalValueDto> =
   tagged<G.SignalValueDto>({
     BOOL: obj({ type: literal("BOOL"), value: bool }),
@@ -683,6 +708,7 @@ const event = obj<G.EventDto>({
   severity: literal("info", "warning", "error"),
   text: str,
   source: nullable(str),
+  message: nullable(messageDto),
 });
 export const eventsPage = obj<G.EventsPageDto>({
   events: arr(event, 500),
@@ -812,6 +838,9 @@ export const hardware = obj<G.HardwareDto>({
       expected: nullable(str),
       detected: nullable(str),
       message: str,
+      detail: messageDto,
+      expectedMessage: nullable(messageDto),
+      detectedMessage: nullable(messageDto),
     }),
     2_000,
   ),
@@ -827,6 +856,7 @@ export const hardware = obj<G.HardwareDto>({
       drawnDevice: nullable(str),
       drawnPort: nullable(str),
       deviceState: nullable(str),
+      deviceStateMessage: nullable(messageDto),
     }),
     4_096,
   ),
@@ -844,6 +874,8 @@ const checkItem = obj<G.CheckItemDto>({
   state: checkState,
   findings: arr(str),
   how: str,
+  findingMessages: arr(messageDto),
+  howMessage: nullable(messageDto),
 });
 const checkCategory = obj<G.CheckCategoryDto>({
   id: literal(

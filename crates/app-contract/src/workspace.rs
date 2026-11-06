@@ -525,6 +525,8 @@ pub struct EventDto {
     pub severity: String,
     pub text: String,
     pub source: Option<String>,
+    /// `text` as a message for the viewer's language, where the event has one.
+    pub message: Option<MessageDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -710,6 +712,27 @@ pub struct ModuleTypeDto {
     pub channels: u8,
     pub class: String,
 }
+/// A user-facing message: a stable code, its named values and the canonical English
+/// text. The interface words the code in the viewer's language and falls back to `text`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MessageDto {
+    pub code: String,
+    pub text: String,
+    pub args: Vec<MessageArgDto>,
+}
+/// A value of a message: data shown as it is, a vocabulary term, or a nested message.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MessageArgDto {
+    pub name: String,
+    /// The value as shown in English.
+    pub text: String,
+    /// The vocabulary code of a term; `None` for data and nested messages.
+    pub term: Option<String>,
+    pub message: Option<Box<MessageDto>>,
+}
+
 /// One commissioning check, evaluated by the engine from the installation's observable
 /// state and the I/O tests performed in this session.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -722,6 +745,10 @@ pub struct CheckItemDto {
     pub findings: Vec<String>,
     /// What to do or which tool shows it; empty when nothing applies.
     pub how: String,
+    /// `findings` as messages the interface words in the viewer's language.
+    pub finding_messages: Vec<MessageDto>,
+    /// `how` as a message; `None` when nothing applies.
+    pub how_message: Option<MessageDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -758,6 +785,10 @@ pub struct HardwareFindingDto {
     pub expected: Option<String>,
     pub detected: Option<String>,
     pub message: String,
+    /// `message`, `expected` and `detected` as messages for the viewer's language.
+    pub detail: MessageDto,
+    pub expected_message: Option<MessageDto>,
+    pub detected_message: Option<MessageDto>,
 }
 /// A mapped PLC signal followed through the installation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -775,6 +806,7 @@ pub struct SignalMapRowDto {
     pub drawn_port: Option<String>,
     /// The drawn device's own state.
     pub device_state: Option<String>,
+    pub device_state_message: Option<MessageDto>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -1020,7 +1052,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticDetailDto, DiagnosticEntryDto, DiagnosticBufferRequest, DiagnosticBufferDto,
         PlcRestartRequest, AlarmsRequest, AlarmEventDto, AlarmsDto, AlarmAckRequest, AlarmAckResultDto, ModuleTypeDto,
-        CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareFindingDto, SignalMapRowDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
+        MessageDto, MessageArgDto, CheckItemDto, CheckCategoryDto, CommissioningDto, HardwareFindingDto, SignalMapRowDto, HardwareDto, ScanViewDto, ModbusRequestDto, ScanValueDto, TrafficDto, DeviceViewDto, NetworkDto, MeasureRequest, MeasurementDto, PingRequest, PingDto,
         EvidenceRequest, DiagnosisRequest, DiagnosisResultDto, RepairRequest, RepairResultDto, CheckRequest,
         CriterionResultDto, DebriefDto, GradeReportDto, ExecutionWakeDto
     )

@@ -444,7 +444,11 @@ export type EventDto = { seq: ExactU64, timeUs: ExactU64, cycle: ExactU64, kind:
 /**
  * "info" | "warning" | "error"
  */
-severity: "info" | "warning" | "error", text: string, source: string | null, };
+severity: "info" | "warning" | "error", text: string, source: string | null, 
+/**
+ * `text` as a message for the viewer's language, where the event has one.
+ */
+message: MessageDto | null, };
 
 export type EventsPageDto = { events: Array<EventDto>, gap: boolean, dropped: ExactU64, latest: ExactU64 | null, };
 
@@ -527,6 +531,18 @@ export type AlarmAckResultDto = { acknowledged: number, frame: LiveFrameDto, };
 
 export type ModuleTypeDto = { id: string, name: string, product: string | null, channels: number, class: string, };
 
+export type MessageDto = { code: string, text: string, args: Array<MessageArgDto>, };
+
+export type MessageArgDto = { name: string, 
+/**
+ * The value as shown in English.
+ */
+text: string, 
+/**
+ * The vocabulary code of a term; `None` for data and nested messages.
+ */
+term: string | null, message: MessageDto | null, };
+
 export type CheckItemDto = { id: string, title: string, 
 /**
  * "OK" | "ATTENTION" | "FAULT" | "UNTESTED" | "NOT_APPLICABLE"
@@ -535,7 +551,15 @@ state: string, findings: Array<string>,
 /**
  * What to do or which tool shows it; empty when nothing applies.
  */
-how: string, };
+how: string, 
+/**
+ * `findings` as messages the interface words in the viewer's language.
+ */
+findingMessages: Array<MessageDto>, 
+/**
+ * `how` as a message; `None` when nothing applies.
+ */
+howMessage: MessageDto | null, };
 
 export type CheckCategoryDto = { 
 /**
@@ -563,7 +587,11 @@ category: string,
 /**
  * "warning" | "error"
  */
-severity: "warning" | "error", slot: SlotRefDto | null, channel: ChannelRefDto | null, moduleId: string | null, expected: string | null, detected: string | null, message: string, };
+severity: "warning" | "error", slot: SlotRefDto | null, channel: ChannelRefDto | null, moduleId: string | null, expected: string | null, detected: string | null, message: string, 
+/**
+ * `message`, `expected` and `detected` as messages for the viewer's language.
+ */
+detail: MessageDto, expectedMessage: MessageDto | null, detectedMessage: MessageDto | null, };
 
 export type SignalMapRowDto = { tag: string, channel: ChannelRefDto, channelId: string | null, address: string, value: SignalValueDto | null, quality: string | null, output: boolean | null, 
 /**
@@ -573,7 +601,7 @@ drawnDevice: string | null, drawnPort: string | null,
 /**
  * The drawn device's own state.
  */
-deviceState: string | null, };
+deviceState: string | null, deviceStateMessage: MessageDto | null, };
 
 export type HardwareDto = { station: StationDto, cpu: string, cpuName: string, cpuProduct: string | null, cpuLeds: Array<LedDto>, modules: Array<ModuleViewDto>, diagnostics: Array<DiagnosticEntryDto>, catalog: Array<ModuleTypeDto>, 
 /**

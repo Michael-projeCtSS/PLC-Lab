@@ -15,7 +15,9 @@ import type {
 import { formatValue } from "../format";
 import { useInterface } from "../locale";
 import {
+  backendText,
   diagnosticText,
+  moduleText,
   translateCode,
   type Translate,
 } from "../locale/messages";
@@ -49,7 +51,9 @@ export function FindingsPanel({
 }: {
   findings: readonly HardwareFindingDto[];
 }) {
-  const { t } = useInterface();
+  const { t, preferences } = useInterface();
+  const say = (m: HardwareFindingDto["detail"] | null, text: string | null) =>
+    backendText(preferences.language, m, text ?? "—") || "—";
   return (
     <section className="panel" aria-label={t("hwp.compare")}>
       <div className="panel-head">
@@ -81,9 +85,9 @@ export function FindingsPanel({
                   </Badge>
                 </td>
                 <td>{categoryLabel(t, f.category)}</td>
-                <td>{f.expected ?? "—"}</td>
-                <td>{f.detected ?? "—"}</td>
-                <td>{f.message}</td>
+                <td>{say(f.expectedMessage, f.expected)}</td>
+                <td>{say(f.detectedMessage, f.detected)}</td>
+                <td>{say(f.detail, f.message)}</td>
               </tr>
             ))}
           </tbody>
@@ -98,7 +102,7 @@ export function SignalMapPanel({
 }: {
   signals: readonly SignalMapRowDto[];
 }) {
-  const { t } = useInterface();
+  const { t, preferences } = useInterface();
   return (
     <section className="panel" aria-label={t("hwp.signals")}>
       <div className="panel-head">
@@ -144,7 +148,13 @@ export function SignalMapPanel({
                   ? `${s.drawnDevice} (${s.drawnPort ?? ""})`
                   : t("hwp.notDrawn")}
               </td>
-              <td>{s.deviceState ?? "—"}</td>
+              <td>
+                {backendText(
+                  preferences.language,
+                  s.deviceStateMessage,
+                  s.deviceState ?? "—",
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -181,7 +191,7 @@ export function StationEditor({
         >
           {catalog.map((m) => (
             <option key={m.id} value={m.id}>
-              {m.name}
+              {moduleText(t, m.name)}
             </option>
           ))}
         </select>
@@ -249,7 +259,7 @@ export function ModuleDiagnostics({
   module: ModuleViewDto;
   data: HardwareDto;
 }) {
-  const { t } = useInterface();
+  const { t, preferences } = useInterface();
   const here = data.findings.filter(
     (f) =>
       f.slot?.rack === module.position.rack &&
@@ -279,7 +289,8 @@ export function ModuleDiagnostics({
           key={findingKey(f)}
           className={`notice ${f.severity === "error" ? "error" : "warning"}`}
         >
-          <strong>{categoryLabel(t, f.category)}:</strong> {f.message}
+          <strong>{categoryLabel(t, f.category)}:</strong>{" "}
+          {backendText(preferences.language, f.detail, f.message)}
         </div>
       ))}
       {entries.length > 0 && (

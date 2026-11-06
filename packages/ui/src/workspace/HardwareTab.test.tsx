@@ -105,6 +105,13 @@ const hardware: HardwareDto = {
       expected: "DI 8",
       detected: "DO 8",
       message: "di-r0s1 at rack 0 slot 1: configured DI 8, detected DO 8",
+      detail: {
+        code: "hw.wrongType",
+        text: "di-r0s1 at rack 0 slot 1: configured DI 8, detected DO 8",
+        args: [],
+      },
+      expectedMessage: null,
+      detectedMessage: null,
     },
   ],
   signals: [
@@ -119,6 +126,11 @@ const hardware: HardwareDto = {
       drawnDevice: "Start S1",
       drawnPort: "contact",
       deviceState: "actuated",
+      deviceStateMessage: {
+        code: "device.actuated",
+        text: "actuated",
+        args: [],
+      },
     },
   ],
 };

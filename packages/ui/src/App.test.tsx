@@ -325,6 +325,18 @@ it("the commissioning tab shows the checklist the backend evaluated", async () =
             state: "FAULT",
             findings: ["DI 16 at rack 0 slot 1: no 24 V field (load) supply"],
             how: "Hardware view: module status.",
+            findingMessages: [
+              {
+                code: "hw.fieldPower",
+                text: "DI 16 at rack 0 slot 1: no 24 V field (load) supply",
+                args: [],
+              },
+            ],
+            howMessage: {
+              code: "check.how.fieldSupply",
+              text: "Hardware view: module status.",
+              args: [],
+            },
           },
         ],
       },
@@ -339,6 +351,14 @@ it("the commissioning tab shows the checklist the backend evaluated", async () =
             state: "NOT_APPLICABLE",
             findings: ["This machine has no drive."],
             how: "",
+            findingMessages: [
+              {
+                code: "check.noDrive",
+                text: "This machine has no drive.",
+                args: [],
+              },
+            ],
+            howMessage: null,
           },
         ],
       },

@@ -9,7 +9,9 @@ mod comparison;
 mod diagnostics;
 
 pub use analog::{AnalogCondition, AnalogRaw, AnalogReading};
-pub use comparison::{FindingCategory, FindingSeverity, HardwareFinding};
+pub use comparison::{
+    FindingCategory, FindingSeverity, HardwareFinding, mode_term, signal_term, slot_message,
+};
 pub use diagnostics::{
     CpuState, DiagnosticBuffer, DiagnosticEntry, DiagnosticEvent, DiagnosticKind, DiagnosticSource,
     StartupKind,

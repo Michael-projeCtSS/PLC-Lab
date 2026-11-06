@@ -17,7 +17,12 @@ import {
 } from "@plc-lab/ipc";
 import { formatValue, valueClass } from "../format";
 import { useInterface } from "../locale";
-import { moduleStatus, qualityLabel, type Translate } from "../locale/messages";
+import {
+  moduleStatus,
+  moduleText,
+  qualityLabel,
+  type Translate,
+} from "../locale/messages";
 import { Badge, ErrorNotice, Tabs } from "../ui";
 import {
   FindingsPanel,
@@ -272,7 +277,9 @@ export function HardwareTab({
                     {t("hw.slot", { slot: m.position.slot })}
                   </span>
                   <strong style={{ fontSize: 11 }}>{m.id}</strong>
-                  <span className="dim">{type?.name ?? m.module}</span>
+                  <span className="dim">
+                    {type ? moduleText(t, type.name) : m.module}
+                  </span>
                   <span className="dim">
                     {t("hw.startAddress", { address: m.startAddress })}
                   </span>
@@ -389,7 +396,9 @@ export function HardwareTab({
             <strong>
               {t("hw.slotTitle", {
                 slot: selected.position.slot,
-                name: selected.configuredName ?? t("hw.notConfigured"),
+                name: selected.configuredName
+                  ? moduleText(t, selected.configuredName)
+                  : t("hw.notConfigured"),
               })}
             </strong>
             <Badge kind={STATUS_KIND[selected.status] ?? "normal"}>
@@ -417,14 +426,20 @@ export function HardwareTab({
                   {selected.moduleId ?? t("hw.notConfigured")}
                 </dd>
                 <dt>{t("hw.configured")}</dt>
-                <dd>{selected.configuredName ?? "—"}</dd>
+                <dd>
+                  {selected.configuredName
+                    ? moduleText(t, selected.configuredName)
+                    : "—"}
+                </dd>
                 <dt>{t("hw.detected")}</dt>
                 <dd>
                   {selected.status === "MISSING"
                     ? t("hw.nothingAnswers")
                     : selected.status === "NO_MODULE_POWER"
                       ? t("hw.notAnswering")
-                      : (selected.installedName ?? "—")}
+                      : selected.installedName
+                        ? moduleText(t, selected.installedName)
+                        : "—"}
                 </dd>
                 <dt>{t("hw.status")}</dt>
                 <dd>{moduleStatus(t, selected.status).toLowerCase()}</dd>
@@ -441,10 +456,10 @@ export function HardwareTab({
                         value={configuredOf(station, selected)?.module ?? ""}
                         onChange={(e) => editModule(selected, e.target.value)}
                       >
-                        {data.catalog.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.product ? `${t.product} — ` : ""}
-                            {t.name}
+                        {data.catalog.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.product ? `${m.product} — ` : ""}
+                            {moduleText(t, m.name)}
                           </option>
                         ))}
                       </select>

@@ -116,6 +116,23 @@ impl ModuleType {
             Self::Ao2 => "ao2.ui",
         }
     }
+    /// The generic name as a vocabulary term the interface words by the module type.
+    pub fn name_term(self) -> crate::message::Arg {
+        let code = match self {
+            Self::CpuCompact => "module.cpu.compact",
+            Self::CpuModular => "module.cpu.modular",
+            Self::PowerSupply24Vdc => "module.ps.24vdc",
+            Self::Di8Sinking => "module.di8.24vdc.sink",
+            Self::Di16Sinking => "module.di16.24vdc.sink",
+            Self::Di8Sourcing => "module.di8.24vdc.source",
+            Self::Do8 => "module.do8.24vdc",
+            Self::Do16 => "module.do16.24vdc",
+            Self::Ai4 => "module.ai4.ui",
+            Self::Ai8 => "module.ai8.ui",
+            Self::Ao2 => "module.ao2.ui",
+        };
+        crate::message::term(code, self.generic_name())
+    }
     pub fn generic_name(self) -> &'static str {
         match self {
             Self::CpuCompact => "Compact CPU",

@@ -45,3 +45,4 @@ as history; their session, process and controller details are superseded as note
 | [0037](0037-industrial-alarm-model.md)                 | A generic industrial alarm model                                     | Accepted                            |
 | [0039](0039-windows-release-signing.md)                | Trusted production signatures and signed distribution catalog        | Accepted for this signing task      |
 | [0040](0040-browser-ui-preview-boundary.md)            | Read-only development browser presentation                           | Superseded: browser preview retired |
+| [0041](0041-coded-backend-messages.md)                 | Coded backend messages for the interface language                    | Accepted for localization           |

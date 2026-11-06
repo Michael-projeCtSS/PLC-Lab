@@ -550,7 +550,7 @@ const EVENT_FILTERS = [
 ] as const;
 
 function Events({ lab }: { lab: Lab }) {
-  const { t } = useInterface();
+  const { t, preferences } = useInterface();
   const [events, setEvents] = useState<EventDto[]>([]);
   const [gap, setGap] = useState(false);
   const [filter, setFilter] = useState<string>("all");
@@ -620,7 +620,7 @@ function Events({ lab }: { lab: Lab }) {
               <span className="mono dim">#{e.cycle}</span>
               <span className="dim">{eventKind(t, e.kind)}</span>
               <span className="text" title={e.source ?? undefined}>
-                {eventText(t, e)}
+                {eventText(preferences.language, e)}
                 {e.source ? <span className="dim"> · {e.source}</span> : null}
               </span>
             </div>

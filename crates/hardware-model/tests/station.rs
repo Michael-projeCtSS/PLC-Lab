@@ -592,10 +592,13 @@ fn comparing_project_installation_and_drawing_finds_each_difference() {
     let f = st.compare(&sc);
     assert_eq!(f[0].category, FindingCategory::WrongModuleType);
     assert_eq!(f[0].module_id.as_deref(), Some("ai-r0s4"));
+    let detected = f[0].detected.as_ref().expect("detected module");
+    assert_eq!(detected.text, ModuleType::Di8Sinking.generic_name());
     assert_eq!(
-        f[0].detected.as_deref(),
-        Some(ModuleType::Di8Sinking.generic_name())
+        detected.args,
+        [("value", ModuleType::Di8Sinking.name_term())]
     );
+    assert_eq!(f[0].message.code, "hw.wrongType");
     // A module moved to a free slot is one finding, not a missing plus an unexpected one.
     let (sc, st) = with(HardwareFault::WrongSlot(s(2), s(7)));
     assert_eq!(categories(&st, &sc), [FindingCategory::WrongSlot]);

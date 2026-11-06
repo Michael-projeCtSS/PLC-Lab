@@ -8,6 +8,8 @@
 use crate::{StationRuntime, address, default_mode};
 use lab_model::{
     hardware::{ChannelMode, ChannelRef, ModuleClass, SlotRef},
+    message,
+    message::{Arg, Message, term},
     profile::AddressingScheme,
     scene::AnalogSignal,
 };
@@ -66,32 +68,43 @@ pub struct HardwareFinding {
     /// The configured module concerned, by its stable id.
     pub module_id: Option<String>,
     /// What the project (or the drawing) expects.
-    pub expected: Option<String>,
+    pub expected: Option<Message>,
     /// What is detected or configured instead.
-    pub detected: Option<String>,
-    pub message: String,
+    pub detected: Option<Message>,
+    pub message: Message,
 }
 
-fn slot_text(slot: SlotRef) -> String {
-    format!("rack {} slot {}", slot.rack, slot.slot)
+/// "rack 0 slot 2" as a message, so the interface words the position itself.
+pub fn slot_message(slot: SlotRef) -> Message {
+    message!(
+        "hw.slot",
+        "rack {rack} slot {slot}",
+        rack = slot.rack,
+        slot = slot.slot
+    )
 }
 
-fn signal_text(s: AnalogSignal) -> &'static str {
+pub fn signal_term(s: AnalogSignal) -> Arg {
     match s {
-        AnalogSignal::Current4To20mA => "4-20 mA",
-        AnalogSignal::Current0To20mA => "0-20 mA",
-        AnalogSignal::Voltage0To10V => "0-10 V",
+        AnalogSignal::Current4To20mA => term("signal.4-20mA", "4-20 mA"),
+        AnalogSignal::Current0To20mA => term("signal.0-20mA", "0-20 mA"),
+        AnalogSignal::Voltage0To10V => term("signal.0-10V", "0-10 V"),
     }
 }
 
-fn mode_text(m: ChannelMode) -> &'static str {
+pub fn mode_term(m: ChannelMode) -> Arg {
     match m {
-        ChannelMode::Disabled => "disabled",
-        ChannelMode::Digital => "digital",
-        ChannelMode::Current4To20mA => "4-20 mA",
-        ChannelMode::Current0To20mA => "0-20 mA",
-        ChannelMode::Voltage0To10V => "0-10 V",
+        ChannelMode::Disabled => term("mode.disabled", "disabled"),
+        ChannelMode::Digital => term("mode.digital", "digital"),
+        ChannelMode::Current4To20mA => term("signal.4-20mA", "4-20 mA"),
+        ChannelMode::Current0To20mA => term("signal.0-20mA", "0-20 mA"),
+        ChannelMode::Voltage0To10V => term("signal.0-10V", "0-10 V"),
     }
+}
+
+/// A single value as a finding's expected or detected side.
+fn value(arg: Arg) -> Message {
+    message!("hw.value", "{value}", value = arg)
 }
 
 impl StationRuntime {
@@ -118,15 +131,17 @@ impl StationRuntime {
         }
         let mut placed = BTreeSet::new();
         for module in &self.configured.modules {
-            let name = module.module.generic_name();
+            let name = module.module.name_term();
+            let id = module.id.to_string();
+            let here = slot_message(module.position);
             let finding =
-                |category, severity, detected: Option<String>, message: String| HardwareFinding {
+                |category, severity, detected: Option<Message>, message: Message| HardwareFinding {
                     category,
                     severity,
                     slot: Some(module.position),
                     channel: None,
                     module_id: Some(module.id.to_string()),
-                    expected: Some(name.to_owned()),
+                    expected: Some(value(module.module.name_term())),
                     detected,
                     message,
                 };
@@ -140,12 +155,19 @@ impl StationRuntime {
                         out.push(finding(
                             FindingCategory::WrongSlot,
                             FindingSeverity::Error,
-                            Some(format!("{name} at {}", slot_text(at))),
-                            format!(
-                                "{} ({name}) is configured at {}, which is empty; a {name} is installed at {}, which the project does not configure",
-                                module.id,
-                                slot_text(module.position),
-                                slot_text(at)
+                            Some(message!(
+                                "hw.detected.at",
+                                "{name} at {slot}",
+                                name = name.clone(),
+                                slot = slot_message(at)
+                            )),
+                            message!(
+                                "hw.wrongSlot",
+                                "{id} ({name}) is configured at {configured}, which is empty; a {name} is installed at {installed}, which the project does not configure",
+                                id = id.clone(),
+                                name = name.clone(),
+                                configured = here.clone(),
+                                installed = slot_message(at)
                             ),
                         ));
                     } else {
@@ -153,10 +175,12 @@ impl StationRuntime {
                             FindingCategory::ModuleMissing,
                             FindingSeverity::Error,
                             None,
-                            format!(
-                                "{} ({name}) is configured at {}, no module answers there",
-                                module.id,
-                                slot_text(module.position)
+                            message!(
+                                "hw.missing",
+                                "{id} ({name}) is configured at {slot}, no module answers there",
+                                id = id.clone(),
+                                name = name.clone(),
+                                slot = here.clone()
                             ),
                         ));
                     }
@@ -164,32 +188,36 @@ impl StationRuntime {
                 Some(i) if !i.electronics => out.push(finding(
                     FindingCategory::ModulePowerMissing,
                     FindingSeverity::Error,
-                    Some("installed, status LEDs dark".into()),
-                    format!(
-                        "{} at {}: a module is installed but does not answer; its status LEDs are dark",
-                        module.id,
-                        slot_text(module.position)
+                    Some(message!("hw.detected.dark", "installed, status LEDs dark")),
+                    message!(
+                        "hw.modulePower",
+                        "{id} at {slot}: a module is installed but does not answer; its status LEDs are dark",
+                        id = id.clone(),
+                        slot = here.clone()
                     ),
                 )),
                 Some(i) if i.module != module.module => out.push(finding(
                     FindingCategory::WrongModuleType,
                     FindingSeverity::Error,
-                    Some(i.module.generic_name().to_owned()),
-                    format!(
-                        "{} at {}: configured {name}, detected {}",
-                        module.id,
-                        slot_text(module.position),
-                        i.module.generic_name()
+                    Some(value(i.module.name_term())),
+                    message!(
+                        "hw.wrongType",
+                        "{id} at {slot}: configured {name}, detected {detected}",
+                        id = id.clone(),
+                        slot = here.clone(),
+                        name = name.clone(),
+                        detected = i.module.name_term()
                     ),
                 )),
                 Some(i) if !i.powered && has_field_side(module.module.class()) => out.push(finding(
                     FindingCategory::FieldPowerMissing,
                     FindingSeverity::Error,
-                    Some("field (load) supply missing".into()),
-                    format!(
-                        "{} at {}: the module answers, but its 24 V field (load) supply is missing",
-                        module.id,
-                        slot_text(module.position)
+                    Some(message!("hw.detected.noField", "field (load) supply missing")),
+                    message!(
+                        "hw.fieldPower",
+                        "{id} at {slot}: the module answers, but its 24 V field (load) supply is missing",
+                        id = id.clone(),
+                        slot = here.clone()
                     ),
                 )),
                 Some(_) => {}
@@ -206,11 +234,12 @@ impl StationRuntime {
                 channel: None,
                 module_id: None,
                 expected: None,
-                detected: Some(installed.module.generic_name().to_owned()),
-                message: format!(
-                    "{} is installed at {}, which the project does not configure",
-                    installed.module.generic_name(),
-                    slot_text(*slot)
+                detected: Some(value(installed.module.name_term())),
+                message: message!(
+                    "hw.unexpected",
+                    "{name} is installed at {slot}, which the project does not configure",
+                    name = installed.module.name_term(),
+                    slot = slot_message(*slot)
                 ),
             });
         }
@@ -242,26 +271,28 @@ impl StationRuntime {
                 .component_label(index)
                 .unwrap_or(wire.component.as_str());
             let channel_id = module.channel_id(wire.channel.channel);
-            let base =
-                |category, expected: String, detected: String, message: String| HardwareFinding {
-                    category,
-                    severity: FindingSeverity::Error,
-                    slot: Some(module.position),
-                    channel: Some(wire.channel),
-                    module_id: Some(module.id.to_string()),
-                    expected: Some(expected),
-                    detected: Some(detected),
-                    message,
-                };
+            let base = |category, expected: Arg, detected: Arg, message: Message| HardwareFinding {
+                category,
+                severity: FindingSeverity::Error,
+                slot: Some(module.position),
+                channel: Some(wire.channel),
+                module_id: Some(module.id.to_string()),
+                expected: Some(value(expected)),
+                detected: Some(value(detected)),
+                message,
+            };
             if mode != expected {
                 out.push(base(
                     FindingCategory::ChannelModeMismatch,
-                    signal_text(field.signal).into(),
-                    mode_text(mode).into(),
-                    format!(
-                        "{channel_id}: configured {}, the drawing shows {label} with a {} signal",
-                        mode_text(mode),
-                        signal_text(field.signal)
+                    signal_term(field.signal),
+                    mode_term(mode),
+                    message!(
+                        "hw.channelMode",
+                        "{channel}: configured {mode}, the drawing shows {label} with a {signal} signal",
+                        channel = channel_id.clone(),
+                        mode = mode_term(mode),
+                        label = label,
+                        signal = signal_term(field.signal)
                     ),
                 ));
                 continue;
@@ -273,15 +304,28 @@ impl StationRuntime {
             );
             if current && field.loop_powered != supplied {
                 let (wanted, configured) = if field.loop_powered {
-                    ("loop supplied by the input (2-wire)", "passive input")
+                    (
+                        term("loop.supplied2wire", "loop supplied by the input (2-wire)"),
+                        term("loop.passive", "passive input"),
+                    )
                 } else {
-                    ("passive input (4-wire)", "loop supplied by the input")
+                    (
+                        term("loop.passive4wire", "passive input (4-wire)"),
+                        term("loop.supplied", "loop supplied by the input"),
+                    )
                 };
                 out.push(base(
                     FindingCategory::LoopSupplyMismatch,
-                    wanted.into(),
-                    configured.into(),
-                    format!("{channel_id}: {label} needs a {wanted}, the channel is configured as {configured}"),
+                    wanted.clone(),
+                    configured.clone(),
+                    message!(
+                        "hw.loopSupply",
+                        "{channel}: {label} needs a {wanted}, the channel is configured as {configured}",
+                        channel = channel_id.clone(),
+                        label = label,
+                        wanted = wanted,
+                        configured = configured
+                    ),
                 ));
             }
         }
@@ -311,15 +355,29 @@ impl StationRuntime {
                         slot: Some(b.position),
                         channel: None,
                         module_id: Some(b.id.to_string()),
-                        expected: Some(format!("addresses not used by {}", a.id)),
-                        detected: Some(format!("bytes {}..{}", b_range.start, b_range.end - 1)),
-                        message: format!(
-                            "{} and {} both use {} bytes {}..{}",
-                            a.id,
-                            b.id,
-                            if *a_input { "input" } else { "output" },
-                            a_range.start.max(b_range.start),
-                            a_range.end.min(b_range.end) - 1
+                        expected: Some(message!(
+                            "hw.expected.freeAddresses",
+                            "addresses not used by {module}",
+                            module = a.id.to_string()
+                        )),
+                        detected: Some(message!(
+                            "hw.detected.bytes",
+                            "bytes {first}..{last}",
+                            first = b_range.start,
+                            last = b_range.end - 1
+                        )),
+                        message: message!(
+                            "hw.addressOverlap",
+                            "{a} and {b} both use {direction} bytes {first}..{last}",
+                            a = a.id.to_string(),
+                            b = b.id.to_string(),
+                            direction = if *a_input {
+                                term("io.input", "input")
+                            } else {
+                                term("io.output", "output")
+                            },
+                            first = a_range.start.max(b_range.start),
+                            last = a_range.end.min(b_range.end) - 1
                         ),
                     });
                 }
@@ -332,7 +390,8 @@ impl StationRuntime {
         let mut channels = BTreeSet::new();
         let mut tags = BTreeSet::new();
         for mapping in &self.configured.io_map {
-            let mut push = |severity, message: String| {
+            let tag = mapping.tag.to_string();
+            let mut push = |severity, message: Message| {
                 out.push(HardwareFinding {
                     category: FindingCategory::SignalBindingMismatch,
                     severity,
@@ -343,27 +402,29 @@ impl StationRuntime {
                         .module_at(mapping.channel.slot_ref())
                         .map(|m| m.id.to_string()),
                     expected: None,
-                    detected: Some(mapping.tag.to_string()),
+                    detected: Some(value(Arg::Data(mapping.tag.to_string()))),
                     message,
                 });
             };
             match self.configured.module_at(mapping.channel.slot_ref()) {
                 None => push(
                     FindingSeverity::Error,
-                    format!(
-                        "{} is mapped to {}, where no module is configured",
-                        mapping.tag,
-                        slot_text(mapping.channel.slot_ref())
+                    message!(
+                        "hw.binding.noModule",
+                        "{tag} is mapped to {slot}, where no module is configured",
+                        tag = tag.clone(),
+                        slot = slot_message(mapping.channel.slot_ref())
                     ),
                 ),
                 Some(m) if mapping.channel.channel >= m.module.channel_count() => push(
                     FindingSeverity::Error,
-                    format!(
-                        "{} is mapped to channel {} of {}, which has only {} channels",
-                        mapping.tag,
-                        mapping.channel.channel,
-                        m.id,
-                        m.module.channel_count()
+                    message!(
+                        "hw.binding.noChannel",
+                        "{tag} is mapped to channel {channel} of {module}, which has only {count} channels",
+                        tag = tag.clone(),
+                        channel = mapping.channel.channel,
+                        module = m.id.to_string(),
+                        count = m.module.channel_count()
                     ),
                 ),
                 Some(m)
@@ -374,10 +435,11 @@ impl StationRuntime {
                 {
                     push(
                         FindingSeverity::Warning,
-                        format!(
-                            "{} is mapped to {}, which is disabled",
-                            mapping.tag,
-                            m.channel_id(mapping.channel.channel)
+                        message!(
+                            "hw.binding.disabled",
+                            "{tag} is mapped to {channel}, which is disabled",
+                            tag = tag.clone(),
+                            channel = m.channel_id(mapping.channel.channel)
                         ),
                     )
                 }
@@ -386,13 +448,21 @@ impl StationRuntime {
             if !channels.insert(mapping.channel) {
                 push(
                     FindingSeverity::Error,
-                    format!("{} shares its channel with another tag", mapping.tag),
+                    message!(
+                        "hw.binding.shared",
+                        "{tag} shares its channel with another tag",
+                        tag = tag.clone()
+                    ),
                 );
             }
             if !tags.insert(mapping.tag.as_str()) {
                 push(
                     FindingSeverity::Error,
-                    format!("{} is mapped to more than one channel", mapping.tag),
+                    message!(
+                        "hw.binding.twice",
+                        "{tag} is mapped to more than one channel",
+                        tag = tag.clone()
+                    ),
                 );
             }
         }

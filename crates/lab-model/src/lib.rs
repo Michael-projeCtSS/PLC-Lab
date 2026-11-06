@@ -10,6 +10,7 @@ pub mod exercise;
 pub mod fault;
 pub mod hardware;
 pub mod ids;
+pub mod message;
 pub mod network;
 pub mod profile;
 pub mod scene;

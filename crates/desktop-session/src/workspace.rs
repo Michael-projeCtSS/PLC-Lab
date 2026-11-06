@@ -1126,15 +1126,16 @@ impl Workspace {
     }
 
     fn event_dto(&self, seq: EventSeq, e: &lab_engine::LabEvent) -> EventDto {
-        let (kind, severity, text, source) = convert::describe(&self.session, e);
+        let (kind, severity, message, source) = convert::describe(&self.session, e);
         EventDto {
             seq: ExactU64(seq.0),
             time_us: ExactU64(e.time_us),
             cycle: ExactU64(e.cycle),
             kind,
             severity: severity.into(),
-            text,
+            text: message.text.clone(),
             source,
+            message: Some(convert::message(&message)),
         }
     }
 
@@ -1166,8 +1167,10 @@ impl Workspace {
                             id: i.id.into(),
                             title: i.title.into(),
                             state: state(i.state),
-                            findings: i.findings,
-                            how: i.how.into(),
+                            findings: i.findings.iter().map(|f| f.text.clone()).collect(),
+                            how: i.how.as_ref().map(|m| m.text.clone()).unwrap_or_default(),
+                            finding_messages: i.findings.iter().map(convert::message).collect(),
+                            how_message: i.how.as_ref().map(convert::message),
                         })
                         .collect(),
                 })
@@ -1268,7 +1271,8 @@ impl Workspace {
                     output: r.output,
                     drawn_device: r.drawn_device,
                     drawn_port: r.drawn_port,
-                    device_state: r.device_state,
+                    device_state: r.device_state.as_ref().map(|m| m.text.clone()),
+                    device_state_message: r.device_state.as_ref().map(convert::message),
                 })
                 .collect(),
         })

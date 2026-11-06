@@ -12,8 +12,11 @@ use hardware_model::{
     ChannelValue, DiagnosticKind, FindingCategory, FindingSeverity, HardwareFinding, LedState,
     Measurement, Quality,
 };
+use hardware_model::{signal_term, slot_message};
 use lab_model::{
     hardware::{ChannelRef, ModuleClass, SlotRef},
+    message,
+    message::{Arg, Message, term},
     scene::{AnalogSignal, ComponentKind, ContactType, PortKind, PortRole, TransmitterWiring},
 };
 use network_core::ScanStatus;
@@ -47,9 +50,9 @@ pub struct CheckItem {
     pub title: &'static str,
     pub state: CheckState,
     /// Observed facts, most important first.
-    pub findings: Vec<String>,
-    /// What to do or which tool shows it.
-    pub how: &'static str,
+    pub findings: Vec<Message>,
+    /// What to do or which tool shows it; `None` when nothing applies.
+    pub how: Option<Message>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -183,92 +186,112 @@ fn is_on(q: Option<Quantity>) -> bool {
     matches!(q, Some(Quantity::Bool(true)))
 }
 
-fn slot_text(slot: SlotRef) -> String {
-    format!("rack {} slot {}", slot.rack, slot.slot)
-}
-
-fn signal_text(s: AnalogSignal) -> &'static str {
-    match s {
-        AnalogSignal::Current4To20mA => "4-20 mA",
-        AnalogSignal::Current0To20mA => "0-20 mA",
-        AnalogSignal::Voltage0To10V => "0-10 V",
-    }
+fn slot_text(slot: SlotRef) -> Message {
+    slot_message(slot)
 }
 
 fn bool_text(v: bool) -> &'static str {
     if v { "TRUE" } else { "FALSE" }
 }
 
-fn quality_text(q: Quality) -> &'static str {
+/// Channel quality as a term with the interface's quality code.
+fn quality_text(q: Quality) -> Arg {
     match q {
-        Quality::Good => "good",
-        Quality::NotMapped => "not mapped",
-        Quality::ChannelDisabled => "channel disabled",
-        Quality::ModuleFault => "module fault",
-        Quality::NoFieldPower => "no field power",
-        Quality::WireBreak => "wire break",
-        Quality::Overflow => "overflow",
-        Quality::Underflow => "underflow",
-        Quality::Overrange => "over range",
-        Quality::Underrange => "under range",
+        Quality::Good => term("q.GOOD", "good"),
+        Quality::NotMapped => term("q.NOT_MAPPED", "not mapped"),
+        Quality::ChannelDisabled => term("q.CHANNEL_DISABLED", "channel disabled"),
+        Quality::ModuleFault => term("q.MODULE_FAULT", "module fault"),
+        Quality::NoFieldPower => term("q.NO_FIELD_POWER", "no field power"),
+        Quality::WireBreak => term("q.WIRE_BREAK", "wire break"),
+        Quality::Overflow => term("q.OVERFLOW", "overflow"),
+        Quality::Underflow => term("q.UNDERFLOW", "underflow"),
+        Quality::Overrange => term("q.OVERRANGE", "over range"),
+        Quality::Underrange => term("q.UNDERRANGE", "under range"),
     }
 }
 
-fn led_text(led: LedState) -> &'static str {
+fn led_text(led: LedState) -> Arg {
     match led {
-        LedState::Off => "off",
-        LedState::Green => "green",
-        LedState::GreenFlashing => "green flashing",
-        LedState::Red => "red",
-        LedState::RedFlashing => "red flashing",
-        LedState::Amber => "amber",
+        LedState::Off => term("led.OFF", "off"),
+        LedState::Green => term("led.GREEN", "green"),
+        LedState::GreenFlashing => term("led.GREEN_FLASHING", "green flashing"),
+        LedState::Red => term("led.RED", "red"),
+        LedState::RedFlashing => term("led.RED_FLASHING", "red flashing"),
+        LedState::Amber => term("led.AMBER", "amber"),
     }
 }
 
-fn diagnostic_text(kind: DiagnosticKind) -> String {
+fn diagnostic_text(kind: DiagnosticKind) -> Message {
+    let short = |code, text| Message::fixed(code, text);
     match kind {
-        DiagnosticKind::ModuleMissing => "module missing".into(),
-        DiagnosticKind::ModuleMismatch { installed, .. } => {
-            format!("wrong module type ({} installed)", installed.generic_name())
+        DiagnosticKind::ModuleMissing => short("check.diag.ModuleMissing", "module missing"),
+        DiagnosticKind::ModuleMismatch { installed, .. } => message!(
+            "check.diag.ModuleMismatch",
+            "wrong module type ({name} installed)",
+            name = installed.name_term()
+        ),
+        DiagnosticKind::UnconfiguredModule => {
+            short("check.diag.UnconfiguredModule", "module not in the project")
         }
-        DiagnosticKind::UnconfiguredModule => "module not in the project".into(),
-        DiagnosticKind::NoFieldPower => "no field (load) supply".into(),
-        DiagnosticKind::WireBreak => "wire break".into(),
-        DiagnosticKind::Overflow => "overflow".into(),
-        DiagnosticKind::Underflow => "underflow".into(),
-        DiagnosticKind::ConnectionTimeout => "connection timeout".into(),
-        DiagnosticKind::ConnectionRefused => "connection refused".into(),
-        DiagnosticKind::NoRoute => "no route to the device".into(),
-        DiagnosticKind::ModbusException(code) => format!("Modbus exception {code}"),
-        DiagnosticKind::IpAddressConflict => "IP address conflict".into(),
-        DiagnosticKind::LinkDown => "network link down".into(),
-        DiagnosticKind::PlcFault => "PLC fault".into(),
-        DiagnosticKind::ForceActive => "force active".into(),
-        DiagnosticKind::ModeChange { .. } => "operating state changed".into(),
-        DiagnosticKind::ProgramDownloaded => "program downloaded".into(),
-        DiagnosticKind::HardwareDownloaded => "hardware configuration downloaded".into(),
-        DiagnosticKind::Startup { .. } => "CPU started".into(),
-        DiagnosticKind::FirstScan { .. } => "first scan executed".into(),
-        DiagnosticKind::MemoryReset => "memory reset".into(),
+        DiagnosticKind::NoFieldPower => short("check.diag.NoFieldPower", "no field (load) supply"),
+        DiagnosticKind::WireBreak => short("check.diag.WireBreak", "wire break"),
+        DiagnosticKind::Overflow => short("check.diag.Overflow", "overflow"),
+        DiagnosticKind::Underflow => short("check.diag.Underflow", "underflow"),
+        DiagnosticKind::ConnectionTimeout => {
+            short("check.diag.ConnectionTimeout", "connection timeout")
+        }
+        DiagnosticKind::ConnectionRefused => {
+            short("check.diag.ConnectionRefused", "connection refused")
+        }
+        DiagnosticKind::NoRoute => short("check.diag.NoRoute", "no route to the device"),
+        DiagnosticKind::ModbusException(code) => message!(
+            "check.diag.ModbusException",
+            "Modbus exception {code}",
+            code = code
+        ),
+        DiagnosticKind::IpAddressConflict => {
+            short("check.diag.IpAddressConflict", "IP address conflict")
+        }
+        DiagnosticKind::LinkDown => short("check.diag.LinkDown", "network link down"),
+        DiagnosticKind::PlcFault => short("check.diag.PlcFault", "PLC fault"),
+        DiagnosticKind::ForceActive => short("check.diag.ForceActive", "force active"),
+        DiagnosticKind::ModeChange { .. } => {
+            short("check.diag.ModeChange", "operating state changed")
+        }
+        DiagnosticKind::ProgramDownloaded => {
+            short("check.diag.ProgramDownloaded", "program downloaded")
+        }
+        DiagnosticKind::HardwareDownloaded => short(
+            "check.diag.HardwareDownloaded",
+            "hardware configuration downloaded",
+        ),
+        DiagnosticKind::Startup { .. } => short("check.diag.Startup", "CPU started"),
+        DiagnosticKind::FirstScan { .. } => short("check.diag.FirstScan", "first scan executed"),
+        DiagnosticKind::MemoryReset => short("check.diag.MemoryReset", "memory reset"),
     }
 }
 
 /// Keep at most [`MAX_FINDINGS`] findings and say how many more there were.
-fn bounded(mut findings: Vec<String>) -> Vec<String> {
+fn bounded(mut findings: Vec<Message>) -> Vec<Message> {
     if findings.len() > MAX_FINDINGS {
         let more = findings.len() - MAX_FINDINGS;
         findings.truncate(MAX_FINDINGS);
-        findings.push(format!("... and {more} more"));
+        findings.push(message!("check.more", "... and {count} more", count = more));
     }
     findings
+}
+
+/// A hint on what to do or which tool shows it.
+fn how(code: &'static str, text: &'static str) -> Option<Message> {
+    Some(Message::fixed(code, text))
 }
 
 fn item(
     id: &'static str,
     title: &'static str,
     state: CheckState,
-    findings: Vec<String>,
-    how: &'static str,
+    findings: Vec<Message>,
+    how: Option<Message>,
 ) -> CheckItem {
     CheckItem {
         id,
@@ -419,7 +442,7 @@ impl LabSession {
     }
 
     /// Field supply findings and the number of I/O modules concerned.
-    fn io_modules(&self, outputs_only: bool) -> (Vec<String>, usize) {
+    fn io_modules(&self, outputs_only: bool) -> (Vec<Message>, usize) {
         let relevant = |class: ModuleClass| match class {
             ModuleClass::DigitalOutput { .. } | ModuleClass::AnalogOutput { .. } => true,
             ModuleClass::DigitalInput { .. } | ModuleClass::AnalogInput { .. } => !outputs_only,
@@ -449,9 +472,8 @@ impl LabSession {
     }
 
     fn power(&self) -> CheckCategory {
-        let cpu = self.scene_def.installation.cpu.generic_name();
         let (supply, modules) = self.io_modules(false);
-        let electronics: Vec<String> = self
+        let electronics: Vec<Message> = self
             .station
             .compare(&self.scene)
             .into_iter()
@@ -464,8 +486,8 @@ impl LabSession {
                 "drive-supply",
                 "Drive supply",
                 CheckState::NotApplicable,
-                vec!["This machine has no drive.".into()],
-                "",
+                vec![message!("check.noDrive", "This machine has no drive.")],
+                None,
             )
         } else {
             let mut findings = Vec::new();
@@ -479,9 +501,17 @@ impl LabSession {
                     CheckState::Fault
                 });
                 findings.push(if supplied {
-                    format!("{label}: mains supply on")
+                    message!(
+                        "check.power.driveSupplied",
+                        "{label}: mains supply on",
+                        label = label
+                    )
                 } else {
-                    format!("{label}: no mains supply (display dark, not ready)")
+                    message!(
+                        "check.power.driveUnsupplied",
+                        "{label}: no mains supply (display dark, not ready)",
+                        label = label
+                    )
                 });
             }
             item(
@@ -489,7 +519,10 @@ impl LabSession {
                 "Drive supply",
                 worst(states),
                 findings,
-                "Drive display; measure the mains supply only with qualified, safe equipment.",
+                how(
+                    "check.how.driveSupply",
+                    "Drive display; measure the mains supply only with qualified, safe equipment.",
+                ),
             )
         };
         let devices = self.network.device_views();
@@ -498,14 +531,24 @@ impl LabSession {
                 "comm-power",
                 "Communication equipment",
                 CheckState::NotApplicable,
-                vec!["This machine has no network devices.".into()],
-                "",
+                vec![message!(
+                    "check.power.noNetworkDevices",
+                    "This machine has no network devices."
+                )],
+                None,
             )
         } else {
-            let off: Vec<String> = devices
+            let off: Vec<Message> = devices
                 .iter()
                 .filter(|d| !d.online)
-                .map(|d| format!("{} ({}) does not respond", d.label, d.ip))
+                .map(|d| {
+                    message!(
+                        "check.power.deviceSilent",
+                        "{label} ({ip}) does not respond",
+                        label = d.label.clone(),
+                        ip = d.ip.to_string()
+                    )
+                })
                 .collect();
             item(
                 "comm-power",
@@ -516,14 +559,18 @@ impl LabSession {
                     CheckState::Fault
                 },
                 if off.is_empty() {
-                    vec![format!(
-                        "{} network device(s) powered and online",
-                        devices.len()
+                    vec![message!(
+                        "check.power.devicesOnline",
+                        "{count} network device(s) powered and online",
+                        count = devices.len()
                     )]
                 } else {
                     off
                 },
-                "Network view: device status; ping the device.",
+                how(
+                    "check.how.commPower",
+                    "Network view: device status; ping the device.",
+                ),
             )
         };
         CheckCategory {
@@ -534,8 +581,12 @@ impl LabSession {
                     "controller",
                     "Controller powered",
                     CheckState::Ok,
-                    vec![format!("{cpu} powered")],
-                    "Hardware view: CPU status LEDs.",
+                    vec![message!(
+                        "check.power.controller",
+                        "{cpu} powered",
+                        cpu = self.scene_def.installation.cpu.name_term()
+                    )],
+                    how("check.how.controller", "Hardware view: CPU status LEDs."),
                 ),
                 item(
                     "module-power",
@@ -546,11 +597,17 @@ impl LabSession {
                         CheckState::Fault
                     },
                     if electronics.is_empty() {
-                        vec!["Every configured module answers the CPU".into()]
+                        vec![message!(
+                            "check.power.modulesAnswer",
+                            "Every configured module answers the CPU"
+                        )]
                     } else {
                         electronics
                     },
-                    "Hardware view: module status LEDs; a module without electronics supply does not answer.",
+                    how(
+                        "check.how.modulePower",
+                        "Hardware view: module status LEDs; a module without electronics supply does not answer.",
+                    ),
                 ),
                 item(
                     "io-supply",
@@ -561,11 +618,18 @@ impl LabSession {
                         CheckState::Fault
                     },
                     if supply.is_empty() {
-                        vec![format!("{modules} I/O module(s) have their field supply")]
+                        vec![message!(
+                            "check.power.fieldSupplied",
+                            "{count} I/O module(s) have their field supply",
+                            count = modules
+                        )]
                     } else {
                         supply
                     },
-                    "Hardware view: module status; measure the module's 24 V supply.",
+                    how(
+                        "check.how.ioSupply",
+                        "Hardware view: module status; measure the module's 24 V supply.",
+                    ),
                 ),
                 drive_supply,
                 comm,
@@ -584,7 +648,7 @@ impl LabSession {
                 .filter(|f| categories.contains(&f.category))
                 .collect()
         };
-        let texts = |list: &[&HardwareFinding]| -> Vec<String> {
+        let texts = |list: &[&HardwareFinding]| -> Vec<Message> {
             list.iter().map(|f| f.message.clone()).collect()
         };
         let types = texts(&of(&[FindingCategory::WrongModuleType]));
@@ -607,27 +671,42 @@ impl LabSession {
             let name = view
                 .configured
                 .or(view.installed)
-                .map_or("module", |m| m.generic_name());
+                .map_or(term("module.unknown", "module"), |m| m.name_term());
             if view.status_led != LedState::Green {
-                leds.push(format!(
-                    "{} {name}: status LED {}",
-                    slot_text(view.position),
-                    led_text(view.status_led)
+                leds.push(message!(
+                    "check.hw.led",
+                    "{slot} {name}: status LED {led}",
+                    slot = slot_text(view.position),
+                    name = name,
+                    led = led_text(view.status_led)
                 ));
             }
         }
-        let diagnostics: Vec<String> = self
+        let diagnostics: Vec<Message> = self
             .station
             .active_diagnostics()
             .map(|(source, kind)| {
-                let at = match source {
-                    hardware_model::DiagnosticSource::Cpu => "CPU".to_owned(),
-                    hardware_model::DiagnosticSource::Module(s) => slot_text(*s),
-                    hardware_model::DiagnosticSource::Channel(c) => self.channel_name(*c),
-                    hardware_model::DiagnosticSource::Connection(i) => format!("connection {i}"),
-                    hardware_model::DiagnosticSource::Interface => "PLC interface".to_owned(),
+                let at: Arg = match source {
+                    hardware_model::DiagnosticSource::Cpu => Arg::Data("CPU".to_owned()),
+                    hardware_model::DiagnosticSource::Module(s) => {
+                        Arg::Message(Box::new(slot_text(*s)))
+                    }
+                    hardware_model::DiagnosticSource::Channel(c) => {
+                        Arg::Data(self.channel_name(*c))
+                    }
+                    hardware_model::DiagnosticSource::Connection(i) => Arg::Message(Box::new(
+                        message!("check.hw.connection", "connection {index}", index = *i),
+                    )),
+                    hardware_model::DiagnosticSource::Interface => {
+                        term("check.hw.interface", "PLC interface")
+                    }
                 };
-                format!("{at}: {}", diagnostic_text(*kind))
+                message!(
+                    "check.hw.diagnostic",
+                    "{at}: {diagnostic}",
+                    at = at,
+                    diagnostic = diagnostic_text(*kind)
+                )
             })
             .collect();
         let plc = match self.plc_mode() {
@@ -636,36 +715,48 @@ impl LabSession {
                 "PLC state",
                 CheckState::Ok,
                 vec![match self.program() {
-                    Some((name, revision, _)) => {
-                        format!("RUN, program {name} (download {revision})")
-                    }
-                    None => "RUN".into(),
+                    Some((name, revision, _)) => message!(
+                        "check.plc.run",
+                        "RUN, program {name} (download {revision})",
+                        name = name,
+                        revision = revision
+                    ),
+                    None => message!("check.plc.runEmpty", "RUN"),
                 }],
-                "Toolbar: PLC mode and program.",
+                how("check.how.plcRun", "Toolbar: PLC mode and program."),
             ),
             PlcMode::Stop => item(
                 "plc-state",
                 "PLC state",
                 CheckState::Attention,
                 vec![if self.program().is_some() {
-                    "STOP: the program is loaded but not executed".into()
+                    message!(
+                        "check.plc.stopLoaded",
+                        "STOP: the program is loaded but not executed"
+                    )
                 } else {
-                    "STOP: no program loaded".into()
+                    message!("check.plc.stopEmpty", "STOP: no program loaded")
                 }],
-                "Toolbar: switch the PLC to RUN after Build & Load.",
+                how(
+                    "check.how.plcStop",
+                    "Toolbar: switch the PLC to RUN after Build & Load.",
+                ),
             ),
             PlcMode::Fault => item(
                 "plc-state",
                 "PLC state",
                 CheckState::Fault,
                 vec![match self.plc_fault() {
-                    Some(d) => format!("FAULT: {}", d.message()),
-                    None => "FAULT".into(),
+                    Some(d) => message!("check.plc.fault", "FAULT: {detail}", detail = d.message()),
+                    None => message!("check.plc.faultEmpty", "FAULT"),
                 }],
-                "Diagnostics view: the PLC fault; reset the PLC after correcting it.",
+                how(
+                    "check.how.plcFault",
+                    "Diagnostics view: the PLC fault; reset the PLC after correcting it.",
+                ),
             ),
         };
-        let state = |problems: &Vec<String>, bad| {
+        let state = |problems: &Vec<Message>, bad| {
             if problems.is_empty() {
                 CheckState::Ok
             } else {
@@ -685,26 +776,40 @@ impl LabSession {
                         CheckState::Fault
                     },
                     vec![if configured == installed {
-                        format!("{} installed and configured", installed.generic_name())
+                        message!(
+                            "check.hw.cpuMatches",
+                            "{cpu} installed and configured",
+                            cpu = installed.name_term()
+                        )
                     } else {
-                        format!(
-                            "project {}, installed {}",
-                            configured.generic_name(),
-                            installed.generic_name()
+                        message!(
+                            "check.hw.cpuDiffers",
+                            "project {configured}, installed {installed}",
+                            configured = configured.name_term(),
+                            installed = installed.name_term()
                         )
                     }],
-                    "Hardware view: compare the project with the installed CPU.",
+                    how(
+                        "check.how.cpu",
+                        "Hardware view: compare the project with the installed CPU.",
+                    ),
                 ),
                 item(
                     "module-types",
                     "Module types",
                     state(&types, CheckState::Fault),
                     if types.is_empty() {
-                        vec!["Every installed module has the configured type".into()]
+                        vec![message!(
+                            "check.hw.typesMatch",
+                            "Every installed module has the configured type"
+                        )]
                     } else {
                         types.clone()
                     },
-                    "Hardware view (Compare): configured against detected modules.",
+                    how(
+                        "check.how.compare",
+                        "Hardware view (Compare): configured against detected modules.",
+                    ),
                 ),
                 item(
                     "slot-order",
@@ -717,47 +822,66 @@ impl LabSession {
                         CheckState::Attention
                     },
                     if slots.is_empty() {
-                        vec![format!("{} module position(s) as configured", views.len())]
+                        vec![message!(
+                            "check.hw.slotsMatch",
+                            "{count} module position(s) as configured",
+                            count = views.len()
+                        )]
                     } else {
                         slots
                     },
-                    "Hardware view (Compare): configured against detected modules.",
+                    how(
+                        "check.how.compare",
+                        "Hardware view (Compare): configured against detected modules.",
+                    ),
                 ),
                 item(
                     "configuration",
                     "Addresses and I/O mapping",
                     state(&consistency, CheckState::Fault),
                     if consistency.is_empty() {
-                        vec![
+                        vec![message!(
+                            "check.hw.consistent",
                             "No overlapping addresses; every mapping points to a usable channel"
-                                .into(),
-                        ]
+                        )]
                     } else {
                         consistency.clone()
                     },
-                    "Hardware view: addresses and the signal mapping.",
+                    how(
+                        "check.how.configuration",
+                        "Hardware view: addresses and the signal mapping.",
+                    ),
                 ),
                 item(
                     "module-status",
                     "Module status",
                     state(&leds, CheckState::Attention),
                     if leds.is_empty() {
-                        vec!["All module status LEDs green".into()]
+                        vec![message!(
+                            "check.hw.ledsGreen",
+                            "All module status LEDs green"
+                        )]
                     } else {
                         leds.clone()
                     },
-                    "Hardware view: module status LEDs.",
+                    how(
+                        "check.how.moduleStatus",
+                        "Hardware view: module status LEDs.",
+                    ),
                 ),
                 item(
                     "diagnostics",
                     "Diagnostics",
                     state(&diagnostics, CheckState::Attention),
                     if diagnostics.is_empty() {
-                        vec!["No active diagnostic".into()]
+                        vec![message!("check.hw.noDiagnostic", "No active diagnostic")]
                     } else {
                         diagnostics.clone()
                     },
-                    "Diagnostics view: the diagnostic buffer.",
+                    how(
+                        "check.how.diagnostics",
+                        "Diagnostics view: the diagnostic buffer.",
+                    ),
                 ),
                 plc,
             ],
@@ -773,8 +897,8 @@ impl LabSession {
                 id,
                 title,
                 CheckState::NotApplicable,
-                vec!["This machine has no network.".into()],
-                "",
+                vec![message!("check.net.none", "This machine has no network.")],
+                None,
             )
         };
         if interface.is_none() && devices.is_empty() && scans.is_empty() {
@@ -799,34 +923,56 @@ impl LabSession {
                 "address",
                 "Address",
                 CheckState::Ok,
-                vec![format!("PLC interface {} / {}", i.ip, i.mask)],
-                "Network configuration: the PLC interface.",
+                vec![message!(
+                    "check.net.interface",
+                    "PLC interface {ip} / {mask}",
+                    ip = i.ip.to_string(),
+                    mask = i.mask.to_string()
+                )],
+                how(
+                    "check.how.address",
+                    "Network configuration: the PLC interface.",
+                ),
             ),
             Some(i) => item(
                 "address",
                 "Address",
                 CheckState::Fault,
-                vec![format!("{} is used by another device", i.ip)],
-                "Network view: device addresses.",
+                vec![message!(
+                    "check.net.conflict",
+                    "{ip} is used by another device",
+                    ip = i.ip.to_string()
+                )],
+                how(
+                    "check.how.addressConflict",
+                    "Network view: device addresses.",
+                ),
             ),
             None => item(
                 "address",
                 "Address",
                 CheckState::Fault,
-                vec!["The PLC interface has no IP address".into()],
-                "Network configuration: set the PLC interface address.",
+                vec![message!(
+                    "check.net.noAddress",
+                    "The PLC interface has no IP address"
+                )],
+                how(
+                    "check.how.addressMissing",
+                    "Network configuration: set the PLC interface address.",
+                ),
             ),
         };
-        let mut down: Vec<String> = Vec::new();
+        let mut down: Vec<Message> = Vec::new();
         if !self.network.plc_link_up() {
-            down.push("PLC port: no link".into());
+            down.push(message!("check.net.plcNoLink", "PLC port: no link"));
         }
-        down.extend(
-            devices
-                .iter()
-                .filter(|d| !d.link_up)
-                .map(|d| format!("{}: no link", d.label)),
-        );
+        down.extend(devices.iter().filter(|d| !d.link_up).map(|d| {
+            message!(
+                "check.net.deviceNoLink",
+                "{label}: no link",
+                label = d.label.clone()
+            )
+        }));
         let link = item(
             "link",
             "Link",
@@ -836,11 +982,14 @@ impl LabSession {
                 CheckState::Fault
             },
             if down.is_empty() {
-                vec!["All ports have link".into()]
+                vec![message!("check.net.linksUp", "All ports have link")]
             } else {
                 down
             },
-            "Network view: link LEDs; check the cable.",
+            how(
+                "check.how.link",
+                "Network view: link LEDs; check the cable.",
+            ),
         );
         let names = item(
             "devices",
@@ -853,23 +1002,36 @@ impl LabSession {
             devices
                 .iter()
                 .map(|d| {
-                    format!(
-                        "{} at {}: {}",
-                        d.label,
-                        d.ip,
-                        if d.online { "online" } else { "not responding" }
+                    message!(
+                        "check.net.device",
+                        "{label} at {ip}: {state}",
+                        label = d.label.clone(),
+                        ip = d.ip.to_string(),
+                        state = if d.online {
+                            term("check.net.online", "online")
+                        } else {
+                            term("check.net.notResponding", "not responding")
+                        }
                     )
                 })
                 .collect(),
-            "Network view: devices; ping a device by its address.",
+            how(
+                "check.how.devices",
+                "Network view: devices; ping a device by its address.",
+            ),
         );
-        let errors: Vec<String> = scans
+        let errors: Vec<Message> = scans
             .iter()
             .filter(|s| s.timeouts > 0 || s.exceptions > 0)
             .map(|s| {
-                format!(
-                    "{} ({}): {} timeout(s), {} exception(s) in {} request(s)",
-                    s.id, s.server, s.timeouts, s.exceptions, s.requests
+                message!(
+                    "check.net.errors",
+                    "{id} ({server}): {timeouts} timeout(s), {exceptions} exception(s) in {requests} request(s)",
+                    id = s.id.to_string(),
+                    server = s.server.to_string(),
+                    timeouts = s.timeouts,
+                    exceptions = s.exceptions,
+                    requests = s.requests
                 )
             })
             .collect();
@@ -885,11 +1047,14 @@ impl LabSession {
                     CheckState::Attention
                 },
                 if errors.is_empty() {
-                    vec!["No timeouts or exceptions".into()]
+                    vec![message!("check.net.noErrors", "No timeouts or exceptions")]
                 } else {
                     errors
                 },
-                "Network view: request and error counters.",
+                how(
+                    "check.how.quality",
+                    "Network view: request and error counters.",
+                ),
             )
         };
         let cyclic = if scans.is_empty() {
@@ -911,20 +1076,39 @@ impl LabSession {
                     .iter()
                     .map(|s| {
                         let status = match s.status {
-                            ScanStatus::Idle => "idle (the PLC is not polling)".to_owned(),
-                            ScanStatus::Ok => {
-                                format!("exchanging data ({} responses)", s.responses)
+                            ScanStatus::Idle => {
+                                message!("check.scan.idle", "idle (the PLC is not polling)")
                             }
-                            ScanStatus::Timeout => "timeout".to_owned(),
-                            ScanStatus::NoRoute => "no route".to_owned(),
-                            ScanStatus::ConnectionRefused => "connection refused".to_owned(),
-                            ScanStatus::Exception(code) => format!("exception {code}"),
-                            ScanStatus::NoInterface => "no PLC interface".to_owned(),
+                            ScanStatus::Ok => message!(
+                                "check.scan.ok",
+                                "exchanging data ({count} responses)",
+                                count = s.responses
+                            ),
+                            ScanStatus::Timeout => message!("check.scan.timeout", "timeout"),
+                            ScanStatus::NoRoute => message!("check.scan.noRoute", "no route"),
+                            ScanStatus::ConnectionRefused => {
+                                message!("check.scan.refused", "connection refused")
+                            }
+                            ScanStatus::Exception(code) => {
+                                message!("check.scan.exception", "exception {code}", code = code)
+                            }
+                            ScanStatus::NoInterface => {
+                                message!("check.scan.noInterface", "no PLC interface")
+                            }
                         };
-                        format!("{} -> {}: {status}", s.id, s.server)
+                        message!(
+                            "check.net.scan",
+                            "{id} -> {server}: {status}",
+                            id = s.id.to_string(),
+                            server = s.server.to_string(),
+                            status = status
+                        )
                     })
                     .collect(),
-                "Network view: connection status; the PLC polls only in RUN.",
+                how(
+                    "check.how.cyclic",
+                    "Network view: connection status; the PLC polls only in RUN.",
+                ),
             )
         };
         CheckCategory {
@@ -962,13 +1146,19 @@ impl LabSession {
             };
             let mapped = self.station.tag_for(channel).is_some();
             if reading.quality != Quality::Good && reading.quality != Quality::NotMapped {
-                bad.push(format!(
-                    "{}: {}",
-                    self.channel_name(channel),
-                    quality_text(reading.quality)
+                bad.push(message!(
+                    "check.in.quality",
+                    "{channel}: {quality}",
+                    channel = self.channel_name(channel),
+                    quality = quality_text(reading.quality)
                 ));
             } else if mapped && let ChannelValue::Bool(v) = reading.value {
-                values.push(format!("{} = {}", self.channel_name(channel), bool_text(v)));
+                values.push(message!(
+                    "check.in.value",
+                    "{channel} = {value}",
+                    channel = self.channel_name(channel),
+                    value = bool_text(v)
+                ));
             }
         }
         let tests = &self.tests;
@@ -990,26 +1180,45 @@ impl LabSession {
             let (state, finding) = match test {
                 None | Some(InputTest { edges: 0, .. }) => (
                     CheckState::Untested,
-                    format!("{label}: not operated yet (drawn on {drawn})"),
+                    message!(
+                        "check.in.notOperated",
+                        "{label}: not operated yet (drawn on {drawn})",
+                        label = label,
+                        drawn = drawn.clone()
+                    ),
                 ),
                 Some(t) if t.followed(&candidates).contains(&wire.channel) => (
                     CheckState::Ok,
-                    format!("{label}: {drawn} follows the device"),
+                    message!(
+                        "check.in.follows",
+                        "{label}: {drawn} follows the device",
+                        label = label,
+                        drawn = drawn.clone()
+                    ),
                 ),
                 Some(t) if !t.followed(&candidates).is_empty() => (
                     CheckState::Fault,
-                    format!(
-                        "{label}: operating it changed {} instead of {drawn}",
-                        t.followed(&candidates)
+                    message!(
+                        "check.in.otherInput",
+                        "{label}: operating it changed {changed} instead of {drawn}",
+                        label = label,
+                        changed = t
+                            .followed(&candidates)
                             .iter()
                             .map(|c| self.channel_name(*c))
                             .collect::<Vec<_>>()
-                            .join(", ")
+                            .join(", "),
+                        drawn = drawn.clone()
                     ),
                 ),
                 Some(_) => (
                     CheckState::Fault,
-                    format!("{label}: operating it changed no input; {drawn} did not follow"),
+                    message!(
+                        "check.in.noInput",
+                        "{label}: operating it changed no input; {drawn} did not follow",
+                        label = label,
+                        drawn = drawn.clone()
+                    ),
                 ),
             };
             operation_states.push(state);
@@ -1017,9 +1226,9 @@ impl LabSession {
             if let Some(contact) = contact_of(&definition.kind) {
                 let expected = contact == ContactType::NormallyClosed;
                 let drawing = if expected {
-                    "normally closed (TRUE at rest)"
+                    term("check.in.nc", "normally closed (TRUE at rest)")
                 } else {
-                    "normally open (FALSE at rest)"
+                    term("check.in.no", "normally open (FALSE at rest)")
                 };
                 let (state, finding) = match test {
                     Some(t) if t.edges > 0 && t.rest.is_some() => {
@@ -1027,24 +1236,36 @@ impl LabSession {
                         if rest == expected {
                             (
                                 CheckState::Ok,
-                                format!(
-                                    "{label}: drawn {drawing}, reads {} at rest",
-                                    bool_text(rest)
+                                message!(
+                                    "check.in.contactOk",
+                                    "{label}: drawn {drawing}, reads {value} at rest",
+                                    label = label,
+                                    drawing = drawing.clone(),
+                                    value = bool_text(rest)
                                 ),
                             )
                         } else {
                             (
                                 CheckState::Attention,
-                                format!(
-                                    "{label}: drawn {drawing}, but {drawn} reads {} at rest",
-                                    bool_text(rest)
+                                message!(
+                                    "check.in.contactDiffers",
+                                    "{label}: drawn {drawing}, but {drawn} reads {value} at rest",
+                                    label = label,
+                                    drawing = drawing.clone(),
+                                    drawn = drawn.clone(),
+                                    value = bool_text(rest)
                                 ),
                             )
                         }
                     }
                     _ => (
                         CheckState::Untested,
-                        format!("{label}: drawn {drawing}; operate it to compare"),
+                        message!(
+                            "check.in.contactUntested",
+                            "{label}: drawn {drawing}; operate it to compare",
+                            label = label,
+                            drawing = drawing.clone()
+                        ),
                     ),
                 };
                 contact_states.push(state);
@@ -1052,9 +1273,12 @@ impl LabSession {
             }
         }
         let analog = self.analog_checks();
-        let no_devices = |findings: Vec<String>| {
+        let no_devices = |findings: Vec<Message>| {
             if findings.is_empty() {
-                vec!["No operator devices or sensors are wired to inputs.".into()]
+                vec![message!(
+                    "check.in.noDevices",
+                    "No operator devices or sensors are wired to inputs."
+                )]
             } else {
                 findings
             }
@@ -1072,7 +1296,10 @@ impl LabSession {
                         CheckState::Fault
                     },
                     bad.into_iter().chain(values).collect(),
-                    "Hardware view: input LEDs; Watch: input values and quality.",
+                    how(
+                        "check.how.diState",
+                        "Hardware view: input LEDs; Watch: input values and quality.",
+                    ),
                 ),
                 item(
                     "sensor-operation",
@@ -1083,7 +1310,10 @@ impl LabSession {
                         worst(operation_states)
                     },
                     no_devices(operation),
-                    "Operate each device in the Process view and watch its input follow.",
+                    how(
+                        "check.how.sensorOperation",
+                        "Operate each device in the Process view and watch its input follow.",
+                    ),
                 ),
                 item(
                     "contact-type",
@@ -1094,7 +1324,10 @@ impl LabSession {
                         worst(contact_states)
                     },
                     no_devices(contacts),
-                    "Compare the input at rest with the drawing: NC reads TRUE at rest, NO FALSE.",
+                    how(
+                        "check.how.contactType",
+                        "Compare the input at rest with the drawing: NC reads TRUE at rest, NO FALSE.",
+                    ),
                 ),
                 analog.signal,
                 analog.raw,
@@ -1144,13 +1377,20 @@ impl LabSession {
                 (CheckState::Fault, f.message.clone())
             } else {
                 let power = match (current, two_wire) {
-                    (true, true) => "2-wire, loop supplied by the input",
-                    (true, false) => "4-wire, passive input",
-                    (false, _) => "separately powered",
+                    (true, true) => term("check.ai.twoWire", "2-wire, loop supplied by the input"),
+                    (true, false) => term("check.ai.fourWire", "4-wire, passive input"),
+                    (false, _) => term("check.ai.separate", "separately powered"),
                 };
                 (
                     CheckState::Ok,
-                    format!("{label}: {} {power}; {name} matches", signal_text(*drawn)),
+                    message!(
+                        "check.ai.signalOk",
+                        "{label}: {signal} {power}; {channel} matches",
+                        label = label,
+                        signal = signal_term(*drawn),
+                        power = power,
+                        channel = name.clone()
+                    ),
                 )
             };
             signal.0.push(state);
@@ -1168,6 +1408,7 @@ impl LabSession {
                         ChannelValue::Real(v) => format!("{v}"),
                         ChannelValue::Bool(b) => bool_text(b).to_owned(),
                     };
+                    let measured = format!("{}.{:02}", value / 1000, (value % 1000).abs() / 10);
                     let state = match r.quality {
                         Quality::Good => CheckState::Ok,
                         Quality::Overrange | Quality::Underrange => CheckState::Attention,
@@ -1175,15 +1416,27 @@ impl LabSession {
                     };
                     (
                         state,
-                        format!(
-                            "{label} on {name}: {}.{:02} {unit}, raw {raw_text} ({})",
-                            value / 1000,
-                            (value % 1000).abs() / 10,
-                            quality_text(r.quality)
+                        message!(
+                            "check.ai.raw",
+                            "{label} on {channel}: {measured} {unit}, raw {raw} ({quality})",
+                            label = label,
+                            channel = name.clone(),
+                            measured = measured,
+                            unit = unit,
+                            raw = raw_text,
+                            quality = quality_text(r.quality)
                         ),
                     )
                 }
-                _ => (CheckState::Fault, format!("{label} on {name}: no reading")),
+                _ => (
+                    CheckState::Fault,
+                    message!(
+                        "check.ai.noReading",
+                        "{label} on {channel}: no reading",
+                        label = label,
+                        channel = name.clone()
+                    ),
+                ),
             };
             let valid = state != CheckState::Fault;
             raw.0.push(state);
@@ -1207,10 +1460,15 @@ impl LabSession {
                 (Some(ppm), Some(level)) if valid => {
                     let value = min + ppm * span / 1_000_000;
                     let deviation = (value - level).abs();
-                    let text = format!(
-                        "{label}: {}.{} % of {range_min_ml}..{range_max_ml} ml = {value} ml; sight glass {level} ml",
-                        ppm / 10_000,
-                        (ppm % 10_000).abs() / 1_000
+                    let text = message!(
+                        "check.ai.scaling",
+                        "{label}: {percent} % of {min}..{max} ml = {value} ml; sight glass {level} ml",
+                        label = label,
+                        percent = format!("{}.{}", ppm / 10_000, (ppm % 10_000).abs() / 1_000),
+                        min = *range_min_ml,
+                        max = *range_max_ml,
+                        value = value,
+                        level = level
                     );
                     // Within 2 % of the span counts as matching.
                     if deviation * 50 <= span {
@@ -1218,29 +1476,44 @@ impl LabSession {
                     } else {
                         (
                             CheckState::Attention,
-                            format!("{text}: differs by {deviation} ml"),
+                            message!(
+                                "check.ai.differs",
+                                "{scaling}: differs by {deviation} ml",
+                                scaling = text,
+                                deviation = deviation
+                            ),
                         )
                     }
                 }
                 _ => (
                     CheckState::Untested,
-                    format!("{label}: no valid signal to compare with the sight glass"),
+                    message!(
+                        "check.ai.noSignal",
+                        "{label}: no valid signal to compare with the sight glass",
+                        label = label
+                    ),
                 ),
             };
             scaling.0.push(state);
             scaling.1.push(finding);
         }
-        let make = |id, title, (states, findings): (Vec<CheckState>, Vec<String>), how| {
+        let make = |id,
+                    title,
+                    (states, findings): (Vec<CheckState>, Vec<Message>),
+                    hint: Option<Message>| {
             if states.is_empty() {
                 item(
                     id,
                     title,
                     CheckState::NotApplicable,
-                    vec!["This machine has no analog transmitters.".into()],
-                    "",
+                    vec![message!(
+                        "check.ai.none",
+                        "This machine has no analog transmitters."
+                    )],
+                    None,
                 )
             } else {
-                item(id, title, worst(states), findings, how)
+                item(id, title, worst(states), findings, hint)
             }
         };
         AnalogChecks {
@@ -1248,19 +1521,28 @@ impl LabSession {
                 "analog-signal",
                 "Analog signal type and loop",
                 signal,
-                "Hardware view (Advanced): channel mode and loop supply against the drawing.",
+                how(
+                    "check.how.analogSignal",
+                    "Hardware view (Advanced): channel mode and loop supply against the drawing.",
+                ),
             ),
             raw: make(
                 "analog-raw",
                 "Analog raw value",
                 raw,
-                "Measure the loop current or voltage at the terminal; Watch: the raw value.",
+                how(
+                    "check.how.analogRaw",
+                    "Measure the loop current or voltage at the terminal; Watch: the raw value.",
+                ),
             ),
             scaling: make(
                 "scaling",
                 "Scaling",
                 scaling,
-                "Compare the transmitter value with the sight glass, then with your scaled value in Watch.",
+                how(
+                    "check.how.scaling",
+                    "Compare the transmitter value with the sight glass, then with your scaled value in Watch.",
+                ),
             ),
         }
     }
@@ -1296,9 +1578,16 @@ impl LabSession {
                 .get(&wire.channel)
                 .cloned()
                 .unwrap_or_default();
-            logical.push(format!(
-                "{name} -> {label}: {}",
-                if now { "ON" } else { "OFF" }
+            logical.push(message!(
+                "check.out.logical",
+                "{channel} -> {label}: {state}",
+                channel = name.clone(),
+                label = label,
+                state = if now {
+                    term("check.out.on", "ON")
+                } else {
+                    term("check.out.off", "OFF")
+                }
             ));
             logical_states.push(if test.commanded {
                 CheckState::Ok
@@ -1306,13 +1595,31 @@ impl LabSession {
                 CheckState::Untested
             });
             let (state, finding) = if !test.commanded {
-                (CheckState::Untested, format!("{name}: not switched ON yet"))
+                (
+                    CheckState::Untested,
+                    message!(
+                        "check.out.notSwitched",
+                        "{channel}: not switched ON yet",
+                        channel = name.clone()
+                    ),
+                )
             } else if test.live {
-                (CheckState::Ok, format!("{name}: terminal switches 24 V"))
+                (
+                    CheckState::Ok,
+                    message!(
+                        "check.out.live",
+                        "{channel}: terminal switches 24 V",
+                        channel = name.clone()
+                    ),
+                )
             } else {
                 (
                     CheckState::Fault,
-                    format!("{name}: commanded ON, the terminal stayed at 0 V"),
+                    message!(
+                        "check.out.dead",
+                        "{channel}: commanded ON, the terminal stayed at 0 V",
+                        channel = name.clone()
+                    ),
                 )
             };
             physical_states.push(state);
@@ -1320,16 +1627,41 @@ impl LabSession {
             let (state, finding) = if test.received_while_off {
                 (
                     CheckState::Fault,
-                    format!("{label}: energized although {name} was OFF"),
+                    message!(
+                        "check.out.energizedOff",
+                        "{label}: energized although {channel} was OFF",
+                        label = label,
+                        channel = name.clone()
+                    ),
                 )
             } else if !test.live {
-                (CheckState::Untested, format!("{label}: not energized yet"))
+                (
+                    CheckState::Untested,
+                    message!(
+                        "check.out.notEnergized",
+                        "{label}: not energized yet",
+                        label = label
+                    ),
+                )
             } else if test.received {
-                (CheckState::Ok, format!("{label}: responds to {name}"))
+                (
+                    CheckState::Ok,
+                    message!(
+                        "check.out.responds",
+                        "{label}: responds to {channel}",
+                        label = label,
+                        channel = name.clone()
+                    ),
+                )
             } else {
                 (
                     CheckState::Fault,
-                    format!("{name} switched 24 V, but {label} did not respond"),
+                    message!(
+                        "check.out.noResponse",
+                        "{channel} switched 24 V, but {label} did not respond",
+                        channel = name.clone(),
+                        label = label
+                    ),
                 )
             };
             response_states.push(state);
@@ -1339,20 +1671,33 @@ impl LabSession {
                 let (state, finding) = if follows(seen) {
                     (
                         CheckState::Ok,
-                        format!("{label}: feedback {feedback_name} follows"),
+                        message!(
+                            "check.out.feedbackFollows",
+                            "{label}: feedback {feedback} follows",
+                            label = label,
+                            feedback = feedback_name.clone()
+                        ),
                     )
                 } else if test.energized_us >= FEEDBACK_WAIT_US {
                     (
                         CheckState::Fault,
-                        format!(
-                            "{label}: energized for {} s, feedback {feedback_name} never changed",
-                            test.energized_us / 1_000_000
+                        message!(
+                            "check.out.feedbackMissing",
+                            "{label}: energized for {seconds} s, feedback {feedback} never changed",
+                            label = label,
+                            seconds = test.energized_us / 1_000_000,
+                            feedback = feedback_name.clone()
                         ),
                     )
                 } else {
                     (
                         CheckState::Untested,
-                        format!("{label}: energize it for a few seconds to see {feedback_name}"),
+                        message!(
+                            "check.out.feedbackWait",
+                            "{label}: energize it for a few seconds to see {feedback}",
+                            label = label,
+                            feedback = feedback_name.clone()
+                        ),
                     )
                 };
                 feedback_states.push(state);
@@ -1360,7 +1705,11 @@ impl LabSession {
             }
             if test.feedback.is_empty() && !feedback_ports(&definition.kind).is_empty() {
                 feedback_states.push(CheckState::Untested);
-                feedback.push(format!("{label}: energize it to see its feedback"));
+                feedback.push(message!(
+                    "check.out.feedbackUntested",
+                    "{label}: energize it to see its feedback",
+                    label = label
+                ));
             }
         }
         let (supply, modules) = self.io_modules(true);
@@ -1371,9 +1720,9 @@ impl LabSession {
                 worst(states)
             }
         };
-        let none = |findings: Vec<String>, what: &str| {
+        let none = |findings: Vec<Message>, empty: Message| {
             if findings.is_empty() {
-                vec![format!("No {what}.")]
+                vec![empty]
             } else {
                 findings
             }
@@ -1386,15 +1735,27 @@ impl LabSession {
                     "logical",
                     "Logical PLC output",
                     applicable(logical_states),
-                    none(logical, "wired outputs"),
-                    "Switch each output ON from the program or with a force.",
+                    none(
+                        logical,
+                        message!("check.out.noOutputs", "No wired outputs."),
+                    ),
+                    how(
+                        "check.how.logical",
+                        "Switch each output ON from the program or with a force.",
+                    ),
                 ),
                 item(
                     "physical",
                     "Physical output",
                     applicable(physical_states),
-                    none(physical, "wired outputs"),
-                    "Hardware view: output LED; measure the terminal against M.",
+                    none(
+                        physical,
+                        message!("check.out.noOutputs", "No wired outputs."),
+                    ),
+                    how(
+                        "check.how.physical",
+                        "Hardware view: output LED; measure the terminal against M.",
+                    ),
                 ),
                 item(
                     "field-supply",
@@ -1407,67 +1768,93 @@ impl LabSession {
                         CheckState::Fault
                     },
                     if modules == 0 {
-                        vec!["No output modules.".into()]
+                        vec![message!("check.out.noModules", "No output modules.")]
                     } else if supply.is_empty() {
-                        vec![format!("{modules} output module(s) have their load supply")]
+                        vec![message!(
+                            "check.out.supplied",
+                            "{count} output module(s) have their load supply",
+                            count = modules
+                        )]
                     } else {
                         supply
                     },
-                    "Hardware view: output module status.",
+                    how(
+                        "check.how.fieldSupply",
+                        "Hardware view: output module status.",
+                    ),
                 ),
                 item(
                     "actuator",
                     "Actuator response",
                     applicable(response_states),
-                    none(response, "wired actuators"),
-                    "Process view: does the device move when its output switches?",
+                    none(
+                        response,
+                        message!("check.out.noActuators", "No wired actuators."),
+                    ),
+                    how(
+                        "check.how.actuator",
+                        "Process view: does the device move when its output switches?",
+                    ),
                 ),
                 item(
                     "feedback",
                     "Feedback",
                     applicable(feedback_states),
-                    none(feedback, "actuators with feedback"),
-                    "Watch: the feedback input while the actuator is energized.",
+                    none(
+                        feedback,
+                        message!("check.out.noFeedback", "No actuators with feedback."),
+                    ),
+                    how(
+                        "check.how.feedback",
+                        "Watch: the feedback input while the actuator is energized.",
+                    ),
                 ),
             ],
         }
     }
 
     fn drives(&self) -> CheckCategory {
-        const ITEMS: [(&str, &str, &str); 7] = [
+        const ITEMS: [(&str, &str, &str, &str); 7] = [
             (
                 "ready",
                 "Ready",
+                "check.how.driveReady",
                 "Drive display and ready relay: supply, fault and enable.",
             ),
             (
                 "control-place",
                 "Local / remote",
+                "check.how.driveControlPlace",
                 "Drive display: control place.",
             ),
             (
                 "enable",
                 "Run enable",
+                "check.how.driveEnable",
                 "Watch the enable output and the drive's enable terminal.",
             ),
             (
                 "fault",
                 "Fault",
+                "check.how.driveFault",
                 "Drive display and fault relay; acknowledge after removing the cause.",
             ),
             (
                 "run-command",
                 "Run command",
+                "check.how.driveRun",
                 "Command the drive from the PLC and watch its run input.",
             ),
             (
                 "reference",
                 "Speed reference",
+                "check.how.driveReference",
                 "Drive display: reference source and value.",
             ),
             (
                 "speed",
                 "Speed and feedback",
+                "check.how.driveSpeed",
                 "Process view: drive speed; Watch: the running feedback.",
             ),
         ];
@@ -1478,19 +1865,19 @@ impl LabSession {
                 title: "Drives",
                 items: ITEMS
                     .iter()
-                    .map(|(id, title, _)| {
+                    .map(|(id, title, _, _)| {
                         item(
                             id,
                             title,
                             CheckState::NotApplicable,
-                            vec!["This machine has no drive.".into()],
-                            "",
+                            vec![message!("check.noDrive", "This machine has no drive.")],
+                            None,
                         )
                     })
                     .collect(),
             };
         }
-        let mut results: Vec<(Vec<CheckState>, Vec<String>)> = vec![Default::default(); 7];
+        let mut results: Vec<(Vec<CheckState>, Vec<Message>)> = vec![Default::default(); 7];
         for index in drives {
             let definition = &self.scene_def.components[index];
             let label = &definition.label;
@@ -1506,16 +1893,20 @@ impl LabSession {
                 Some(Quantity::Integer(p)) => p,
                 _ => 0,
             };
-            let percent = |p: i64| format!("{}.{} %", p / 10, p % 10);
+            let percent = |p: i64| format!("{}.{}", p / 10, p % 10);
             let (ready, tripped, commanded) = (q("ready"), q("tripped"), q("command"));
             // Control place, fault and reference are read on the drive's display, which is
             // dark without supply.
             let supplied = q("supplied");
-            let mut add = |item: usize, state: CheckState, finding: String| {
+            let mut add = |item: usize, state: CheckState, finding: Message| {
                 let (state, finding) = if !supplied && matches!(item, 1 | 3 | 5) {
                     (
                         CheckState::Untested,
-                        format!("{label}: no indication, the drive has no supply"),
+                        message!(
+                            "check.drive.dark",
+                            "{label}: no indication, the drive has no supply",
+                            label = label
+                        ),
                     )
                 } else {
                     (state, finding)
@@ -1525,13 +1916,13 @@ impl LabSession {
             };
             let mut reasons = Vec::new();
             if !supplied {
-                reasons.push("no mains supply");
+                reasons.push(term("check.drive.noSupply", "no mains supply"));
             }
             if tripped {
-                reasons.push("faulted");
+                reasons.push(term("check.drive.faulted", "faulted"));
             }
             if enable_terminal && !q("enableCommand") {
-                reasons.push("run enable missing");
+                reasons.push(term("check.drive.noEnable", "run enable missing"));
             }
             add(
                 0,
@@ -1543,16 +1934,20 @@ impl LabSession {
                     CheckState::Attention
                 },
                 if ready {
-                    format!("{label}: ready")
+                    message!("check.drive.ready", "{label}: ready", label = label)
+                } else if commanded {
+                    message!(
+                        "check.drive.notReadyCommanded",
+                        "{label}: not ready ({reasons}); the run command is active",
+                        label = label,
+                        reasons = Message::list(reasons)
+                    )
                 } else {
-                    format!(
-                        "{label}: not ready ({}){}",
-                        reasons.join(", "),
-                        if commanded {
-                            "; the run command is active"
-                        } else {
-                            ""
-                        }
+                    message!(
+                        "check.drive.notReady",
+                        "{label}: not ready ({reasons})",
+                        label = label,
+                        reasons = Message::list(reasons)
                     )
                 },
             );
@@ -1565,9 +1960,17 @@ impl LabSession {
                     CheckState::Attention
                 },
                 if remote {
-                    format!("{label}: remote (follows the PLC)")
+                    message!(
+                        "check.drive.remote",
+                        "{label}: remote (follows the PLC)",
+                        label = label
+                    )
                 } else {
-                    format!("{label}: local control, the PLC run command is ignored")
+                    message!(
+                        "check.drive.local",
+                        "{label}: local control, the PLC run command is ignored",
+                        label = label
+                    )
                 },
             );
             add(
@@ -1578,16 +1981,22 @@ impl LabSession {
                     (true, false) => CheckState::Attention,
                 },
                 if enable_terminal {
-                    format!(
-                        "{label}: run enable terminal {}",
-                        if q("enableCommand") {
-                            "energized"
+                    message!(
+                        "check.drive.enable",
+                        "{label}: run enable terminal {state}",
+                        label = label,
+                        state = if q("enableCommand") {
+                            term("check.drive.energized", "energized")
                         } else {
-                            "not energized"
+                            term("check.drive.notEnergized", "not energized")
                         }
                     )
                 } else {
-                    format!("{label}: no run enable terminal")
+                    message!(
+                        "check.drive.noEnableTerminal",
+                        "{label}: no run enable terminal",
+                        label = label
+                    )
                 },
             );
             add(
@@ -1598,9 +2007,13 @@ impl LabSession {
                     CheckState::Ok
                 },
                 if tripped {
-                    format!("{label}: faulted (fault relay closed)")
+                    message!(
+                        "check.drive.tripped",
+                        "{label}: faulted (fault relay closed)",
+                        label = label
+                    )
                 } else {
-                    format!("{label}: no fault")
+                    message!("check.drive.noFault", "{label}: no fault", label = label)
                 },
             );
             let id = definition.id.as_str();
@@ -1626,9 +2039,15 @@ impl LabSession {
                 } else {
                     CheckState::Untested
                 },
-                format!(
-                    "{label}: run command {}",
-                    if commanded { "present" } else { "absent" }
+                message!(
+                    "check.drive.command",
+                    "{label}: run command {state}",
+                    label = label,
+                    state = if commanded {
+                        term("check.drive.present", "present")
+                    } else {
+                        term("check.drive.absent", "absent")
+                    }
                 ),
             );
             let keypad = q("keypadReference");
@@ -1639,13 +2058,15 @@ impl LabSession {
                 } else {
                     CheckState::Ok
                 },
-                format!(
-                    "{label}: reference {} from {}",
-                    percent(permille("referencePermille")),
-                    if keypad {
-                        "the keypad"
+                message!(
+                    "check.drive.reference",
+                    "{label}: reference {percent} % from {source}",
+                    label = label,
+                    percent = percent(permille("referencePermille")),
+                    source = if keypad {
+                        term("check.drive.keypad", "the keypad")
                     } else {
-                        "the terminals"
+                        term("check.drive.terminals", "the terminals")
                     }
                 ),
             );
@@ -1659,10 +2080,16 @@ impl LabSession {
                 } else {
                     CheckState::Untested
                 },
-                format!(
-                    "{label}: {} at {} speed",
-                    if running { "running" } else { "stopped" },
-                    percent(permille("speedPermille"))
+                message!(
+                    "check.drive.speed",
+                    "{label}: {state} at {percent} % speed",
+                    label = label,
+                    state = if running {
+                        term("check.drive.running", "running")
+                    } else {
+                        term("check.drive.stopped", "stopped")
+                    },
+                    percent = percent(permille("speedPermille"))
                 ),
             );
         }
@@ -1672,13 +2099,13 @@ impl LabSession {
             items: ITEMS
                 .iter()
                 .zip(results)
-                .map(|((id, title, how), (states, findings))| {
+                .map(|((id, title, code, hint), (states, findings))| {
                     let state = if states.iter().all(|s| *s == CheckState::NotApplicable) {
                         CheckState::NotApplicable
                     } else {
                         worst(states)
                     };
-                    item(id, title, state, findings, how)
+                    item(id, title, state, findings, how(code, hint))
                 })
                 .collect(),
         }
@@ -1691,29 +2118,51 @@ impl LabSession {
             match component.kind {
                 ComponentKind::MotorStarter { .. } => {
                     if is_on(self.scene.quantity(index, "tripped")) {
-                        trips.push(format!("{}: overload relay tripped", component.label));
+                        trips.push(message!(
+                            "check.process.overload",
+                            "{label}: overload relay tripped",
+                            label = component.label.clone()
+                        ));
                     }
                 }
                 ComponentKind::Pump { .. } => {
                     if is_on(self.scene.quantity(index, "dry")) {
-                        trips.push(format!("{}: running dry", component.label));
+                        trips.push(message!(
+                            "check.process.dry",
+                            "{label}: running dry",
+                            label = component.label.clone()
+                        ));
                     }
                 }
                 ComponentKind::Tank { .. } => {
                     for (quantity, text) in [
-                        ("overflowing", "overflowing"),
-                        ("highHigh", "above its high-high level"),
-                        ("lowLow", "below its low-low level"),
+                        (
+                            "overflowing",
+                            term("check.process.overflowing", "overflowing"),
+                        ),
+                        (
+                            "highHigh",
+                            term("check.process.highHigh", "above its high-high level"),
+                        ),
+                        (
+                            "lowLow",
+                            term("check.process.lowLow", "below its low-low level"),
+                        ),
                     ] {
                         if is_on(self.scene.quantity(index, quantity)) {
-                            limits.push(format!("{}: {text}", component.label));
+                            limits.push(message!(
+                                "check.process.limit",
+                                "{label}: {limit}",
+                                label = component.label.clone(),
+                                limit = text
+                            ));
                         }
                     }
                 }
                 _ => {}
             }
         }
-        let timeouts: Vec<String> = self
+        let timeouts: Vec<Message> = self
             .tests
             .outputs
             .iter()
@@ -1721,9 +2170,10 @@ impl LabSession {
                 t.energized_us >= FEEDBACK_WAIT_US && t.feedback.values().any(|seen| !follows(seen))
             })
             .map(|(channel, _)| {
-                format!(
-                    "{}: energized without the expected feedback",
-                    self.channel_name(*channel)
+                message!(
+                    "check.process.timeout",
+                    "{channel}: energized without the expected feedback",
+                    channel = self.channel_name(*channel)
                 )
             })
             .collect();
@@ -1737,13 +2187,23 @@ impl LabSession {
                 CheckState::Untested
             },
             vec![if running {
-                format!("The PLC executes its program ({} scans)", self.plc_scans())
+                message!(
+                    "check.process.running",
+                    "The PLC executes its program ({scans} scans)",
+                    scans = self.plc_scans()
+                )
             } else {
-                "The PLC does not execute a program (not in RUN)".into()
+                message!(
+                    "check.process.notRunning",
+                    "The PLC does not execute a program (not in RUN)"
+                )
             }],
-            "Program view: online values; Cause & effect: the last cycle.",
+            how(
+                "check.how.sequence",
+                "Program view: online values; Cause & effect: the last cycle.",
+            ),
         );
-        let alarms: Vec<String> = trips.iter().chain(&limits).cloned().collect();
+        let alarms: Vec<Message> = trips.iter().chain(&limits).cloned().collect();
         CheckCategory {
             id: "process",
             title: "Process",
@@ -1757,11 +2217,17 @@ impl LabSession {
                         CheckState::Fault
                     },
                     if trips.is_empty() {
-                        vec!["No protective device has tripped".into()]
+                        vec![message!(
+                            "check.process.noTrips",
+                            "No protective device has tripped"
+                        )]
                     } else {
                         trips
                     },
-                    "Process view: overload relays and protective devices.",
+                    how(
+                        "check.how.interlocks",
+                        "Process view: overload relays and protective devices.",
+                    ),
                 ),
                 item(
                     "permissives",
@@ -1772,11 +2238,17 @@ impl LabSession {
                         CheckState::Attention
                     },
                     if limits.is_empty() {
-                        vec!["The process is within its limits".into()]
+                        vec![message!(
+                            "check.process.withinLimits",
+                            "The process is within its limits"
+                        )]
                     } else {
                         limits
                     },
-                    "Process view: levels and limit switches.",
+                    how(
+                        "check.how.permissives",
+                        "Process view: levels and limit switches.",
+                    ),
                 ),
                 sequence,
                 item(
@@ -1788,11 +2260,17 @@ impl LabSession {
                         CheckState::Fault
                     },
                     if timeouts.is_empty() {
-                        vec!["No actuator waits for its feedback".into()]
+                        vec![message!(
+                            "check.process.noTimeouts",
+                            "No actuator waits for its feedback"
+                        )]
                     } else {
                         timeouts
                     },
-                    "Watch: feedback inputs after a command.",
+                    how(
+                        "check.how.timeout",
+                        "Watch: feedback inputs after a command.",
+                    ),
                 ),
                 item(
                     "alarms",
@@ -1803,11 +2281,17 @@ impl LabSession {
                         CheckState::Attention
                     },
                     if alarms.is_empty() {
-                        vec!["No process alarm condition".into()]
+                        vec![message!(
+                            "check.process.noAlarms",
+                            "No process alarm condition"
+                        )]
                     } else {
                         alarms
                     },
-                    "Process view and Diagnostics: alarm conditions.",
+                    how(
+                        "check.how.alarms",
+                        "Process view and Diagnostics: alarm conditions.",
+                    ),
                 ),
             ],
         }
@@ -1830,7 +2314,7 @@ pub struct SignalMapRow {
     pub drawn_device: Option<String>,
     pub drawn_port: Option<String>,
     /// What the drawn device does right now (actuated, commanded, contact closed, signal).
-    pub device_state: Option<String>,
+    pub device_state: Option<Message>,
 }
 
 impl LabSession {
@@ -1867,7 +2351,7 @@ impl LabSession {
     }
 
     /// A device's own state at one of its ports, as seen at the device.
-    fn device_state(&self, index: usize, port: &str) -> String {
+    fn device_state(&self, index: usize, port: &str) -> Message {
         let kind = &self.scene_def.components[index].kind;
         match kind.port_role(port) {
             Some(PortRole::Sensor) => {
@@ -1876,13 +2360,21 @@ impl LabSession {
                         Some(Quantity::Integer(p)) => port_position(kind, port) == Some(p),
                         other => is_on(other),
                     };
-                if actuated { "actuated" } else { "not actuated" }.into()
+                if actuated {
+                    message!("device.actuated", "actuated")
+                } else {
+                    message!("device.notActuated", "not actuated")
+                }
             }
             Some(PortRole::Command) => {
                 let on = kind
                     .command_quantity(port)
                     .is_some_and(|q| is_on(self.scene.quantity(index, q)));
-                if on { "energized" } else { "not energized" }.into()
+                if on {
+                    message!("device.energized", "energized")
+                } else {
+                    message!("device.notEnergized", "not energized")
+                }
             }
             Some(PortRole::Feedback | PortRole::Status) => {
                 let closed = self
@@ -1890,24 +2382,27 @@ impl LabSession {
                     .digital_output(index, port)
                     .is_ok_and(|f| f.conducting);
                 if closed {
-                    "contact closed"
+                    message!("device.closed", "contact closed")
                 } else {
-                    "contact open"
+                    message!("device.open", "contact open")
                 }
-                .into()
             }
             Some(PortRole::Measurement) => match self.scene.analog_output(index, port) {
                 Ok(f) => match f.unit {
-                    process_simulation::AnalogUnit::Microamp => {
-                        format!("sends {}.{:02} mA", f.value / 1000, (f.value % 1000) / 10)
-                    }
-                    process_simulation::AnalogUnit::Millivolt => {
-                        format!("sends {}.{:02} V", f.value / 1000, (f.value % 1000) / 10)
-                    }
+                    process_simulation::AnalogUnit::Microamp => message!(
+                        "device.sendsMa",
+                        "sends {value} mA",
+                        value = format!("{}.{:02}", f.value / 1000, (f.value % 1000) / 10)
+                    ),
+                    process_simulation::AnalogUnit::Millivolt => message!(
+                        "device.sendsV",
+                        "sends {value} V",
+                        value = format!("{}.{:02}", f.value / 1000, (f.value % 1000) / 10)
+                    ),
                 },
-                Err(_) => "no signal".into(),
+                Err(_) => message!("device.noSignal", "no signal"),
             },
-            None => "unknown".into(),
+            None => message!("device.unknown", "unknown"),
         }
     }
 }

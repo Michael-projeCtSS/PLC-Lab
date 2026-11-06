@@ -11,6 +11,8 @@ use lab_engine::{
     CauseEffect, CycleOutcome, LabEvent, LabEventKind, LabSession, ModeReason, OperatorAction,
     PlcMode, SignalKind, SignalValue, StartKind,
 };
+use lab_model::message;
+use lab_model::message::{Arg, IntoArg, Message, term};
 use lab_model::network::{
     ModbusDataType, ModbusReadFunction, ModbusTcpScan, ModbusValueMapping, StationNetworkConfig,
     WordOrder,
@@ -405,9 +407,36 @@ pub fn hardware_finding(f: hardware_model::HardwareFinding) -> HardwareFindingDt
             channel: c.channel,
         }),
         module_id: f.module_id,
-        expected: f.expected,
-        detected: f.detected,
-        message: f.message,
+        expected: f.expected.as_ref().map(|m| m.text.clone()),
+        detected: f.detected.as_ref().map(|m| m.text.clone()),
+        message: f.message.text.clone(),
+        detail: message(&f.message),
+        expected_message: f.expected.as_ref().map(message),
+        detected_message: f.detected.as_ref().map(message),
+    }
+}
+
+/// A backend message for the interface: code, named values and the English text.
+pub fn message(m: &Message) -> MessageDto {
+    MessageDto {
+        code: m.code.into(),
+        text: m.text.clone(),
+        args: m
+            .args
+            .iter()
+            .map(|(name, arg)| MessageArgDto {
+                name: (*name).into(),
+                text: arg.to_string(),
+                term: match arg {
+                    Arg::Term { code, .. } => Some(code.clone()),
+                    _ => None,
+                },
+                message: match arg {
+                    Arg::Message(nested) => Some(Box::new(message(nested))),
+                    _ => None,
+                },
+            })
+            .collect(),
     }
 }
 
@@ -522,6 +551,86 @@ pub fn diagnostic_text(session: &LabSession, kind: DiagnosticKind) -> String {
             "Memory reset: all program data initialized and every force removed.".into()
         }
     }
+}
+
+/// [`diagnostic_text`] as a coded message with the same English text.
+pub fn diagnostic_message(session: &LabSession, entry: &DiagnosticEntry) -> Message {
+    let profile = session.profile();
+    // The same text as module_name: the product name and the generic name as a term.
+    let module = |m: ModuleType| match profile.product_name(m) {
+        Some(product) => message!(
+            "module.product",
+            "{product} ({name})",
+            product = product,
+            name = m.name_term()
+        )
+        .into_arg(),
+        None => m.name_term(),
+    };
+    let text = diagnostic_text(session, entry.kind);
+    let (code, args): (&'static str, Vec<(&'static str, Arg)>) = match entry.kind {
+        DiagnosticKind::ModuleMissing => ("event.diag.ModuleMissing", vec![]),
+        DiagnosticKind::ModuleMismatch {
+            configured,
+            installed,
+        } => (
+            "event.diag.ModuleMismatch",
+            vec![
+                (
+                    "configured",
+                    configured.map_or_else(|| term("diag.value.none", "none"), module),
+                ),
+                ("installed", module(installed)),
+            ],
+        ),
+        DiagnosticKind::UnconfiguredModule => ("event.diag.UnconfiguredModule", vec![]),
+        DiagnosticKind::NoFieldPower => ("event.diag.NoFieldPower", vec![]),
+        DiagnosticKind::WireBreak => ("event.diag.WireBreak", vec![]),
+        DiagnosticKind::Overflow => ("event.diag.Overflow", vec![]),
+        DiagnosticKind::Underflow => ("event.diag.Underflow", vec![]),
+        DiagnosticKind::ConnectionTimeout => ("event.diag.ConnectionTimeout", vec![]),
+        DiagnosticKind::ConnectionRefused => ("event.diag.ConnectionRefused", vec![]),
+        DiagnosticKind::NoRoute => ("event.diag.NoRoute", vec![]),
+        DiagnosticKind::ModbusException(code) => (
+            "event.diag.ModbusException",
+            vec![
+                ("exception", Arg::Data(format!("{code:02X}h"))),
+                ("name", exception_term(code)),
+            ],
+        ),
+        DiagnosticKind::IpAddressConflict => ("event.diag.IpAddressConflict", vec![]),
+        DiagnosticKind::LinkDown => ("event.diag.LinkDown", vec![]),
+        DiagnosticKind::PlcFault => ("event.diag.PlcFault", vec![]),
+        DiagnosticKind::ForceActive => ("event.diag.ForceActive", vec![]),
+        DiagnosticKind::ModeChange { from, to } => (
+            "event.diag.ModeChange",
+            vec![
+                ("from", Arg::Data(cpu_state_name(from).into())),
+                ("to", Arg::Data(cpu_state_name(to).into())),
+            ],
+        ),
+        DiagnosticKind::ProgramDownloaded => ("event.diag.ProgramDownloaded", vec![]),
+        DiagnosticKind::HardwareDownloaded => ("event.diag.HardwareDownloaded", vec![]),
+        DiagnosticKind::Startup {
+            kind: StartupKind::Warm,
+            retained,
+        } => (
+            "event.diag.Startup.warm",
+            vec![("retained", Arg::Data(retained.to_string()))],
+        ),
+        DiagnosticKind::Startup {
+            kind: StartupKind::Cold,
+            ..
+        } => ("event.diag.Startup.cold", vec![]),
+        DiagnosticKind::FirstScan {
+            kind: StartupKind::Warm,
+        } => ("event.diag.FirstScan.warm", vec![]),
+        DiagnosticKind::FirstScan {
+            kind: StartupKind::Cold,
+        } => ("event.diag.FirstScan.cold", vec![]),
+        DiagnosticKind::MemoryReset => ("event.diag.MemoryReset", vec![]),
+    };
+    Message { code, args, text }
 }
 
 pub fn start_kind(kind: StartKind) -> &'static str {
@@ -734,11 +843,19 @@ pub fn scan_status(s: ScanStatus) -> String {
     }
 }
 
-/// (kind, severity, text, source)
+/// The Modbus exception name as a term with the interface's exception code.
+fn exception_term(code: u8) -> Arg {
+    term(
+        format!("modbus.exception.{code:02X}h"),
+        exception_name(code),
+    )
+}
+
+/// (kind, severity, message, source)
 pub fn describe(
     session: &LabSession,
     e: &LabEvent,
-) -> (String, &'static str, String, Option<String>) {
+) -> (String, &'static str, Message, Option<String>) {
     match &e.kind {
         LabEventKind::ModeChanged { from, to, reason } => (
             "PLC_MODE".into(),
@@ -747,18 +864,19 @@ pub fn describe(
             } else {
                 "info"
             },
-            format!(
-                "CPU {} → {}{}",
-                mode(*from),
-                mode(*to),
-                match reason {
-                    ModeReason::Switch => " (mode switch)",
-                    ModeReason::RuntimeFault => " (runtime error)",
-                    ModeReason::Download => " (download)",
-                    ModeReason::MemoryReset => " (memory reset)",
-                    ModeReason::WorldReset => " (simulation reset)",
-                    ModeReason::WarmRestart => " (warm restart)",
-                    ModeReason::ColdRestart => " (cold restart)",
+            message!(
+                "event.mode",
+                "CPU {from} → {to} ({reason})",
+                from = mode(*from),
+                to = mode(*to),
+                reason = match reason {
+                    ModeReason::Switch => term("event.reason.switch", "mode switch"),
+                    ModeReason::RuntimeFault => term("event.reason.fault", "runtime error"),
+                    ModeReason::Download => term("event.reason.download", "download"),
+                    ModeReason::MemoryReset => term("event.reason.memoryReset", "memory reset"),
+                    ModeReason::WorldReset => term("event.reason.worldReset", "simulation reset"),
+                    ModeReason::WarmRestart => term("event.reason.warm", "warm restart"),
+                    ModeReason::ColdRestart => term("event.reason.cold", "cold restart"),
                 }
             ),
             Some("CPU".into()),
@@ -766,7 +884,12 @@ pub fn describe(
         LabEventKind::PlcFault { diagnostic } => (
             "PLC_FAULT".into(),
             "error",
-            format!("{}: {}", diagnostic.code(), diagnostic.message()),
+            message!(
+                "event.fault",
+                "{code}: {detail}",
+                code = diagnostic.code(),
+                detail = diagnostic.message()
+            ),
             diagnostic
                 .source()
                 .and_then(|s| s.text_span())
@@ -775,43 +898,83 @@ pub fn describe(
         LabEventKind::ProgramDownloaded { name, revision } => (
             "DOWNLOAD".into(),
             "info",
-            format!("Program {name} downloaded (revision {revision})."),
+            message!(
+                "event.programDownloaded",
+                "Program {name} downloaded (revision {revision}).",
+                name = name.as_str(),
+                revision = *revision
+            ),
             Some("CPU".into()),
         ),
         LabEventKind::HardwareDownloaded => (
             "DOWNLOAD".into(),
             "info",
-            "Hardware configuration downloaded.".into(),
+            message!(
+                "event.hardwareDownloaded",
+                "Hardware configuration downloaded."
+            ),
             Some("CPU".into()),
         ),
         LabEventKind::WorldReset => (
             "SIMULATION".into(),
             "info",
-            "Simulation reset to the initial plant state.".into(),
+            message!(
+                "event.worldReset",
+                "Simulation reset to the initial plant state."
+            ),
             None,
         ),
         LabEventKind::Process { component, kind } => {
             let label = component_label(session, component);
-            let (severity, text) = match kind {
-                ProcessEventKind::OverflowStarted => {
-                    ("error", "overflow: the tank is full and still being filled")
+            let (severity, code, text) = match kind {
+                ProcessEventKind::OverflowStarted => (
+                    "error",
+                    "event.process.overflow",
+                    "overflow: the tank is full and still being filled",
+                ),
+                ProcessEventKind::OverflowEnded => {
+                    ("info", "event.process.overflowEnded", "overflow ended")
                 }
-                ProcessEventKind::OverflowEnded => ("info", "overflow ended"),
-                ProcessEventKind::DryRunStarted => {
-                    ("error", "dry running: the pump is running on an empty tank")
+                ProcessEventKind::DryRunStarted => (
+                    "error",
+                    "event.process.dryRun",
+                    "dry running: the pump is running on an empty tank",
+                ),
+                ProcessEventKind::DryRunEnded => {
+                    ("info", "event.process.dryRunEnded", "dry running ended")
                 }
-                ProcessEventKind::DryRunEnded => ("info", "dry running ended"),
-                ProcessEventKind::HighHighOn => ("warning", "level high-high"),
-                ProcessEventKind::HighHighOff => ("info", "level high-high cleared"),
-                ProcessEventKind::LowLowOn => ("warning", "level low-low"),
-                ProcessEventKind::LowLowOff => ("info", "level low-low cleared"),
-                ProcessEventKind::MotorOverloadTripped => ("error", "overload relay tripped"),
-                ProcessEventKind::MotorOverloadReset => ("info", "overload relay reset"),
+                ProcessEventKind::HighHighOn => {
+                    ("warning", "event.process.highHigh", "level high-high")
+                }
+                ProcessEventKind::HighHighOff => (
+                    "info",
+                    "event.process.highHighCleared",
+                    "level high-high cleared",
+                ),
+                ProcessEventKind::LowLowOn => ("warning", "event.process.lowLow", "level low-low"),
+                ProcessEventKind::LowLowOff => (
+                    "info",
+                    "event.process.lowLowCleared",
+                    "level low-low cleared",
+                ),
+                ProcessEventKind::MotorOverloadTripped => {
+                    ("error", "event.process.overload", "overload relay tripped")
+                }
+                ProcessEventKind::MotorOverloadReset => (
+                    "info",
+                    "event.process.overloadReset",
+                    "overload relay reset",
+                ),
             };
             (
                 "PROCESS".into(),
                 severity,
-                format!("{label}: {text}"),
+                message!(
+                    "event.process",
+                    "{label}: {event}",
+                    label = label.as_str(),
+                    event = term(code, text)
+                ),
                 Some(label),
             )
         }
@@ -822,18 +985,20 @@ pub fn describe(
             } else {
                 "info"
             },
-            format!(
-                "{} {}",
-                if entry.event == DiagnosticEvent::Incoming {
+            message!(
+                "event.diagnostic",
+                "{arrow} {diagnostic}",
+                arrow = if entry.event == DiagnosticEvent::Incoming {
                     "▲"
                 } else {
                     "▼"
                 },
-                diagnostic_text(session, entry.kind)
+                diagnostic = diagnostic_message(session, entry)
             ),
             Some(source_text(session, entry.source)),
         ),
         LabEventKind::Network { event } => {
+            let tid = event.transaction;
             let (severity, text) = match &event.kind {
                 NetworkEventKind::RequestSent {
                     function,
@@ -842,43 +1007,66 @@ pub fn describe(
                     unit,
                 } => (
                     "info",
-                    format!(
-                        "→ FC{function:02} read {quantity} register(s) from address {address} (unit {unit}), TID {}",
-                        event.transaction
+                    message!(
+                        "event.net.request",
+                        "→ FC{function} read {quantity} register(s) from address {address} (unit {unit}), TID {tid}",
+                        function = format!("{function:02}"),
+                        quantity = *quantity,
+                        address = *address,
+                        unit = *unit,
+                        tid = tid
                     ),
                 ),
                 NetworkEventKind::ResponseReceived { round_trip_us } => (
                     "info",
-                    format!(
-                        "← response TID {} after {:.1} ms",
-                        event.transaction,
-                        *round_trip_us as f64 / 1000.0
+                    message!(
+                        "event.net.response",
+                        "← response TID {tid} after {time} ms",
+                        tid = tid,
+                        time = format!("{:.1}", *round_trip_us as f64 / 1000.0)
                     ),
                 ),
                 NetworkEventKind::ExceptionReceived { code } => (
                     "warning",
-                    format!(
-                        "← exception {code:02X}h ({}) TID {}",
-                        exception_name(*code),
-                        event.transaction
+                    message!(
+                        "event.net.exception",
+                        "← exception {code}h ({name}) TID {tid}",
+                        name = exception_term(*code),
+                        code = format!("{code:02X}"),
+                        tid = tid
                     ),
                 ),
-                NetworkEventKind::Timeout => {
-                    ("warning", format!("✕ timeout TID {}", event.transaction))
-                }
+                NetworkEventKind::Timeout => (
+                    "warning",
+                    message!("event.net.timeout", "✕ timeout TID {tid}", tid = tid),
+                ),
                 NetworkEventKind::NoRoute => (
                     "warning",
-                    "✕ no route to host (destination outside the subnet, no gateway)".into(),
+                    message!(
+                        "event.net.noRoute",
+                        "✕ no route to host (destination outside the subnet, no gateway)"
+                    ),
                 ),
-                NetworkEventKind::ArpUnresolved { ip } => {
-                    ("warning", format!("✕ ARP: no device answers for {ip}"))
-                }
-                NetworkEventKind::ConnectionRefused => {
-                    ("warning", "✕ connection refused (TCP reset)".into())
-                }
-                NetworkEventKind::AddressConflict { ip } => {
-                    ("error", format!("⚠ several devices answer for {ip}"))
-                }
+                NetworkEventKind::ArpUnresolved { ip } => (
+                    "warning",
+                    message!(
+                        "event.net.arp",
+                        "✕ ARP: no device answers for {ip}",
+                        ip = ip.to_string()
+                    ),
+                ),
+                NetworkEventKind::ConnectionRefused => (
+                    "warning",
+                    message!("event.net.refused", "✕ connection refused (TCP reset)"),
+                ),
+                NetworkEventKind::AddressConflict { ip } => (
+                    "error",
+                    message!(
+                        "event.net.conflict",
+                        "⚠ several devices answer for {ip}",
+                        ip = ip.to_string()
+                    ),
+                ),
             };
             (
                 "NETWORK".into(),
@@ -889,26 +1077,34 @@ pub fn describe(
         }
         LabEventKind::Operator { action } => {
             let text = match action {
-                OperatorAction::Press { component } => {
-                    format!("Pressed {}", component_label(session, component))
-                }
-                OperatorAction::Release { component } => {
-                    format!("Released {}", component_label(session, component))
-                }
+                OperatorAction::Press { component } => message!(
+                    "event.op.press",
+                    "Pressed {device}",
+                    device = component_label(session, component)
+                ),
+                OperatorAction::Release { component } => message!(
+                    "event.op.release",
+                    "Released {device}",
+                    device = component_label(session, component)
+                ),
                 OperatorAction::SetSelector {
                     component,
                     position,
-                } => {
-                    format!(
-                        "Switched {} to position {}",
-                        component_label(session, component),
-                        position
-                    )
-                }
-                OperatorAction::SetPresence { component, present } => format!(
-                    "{} target {}",
-                    component_label(session, component),
-                    if *present { "present" } else { "removed" }
+                } => message!(
+                    "event.op.selector",
+                    "Switched {device} to position {position}",
+                    device = component_label(session, component),
+                    position = position.to_string()
+                ),
+                OperatorAction::SetPresence { component, present } => message!(
+                    "event.op.presence",
+                    "{device} target {state}",
+                    device = component_label(session, component),
+                    state = if *present {
+                        term("event.op.present", "present")
+                    } else {
+                        term("event.op.removed", "removed")
+                    }
                 ),
             };
             ("OPERATOR".into(), "info", text, None)
@@ -922,51 +1118,75 @@ pub fn describe(
                 Some(v) => (
                     "FORCE".into(),
                     "warning",
-                    format!("Force {name} = {}", format_value(*v)),
+                    message!(
+                        "event.force",
+                        "Force {name} = {value}",
+                        name = name.as_str(),
+                        value = format_value(*v)
+                    ),
                     Some("CPU".into()),
                 ),
                 None => (
                     "FORCE".into(),
                     "info",
-                    format!("Force removed from {name}"),
+                    message!(
+                        "event.forceRemoved",
+                        "Force removed from {name}",
+                        name = name.as_str()
+                    ),
                     Some("CPU".into()),
                 ),
             }
         }
-        LabEventKind::Repair { label } => {
-            ("REPAIR".into(), "info", format!("Repair: {label}"), None)
-        }
+        LabEventKind::Repair { label } => (
+            "REPAIR".into(),
+            "info",
+            message!("event.repair", "Repair: {label}", label = label.as_str()),
+            None,
+        ),
         LabEventKind::Started { kind, retained } => (
             "PLC_START".into(),
             "info",
             match kind {
-                StartKind::Warm => format!(
-                    "Warm start: non-retentive data initialized, {retained} retentive variable(s) kept"
+                StartKind::Warm => message!(
+                    "event.warmStart",
+                    "Warm start: non-retentive data initialized, {retained} retentive variable(s) kept",
+                    retained = *retained
                 ),
-                StartKind::Cold => "Cold start: all program data initialized".into(),
+                StartKind::Cold => {
+                    message!(
+                        "event.coldStart",
+                        "Cold start: all program data initialized"
+                    )
+                }
             },
             Some("CPU".into()),
         ),
         LabEventKind::FirstScan { kind } => (
             "PLC_FIRST_SCAN".into(),
             "info",
-            format!(
-                "First scan after the {} start",
-                match kind {
-                    StartKind::Warm => "warm",
-                    StartKind::Cold => "cold",
+            match kind {
+                StartKind::Warm => {
+                    message!("event.firstScanWarm", "First scan after the warm start")
                 }
-            ),
+                StartKind::Cold => {
+                    message!("event.firstScanCold", "First scan after the cold start")
+                }
+            },
             Some("CPU".into()),
         ),
         LabEventKind::MemoryReset => (
             "PLC_MEMORY_RESET".into(),
             "warning",
-            "Memory reset: program data initialized, forces removed".into(),
+            message!(
+                "event.memoryReset",
+                "Memory reset: program data initialized, forces removed"
+            ),
             Some("CPU".into()),
         ),
         LabEventKind::Alarm {
-            message,
+            code,
+            message: text,
             priority,
             transition,
             ..
@@ -979,15 +1199,22 @@ pub fn describe(
                 _ => "info",
             };
             let what = match transition {
-                AlarmTransition::Activated => "alarm",
-                AlarmTransition::Acknowledged => "acknowledged",
-                AlarmTransition::ReturnedToNormal => "returned to normal",
-                AlarmTransition::Withdrawn => "withdrawn",
+                AlarmTransition::Activated => term("event.alarm.activated", "alarm"),
+                AlarmTransition::Acknowledged => term("event.alarm.acknowledged", "acknowledged"),
+                AlarmTransition::ReturnedToNormal => {
+                    term("event.alarm.returned", "returned to normal")
+                }
+                AlarmTransition::Withdrawn => term("event.alarm.withdrawn", "withdrawn"),
             };
             (
                 "ALARM".into(),
                 severity,
-                format!("{message} ({what})"),
+                message!(
+                    "event.alarm",
+                    "{alarm} ({what})",
+                    alarm = term(format!("alarm.code.{code}"), text.as_str()),
+                    what = what
+                ),
                 None,
             )
         }
