@@ -1814,3 +1814,41 @@ textarea.input {
   color: var(--danger-text);
   background: var(--danger-tint);
 }
+
+/* Library browser (ADR-0044). */
+.library-browser {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.library-browser h5 {
+  margin: 10px 0 4px;
+  color: var(--text-2);
+}
+.lib-entry {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 6px 0;
+  background: var(--bg-2);
+}
+.lib-entry summary {
+  cursor: pointer;
+}
+.lib-signature {
+  display: block;
+  margin: 6px 0;
+  white-space: normal;
+  color: var(--text-1);
+}
+.lib-parameters {
+  table-layout: fixed;
+  width: 100%;
+}
+.lib-example pre {
+  margin: 4px 0 0;
+  padding: 6px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  white-space: pre-wrap;
+}

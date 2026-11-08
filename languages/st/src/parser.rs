@@ -20,7 +20,7 @@ pub(crate) fn parse(
         config,
         errors: Diagnostics::new(config.diagnostics),
     };
-    let result = parser.program();
+    let result = parser.document();
     match result {
         Ok(ast) if parser.errors.items.is_empty() => Ok(ast),
         Ok(_) => Err(parser.errors.items),
@@ -87,6 +87,45 @@ impl Parser<'_> {
             Err(self.syntax("Expected an ASCII identifier: [A-Za-z_][A-Za-z0-9_]*."))
         }
     }
+    /// One source document: user FUNCTIONs and FUNCTION_BLOCKs and exactly one PROGRAM, in
+    /// any order (ADR-0044).
+    fn document(&mut self) -> Result<ProgramAst, Diagnostic> {
+        let mut program: Option<ProgramAst> = None;
+        let mut library = Vec::new();
+        while !self.at(&TokenKind::Eof) && !self.errors.stopped {
+            match self.peek().kind {
+                TokenKind::Keyword(Keyword::Program) => {
+                    let span = self.peek().span;
+                    let parsed = self.program()?;
+                    if program.is_some() {
+                        return Err(error(
+                            codes::UNSUPPORTED,
+                            "Only one PROGRAM is supported per source document; put reusable code in a FUNCTION or FUNCTION_BLOCK.",
+                            Some(span),
+                        ));
+                    }
+                    program = Some(parsed);
+                }
+                TokenKind::Keyword(Keyword::Function | Keyword::FunctionBlock) => {
+                    library.push(self.pou()?);
+                }
+                _ => {
+                    return Err(self.syntax(
+                        "Expected PROGRAM, FUNCTION or FUNCTION_BLOCK at the start of a POU.",
+                    ));
+                }
+            }
+        }
+        let mut program = program.ok_or_else(|| {
+            error(
+                codes::SYNTAX,
+                "Expected PROGRAM followed by its name: a source document needs one PROGRAM.",
+                Some(self.peek().span),
+            )
+        })?;
+        program.library = library;
+        Ok(program)
+    }
     fn program(&mut self) -> Result<ProgramAst, Diagnostic> {
         let start = self
             .expect(
@@ -95,16 +134,81 @@ impl Parser<'_> {
             )?
             .span;
         let name = self.name()?;
+        let declarations = self.sections();
+        let body = self.body(0, false);
+        let end = self
+            .expect(
+                TokenKind::Keyword(Keyword::EndProgram),
+                "Expected END_PROGRAM.",
+            )?
+            .span;
+        Ok(ProgramAst {
+            name,
+            declarations,
+            body,
+            span: joined(start, end),
+            library: Vec::new(),
+        })
+    }
+    /// `FUNCTION Name : Type ... END_FUNCTION` or `FUNCTION_BLOCK Name ... END_FUNCTION_BLOCK`.
+    fn pou(&mut self) -> Result<PouAst, Diagnostic> {
+        let keyword = self.take();
+        let function = keyword.kind == TokenKind::Keyword(Keyword::Function);
+        let name = self.name()?;
+        let kind = if function {
+            self.expect(
+                TokenKind::Colon,
+                "Expected ':' and the return type after the function name.",
+            )?;
+            match self.peek().kind {
+                TokenKind::Type(t) => {
+                    self.take();
+                    PouKind::Function(t)
+                }
+                _ => {
+                    return Err(self.syntax("A function returns BOOL, INT, REAL or TIME."));
+                }
+            }
+        } else {
+            PouKind::FunctionBlock
+        };
+        let declarations = self.sections();
+        let body = self.body(0, false);
+        let end = if function {
+            self.expect(
+                TokenKind::Keyword(Keyword::EndFunction),
+                "Expected END_FUNCTION.",
+            )?
+        } else {
+            self.expect(
+                TokenKind::Keyword(Keyword::EndFunctionBlock),
+                "Expected END_FUNCTION_BLOCK.",
+            )?
+        };
+        Ok(PouAst {
+            kind,
+            name,
+            declarations,
+            body,
+            span: joined(keyword.span, end.span),
+        })
+    }
+    /// VAR, VAR_INPUT, VAR_OUTPUT and VAR_IN_OUT sections; the compiler checks which
+    /// sections each kind of POU may have.
+    fn sections(&mut self) -> Vec<Declaration> {
         let mut declarations = Vec::new();
         while matches!(
             self.peek().kind,
-            TokenKind::Keyword(Keyword::Var | Keyword::VarInput | Keyword::VarOutput)
+            TokenKind::Keyword(
+                Keyword::Var | Keyword::VarInput | Keyword::VarOutput | Keyword::VarInOut
+            )
         ) && !self.errors.stopped
         {
             let section = self.take();
             let role = match section.kind {
                 TokenKind::Keyword(Keyword::VarInput) => VariableCategory::Input,
                 TokenKind::Keyword(Keyword::VarOutput) => VariableCategory::Output,
+                TokenKind::Keyword(Keyword::VarInOut) => VariableCategory::InOut,
                 _ => VariableCategory::Local,
             };
             let mut retain = false;
@@ -128,6 +232,8 @@ impl Parser<'_> {
                     self.peek().kind,
                     TokenKind::Keyword(
                         Keyword::EndProgram
+                            | Keyword::EndFunction
+                            | Keyword::EndFunctionBlock
                             | Keyword::If
                             | Keyword::Case
                             | Keyword::EndIf
@@ -135,6 +241,7 @@ impl Parser<'_> {
                             | Keyword::Var
                             | Keyword::VarInput
                             | Keyword::VarOutput
+                            | Keyword::VarInOut
                     )
                 ) || self
                     .peek_at(1)
@@ -160,30 +267,7 @@ impl Parser<'_> {
                     .push(self.syntax("Expected END_VAR after declarations."));
             }
         }
-        let body = self.body(0, false);
-        let end = self
-            .expect(
-                TokenKind::Keyword(Keyword::EndProgram),
-                "Expected END_PROGRAM.",
-            )?
-            .span;
-        if !self.at(&TokenKind::Eof) {
-            return Err(error(
-                codes::UNSUPPORTED,
-                if self.keyword(Keyword::Program) {
-                    "Only one PROGRAM is supported per source document."
-                } else {
-                    "Unexpected source after END_PROGRAM; only one PROGRAM is supported."
-                },
-                Some(self.peek().span),
-            ));
-        }
-        Ok(ProgramAst {
-            name,
-            declarations,
-            body,
-            span: joined(start, end),
-        })
+        declarations
     }
     fn declaration(
         &mut self,
@@ -204,15 +288,7 @@ impl Parser<'_> {
                 self.take();
                 DeclaredType::FunctionBlock(k)
             }
-            TokenKind::Identifier(type_name) => {
-                return Err(error(
-                    codes::UNSUPPORTED,
-                    format!(
-                        "Type '{type_name}' is unsupported; use BOOL, INT, REAL, TIME or a standard block (TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD)."
-                    ),
-                    Some(self.peek().span),
-                ));
-            }
+            TokenKind::Identifier(_) => DeclaredType::Named(self.name()?),
             _ => {
                 return Err(self
                     .syntax("Expected BOOL, INT, REAL, TIME or a standard function block type."));
@@ -261,6 +337,8 @@ impl Parser<'_> {
                         | Keyword::EndIf
                         | Keyword::EndCase
                         | Keyword::EndProgram
+                        | Keyword::EndFunction
+                        | Keyword::EndFunctionBlock
                 )
             )
             && !(in_case && self.at_case_label())
@@ -292,6 +370,8 @@ impl Parser<'_> {
                         | Keyword::Elsif
                         | Keyword::EndCase
                         | Keyword::EndProgram
+                        | Keyword::EndFunction
+                        | Keyword::EndFunctionBlock
                 )
             ) {
                 break;
@@ -323,6 +403,8 @@ impl Parser<'_> {
                         | Keyword::Elsif
                         | Keyword::EndCase
                         | Keyword::EndProgram
+                        | Keyword::EndFunction
+                        | Keyword::EndFunctionBlock
                 )
             )
         {

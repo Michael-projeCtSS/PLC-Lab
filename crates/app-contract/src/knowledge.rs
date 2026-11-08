@@ -394,6 +394,8 @@ pub struct SceneSummaryDto {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LibraryDto {
+    /// Standard function blocks of the PLC runtime with their signatures (ADR-0044).
+    pub standard_blocks: Vec<StandardBlockDto>,
     pub lessons: Vec<LessonSummaryDto>,
     pub exercises: Vec<ExerciseSummaryDto>,
     pub platforms: Vec<PlatformDto>,
@@ -403,8 +405,26 @@ pub struct LibraryDto {
     pub notices: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StandardParameterDto {
+    pub name: String,
+    pub data_type: String,
+    #[ts(type = "\"Input\" | \"Output\" | \"InOut\"")]
+    pub direction: String,
+    pub required: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StandardBlockDto {
+    pub name: String,
+    pub parameters: Vec<StandardParameterDto>,
+}
+
 pub(crate) fn typescript(config: &ts_rs::Config) -> String {
     declarations!(config;
+        StandardParameterDto, StandardBlockDto,
         PackDto, KnowledgeStatusDto, KnowledgeSearchRequest, SearchHitDto, IdRequest, SectionDto, FactDto, FidelityDto,
         ParameterDto, EquivalentDto, InstructionDto, RelatedDto, TroubleshootingDto, SourceDto, ArticleDto,
         CatalogEntryDto, CatalogDto, QuestionDto, LessonSectionDto, LessonSummaryDto, LessonDto, LessonCompleteRequest,

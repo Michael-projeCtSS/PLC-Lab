@@ -12,10 +12,12 @@ pub struct Name {
     pub text: String,
     pub span: TextSpan,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeclaredType {
     Scalar(PlcType),
     FunctionBlock(StandardFunctionBlock),
+    /// A user function block, resolved by the compiler (ADR-0044).
+    Named(Name),
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Declaration {
@@ -30,6 +32,23 @@ pub struct Declaration {
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProgramAst {
+    pub name: Name,
+    pub declarations: Vec<Declaration>,
+    pub body: Vec<Statement>,
+    pub span: TextSpan,
+    /// User functions and function blocks of the same document, in source order.
+    pub library: Vec<PouAst>,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PouKind {
+    /// A function and its return type.
+    Function(PlcType),
+    FunctionBlock,
+}
+/// A user FUNCTION or FUNCTION_BLOCK (ADR-0044).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PouAst {
+    pub kind: PouKind,
     pub name: Name,
     pub declarations: Vec<Declaration>,
     pub body: Vec<Statement>,

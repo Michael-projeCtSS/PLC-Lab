@@ -11,6 +11,7 @@ import {
   type DiagnosticDto,
   type GradeReportDto,
   type LiveFrameDto,
+  type PouDto,
   type ProjectDto,
   type SignalDto,
   type StationDto,
@@ -50,6 +51,10 @@ export function useLab(projectId: string) {
   const [diagnostics, setDiagnostics] = useState<DiagnosticDto[]>([]);
   // The exact text `diagnostics` were computed for, and the program the PLC runs: the
   // editor marks positions only in the text they belong to.
+  // The program's own functions and function blocks, from the latest successful
+  // compile, and whether the current text compiles (ADR-0044).
+  const [pous, setPous] = useState<PouDto[]>([]);
+  const [pousCurrent, setPousCurrent] = useState(true);
   const [diagnosticsSource, setDiagnosticsSource] = useState<string | null>(
     null,
   );
@@ -216,6 +221,8 @@ export function useLab(projectId: string) {
         (r) => {
           setDiagnostics(r.diagnostics);
           setDiagnosticsSource(source);
+          if (r.success) setPous(r.pous);
+          setPousCurrent(r.success);
         },
         () => undefined,
       );
@@ -405,6 +412,8 @@ export function useLab(projectId: string) {
     setSource,
     diagnostics,
     diagnosticsSource,
+    pous,
+    pousCurrent,
     loadedSource,
     messages,
     clearMessages: () => setMessages([]),

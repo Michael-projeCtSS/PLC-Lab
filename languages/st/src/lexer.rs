@@ -15,6 +15,11 @@ use plc_types::{
 pub enum Keyword {
     Program,
     EndProgram,
+    Function,
+    EndFunction,
+    FunctionBlock,
+    EndFunctionBlock,
+    VarInOut,
     VarInput,
     VarOutput,
     Var,
@@ -329,6 +334,11 @@ fn word(name: String, upper: &str) -> TokenKind {
     let keyword = match upper {
         "PROGRAM" => Program,
         "END_PROGRAM" => EndProgram,
+        "FUNCTION" => Function,
+        "END_FUNCTION" => EndFunction,
+        "FUNCTION_BLOCK" => FunctionBlock,
+        "END_FUNCTION_BLOCK" => EndFunctionBlock,
+        "VAR_IN_OUT" => VarInOut,
         "VAR_INPUT" => VarInput,
         "VAR_OUTPUT" => VarOutput,
         "VAR" => Var,
@@ -358,9 +368,9 @@ fn word(name: String, upper: &str) -> TokenKind {
         }
         "TRUE" => return TokenKind::Literal(Literal::Bool(true)),
         "FALSE" => return TokenKind::Literal(Literal::Bool(false)),
-        "FOR" | "WHILE" | "REPEAT" | "RETURN" | "ARRAY" | "STRUCT" | "STRING" | "FUNCTION"
-        | "FUNCTION_BLOCK" | "METHOD" | "CLASS" | "NAMESPACE" | "VAR_IN_OUT" | "VAR_TEMP"
-        | "AT" | "POINTER" | "REFERENCE" | "INCLUDE" | "IMPORT" | "NAN" | "INF" | "INFINITY" => {
+        "FOR" | "WHILE" | "REPEAT" | "RETURN" | "ARRAY" | "STRUCT" | "STRING" | "METHOD"
+        | "CLASS" | "NAMESPACE" | "VAR_TEMP" | "AT" | "POINTER" | "REFERENCE" | "INCLUDE"
+        | "IMPORT" | "NAN" | "INF" | "INFINITY" => {
             return TokenKind::Unsupported(name);
         }
         _ => return TokenKind::Identifier(name),

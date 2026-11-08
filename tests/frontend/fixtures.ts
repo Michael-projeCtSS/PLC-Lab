@@ -269,6 +269,17 @@ export function workspace(overrides: Partial<WorkspaceDto> = {}): WorkspaceDto {
 }
 
 export const library: LibraryDto = {
+  standardBlocks: [
+    {
+      name: "TON",
+      parameters: [
+        { name: "IN", dataType: "BOOL", direction: "Input", required: true },
+        { name: "PT", dataType: "TIME", direction: "Input", required: true },
+        { name: "Q", dataType: "BOOL", direction: "Output", required: false },
+        { name: "ET", dataType: "TIME", direction: "Output", required: false },
+      ],
+    },
+  ],
   lessons: [
     {
       id: "lesson.01",

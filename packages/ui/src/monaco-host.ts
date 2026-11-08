@@ -27,6 +27,11 @@ if (
     keywords: [
       "PROGRAM",
       "END_PROGRAM",
+      "FUNCTION",
+      "END_FUNCTION",
+      "FUNCTION_BLOCK",
+      "END_FUNCTION_BLOCK",
+      "VAR_IN_OUT",
       "VAR_INPUT",
       "VAR_OUTPUT",
       "VAR",

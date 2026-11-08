@@ -1366,4 +1366,44 @@ export const pl = {
   "about.dist.SIGNED_PRODUCTION_RELEASE": "Podpisane wydanie produkcyjne",
   "about.dist.MANIFEST_MISMATCH":
     "resources/product.json obok tego pliku wykonywalnego opisuje inną kompilację",
+  "ws.library": "Biblioteka",
+  "lib.search": "Szukaj w bibliotece",
+  "lib.user": "Biblioteka użytkownika (ten program)",
+  "lib.userHelp":
+    "Definicje FUNCTION i FUNCTION_BLOCK zapisane w tym programie. Zadeklaruj instancję bloku funkcyjnego w VAR i wywołaj ją; funkcję wywołaj w wyrażeniu.",
+  "lib.stale":
+    "Program obecnie się nie kompiluje: lista pokazuje ostatnią wersję, która się skompilowała.",
+  "lib.standard": "Biblioteka standardowa",
+  "lib.functions": "Funkcje",
+  "lib.functionBlocks": "Bloki funkcyjne",
+  "lib.function": "FUNKCJA",
+  "lib.functionBlock": "BLOK FUNKCYJNY",
+  "lib.none": "Brak.",
+  "lib.noDescription":
+    "Brak opisu: napisz komentarz (* ... *) bezpośrednio przed POU.",
+  "lib.noParameters": "Brak parametrów.",
+  "lib.line": "Wiersz {line} programu",
+  "lib.parameter": "Parametr",
+  "lib.type": "Typ",
+  "lib.direction": "Kierunek",
+  "lib.description": "Opis",
+  "lib.direction.Input": "wejście",
+  "lib.direction.Output": "wyjście",
+  "lib.direction.InOut": "we/wy (zmienna wywołującego)",
+  "lib.example": "Przykład użycia",
+  "lib.copy": "Kopiuj",
+  "lib.std.TON":
+    "Timer opóźnionego załączenia: Q przyjmuje TRUE, gdy IN jest TRUE przez czas PT; ET pokazuje upływający czas.",
+  "lib.std.TOF":
+    "Timer opóźnionego wyłączenia: Q od razu przyjmuje TRUE razem z IN i pozostaje TRUE przez czas PT po wyłączeniu IN.",
+  "lib.std.TP":
+    "Timer impulsowy: zbocze narastające IN daje na Q impuls o długości dokładnie PT.",
+  "lib.std.R_TRIG":
+    "Zbocze narastające: Q jest TRUE przez jeden cykl, gdy CLK zmienia się z FALSE na TRUE.",
+  "lib.std.F_TRIG":
+    "Zbocze opadające: Q jest TRUE przez jeden cykl, gdy CLK zmienia się z TRUE na FALSE.",
+  "lib.std.CTU":
+    "Licznik w górę: każde zbocze narastające CU zwiększa CV o jeden; R zeruje licznik; Q jest TRUE, gdy CV osiągnie PV.",
+  "lib.std.CTD":
+    "Licznik w dół: LD wpisuje PV do CV; każde zbocze narastające CD zmniejsza CV o jeden; Q jest TRUE, gdy CV osiągnie zero.",
 } satisfies Record<TranslationKey, string>;

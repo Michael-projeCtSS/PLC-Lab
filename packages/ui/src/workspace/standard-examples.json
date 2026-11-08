@@ -1,0 +1,9 @@
+{
+  "TON": "VAR Delay : TON; END_VAR\nDelay(IN := StartPB, PT := T#5s);\nLamp := Delay.Q;",
+  "TOF": "VAR OffDelay : TOF; END_VAR\nOffDelay(IN := Running, PT := T#10s);\nFan := OffDelay.Q;",
+  "TP": "VAR Pulse : TP; END_VAR\nPulse(IN := StartPB, PT := T#2s);\nHorn := Pulse.Q;",
+  "R_TRIG": "VAR Edge : R_TRIG; END_VAR\nEdge(CLK := StartPB);\nIF Edge.Q THEN Count := Count + 1; END_IF;",
+  "F_TRIG": "VAR Fall : F_TRIG; END_VAR\nFall(CLK := Running);\nIF Fall.Q THEN Stops := Stops + 1; END_IF;",
+  "CTU": "VAR Parts : CTU; END_VAR\nParts(CU := PartPresent, R := ResetPB, PV := 10);\nBatchDone := Parts.Q;",
+  "CTD": "VAR Remaining : CTD; END_VAR\nRemaining(CD := PartPresent, LD := LoadPB, PV := 10);\nEmpty := Remaining.Q;"
+}

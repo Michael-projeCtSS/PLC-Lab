@@ -314,6 +314,21 @@ export const platform = obj<G.PlatformDto>({
   analog: str,
 });
 export const library = obj<G.LibraryDto>({
+  standardBlocks: arr(
+    obj<G.StandardBlockDto>({
+      name: str,
+      parameters: arr(
+        obj<G.StandardParameterDto>({
+          name: str,
+          dataType: str,
+          direction: literal("Input", "Output", "InOut"),
+          required: bool,
+        }),
+        16,
+      ),
+    }),
+    32,
+  ),
   lessons: arr(
     obj<G.LessonSummaryDto>({
       id: str,
@@ -773,6 +788,25 @@ export const compileResult = obj<G.CompileResultDto>({
       role: str,
       retained: bool,
     }),
+  ),
+  pous: arr(
+    obj<G.PouDto>({
+      name: str,
+      kind: literal("FUNCTION", "FUNCTION_BLOCK"),
+      returnType: nullable(str),
+      parameters: arr(
+        obj<G.PouParameterDto>({
+          name: str,
+          dataType: str,
+          direction: literal("Input", "Output", "InOut"),
+          description: nullable(str),
+        }),
+        256,
+      ),
+      description: nullable(str),
+      line: u32,
+    }),
+    256,
   ),
 });
 export const buildLoadResult = obj<G.BuildLoadResultDto>({

@@ -224,6 +224,7 @@ beforeEach(() => {
     programName: "Main",
     diagnostics: [],
     declarations: [],
+    pous: [],
   });
   fake.variables.mockResolvedValue({ total: 0, rows: [] });
   fake.events.mockResolvedValue({

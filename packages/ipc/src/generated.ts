@@ -48,6 +48,10 @@ severity: "error" | "warning" | "info", message: string, span: SpanDto | null,
  */
 category: "compiler" | "runtime" | "internal", };
 
+export type StandardParameterDto = { name: string, dataType: string, direction: "Input" | "Output" | "InOut", required: boolean, };
+
+export type StandardBlockDto = { name: string, parameters: Array<StandardParameterDto>, };
+
 export type PackDto = { id: string | null, title: string | null, version: string | null, path: string, 
 /**
  * "LOADED" | "PARTIAL" | "INVALID"
@@ -144,7 +148,11 @@ export type SequenceInterlockDto = { id: string, name: string, reaction: "blockS
 
 export type SceneSummaryDto = { id: string, title: string, summary: string, };
 
-export type LibraryDto = { lessons: Array<LessonSummaryDto>, exercises: Array<ExerciseSummaryDto>, platforms: Array<PlatformDto>, scenes: Array<SceneSummaryDto>, 
+export type LibraryDto = { 
+/**
+ * Standard function blocks of the PLC runtime with their signatures (ADR-0044).
+ */
+standardBlocks: Array<StandardBlockDto>, lessons: Array<LessonSummaryDto>, exercises: Array<ExerciseSummaryDto>, platforms: Array<PlatformDto>, scenes: Array<SceneSummaryDto>, 
 /**
  * Non-fatal problems found at startup, for example a progress file that could not be
  * read and was kept aside.
@@ -437,7 +445,27 @@ export type DeclarationDto = { name: string, dataType: string, role: string,
  */
 retained: boolean, };
 
-export type CompileResultDto = { success: boolean, programName: string | null, diagnostics: Array<DiagnosticDto>, declarations: Array<DeclarationDto>, };
+export type CompileResultDto = { success: boolean, programName: string | null, diagnostics: Array<DiagnosticDto>, declarations: Array<DeclarationDto>, 
+/**
+ * The document's user functions and function blocks (ADR-0044).
+ */
+pous: Array<PouDto>, };
+
+export type PouParameterDto = { name: string, dataType: string, direction: "Input" | "Output" | "InOut", 
+/**
+ * The comment after the declaration.
+ */
+description: string | null, };
+
+export type PouDto = { name: string, kind: "FUNCTION" | "FUNCTION_BLOCK", returnType: string | null, parameters: Array<PouParameterDto>, 
+/**
+ * The comment block before the POU.
+ */
+description: string | null, 
+/**
+ * First line of the POU in the document.
+ */
+line: number, };
 
 export type BuildLoadRequest = { contractVersion: number, workspaceId: ExactU64, source: string, revision: ExactU64, station: StationDto | null, 
 /**

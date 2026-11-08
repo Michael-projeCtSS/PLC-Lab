@@ -750,6 +750,7 @@ dependencies = [
  "process-simulation",
  "project-model",
  "serde_json",
+ "st-frontend",
  "trace-core",
 ]
 
@@ -3354,6 +3355,7 @@ dependencies = [
  "plc-ir",
  "plc-runtime",
  "plc-types",
+ "serde_json",
 ]
 
 [[package]]

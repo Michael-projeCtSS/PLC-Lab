@@ -1502,3 +1502,59 @@ pub fn format_value(v: SignalValue) -> String {
         SignalValue::Count(c) => c.to_string(),
     }
 }
+
+/// A user function or function block for the library browser (ADR-0044).
+pub fn pou(p: &st_frontend::PouSummary) -> PouDto {
+    PouDto {
+        name: p.name.clone(),
+        kind: p.kind.clone(),
+        return_type: p.return_type.clone(),
+        parameters: p
+            .parameters
+            .iter()
+            .map(|x| PouParameterDto {
+                name: x.name.clone(),
+                data_type: x.type_name.clone(),
+                direction: x.direction.clone(),
+                description: x.description.clone(),
+            })
+            .collect(),
+        description: p.description.clone(),
+        line: p.span.start().line(),
+    }
+}
+
+/// The standard function blocks of the runtime with their signatures.
+pub fn standard_blocks() -> Vec<StandardBlockDto> {
+    use plc_types::function_blocks::{ParameterDirection, StandardFunctionBlock};
+    StandardFunctionBlock::ALL
+        .iter()
+        .map(|block| StandardBlockDto {
+            name: block.name().into(),
+            parameters: block
+                .signature()
+                .iter()
+                .map(|p| StandardParameterDto {
+                    name: p.name.into(),
+                    data_type: plc_types_name(p.plc_type).into(),
+                    direction: match p.direction {
+                        ParameterDirection::Input => "Input",
+                        ParameterDirection::Output => "Output",
+                        ParameterDirection::InOut => "InOut",
+                    }
+                    .into(),
+                    required: p.required,
+                })
+                .collect(),
+        })
+        .collect()
+}
+
+fn plc_types_name(t: plc_types::PlcType) -> &'static str {
+    match t {
+        plc_types::PlcType::Bool => "BOOL",
+        plc_types::PlcType::Int => "INT",
+        plc_types::PlcType::Real => "REAL",
+        plc_types::PlcType::Time => "TIME",
+    }
+}

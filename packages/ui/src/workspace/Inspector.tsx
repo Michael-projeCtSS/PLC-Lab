@@ -17,13 +17,14 @@ import { processLabel, translateCode } from "../locale/messages";
 import { Badge, Tabs } from "../ui";
 import { isFaultFinding, type Navigate } from "../route";
 import { CauseEffect } from "./CauseEffect";
+import { LibraryTab } from "./LibraryTab";
 import { SequenceTab } from "./SequenceTab";
 import { useSequenceDefinition } from "./sequenceDefinition";
 import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
 import { VariableDetail } from "./VariableDetail";
 
-type Tab = "task" | "sequence" | "cause" | "properties";
+type Tab = "task" | "sequence" | "cause" | "library" | "properties";
 
 export function Inspector({
   lab,
@@ -72,6 +73,9 @@ export function Inspector({
             : []),
           { id: "cause", label: t("cause.title") },
           ...(!simple
+            ? [{ id: "library" as const, label: t("ws.library") }]
+            : []),
+          ...(!simple
             ? [{ id: "properties" as const, label: t("cause.properties") }]
             : []),
         ]}
@@ -103,6 +107,9 @@ export function Inspector({
               signals={lab.signals}
             />
           </div>
+        )}
+        {!simple && tab === "library" && (
+          <LibraryTab pous={lab.pous} current={lab.pousCurrent} />
         )}
         {!simple && tab === "properties" && (
           <Properties lab={lab} selection={selection} />

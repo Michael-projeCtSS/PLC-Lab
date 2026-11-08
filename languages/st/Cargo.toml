@@ -10,6 +10,7 @@ plc-types.workspace = true
 plc-ir.workspace = true
 
 [dev-dependencies]
+serde_json.workspace = true
 plc-runtime.workspace = true
 
 [lints]

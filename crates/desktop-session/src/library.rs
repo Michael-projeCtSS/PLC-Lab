@@ -387,6 +387,7 @@ pub fn library(library: &KnowledgeLibrary, progress: &Progress, notices: &[Strin
         .collect();
     scenes.sort_by(|a, b| a.title.cmp(&b.title));
     LibraryDto {
+        standard_blocks: convert::standard_blocks(),
         lessons,
         exercises: exercises.into_iter().map(|(_, e)| e).collect(),
         platforms: library.profiles().iter().map(convert::platform).collect(),

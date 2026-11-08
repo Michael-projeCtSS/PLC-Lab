@@ -4,7 +4,7 @@ use crate::{
     diagnostics::{Diagnostic, codes},
     identity::{FunctionBlockId, FunctionBlockInstanceId, ParameterId, PouId},
     source::SourceRef,
-    symbols::{SymbolError, checked_name},
+    symbols::{SymbolError, checked_name, checked_path},
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -275,7 +275,7 @@ impl FunctionBlockInstance {
             id,
             definition,
             owner,
-            name: checked_name(name.into()).map_err(FunctionBlockDeclarationError::InvalidName)?,
+            name: checked_path(name.into()).map_err(FunctionBlockDeclarationError::InvalidName)?,
             source,
         })
     }

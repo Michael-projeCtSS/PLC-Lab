@@ -1350,5 +1350,45 @@ export const en = {
   "about.dist.SIGNED_PRODUCTION_RELEASE": "Signed production release",
   "about.dist.MANIFEST_MISMATCH":
     "resources/product.json beside this executable describes another build",
+  "ws.library": "Library",
+  "lib.search": "Search the library",
+  "lib.user": "User library (this program)",
+  "lib.userHelp":
+    "FUNCTION and FUNCTION_BLOCK definitions written in this program. Declare a function block instance in VAR and call it; call a function in an expression.",
+  "lib.stale":
+    "The program does not compile right now: the list shows its last version that compiled.",
+  "lib.standard": "Standard library",
+  "lib.functions": "Functions",
+  "lib.functionBlocks": "Function blocks",
+  "lib.function": "FUNCTION",
+  "lib.functionBlock": "FUNCTION BLOCK",
+  "lib.none": "None yet.",
+  "lib.noDescription":
+    "No description: write a (* comment *) right before the POU.",
+  "lib.noParameters": "No parameters.",
+  "lib.line": "Line {line} of the program",
+  "lib.parameter": "Parameter",
+  "lib.type": "Type",
+  "lib.direction": "Direction",
+  "lib.description": "Description",
+  "lib.direction.Input": "input",
+  "lib.direction.Output": "output",
+  "lib.direction.InOut": "in/out (the caller's variable)",
+  "lib.example": "Usage example",
+  "lib.copy": "Copy",
+  "lib.std.TON":
+    "On-delay timer: Q becomes TRUE when IN has been TRUE for PT; ET shows the elapsed time.",
+  "lib.std.TOF":
+    "Off-delay timer: Q follows IN to TRUE at once and stays TRUE for PT after IN becomes FALSE.",
+  "lib.std.TP":
+    "Pulse timer: a rising edge of IN gives a pulse on Q that lasts exactly PT.",
+  "lib.std.R_TRIG":
+    "Rising edge: Q is TRUE for one scan when CLK changes from FALSE to TRUE.",
+  "lib.std.F_TRIG":
+    "Falling edge: Q is TRUE for one scan when CLK changes from TRUE to FALSE.",
+  "lib.std.CTU":
+    "Up counter: each rising edge of CU adds one to CV; R resets it; Q is TRUE when CV reaches PV.",
+  "lib.std.CTD":
+    "Down counter: LD loads PV into CV; each rising edge of CD subtracts one; Q is TRUE when CV reaches zero.",
 } as const;
 export type TranslationKey = keyof typeof en;

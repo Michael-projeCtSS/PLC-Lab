@@ -564,12 +564,14 @@ impl DesktopApp {
                             retained: d.retained,
                         })
                         .collect(),
+                    pous: compiled.pous().iter().map(convert::pou).collect(),
                 },
                 Err(d) => CompileResultDto {
                     success: false,
                     program_name: None,
                     diagnostics: d.iter().map(convert::diagnostic).collect(),
                     declarations: Vec::new(),
+                    pous: Vec::new(),
                 },
             })
         })())

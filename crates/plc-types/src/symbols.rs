@@ -131,6 +131,24 @@ impl SymbolError {
     }
 }
 
+/// A variable or instance path: identifiers separated by dots, as the compiler generates
+/// for instance memory (`Pump1.Running`) and call temporaries (`Scale#3.Raw`, where a
+/// `#<number>` suffix marks a call site). Source code cannot write these names: the lexer
+/// splits at dots and never produces `#` (ADR-0044).
+pub(crate) fn checked_path(name: String) -> Result<String, SymbolError> {
+    let valid = name.split('.').all(|segment| {
+        let (base, call) = segment.split_once('#').unwrap_or((segment, ""));
+        checked_name(base.to_owned()).is_ok()
+            && (!segment.contains('#')
+                || (!call.is_empty() && call.bytes().all(|b| b.is_ascii_digit())))
+    });
+    if valid {
+        Ok(name)
+    } else {
+        Err(SymbolError::InvalidName(name))
+    }
+}
+
 pub(crate) fn checked_name(name: String) -> Result<String, SymbolError> {
     let mut bytes = name.bytes();
     if !bytes
@@ -194,7 +212,7 @@ impl Symbol {
         }
         Ok(Self {
             id,
-            name: checked_name(name.into())?,
+            name: checked_path(name.into())?,
             plc_type,
             scope,
             category,
@@ -337,7 +355,7 @@ impl SymbolTable {
     }
     pub fn resolve(&self, scope: Scope, name: &str) -> Result<&Symbol, SymbolError> {
         self.check_scope(scope)?;
-        let key = checked_name(name.into())?.to_ascii_uppercase();
+        let key = checked_path(name.into())?.to_ascii_uppercase();
         let id = self
             .names
             .get(&(scope, key.clone()))

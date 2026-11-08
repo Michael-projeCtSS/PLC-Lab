@@ -7,7 +7,7 @@ pub mod lexer;
 mod literals;
 mod parser;
 
-pub use compiler::{CompiledProgram, DeclarationSummary, compile_st};
+pub use compiler::{CompiledProgram, DeclarationSummary, ParameterSummary, PouSummary, compile_st};
 pub use diagnostics::{CompilerConfig, codes};
 
 pub fn parse_st(

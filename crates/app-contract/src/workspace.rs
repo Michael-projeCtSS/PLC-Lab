@@ -414,6 +414,31 @@ pub struct CompileResultDto {
     pub program_name: Option<String>,
     pub diagnostics: Vec<DiagnosticDto>,
     pub declarations: Vec<DeclarationDto>,
+    /// The document's user functions and function blocks (ADR-0044).
+    pub pous: Vec<PouDto>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PouParameterDto {
+    pub name: String,
+    pub data_type: String,
+    #[ts(type = "\"Input\" | \"Output\" | \"InOut\"")]
+    pub direction: String,
+    /// The comment after the declaration.
+    pub description: Option<String>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PouDto {
+    pub name: String,
+    #[ts(type = "\"FUNCTION\" | \"FUNCTION_BLOCK\"")]
+    pub kind: String,
+    pub return_type: Option<String>,
+    pub parameters: Vec<PouParameterDto>,
+    /// The comment block before the POU.
+    pub description: Option<String>,
+    /// First line of the POU in the document.
+    pub line: u32,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -1186,7 +1211,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         CauseEffectDto, AlarmDto, SimulationStatusDto, TraceStatsDto, SequenceValueDto, SequenceConditionRowDto,
         SequenceConditionDto, SequenceStepStateDto, SequencePermissiveStateDto, SequenceTransitionStateDto,
         SequenceInterlockStateDto, SequenceObservedDto, SequenceEventDto, SequenceStatusDto, LiveFrameDto, WorkspaceDto, CompileRequest,
-        DeclarationDto, CompileResultDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
+        DeclarationDto, CompileResultDto, PouParameterDto, PouDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticDetailDto, DiagnosticEntryDto, DiagnosticBufferRequest, DiagnosticBufferDto,
