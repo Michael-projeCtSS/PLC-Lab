@@ -12,6 +12,23 @@ it("a lagging React value is an echo: the newer keystrokes in the model stay", (
   expect(sync.reconcile("A", "A")).toBe("in-sync");
 });
 
+it("returning to an earlier text keeps the echoes still on their way", () => {
+  const sync = new EditorSync();
+  // "x", a typed "a", then Backspace: the model is back at "x" while React still has to
+  // deliver all three values.
+  sync.emitted("x");
+  sync.emitted("xa");
+  sync.emitted("x");
+  expect(sync.reconcile("x", "x")).toBe("in-sync");
+  // The deleted "a" must not come back into the model.
+  expect(sync.reconcile("xa", "x")).toBe("echo");
+  expect(sync.reconcile("x", "x")).toBe("in-sync");
+  // React may also skip the intermediate value.
+  sync.emitted("xb");
+  sync.emitted("x");
+  expect(sync.reconcile("x", "x")).toBe("in-sync");
+});
+
 it("a program that was opened or replaced is an external change", () => {
   const sync = new EditorSync();
   sync.emitted("PROGRAM Main\nEND_PROGRAM");

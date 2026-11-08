@@ -30,19 +30,19 @@ export class EditorSync {
     if (this.pending.length > MAX_PENDING) this.pending.shift();
   }
 
-  /** How a source value from React relates to the model's current text. */
+  /**
+   * How a source value from React relates to the model's current text. React commits
+   * values in emission order and may skip some, so a value is matched with the earliest
+   * emitted text equal to it: later emissions (an Enter followed by a Backspace returns to
+   * an earlier text) may still be on their way and stay recognised as echoes.
+   */
   reconcile(value: string, current: string): Reconcile {
-    if (value === current) {
-      this.pending = [];
-      return "in-sync";
-    }
-    const index = this.pending.lastIndexOf(value);
+    const index = this.pending.indexOf(value);
     if (index >= 0) {
-      // React shows an earlier keystroke; the newer ones are still on their way.
       this.pending = this.pending.slice(index + 1);
-      return "echo";
+      return value === current ? "in-sync" : "echo";
     }
     this.pending = [];
-    return "external";
+    return value === current ? "in-sync" : "external";
   }
 }
