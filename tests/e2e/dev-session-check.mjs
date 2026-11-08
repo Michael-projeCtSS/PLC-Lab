@@ -12,6 +12,7 @@ import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright-core";
 import { root } from "../../scripts/toolchain.mjs";
+import { editorText } from "./monaco-text.mjs";
 
 if (process.platform !== "win32")
   throw new Error("The development session check requires Windows.");
@@ -196,18 +197,8 @@ try {
   await check(
     "Enter, Backspace, undo and redo edit the running program normally",
     async () => {
-      // The model's text from Monaco's rendered lines (non-breaking spaces as spaces).
-      const text = () =>
-        page.evaluate(() =>
-          [...document.querySelectorAll('[data-testid="st-editor"] .view-line')]
-            .map((n) => ({
-              top: parseFloat(n.style.top),
-              text: n.textContent.replaceAll(" ", " "),
-            }))
-            .sort((a, b) => a.top - b.top)
-            .map((l) => l.text)
-            .join("\n"),
-        );
+      // The model's text as Monaco renders it, independent of word wrap.
+      const text = () => editorText(page);
       const original = await text();
       assert.match(original, /VAR RETAIN Count[\s\S]*END_PROGRAM/);
       await page.locator('[data-testid="st-editor"] .view-lines').click();

@@ -54,9 +54,12 @@ the older text, which undid the newer keystroke and reset the cursor and undo hi
 - `tests/e2e/editor-keyboard.mjs` (native, real keyboard): Backspace at the start of an
   error line, Enter before an error, Enter/Backspace at line starts, held Backspace,
   Delete and selection delete, undo/redo, a real clipboard paste (Ctrl+V), 200 rapid edits
-  with diagnostics in between, compile and run, and autosave plus reopening the project.
-  PASS in English and Polish; dark, light and system theme; Basic and Advanced mode. It
-  runs in `npm run test:desktop` locally and in the Windows CI lane.
+  with diagnostics in between, a long line that wraps on screen, compile and run, and
+  autosave plus reopening the project. PASS in English and Polish; dark, light and system
+  theme; Basic and Advanced mode. It runs in `npm run test:desktop` locally and in the
+  Windows CI lane. The test reads program lines through Monaco's line-number gutter
+  (`tests/e2e/monaco-text.mjs`), so a narrow window that wraps lines does not change what
+  it compares.
 - `tests/e2e/dev-session-check.mjs` through `TEST_PLC_LAB.bat`: real editing during a RUN
   session and no uncaught JavaScript error during the whole session.
 - Unit tests: `editor-sync.test.ts` (echo, external change, bounded history, stale

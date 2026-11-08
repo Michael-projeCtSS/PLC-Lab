@@ -16,6 +16,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright-core";
 import { root } from "../../scripts/toolchain.mjs";
+import { editorText, wrappedRows } from "./monaco-text.mjs";
 
 const { values } = parseArgs({
   options: {
@@ -77,15 +78,25 @@ async function rendered(name) {
   return state;
 }
 
+// Short lines: no line wraps even in a small window, so ArrowDown moves by program lines.
 const PROGRAM = [
   "PROGRAM Main",
-  "VAR_INPUT Button1 : BOOL; Button2 : BOOL; AutoMode : BOOL; PartPresent : BOOL; END_VAR",
-  "VAR_OUTPUT Lamp1 : BOOL; Lamp2 : BOOL; Lamp3 : BOOL; END_VAR",
+  "VAR_INPUT",
+  "Button1 : BOOL; Button2 : BOOL;",
+  "AutoMode : BOOL; PartPresent : BOOL;",
+  "END_VAR",
+  "VAR_OUTPUT",
+  "Lamp1 : BOOL; Lamp2 : BOOL; Lamp3 : BOOL;",
+  "END_VAR",
   "Lamp1 := Button1;",
   "Lamp2 := AutoMode;",
   "Lamp3 := Button2 AND PartPresent;",
   "END_PROGRAM",
 ].join("\n");
+const lineOf = (line) => PROGRAM.split("\n").indexOf(line) + 1;
+const LAMP1 = lineOf("Lamp1 := Button1;");
+const LAMP3 = lineOf("Lamp3 := Button2 AND PartPresent;");
+const END = lineOf("END_PROGRAM");
 
 try {
   const deadline = Date.now() + 60_000;
@@ -131,20 +142,15 @@ try {
 
   const editor = page.locator('[data-testid="st-editor"] .monaco-editor');
   const lines = page.locator('[data-testid="st-editor"] .view-lines');
-  // The model's text, read from Monaco itself (rendered lines use non-breaking spaces).
-  const text = () =>
-    page.evaluate(() => {
-      const nodes = document.querySelectorAll(
-        '[data-testid="st-editor"] .view-line',
-      );
-      return [...nodes]
-        .map((n) => ({ top: parseFloat(n.style.top), text: n.textContent }))
-        .sort((a, b) => a.top - b.top)
-        .map((l) => l.text.replaceAll(" ", " "))
-        .join("\n");
-    });
+  // The model's text as Monaco renders it, independent of word wrap.
+  const text = () => editorText(page);
   const errorMarker = page.locator('[data-testid="st-editor"] .squiggly-error');
   const goto = async (line, column) => {
+    assert.equal(
+      await wrappedRows(page),
+      0,
+      "a wrapped line would make ArrowDown stop inside a program line",
+    );
     await lines.click();
     await page.keyboard.press("Control+Home");
     for (let i = 1; i < line; i++) await page.keyboard.press("ArrowDown");
@@ -185,6 +191,31 @@ try {
     assert.equal(await text(), PROGRAM);
   });
 
+  await step(
+    "a long line wraps on screen and Backspace joins the next line to it",
+    async () => {
+      await goto(END, 1);
+      const long = `(* ${"wrapped ".repeat(25).trim()} *)`;
+      await page.keyboard.insertText(long);
+      await page.keyboard.press("Enter");
+      await delay(100);
+      assert.ok((await wrappedRows(page)) > 0, "the long line did not wrap");
+      assert.equal(
+        await text(),
+        PROGRAM.replace("END_PROGRAM", `${long}\nEND_PROGRAM`),
+      );
+      await page.keyboard.press("Backspace");
+      await delay(100);
+      assert.equal(
+        await text(),
+        PROGRAM.replace("END_PROGRAM", `${long}END_PROGRAM`),
+      );
+      await page.keyboard.press("Control+A");
+      await page.keyboard.insertText(PROGRAM);
+      assert.equal(await text(), PROGRAM);
+    },
+  );
+
   // A syntax error on the last statement, then wait for the compiler's marker.
   const broken = PROGRAM.replace(
     "Lamp3 := Button2 AND PartPresent;",
@@ -201,7 +232,7 @@ try {
     "Backspace at the start of the line with a compiler error",
     async () => {
       await withError();
-      await goto(6, 1);
+      await goto(LAMP3, 1);
       await page.keyboard.press("Backspace");
       await delay(100);
       assert.equal(
@@ -215,7 +246,7 @@ try {
     "Enter in the middle of a line before a compiler error",
     async () => {
       await withError();
-      await goto(6, 10);
+      await goto(LAMP3, 10);
       await page.keyboard.press("Enter");
       await delay(100);
       assert.equal(
@@ -234,7 +265,7 @@ try {
       await lines.click();
       await page.keyboard.press("Control+A");
       await page.keyboard.insertText(PROGRAM);
-      await goto(4, 1);
+      await goto(LAMP1, 1);
       await page.keyboard.press("Enter");
       await page.keyboard.press("ArrowUp");
       await page.keyboard.press("Enter");
@@ -247,7 +278,7 @@ try {
   );
 
   await step("Delete, held Backspace and selection delete", async () => {
-    await goto(6, 1);
+    await goto(LAMP3, 1);
     await page.keyboard.press("End");
     for (let i = 0; i < 16; i++) await page.keyboard.press("Backspace");
     await page.keyboard.press("Home");
@@ -280,7 +311,7 @@ try {
   });
 
   await step("multiline paste with the clipboard", async () => {
-    await goto(7, 1);
+    await goto(END, 1);
     const pasted = "Lamp2 := Button1 OR AutoMode;\nLamp1 := Button2;\n";
     const clipboard = await page
       .evaluate(async (value) => {
@@ -304,7 +335,7 @@ try {
       await page.keyboard.press("Control+A");
       await page.keyboard.insertText(broken);
       await errorMarker.first().waitFor({ timeout: 15_000 });
-      await goto(6, 1);
+      await goto(LAMP3, 1);
       for (let i = 0; i < 50; i++) {
         await page.keyboard.press("Enter");
         await page.keyboard.type("X;");
@@ -350,7 +381,7 @@ try {
     "the last edit is autosaved and the reopened project shows it",
     async () => {
       // A final edit, then the autosave delay (800 ms) without further typing.
-      await goto(7, 1);
+      await goto(END, 1);
       await page.keyboard.type("(* saved *)");
       await page.keyboard.press("Enter");
       const edited = PROGRAM.replace("END_PROGRAM", "(* saved *)\nEND_PROGRAM");
