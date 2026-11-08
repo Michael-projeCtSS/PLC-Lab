@@ -141,8 +141,12 @@ try {
   const pl = values.language === "pl";
 
   const editor = page.locator('[data-testid="st-editor"] .monaco-editor');
-  const lines = page.locator('[data-testid="st-editor"] .view-lines');
-  // The model's text as Monaco renders it, independent of word wrap.
+  // A click on the top visible row: the text layer may be taller than the editor.
+  const focus = async () => {
+    const box = await editor.boundingBox();
+    await editor.click({ position: { x: box.width / 2, y: 12 } });
+  };
+  // The model's text as Monaco renders it, independent of window size and word wrap.
   const text = () => editorText(page);
   const errorMarker = page.locator('[data-testid="st-editor"] .squiggly-error');
   const goto = async (line, column) => {
@@ -151,7 +155,7 @@ try {
       0,
       "a wrapped line would make ArrowDown stop inside a program line",
     );
-    await lines.click();
+    await focus();
     await page.keyboard.press("Control+Home");
     for (let i = 1; i < line; i++) await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Home");
@@ -184,7 +188,7 @@ try {
           exact: true,
         })
         .click();
-    await lines.click();
+    await focus();
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Delete");
     await page.keyboard.insertText(PROGRAM);
@@ -216,13 +220,38 @@ try {
     },
   );
 
+  await step(
+    "Backspace and Enter below the first screen of a long program",
+    async () => {
+      const statements = Array.from(
+        { length: 60 },
+        (_, i) => `Lamp1 := Button${(i % 2) + 1};`,
+      ).join("\n");
+      const tall = PROGRAM.replace("END_PROGRAM", `${statements}\nEND_PROGRAM`);
+      await focus();
+      await page.keyboard.press("Control+A");
+      await page.keyboard.insertText(tall);
+      await page.keyboard.press("Control+End");
+      await page.keyboard.press("Home");
+      await page.keyboard.press("Backspace");
+      await delay(100);
+      assert.equal(await text(), tall.replace("\nEND_PROGRAM", "END_PROGRAM"));
+      await page.keyboard.press("Enter");
+      await delay(100);
+      assert.equal(await text(), tall);
+      await page.keyboard.press("Control+A");
+      await page.keyboard.insertText(PROGRAM);
+      assert.equal(await text(), PROGRAM);
+    },
+  );
+
   // A syntax error on the last statement, then wait for the compiler's marker.
   const broken = PROGRAM.replace(
     "Lamp3 := Button2 AND PartPresent;",
     "Lamp3 := Button2 AND PartPresent AND ;",
   );
   const withError = async () => {
-    await lines.click();
+    await focus();
     await page.keyboard.press("Control+A");
     await page.keyboard.insertText(broken);
     await errorMarker.first().waitFor({ timeout: 15_000 });
@@ -262,7 +291,7 @@ try {
   await step(
     "Enter on an empty line and Backspace at a line start",
     async () => {
-      await lines.click();
+      await focus();
       await page.keyboard.press("Control+A");
       await page.keyboard.insertText(PROGRAM);
       await goto(LAMP1, 1);
@@ -331,7 +360,7 @@ try {
   await step(
     "200 rapid edits with compiler diagnostics in between",
     async () => {
-      await lines.click();
+      await focus();
       await page.keyboard.press("Control+A");
       await page.keyboard.insertText(broken);
       await errorMarker.first().waitFor({ timeout: 15_000 });
@@ -350,7 +379,7 @@ try {
   );
 
   await step("the program still compiles and runs", async () => {
-    await lines.click();
+    await focus();
     await page.keyboard.press("Control+A");
     await page.keyboard.insertText(PROGRAM);
     // Basic mode has the one-click Build & Load that also starts the PLC and simulation.

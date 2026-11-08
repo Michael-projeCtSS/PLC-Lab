@@ -37,6 +37,8 @@ the older text, which undid the newer keystroke and reset the cursor and undo hi
 - `editor-sync.ts`: the Monaco model owns the text while editing. A source value the
   editor itself emitted earlier is an echo and never written back; only a value the
   editor never emitted (a program that was opened or replaced) goes into the model.
+  Values are matched in emission order, so returning to an earlier text (a typed
+  character deleted again) cannot bring back a deleted character when React lags.
 - `useLab` records the exact text each diagnostics set was compiled for
   (`diagnosticsSource`) and the program the PLC runs (`loadedSource`); the editor applies
   compiler and runtime markers only when that text equals the current text. The next
@@ -54,12 +56,13 @@ the older text, which undid the newer keystroke and reset the cursor and undo hi
 - `tests/e2e/editor-keyboard.mjs` (native, real keyboard): Backspace at the start of an
   error line, Enter before an error, Enter/Backspace at line starts, held Backspace,
   Delete and selection delete, undo/redo, a real clipboard paste (Ctrl+V), 200 rapid edits
-  with diagnostics in between, a long line that wraps on screen, compile and run, and
-  autosave plus reopening the project. PASS in English and Polish; dark, light and system
-  theme; Basic and Advanced mode. It runs in `npm run test:desktop` locally and in the
-  Windows CI lane. The test reads program lines through Monaco's line-number gutter
-  (`tests/e2e/monaco-text.mjs`), so a narrow window that wraps lines does not change what
-  it compares.
+  with diagnostics in between, a long line that wraps on screen, Backspace and Enter below
+  the first screen of a long program, compile and run, and autosave plus reopening the
+  project. PASS in English and Polish; dark, light and system theme; Basic and Advanced
+  mode. It runs in `npm run test:desktop` locally and in the Windows CI lane. The test
+  reads program lines through Monaco's line-number gutter after Monaco's next frame and
+  scrolls through a program taller than the editor (`tests/e2e/monaco-text.mjs`), so the
+  window size does not change what it compares.
 - `tests/e2e/dev-session-check.mjs` through `TEST_PLC_LAB.bat`: real editing during a RUN
   session and no uncaught JavaScript error during the whole session.
 - Unit tests: `editor-sync.test.ts` (echo, external change, bounded history, stale
