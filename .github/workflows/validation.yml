@@ -59,6 +59,8 @@ jobs:
             artifacts/desktop-smoke/native.log
             artifacts/desktop-smoke/result.json
             artifacts/desktop-smoke/*.png
+            artifacts/editor-keyboard/*.png
+            artifacts/editor-keyboard/failure.json
             artifacts/release-smoke/native.log
             artifacts/release-smoke/result.json
             artifacts/release-smoke/*.png

@@ -424,6 +424,8 @@ No PLC functionality was added. Commits on `claude/product-development-v2`:
 - `2aaf54a`: light and system themes on semantic colour tokens, Monaco light theme,
   WCAG AA for 57 token pairs per theme (ADR-0042).
 - Repository cleanup: see `docs/validation/REPOSITORY_CLEANUP.md`.
+- P0 fix: Enter/Backspace in the ST editor could blank the window (stale compiler
+  diagnostics threw inside a React effect); see `docs/validation/P0_EDITOR_BLACK_SCREEN.md`.
 
 ## Local machine limits
 

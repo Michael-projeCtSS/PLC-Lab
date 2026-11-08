@@ -21,6 +21,7 @@ import { useCoalescedRead } from "../useCoalescedRead";
 import { translate, useInterface } from "../locale";
 import type { TranslationKey } from "../locale/en";
 import { diagnosticLine } from "../locale/messages";
+import { rememberDraft } from "../error-log";
 import { localizeContent } from "../locale/content";
 import { newTableId, newTableName, setRows, updateTable } from "./watchEdit";
 
@@ -47,6 +48,12 @@ export function useLab(projectId: string) {
   const [signals, setSignals] = useState<SignalDto[]>([]);
   const [source, setSourceState] = useState("");
   const [diagnostics, setDiagnostics] = useState<DiagnosticDto[]>([]);
+  // The exact text `diagnostics` were computed for, and the program the PLC runs: the
+  // editor marks positions only in the text they belong to.
+  const [diagnosticsSource, setDiagnosticsSource] = useState<string | null>(
+    null,
+  );
+  const [loadedSource, setLoadedSource] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [report, setReport] = useState<GradeReportDto | null>(null);
   const [watchTables, setWatchTables] = useState<WatchTableDto[]>([]);
@@ -120,6 +127,7 @@ export function useLab(projectId: string) {
       applyFrame(nextFrameRequest(), w.frame);
       setSignals(w.signals);
       setSourceState(p.programs[0]?.source ?? "");
+      setLoadedSource(p.programs[0]?.source ?? null);
       setWatchTables(p.watchTables);
       setActiveTable(p.watchTables[0]?.id ?? null);
     })().catch((e: unknown) => active && setFatal(e));
@@ -192,12 +200,23 @@ export function useLab(projectId: string) {
   );
 
   // Program draft: live compile diagnostics and autosave, both debounced.
-  const setSource = useCallback((value: string) => setSourceState(value), []);
+  // The latest text is kept outside React as it arrives, so the error screen can show it
+  // even if a view stops rendering in the same update.
+  const setSource = useCallback(
+    (value: string) => {
+      rememberDraft(projectId, value);
+      setSourceState(value);
+    },
+    [projectId],
+  );
   useEffect(() => {
     if (!project) return;
     const timer = setTimeout(() => {
       api.compile(source).then(
-        (r) => setDiagnostics(r.diagnostics),
+        (r) => {
+          setDiagnostics(r.diagnostics);
+          setDiagnosticsSource(source);
+        },
         () => undefined,
       );
     }, 350);
@@ -233,9 +252,11 @@ export function useLab(projectId: string) {
   }, [source, project, log, say]);
 
   const applyBuild = useCallback(
-    (r: BuildLoadResultDto) => {
+    (r: BuildLoadResultDto, built: string) => {
       setSignals(r.signals);
       setDiagnostics(r.diagnostics);
+      setDiagnosticsSource(built);
+      if (r.outcome === "LOADED") setLoadedSource(built);
       const issues = r.bindingIssues
         .map((i) => `${i.tag}: ${i.message}`)
         .join("\n");
@@ -271,7 +292,7 @@ export function useLab(projectId: string) {
       return act(
         "build",
         () => api.buildAndLoad(ws, source, rev, station, runAfterLoad),
-        applyBuild,
+        (r) => applyBuild(r, source),
       ).then((r) => {
         if (r?.outcome === "LOADED" && station)
           setProject((p) => (p ? { ...p, station } : p));
@@ -383,6 +404,8 @@ export function useLab(projectId: string) {
     source,
     setSource,
     diagnostics,
+    diagnosticsSource,
+    loadedSource,
     messages,
     clearMessages: () => setMessages([]),
     log,

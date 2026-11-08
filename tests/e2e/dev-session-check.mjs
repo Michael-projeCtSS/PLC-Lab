@@ -123,6 +123,9 @@ try {
   // while it prepares modules: talk to the backend only once the shell has rendered.
   await page.getByRole("navigation").first().waitFor({ timeout: 120_000 });
   await page.waitForLoadState("load");
+  // Any uncaught error in the window fails the session check at the end.
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(e.stack ?? String(e)));
   const invoke = (command, request) =>
     page.evaluate(
       async ({ command, request }) => {
@@ -187,6 +190,51 @@ try {
       await page
         .getByText("Sim running", { exact: true })
         .waitFor({ timeout: 30_000 });
+    },
+  );
+
+  await check(
+    "Enter, Backspace, undo and redo edit the running program normally",
+    async () => {
+      // The model's text from Monaco's rendered lines (non-breaking spaces as spaces).
+      const text = () =>
+        page.evaluate(() =>
+          [...document.querySelectorAll('[data-testid="st-editor"] .view-line')]
+            .map((n) => ({
+              top: parseFloat(n.style.top),
+              text: n.textContent.replaceAll(" ", " "),
+            }))
+            .sort((a, b) => a.top - b.top)
+            .map((l) => l.text)
+            .join("\n"),
+        );
+      const original = await text();
+      assert.match(original, /VAR RETAIN Count[\s\S]*END_PROGRAM/);
+      await page.locator('[data-testid="st-editor"] .view-lines').click();
+      await page.keyboard.press("Control+End");
+      await page.keyboard.type("(* edit *)");
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("Backspace");
+      for (let i = 0; i < 10; i++) await page.keyboard.press("Backspace");
+      await page.keyboard.press("Control+Home");
+      await page.keyboard.press("End");
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("Backspace");
+      await delay(800);
+      assert.equal(await text(), original, "the edits did not cancel out");
+      await page.keyboard.press("Control+Z");
+      await delay(100);
+      assert.notEqual(await text(), original, "undo changed nothing");
+      await page.keyboard.press("Control+Y");
+      await delay(100);
+      assert.equal(await text(), original, "redo did not restore the text");
+      assert.ok(
+        await page.evaluate(
+          () => document.getElementById("root")?.childElementCount > 0,
+        ),
+        "the interface disappeared",
+      );
+      assert.deepEqual(pageErrors, []);
     },
   );
 
@@ -346,6 +394,10 @@ try {
       .getByRole("button", { name: "Restart ciepły", exact: true })
       .waitFor();
     await page.screenshot({ path: path.join(directory, "toolbar-pl.png") });
+  });
+
+  await check("no uncaught JavaScript error during the session", async () => {
+    assert.deepEqual(pageErrors, []);
   });
 
   await check(

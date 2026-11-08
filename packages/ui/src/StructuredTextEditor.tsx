@@ -1,22 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import type { DiagnosticDto } from "@plc-lab/ipc";
+import type { SourceDiagnostics } from "./editor-sync";
+import { recordProblem } from "./error-log";
 import type { createStEditor } from "./monaco-host";
 import { useInterface } from "./locale";
 
-/** Monaco-based Structured Text editor. Markers come only from the Rust compiler/runtime. */
+const NONE: SourceDiagnostics = { items: [], source: null };
+
+/**
+ * Monaco-based Structured Text editor. Markers come only from the Rust compiler/runtime,
+ * each set with the exact text it was computed for; the Monaco model owns the text while
+ * the student types (see editor-sync.ts).
+ */
 export function StructuredTextEditor({
   source,
   readOnly = false,
   onChange,
   diagnostics,
-  runtimeDiagnostics = [],
+  runtimeDiagnostics = NONE,
   focusedDiagnostic,
 }: {
   source: string;
   readOnly?: boolean;
   onChange: (value: string) => void;
-  diagnostics: DiagnosticDto[];
-  runtimeDiagnostics?: DiagnosticDto[];
+  diagnostics: SourceDiagnostics;
+  runtimeDiagnostics?: SourceDiagnostics;
   focusedDiagnostic: DiagnosticDto | null;
 }) {
   const { t, theme } = useInterface();
@@ -64,6 +72,7 @@ export function StructuredTextEditor({
             if (!latest.current.readOnly) latest.current.onChange(value);
           },
           current.theme,
+          (problem) => recordProblem("editor", problem),
         );
         instance.current.update(
           current.source,

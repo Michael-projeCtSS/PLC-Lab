@@ -11,6 +11,7 @@ import { WorkspacePage } from "./workspace/WorkspacePage";
 import type { Navigate, Route } from "./route";
 import { PreferencesProvider, useInterface } from "./locale";
 import { Settings } from "./pages/Settings";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 const NAV = [
   "home",
@@ -127,48 +128,50 @@ function Application() {
         </div>
       </header>
       <main className="page" id="main">
-        {openProblem && (
-          <div className="notice error" role="alert" style={{ margin: 16 }}>
-            {t("common.openProblem")} {openProblem}{" "}
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => setOpenProblem(null)}
-            >
-              {t("common.dismiss")}
-            </button>
-          </div>
-        )}
-        {route.page === "home" && <HomePage navigate={navigate} />}
-        {route.page === "learn" && (
-          <LearnPage lessonId={route.lesson} navigate={navigate} />
-        )}
-        {route.page === "practice" && (
-          <ExercisesPage kind="practice" navigate={navigate} />
-        )}
-        {route.page === "commission" && (
-          <ExercisesPage kind="commissioning" navigate={navigate} />
-        )}
-        {route.page === "troubleshoot" && (
-          <ExercisesPage kind="troubleshooting" navigate={navigate} />
-        )}
-        {route.page === "freelab" && <FreeLabPage navigate={navigate} />}
-        {route.page === "knowledge" && (
-          <KnowledgePage
-            articleId={route.article}
-            initialQuery={route.query}
-            navigate={navigate}
-          />
-        )}
-        {route.page === "progress" && <ProgressPage navigate={navigate} />}
-        {route.page === "about" && <AboutPage />}
-        {route.page === "workspace" && (
-          <WorkspacePage
-            key={route.projectId}
-            projectId={route.projectId}
-            navigate={navigate}
-            back={route.section}
-          />
-        )}
+        <ErrorBoundary scope="page" resetKey={JSON.stringify(route)}>
+          {openProblem && (
+            <div className="notice error" role="alert" style={{ margin: 16 }}>
+              {t("common.openProblem")} {openProblem}{" "}
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setOpenProblem(null)}
+              >
+                {t("common.dismiss")}
+              </button>
+            </div>
+          )}
+          {route.page === "home" && <HomePage navigate={navigate} />}
+          {route.page === "learn" && (
+            <LearnPage lessonId={route.lesson} navigate={navigate} />
+          )}
+          {route.page === "practice" && (
+            <ExercisesPage kind="practice" navigate={navigate} />
+          )}
+          {route.page === "commission" && (
+            <ExercisesPage kind="commissioning" navigate={navigate} />
+          )}
+          {route.page === "troubleshoot" && (
+            <ExercisesPage kind="troubleshooting" navigate={navigate} />
+          )}
+          {route.page === "freelab" && <FreeLabPage navigate={navigate} />}
+          {route.page === "knowledge" && (
+            <KnowledgePage
+              articleId={route.article}
+              initialQuery={route.query}
+              navigate={navigate}
+            />
+          )}
+          {route.page === "progress" && <ProgressPage navigate={navigate} />}
+          {route.page === "about" && <AboutPage />}
+          {route.page === "workspace" && (
+            <WorkspacePage
+              key={route.projectId}
+              projectId={route.projectId}
+              navigate={navigate}
+              back={route.section}
+            />
+          )}
+        </ErrorBoundary>
       </main>
       {settings && <Settings onClose={() => setSettings(false)} />}
     </div>

@@ -1223,5 +1223,15 @@ export const en = {
   "process.noContact": "NO contact",
   "direction.input": "input",
   "direction.output": "output",
+  "crash.title": "Part of the interface stopped working",
+  "crash.text":
+    "The error is recorded below. Your projects and the PLC are not affected, and nothing was deleted.",
+  "crash.draft": "Your program",
+  "crash.draftHelp":
+    "The text in the editor when the error occurred. Changes are saved automatically within a second; copy it if you want to be sure.",
+  "crash.copy": "Copy program",
+  "crash.retry": "Try again",
+  "crash.reload": "Restart the interface",
+  "crash.details": "Technical details",
 } as const;
 export type TranslationKey = keyof typeof en;

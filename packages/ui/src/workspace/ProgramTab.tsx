@@ -12,9 +12,17 @@ export function ProgramTab({ lab }: { lab: Lab }) {
   const faultKey = lab.frame?.plc.fault
     ? JSON.stringify(lab.frame.plc.fault)
     : "";
+  // A runtime fault's position refers to the program the PLC runs.
   const runtime = useMemo(
-    () => (faultKey ? [JSON.parse(faultKey) as DiagnosticDto] : []),
-    [faultKey],
+    () => ({
+      items: faultKey ? [JSON.parse(faultKey) as DiagnosticDto] : [],
+      source: lab.loadedSource,
+    }),
+    [faultKey, lab.loadedSource],
+  );
+  const compiler = useMemo(
+    () => ({ items: lab.diagnostics, source: lab.diagnosticsSource }),
+    [lab.diagnostics, lab.diagnosticsSource],
   );
   return (
     <div className="program-panel">
@@ -37,7 +45,7 @@ export function ProgramTab({ lab }: { lab: Lab }) {
       <StructuredTextEditor
         source={lab.source}
         onChange={lab.setSource}
-        diagnostics={lab.diagnostics}
+        diagnostics={compiler}
         runtimeDiagnostics={runtime}
         focusedDiagnostic={focused}
       />

@@ -1,7 +1,8 @@
 import * as monaco from "monaco-editor/editor/editor.api.js";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import type { DiagnosticDto } from "@plc-lab/ipc";
-import { toEditorRange } from "./source-spans";
+import { EditorSync, type SourceDiagnostics } from "./editor-sync";
+import { tryEditorRange } from "./source-spans";
 
 const environment = self as typeof self & {
   MonacoEnvironment: monaco.Environment;
@@ -139,11 +140,18 @@ export function setEditorTheme(theme: EditorTheme) {
   monaco.editor.setTheme(MONACO_THEME[theme]);
 }
 
+const SEVERITY = {
+  error: monaco.MarkerSeverity.Error,
+  warning: monaco.MarkerSeverity.Warning,
+  info: monaco.MarkerSeverity.Info,
+} as const;
+
 export function createStEditor(
   element: HTMLElement,
   source: string,
   onChange: (source: string) => void,
   theme: EditorTheme = "dark",
+  report: (problem: string) => void = () => undefined,
 ) {
   const model = monaco.editor.createModel(source, ST_LANGUAGE_ID);
   const editor = monaco.editor.create(element, {
@@ -158,51 +166,68 @@ export function createStEditor(
     ariaLabel: "Structured Text source",
     padding: { top: 8 },
   });
-  const subscription = model.onDidChangeContent(() =>
-    onChange(model.getValue()),
-  );
+  const sync = new EditorSync();
+  let replacing = false;
+  const subscription = model.onDidChangeContent(() => {
+    if (replacing) return;
+    const text = model.getValue();
+    sync.emitted(text);
+    onChange(text);
+  });
+  /**
+   * Markers of one owner, only for diagnostics computed for exactly the current text.
+   * Diagnostics of an earlier text are skipped: the next compile result follows within a
+   * fraction of a second, and positions of an earlier text would point to the wrong
+   * place or outside the text.
+   */
+  const markers = (owner: string, set: SourceDiagnostics, label: string) => {
+    const text = model.getValue();
+    if (set.source !== text) return;
+    const list: monaco.editor.IMarkerData[] = [];
+    for (const d of set.items) {
+      if (!d.span) continue;
+      const range = tryEditorRange(text, d.span);
+      if (!range) {
+        report(`${label} ${d.code}: position outside the source`);
+        continue;
+      }
+      list.push({
+        ...range,
+        severity: SEVERITY[d.severity],
+        message: d.message,
+        code: d.code,
+        source: label,
+      });
+    }
+    monaco.editor.setModelMarkers(model, owner, list);
+  };
   return {
     update(
       value: string,
-      diagnostics: DiagnosticDto[],
-      runtimeDiagnostics: DiagnosticDto[] = [],
+      compiler: SourceDiagnostics,
+      runtime: SourceDiagnostics,
       readOnly = false,
     ) {
       editor.updateOptions({ readOnly });
-      if (model.getValue() !== value) model.setValue(value);
-      const markers = (owner: string, items: DiagnosticDto[], source: string) =>
-        monaco.editor.setModelMarkers(
-          model,
-          owner,
-          items.flatMap((d) =>
-            d.span
-              ? [
-                  {
-                    ...toEditorRange(value, d.span),
-                    severity:
-                      d.severity === "error"
-                        ? monaco.MarkerSeverity.Error
-                        : d.severity === "warning"
-                          ? monaco.MarkerSeverity.Warning
-                          : monaco.MarkerSeverity.Info,
-                    message: d.message,
-                    code: d.code,
-                    source,
-                  },
-                ]
-              : [],
-          ),
-        );
-      markers(MARKER_OWNER, diagnostics, "Rust ST compiler");
-      markers("plc-lab-runtime", runtimeDiagnostics, "Rust PLC runtime");
+      if (sync.reconcile(value, model.getValue()) === "external") {
+        // A program that was opened or replaced, not a keystroke of this editor.
+        replacing = true;
+        try {
+          model.setValue(value);
+        } finally {
+          replacing = false;
+        }
+      }
+      markers(MARKER_OWNER, compiler, "Rust ST compiler");
+      markers("plc-lab-runtime", runtime, "Rust PLC runtime");
     },
     focus(span: DiagnosticDto["span"]) {
-      if (span) {
-        const range = toEditorRange(model.getValue(), span);
-        editor.setSelection(range);
-        editor.revealRangeInCenter(range);
-        editor.focus();
-      }
+      if (!span) return;
+      const range = tryEditorRange(model.getValue(), span);
+      if (!range) return;
+      editor.setSelection(range);
+      editor.revealRangeInCenter(range);
+      editor.focus();
     },
     dispose() {
       subscription.dispose();

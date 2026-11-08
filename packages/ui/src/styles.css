@@ -1658,3 +1658,28 @@ textarea.input {
     gap: 5px;
   }
 }
+
+/* error screen: a view that stopped rendering */
+.error-screen {
+  max-width: 880px;
+  margin: 32px auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--danger-line);
+  border-radius: 6px;
+}
+.error-draft {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+}
+.error-details {
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 11px;
+  color: var(--text-2);
+}

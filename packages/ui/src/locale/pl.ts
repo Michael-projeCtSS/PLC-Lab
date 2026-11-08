@@ -1236,4 +1236,14 @@ export const pl = {
   "process.noContact": "styk NO",
   "direction.input": "wejście",
   "direction.output": "wyjście",
+  "crash.title": "Część interfejsu przestała działać",
+  "crash.text":
+    "Błąd jest zapisany poniżej. Projekty i PLC nie zostały naruszone i nic nie zostało usunięte.",
+  "crash.draft": "Twój program",
+  "crash.draftHelp":
+    "Tekst z edytora w chwili błędu. Zmiany zapisują się automatycznie w ciągu sekundy; skopiuj go, jeśli chcesz mieć pewność.",
+  "crash.copy": "Kopiuj program",
+  "crash.retry": "Spróbuj ponownie",
+  "crash.reload": "Uruchom interfejs ponownie",
+  "crash.details": "Szczegóły techniczne",
 } satisfies Record<TranslationKey, string>;

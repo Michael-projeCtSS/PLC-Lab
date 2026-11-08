@@ -62,16 +62,22 @@ not a browser. Close the window to finish: the development server stops with it.
 `node tests/e2e/dev-session-check.mjs` verifies a whole session on this machine: it starts
 `TEST_PLC_LAB.bat` from another folder, attaches to the native window and checks the Rust
 IPC, the Polish interface, a Free Lab ST program with `VAR RETAIN` and `FIRST_SCAN` in RUN,
-backend values, the alarm view, warm and cold restarts with their diagnostics, switching
-between the light and dark themes with the program unchanged, and a clean close. Its
+real Enter/Backspace/undo editing during RUN, backend values, the alarm view, warm and
+cold restarts with their diagnostics, switching between the light and dark themes with the
+program unchanged, no uncaught JavaScript error during the session, and a clean close. Its
 screenshots stay in `artifacts\dev-session-check`; a passing run removes its browser profile
 and data, a failing run keeps them for diagnosis. With
 `--exe target\debug\plc-lab-desktop.exe` it runs the same checks against an already built
 development application instead of starting `TEST_PLC_LAB.bat`.
 
+`npm run test:editor` types in the real Monaco editor of the native application
+(Enter, Backspace, Delete, undo/redo, clipboard paste, 200 rapid edits) in English and
+Polish and fails on any uncaught JavaScript error or a lost line
+([P0 record](validation/P0_EDITOR_BLACK_SCREEN.md)).
+
 `npm run test:screenshots` captures the real application in both themes at 1366x768,
 1920x1080 and 2560x1440 (Home, program, process, hardware, commissioning; Polish) into
-`artifacts	heme-screenshots` and fails when a page overflows or a label is clipped.
+`artifacts\theme-screenshots` and fails when a page overflows or a label is clipped.
 
 ## Smart App Control
 

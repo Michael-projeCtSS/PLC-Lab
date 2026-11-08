@@ -38,3 +38,18 @@ export function toEditorRange(source: string, span: SpanDto): EditorRange {
     endColumn: convert(span.end.line, span.end.column),
   };
 }
+
+/**
+ * The editor range of a span in exactly this text, or null when the span does not fit it
+ * (for example diagnostics computed for an earlier version of the text).
+ */
+export function tryEditorRange(
+  source: string,
+  span: SpanDto,
+): EditorRange | null {
+  try {
+    return toEditorRange(source, span);
+  } catch {
+    return null;
+  }
+}
