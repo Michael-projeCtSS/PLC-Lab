@@ -188,6 +188,11 @@ beforeEach(() => {
     coreVersion: "0.2.0-dev",
     contractVersion: 8,
     execution: "manual-and-continuous",
+    sourceCommit: null,
+    sourceDirty: null,
+    builtAt: null,
+    distribution: "DEVELOPMENT_RUN",
+    signed: false,
   });
   fake.knowledgeStatus.mockResolvedValue({
     packs: [],

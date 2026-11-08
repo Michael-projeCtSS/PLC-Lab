@@ -7,7 +7,7 @@ mod execution_driver;
 mod resources;
 mod startup;
 
-use desktop_session::{AppInfo, AppPaths, DesktopApp};
+use desktop_session::{AppInfo, AppPaths, BuildInfo, DesktopApp};
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Emitter, Manager};
 
@@ -117,7 +117,18 @@ fn builder() -> tauri::Builder<tauri::Wry> {
                 }
                 .into(),
             };
-            app.manage(Arc::new(DesktopApp::new(paths, info)));
+            // Build facts recorded by build.rs; the staged manifest beside a release.
+            let manifest = resources::executable_dir().and_then(|dir| {
+                std::fs::read_to_string(dir.join("resources").join("product.json")).ok()
+            });
+            let build = BuildInfo::describe(
+                env!("PLC_LAB_SOURCE_COMMIT"),
+                env!("PLC_LAB_SOURCE_DIRTY"),
+                env!("PLC_LAB_BUILT_AT_UNIX"),
+                cfg!(debug_assertions),
+                manifest.as_deref(),
+            );
+            app.manage(Arc::new(DesktopApp::new(paths, info).with_build(build)));
             // Lossy: an argument that is not valid Unicode is not a project path we can open.
             let args: Vec<String> = std::env::args_os()
                 .map(|a| a.to_string_lossy().into_owned())

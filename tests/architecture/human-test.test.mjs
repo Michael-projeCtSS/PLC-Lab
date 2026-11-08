@@ -219,6 +219,7 @@ test("root BAT helpers resolve every path from their own folder", async () => {
     "TEST_PLC_LAB.bat",
     "RUN_ALL_CHECKS.bat",
     "BUILD_PLC_LAB_RELEASE.bat",
+    "UPDATE_PLC_LAB.bat",
   ]) {
     const text = await readFile(path.join(root, name), "utf8");
     assert.match(text, /%~dp0/, `${name} must locate files from %~dp0`);

@@ -16,7 +16,7 @@ if errorlevel 1 (
   popd
   exit /b 1
 )
-node "scripts\human-test.mjs" "%~2"
+node "scripts\human-test.mjs" "%~2" %3
 set "PLC_LAB_EXIT=%ERRORLEVEL%"
 popd
 exit /b %PLC_LAB_EXIT%

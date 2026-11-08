@@ -1348,4 +1348,22 @@ export const pl = {
   "seq.reason.progressDuringHold": "postęp podczas wstrzymania",
   "seq.reason.progressAfterFault": "postęp mimo błędu",
   "seq.reason.unknown": "odchylenie",
+  "about.commit": "Commit źródeł",
+  "about.builtAt": "Zbudowano",
+  "about.distribution": "Dystrybucja",
+  "about.signing": "Podpis kodu",
+  "about.signed": "Podpisany (zweryfikowany przy przygotowaniu wydania)",
+  "about.unsigned": "Bez podpisu kodu",
+  "about.unknown": "nieznany",
+  "about.dirty":
+    "Ta kompilacja powstała z kopii roboczej z niezatwierdzonymi zmianami: może różnić się od pokazanego commitu.",
+  "about.dist.DEVELOPMENT_RUN":
+    "Uruchomienie deweloperskie (TEST_PLC_LAB.bat lub RUN_PLC_LAB_DEV.bat)",
+  "about.dist.RELEASE_BUILD":
+    "Kompilacja wydania, nieprzygotowana do dystrybucji",
+  "about.dist.UNSIGNED_DEVELOPMENT_BUILD":
+    "Niepodpisana kompilacja deweloperska (UPDATE_PLC_LAB.bat)",
+  "about.dist.SIGNED_PRODUCTION_RELEASE": "Podpisane wydanie produkcyjne",
+  "about.dist.MANIFEST_MISMATCH":
+    "resources/product.json obok tego pliku wykonywalnego opisuje inną kompilację",
 } satisfies Record<TranslationKey, string>;

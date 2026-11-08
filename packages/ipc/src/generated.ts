@@ -14,7 +14,23 @@ export type CoreInfo = { applicationName: string, appVersion: string, coreVersio
 /**
  * Always "manual-and-continuous" for contract v8.
  */
-execution: string, buildContext: string, };
+execution: string, buildContext: string, 
+/**
+ * The commit this executable was built from, recorded by its build.
+ */
+sourceCommit: string | null, 
+/**
+ * The checkout had changes the commit does not contain; null when unknown.
+ */
+sourceDirty: boolean | null, 
+/**
+ * Build time, RFC 3339 UTC.
+ */
+builtAt: string | null, distribution: "DEVELOPMENT_RUN" | "RELEASE_BUILD" | "UNSIGNED_DEVELOPMENT_BUILD" | "SIGNED_PRODUCTION_RELEASE" | "MANIFEST_MISMATCH", 
+/**
+ * Code-signed and verified when the release was staged.
+ */
+signed: boolean, };
 
 export type SignalValueDto = { "type": "BOOL", value: boolean, } | { "type": "INT", value: number, } | { "type": "REAL", value: number, } | { "type": "TIME", value: ExactU64, } | { "type": "COUNT", value: number, };
 

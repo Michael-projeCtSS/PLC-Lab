@@ -72,6 +72,17 @@ export const coreInfo = obj<G.CoreInfo>({
   contractVersion: int(8, 8),
   execution: str,
   buildContext: str,
+  sourceCommit: nullable(str),
+  sourceDirty: nullable(bool),
+  builtAt: nullable(str),
+  distribution: literal(
+    "DEVELOPMENT_RUN",
+    "RELEASE_BUILD",
+    "UNSIGNED_DEVELOPMENT_BUILD",
+    "SIGNED_PRODUCTION_RELEASE",
+    "MANIFEST_MISMATCH",
+  ),
+  signed: bool,
 });
 
 // ---- knowledge -------------------------------------------------------------------

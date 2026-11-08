@@ -1333,5 +1333,22 @@ export const en = {
   "seq.reason.progressDuringHold": "advanced while held",
   "seq.reason.progressAfterFault": "advanced after a fault",
   "seq.reason.unknown": "deviation",
+  "about.commit": "Source commit",
+  "about.builtAt": "Built",
+  "about.distribution": "Distribution",
+  "about.signing": "Code signing",
+  "about.signed": "Signed (verified when the release was staged)",
+  "about.unsigned": "Not code-signed",
+  "about.unknown": "unknown",
+  "about.dirty":
+    "This build was made from a checkout with uncommitted changes: it may differ from the commit shown.",
+  "about.dist.DEVELOPMENT_RUN":
+    "Development run (TEST_PLC_LAB.bat or RUN_PLC_LAB_DEV.bat)",
+  "about.dist.RELEASE_BUILD": "Release build, not staged",
+  "about.dist.UNSIGNED_DEVELOPMENT_BUILD":
+    "Unsigned development build (UPDATE_PLC_LAB.bat)",
+  "about.dist.SIGNED_PRODUCTION_RELEASE": "Signed production release",
+  "about.dist.MANIFEST_MISMATCH":
+    "resources/product.json beside this executable describes another build",
 } as const;
 export type TranslationKey = keyof typeof en;

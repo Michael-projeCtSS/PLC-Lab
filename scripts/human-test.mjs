@@ -256,10 +256,17 @@ async function main() {
     test: "dev",
     checks: "validate",
     "build-release": "build:release",
+    // UPDATE_PLC_LAB.bat: build this commit and install it as the root PLC Lab.exe.
+    update: null,
   };
   if (!Object.hasOwn(commands, mode))
     throw new Error(`Unknown human-test mode: ${mode}`);
   const npmCli = prepare(mode);
+  if (mode === "update") {
+    const { update } = await import("./update-exe.mjs");
+    await update({ force: process.argv.includes("--force") });
+    return;
+  }
   console.log(
     native(mode)
       ? "[DEV] Starting the native PLC Lab application (Tauri development build, real Rust backend). Its window opens when the build is ready; close it to finish."

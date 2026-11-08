@@ -1,7 +1,16 @@
 import { useInterface } from "../locale";
+import type { TranslationKey } from "../locale/en";
 import { api } from "@plc-lab/ipc";
 import { Badge, ErrorNotice } from "../ui";
 import { useLoad } from "../useLoad";
+
+const DISTRIBUTION: Record<string, TranslationKey> = {
+  DEVELOPMENT_RUN: "about.dist.DEVELOPMENT_RUN",
+  RELEASE_BUILD: "about.dist.RELEASE_BUILD",
+  UNSIGNED_DEVELOPMENT_BUILD: "about.dist.UNSIGNED_DEVELOPMENT_BUILD",
+  SIGNED_PRODUCTION_RELEASE: "about.dist.SIGNED_PRODUCTION_RELEASE",
+  MANIFEST_MISMATCH: "about.dist.MANIFEST_MISMATCH",
+};
 
 /** Product information and developer diagnostics (versions, contract, knowledge packs). */
 export function AboutPage() {
@@ -25,6 +34,34 @@ export function AboutPage() {
           <dl className="kv panel-body">
             <dt>{t("about.version")}</dt>
             <dd>{info.data?.appVersion ?? "—"}</dd>
+            <dt>{t("about.commit")}</dt>
+            <dd
+              className="mono"
+              title={info.data?.sourceCommit ?? undefined}
+              data-testid="about-commit"
+            >
+              {info.data?.sourceCommit
+                ? info.data.sourceCommit.slice(0, 12)
+                : t("about.unknown")}
+            </dd>
+            <dt>{t("about.builtAt")}</dt>
+            <dd>
+              {info.data?.builtAt
+                ? new Date(info.data.builtAt).toLocaleString()
+                : t("about.unknown")}
+            </dd>
+            <dt>{t("about.distribution")}</dt>
+            <dd data-testid="about-distribution">
+              {info.data
+                ? t(DISTRIBUTION[info.data.distribution] ?? "about.unknown")
+                : "—"}
+            </dd>
+            <dt>{t("about.signing")}</dt>
+            <dd>
+              {info.data
+                ? t(info.data.signed ? "about.signed" : "about.unsigned")
+                : "—"}
+            </dd>
             <dt>{t("about.build")}</dt>
             <dd>{info.data?.buildContext ?? "—"}</dd>
             <dt>{t("about.core")}</dt>
@@ -34,6 +71,11 @@ export function AboutPage() {
             <dt>{t("about.execution")}</dt>
             <dd>{info.data?.execution ?? "—"}</dd>
           </dl>
+          {info.data?.sourceDirty && (
+            <p className="notice warning" role="note">
+              {t("about.dirty")}
+            </p>
+          )}
         </div>
         <div className="panel">
           <div className="panel-head">

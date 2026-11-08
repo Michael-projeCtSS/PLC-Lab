@@ -9,6 +9,37 @@ runtime, ST compiler, hardware, process and network simulation, alarms, forces,
 diagnostics, restarts). No browser and no signing certificate are involved. See
 [native development test](#native-development-test-test_plc_labbat).
 
+## Which BAT file?
+
+| File                          | What it does                                                                                                                                                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TEST_PLC_LAB.bat**          | Runs the latest native development application built from this checkout, uncommitted changes included (debug build, real Rust backend).                                                                                          |
+| **UPDATE_PLC_LAB.bat**        | Builds the current commit and installs it as the root `PLC Lab.exe` (unsigned development build): backup, atomic install, hash check and a native check before it reports success. Refuses uncommitted work and signed releases. |
+| **RUN_PLC_LAB.bat**           | Starts the existing root `PLC Lab.exe`, whatever version it is.                                                                                                                                                                  |
+| **RUN_PLC_LAB_DEV.bat**       | The same as TEST_PLC_LAB.bat without the log file.                                                                                                                                                                               |
+| **BUILD_PLC_LAB_RELEASE.bat** | Builds a signed production release (needs signing credentials).                                                                                                                                                                  |
+
+Not sure which version is running? **About** shows the source commit, the build time,
+the distribution (development run, unsigned development build, signed release) and the
+code-signing state, read from the build and the staged `resources\product.json` (trusted
+only when it names the same commit as the running executable).
+
+## Update the root PLC Lab.exe (UPDATE_PLC_LAB.bat)
+
+Commit your changes, close PLC Lab, then double-click **UPDATE_PLC_LAB.bat**. It checks
+Node.js, the dependencies and the pinned Rust toolchain, compares the installed
+`resources\product.json` with the repository HEAD (nothing to do when they match and the
+files verify; `UPDATE_PLC_LAB.bat --force` rebuilds anyway), verifies the knowledge pack
+archive and builds the release application. Before anything is replaced it starts the
+new executable once to see whether Windows lets it run; a Code Integrity (Smart App
+Control) block stops the update with the event and leaves the root unchanged. It then
+copies the installed distribution to `artifacts\plc-lab-backups\` (the newest three are
+kept), installs the new one with the existing staging pipeline (`stage-release.mjs
+--development`, atomic with rollback), checks every hash and the source commit, and runs
+the native smoke test on the installed `PLC Lab.exe`. Only then does it report the
+installed commit and offer to start PLC Lab; if the native check fails, the verified
+previous version is restored. A signed production release is never overwritten.
+
 ## Start the release
 
 Double-click **PLC Lab.exe** in the repository root. It is the application itself (the

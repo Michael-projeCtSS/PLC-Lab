@@ -78,6 +78,18 @@ pub struct CoreInfo {
     /// Always "manual-and-continuous" for contract v8.
     pub execution: String,
     pub build_context: String,
+    /// The commit this executable was built from, recorded by its build.
+    pub source_commit: Option<String>,
+    /// The checkout had changes the commit does not contain; null when unknown.
+    pub source_dirty: Option<bool>,
+    /// Build time, RFC 3339 UTC.
+    pub built_at: Option<String>,
+    #[ts(
+        type = "\"DEVELOPMENT_RUN\" | \"RELEASE_BUILD\" | \"UNSIGNED_DEVELOPMENT_BUILD\" | \"SIGNED_PRODUCTION_RELEASE\" | \"MANIFEST_MISMATCH\""
+    )]
+    pub distribution: String,
+    /// Code-signed and verified when the release was staged.
+    pub signed: bool,
 }
 
 /// Typed value of a signal. COUNT is a physical integer quantity.

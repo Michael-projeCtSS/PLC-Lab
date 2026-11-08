@@ -6,6 +6,7 @@
 //! exercise), owns the single open workspace and maps typed errors to transport errors
 //! at its public boundary. It has no Tauri or user-interface dependency.
 
+mod build_info;
 mod convert;
 mod error;
 mod library;
@@ -13,6 +14,7 @@ mod projects;
 mod sequence;
 mod workspace;
 
+pub use build_info::{BuildInfo, Distribution};
 pub use error::AppError;
 pub use workspace::{RunLease, RunStart, TickOutcome};
 
@@ -65,6 +67,7 @@ struct AppState {
 pub struct DesktopApp {
     paths: AppPaths,
     info: AppInfo,
+    build: BuildInfo,
     state: Mutex<AppState>,
 }
 
@@ -108,6 +111,7 @@ impl DesktopApp {
         Self {
             paths,
             info,
+            build: BuildInfo::describe("", "unknown", "0", cfg!(debug_assertions), None),
             state: Mutex::new(AppState {
                 library,
                 store,
@@ -121,6 +125,12 @@ impl DesktopApp {
                 next_run: 0,
             }),
         }
+    }
+
+    /// What this executable is (build script facts and its staged manifest).
+    pub fn with_build(mut self, build: BuildInfo) -> Self {
+        self.build = build;
+        self
     }
 
     fn lock(&self) -> AppResult<MutexGuard<'_, AppState>> {
@@ -145,6 +155,11 @@ impl DesktopApp {
             contract_version: CONTRACT_VERSION,
             execution: "manual-and-continuous".into(),
             build_context: self.info.build_context.clone(),
+            source_commit: self.build.source_commit.clone(),
+            source_dirty: self.build.source_dirty,
+            built_at: self.build.built_at(),
+            distribution: self.build.distribution.code().into(),
+            signed: self.build.signed,
         }))
     }
 
