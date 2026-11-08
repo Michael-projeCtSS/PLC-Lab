@@ -38,6 +38,7 @@ Tauri host (commands, pacing, trusted paths) ─> packages/ipc (strict validator
 | `hardware-model`     | Configured vs installed modules, wiring, channel conversion, LEDs, diagnostics                                 |
 | `network-core`       | Deterministic virtual Ethernet segment and behavioral Modbus TCP client/server                                 |
 | `grading-core`       | Behavioral rule evaluation over grading evidence; troubleshooting scoring                                      |
+| `sequence-core`      | Sequence monitor: observes a PLC program against a documented step sequence, never controls (ADR-0043)         |
 | `lab-engine`         | Headless lab session: one world, cycle execution, observations, assessment, commissioning checklist (ADR-0027) |
 | `knowledge-core`     | Knowledge pack discovery, validation, cross-references and search index                                        |
 | `project-model`      | `.plclab` project format, migrations, atomic store, learner progress                                           |

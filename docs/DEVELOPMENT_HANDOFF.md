@@ -379,7 +379,7 @@ previous green run; `1356125` moves it to 1.14.1 and changes nothing else.
   architecture and frontend tests; rustfmt and clippy clean except the host crate, whose
   build script the policy blocks.
 
-## Checkpoint 8-B: PLC startup, restart and retentive memory (in progress)
+## Checkpoint 8-B: PLC startup, restart and retentive memory
 
 - ADR-0038. ST: `VAR RETAIN` (scalar program variables), constant initializers, reserved
   read-only `FIRST_SCAN`; RETAIN on inputs, outputs and FB instances refused. Canonical
@@ -398,9 +398,32 @@ previous green run; `1356125` moves it to 1.14.1 and changes nothing else.
 - Tests (all run locally and pass): ST retention (9), engine restarts (19 total), workflows
   (19), knowledge conformance incl. restart lab grading (5), architecture (50), frontend
   (83).
-- Remaining before CP8-B can close: the native smoke step for the restart scenario
-  (Free Lab retentive counter: RUN, warm restart, first scan, cold restart, diagnostic
-  buffer), hosted CI PASS on the final SHA, then rebuild and stage the root `PLC Lab.exe`.
+- The restart scenario runs natively in `tests/e2e/dev-session-check.mjs`
+  (`TEST_PLC_LAB.bat`: Free Lab retentive counter, warm and cold restart, first scan,
+  diagnostic buffer); hosted CI is green since `a933815`.
+
+## Checkpoint 8-C: sequence control and industrial diagnostics (Claude, 2026-11-08)
+
+- ADR-0043. The student's PLC program stays the only controller; the engine's sequence
+  monitor (`sequence-core`) observes it against a documented definition and never writes
+  PLC memory or the plant. Definitions are exercise data (`sequence`): steps identified
+  by a program step variable, transitions with typed conditions and permissives,
+  interlocks with `blockStart`, `holdProgress` or `abortSequence` reactions, step
+  timeouts; the held state is a program variable.
+- Engine: one snapshot per cycle (the grading facts) after the process advance and
+  before alarms; states UNBOUND, STOPPED, IDLE, RUNNING, HELD, COMPLETED, FAULTED;
+  world-time step timers paused by STOP and HOLD; deviations latch a fault until the
+  sequence returns to its initial step; every PLC start begins a new run; alarms
+  `sequence.<id>.step-timeout`, `.deviation` and `.interlock.<id>`; events in the event
+  log (coded, Polish); grading rules `sequenceConforms` and `sequenceReached`.
+- IPC (contract 8, additive): `ExerciseDto.sequence`, `LiveFrameDto.sequence`.
+- UI: inspector tab "Sequence" (Basic: state, active step, progress, timer, what it
+  waits for, refusals, chart, related alarms; Advanced: layers, interlock reactions,
+  history).
+- Content: Hold button S3 on the tank scene (revision 2), exercise `ex.tank-sequence`
+  with reference solution, troubleshooting lab `ts.tank-sequence-stalls` (inlet valve
+  stuck closed), lesson 26, article `fundamentals.sequences`; complete Polish overlays.
+- Native acceptance: `tests/e2e/sequence-session.mjs` (part of `npm run test:desktop`).
 
 ## Product consolidation (Claude, 2026-11-04 to 2026-11-06)
 
@@ -443,8 +466,8 @@ native smoke test. Antivirus settings are never changed by the agent.
    acknowledgment, bounded history, alarm view, an alarm lab); B PLC startup and restart
    (cold and warm restart, retained data, first scan, startup diagnostics, two labs);
    C sequence diagnostic foundation (steps, transitions, timeouts, hold and resume,
-   interlocks and permissives, a sequence inspector, a process sequence). All new
-   content in English and Polish.
+   interlocks and permissives, a sequence inspector, a process sequence). A, B and C are
+   implemented; all content in English and Polish.
 2. Checkpoint 9: ST depth, multiple POUs and FB instances (P11), then LAD readiness.
 
 ## How to continue

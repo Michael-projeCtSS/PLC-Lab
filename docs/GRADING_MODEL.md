@@ -29,7 +29,9 @@ run, high-high, low-low, motor overload) and PLC faults are recorded with world 
 
 `always` (from a time), `never`, `eventually` (by a time), `respondsWithin` (each trigger
 edge must be followed by the response within a time), `stateAt` (the cycle containing a
-time), `noPlcFault`, `eventAbsent`. Conditions combine `compare` (signal, layer,
+time), `noPlcFault`, `eventAbsent`, `sequenceConforms` (the sequence monitor recorded no
+deviation and no step timeout) and `sequenceReached` (a step was active by a time;
+ADR-0043). Conditions combine `compare` (signal, layer,
 operator, literal) with `all`, `any`, `not`. Missing evidence fails a criterion with an
 explanation instead of being guessed.
 

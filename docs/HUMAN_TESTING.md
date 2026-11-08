@@ -75,6 +75,13 @@ development application instead of starting `TEST_PLC_LAB.bat`.
 Polish and fails on any uncaught JavaScript error or a lost line
 ([P0 record](validation/P0_EDITOR_BLACK_SCREEN.md)).
 
+`node tests/e2e/sequence-session.mjs` runs the sequence lab natively through
+`TEST_PLC_LAB.bat` (with `--exe target\debug\plc-lab-desktop.exe` against a built
+application, as `npm run test:desktop` and the Windows CI lane do): the inspector's initial
+step, the reference ST program, a start refused by a permissive, the tank filling,
+HOLD and RESUME, completion and history, the stuck-valve lab's step timeout with its
+alarm, Polish, both themes, ST editing with Enter and Backspace and a clean close.
+
 `npm run test:screenshots` captures the real application in both themes at 1366x768,
 1920x1080 and 2560x1440 (Home, program, process, hardware, commissioning; Polish) into
 `artifacts\theme-screenshots` and fails when a page overflows or a label is clipped.

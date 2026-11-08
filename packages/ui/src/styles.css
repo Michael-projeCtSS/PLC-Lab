@@ -1685,6 +1685,18 @@ textarea.input {
 }
 
 /* Sequence inspector (ADR-0043): states read from the backend monitor. */
+.sequence-inspector {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.sequence-inspector .kv dd,
+.sequence-inspector code {
+  white-space: normal;
+}
+.sequence-inspector .seq-history {
+  table-layout: fixed;
+  width: 100%;
+}
 .sequence-inspector .seq-note {
   margin-top: 8px;
   font-size: 12px;

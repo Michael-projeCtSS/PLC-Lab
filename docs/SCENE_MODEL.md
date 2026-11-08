@@ -45,7 +45,8 @@ knowledge pack that fail validation are rejected with a reason.
 (start/stop, contactor with feedback and overload, run lamp), `scene.conveyor-drive`
 (start/stop, conveyor drive with run terminal and ready/running/remote relay outputs, run
 lamp), `scene.tank-filling` (inlet valve, drain pump, tank, two level switches, 4-20 mA
-transmitter), `scene.tank-modbus` (tank with a Modbus TCP level transmitter and a
+transmitter; revision 2 adds the Hold button S3 wired to DI channel 5, which the reference
+station leaves unmapped so earlier tank labs are unchanged), `scene.tank-modbus` (tank with a Modbus TCP level transmitter and a
 high-high switch).
 
 Digital sink ports (coil, solenoid, motor, run) are derived from the component kind; the
