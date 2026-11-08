@@ -192,8 +192,7 @@ async function freePort() {
  * Does Windows let this file run? A blocked executable never starts (or Code Integrity
  * records a block); a started one reports its own problems and exits. Read-only probe.
  */
-async function windowsLetsItRun(executable) {
-  const { codeIntegrityBlocks } = await import("./human-test.mjs");
+async function windowsLetsItRun(executable, codeIntegrityBlocks) {
   const started = new Date();
   const port = await freePort();
   const scratch = path.join(root, "artifacts", "update-probe", randomUUID());
@@ -230,7 +229,11 @@ function report(lines) {
   console.log(["", "=".repeat(60), ...lines, "=".repeat(60)].join("\n"));
 }
 
-export async function update({ force = false } = {}) {
+/**
+ * `codeIntegrityBlocks(since)` reads Windows Code Integrity blocks; human-test.mjs passes
+ * its reader (importing that module here would wait on the running launcher itself).
+ */
+export async function update({ force = false, codeIntegrityBlocks }) {
   const head = git(["rev-parse", "HEAD"]);
   const status = git(["status", "--porcelain"]);
   const manifest = await readManifest(root);
@@ -279,7 +282,7 @@ export async function update({ force = false } = {}) {
   console.log(
     "\n> Check that Windows lets the new executable run (before replacing anything)",
   );
-  const probe = await windowsLetsItRun(built);
+  const probe = await windowsLetsItRun(built, codeIntegrityBlocks);
   if (probe.blocked) {
     report([
       "WINDOWS BLOCKED THE NEW PLC LAB BUILD (Code Integrity, Smart App Control).",
@@ -350,7 +353,6 @@ export async function update({ force = false } = {}) {
     smoke = !result.error && result.status === 0;
   }
   if (!smoke) {
-    const { codeIntegrityBlocks } = await import("./human-test.mjs");
     const blocks =
       codeIntegrityBlocks(new Date(Date.now() - 15 * 60_000)) ?? [];
     const restored = saved?.verified

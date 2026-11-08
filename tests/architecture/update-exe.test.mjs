@@ -107,6 +107,8 @@ test("UPDATE_PLC_LAB.bat runs the shared launcher in update mode and offers to s
     "codeIntegrityBlocks",
   ])
     assert.ok(updater.includes(piece), piece);
+  // Importing the launcher back would wait on the launcher's own top-level await.
+  assert.doesNotMatch(updater, /import\(\s*"\.\/human-test\.mjs"\s*\)/);
   assert.doesNotMatch(
     updater,
     /Set-MpPreference|Add-MpPreference|VerifiedAndReputablePolicyState|signtool|New-SelfSignedCertificate/i,

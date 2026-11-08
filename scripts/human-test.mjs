@@ -264,7 +264,10 @@ async function main() {
   const npmCli = prepare(mode);
   if (mode === "update") {
     const { update } = await import("./update-exe.mjs");
-    await update({ force: process.argv.includes("--force") });
+    await update({
+      force: process.argv.includes("--force"),
+      codeIntegrityBlocks,
+    });
     return;
   }
   console.log(
