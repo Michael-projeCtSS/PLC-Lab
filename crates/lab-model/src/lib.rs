@@ -14,6 +14,7 @@ pub mod message;
 pub mod network;
 pub mod profile;
 pub mod scene;
+pub mod sequence;
 mod validate;
 
 pub use ids::{Identifier, IdentifierError};

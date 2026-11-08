@@ -87,6 +87,24 @@ pub struct GradingEvidence {
     pub cycles: Vec<CycleFacts>,
     pub events: Vec<EvidenceEvent>,
     pub plc_fault: Option<PlcFaultEvidence>,
+    /// What the sequence monitor recorded, when the exercise defines a sequence.
+    pub sequence: Option<SequenceEvidence>,
+}
+
+/// A deviation or step timeout the sequence monitor recorded (ADR-0043).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SequenceFault {
+    pub time_us: u64,
+    pub code: String,
+    pub step: Option<String>,
+}
+
+/// The sequence monitor's record of one scenario.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SequenceEvidence {
+    pub faults: Vec<SequenceFault>,
+    /// The first time each step was active.
+    pub reached: Vec<(String, u64)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,7 +138,8 @@ enum Truth {
     Missing(String),
 }
 
-fn compare(op: Comparison, actual: EvidenceValue, expected: Literal) -> bool {
+/// Compare one evidence value with a literal, as every rule does.
+pub fn compare(op: Comparison, actual: EvidenceValue, expected: Literal) -> bool {
     match (actual, expected) {
         (EvidenceValue::Bool(a), Literal::Bool(b)) => match op {
             Comparison::Eq => a == b,
@@ -179,6 +198,14 @@ fn eval(condition: &Condition, facts: &CycleFacts) -> Truth {
                 "evidence '{signal}' is not available in layer {layer:?}"
             )),
         },
+    }
+}
+
+/// A condition's value in one cycle; `None` when evidence it needs is not available.
+pub fn condition_holds(condition: &Condition, facts: &CycleFacts) -> Option<bool> {
+    match eval(condition, facts) {
+        Truth::Value(v) => Some(v),
+        Truth::Missing(_) => None,
     }
 }
 
@@ -349,6 +376,43 @@ pub fn evaluate_rule(rule: &Rule, evidence: &GradingEvidence) -> (bool, String) 
                 ),
             ),
         },
+        Rule::SequenceConforms => match &evidence.sequence {
+            None => (false, "No sequence was observed.".into()),
+            Some(seq) => match seq.faults.first() {
+                None => (true, "The sequence followed its definition.".into()),
+                Some(f) => (
+                    false,
+                    format!(
+                        "{} at {}{}.",
+                        f.code,
+                        seconds(f.time_us),
+                        f.step
+                            .as_ref()
+                            .map(|s| format!(" in step '{s}'"))
+                            .unwrap_or_default()
+                    ),
+                ),
+            },
+        },
+        Rule::SequenceReached { step, by_ms } => {
+            let by = u64::from(*by_ms) * 1_000;
+            match evidence
+                .sequence
+                .as_ref()
+                .and_then(|s| s.reached.iter().find(|(id, _)| id == step.as_str()))
+            {
+                Some((_, at)) if *at <= by => (true, format!("Step '{step}' at {}.", seconds(*at))),
+                Some((_, at)) => (
+                    false,
+                    format!(
+                        "Step '{step}' only at {}, after {}.",
+                        seconds(*at),
+                        seconds(by)
+                    ),
+                ),
+                None => (false, format!("Step '{step}' was never active.")),
+            }
+        }
     }
 }
 

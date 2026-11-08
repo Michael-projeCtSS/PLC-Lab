@@ -79,6 +79,9 @@ pub struct ExerciseDefinition {
     pub criteria: Vec<Criterion>,
     #[serde(default)]
     pub troubleshooting: Option<TroubleshootingSetup>,
+    /// The documented step sequence the program implements (ADR-0043).
+    #[serde(default)]
+    pub sequence: Option<crate::sequence::SequenceDefinition>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -217,6 +220,10 @@ pub enum Rule {
     NoPlcFault,
     /// No process event of this kind occurred.
     EventAbsent { event: ProcessEventKind },
+    /// The sequence monitor recorded no deviation and no step timeout (ADR-0043).
+    SequenceConforms,
+    /// The sequence step was active at some point by the given time.
+    SequenceReached { step: Identifier, by_ms: u32 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

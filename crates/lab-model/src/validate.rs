@@ -534,6 +534,21 @@ pub fn validate_exercise(
                 condition_signals(response, &mut signals);
             }
             Rule::NoPlcFault | Rule::EventAbsent { .. } => {}
+            Rule::SequenceConforms => p.check(exercise.sequence.is_some(), || {
+                format!("criterion '{}' needs a sequence definition", c.id)
+            }),
+            Rule::SequenceReached { step, .. } => p.check(
+                exercise
+                    .sequence
+                    .as_ref()
+                    .is_some_and(|s| s.step(step).is_some()),
+                || {
+                    format!(
+                        "criterion '{}' references missing sequence step '{step}'",
+                        c.id
+                    )
+                },
+            ),
         }
         for s in signals {
             p.check(evidence.contains(s), || {
@@ -542,6 +557,19 @@ pub fn validate_exercise(
         }
     }
     p.check(total > 0, || "exercise criteria award no points".into());
+    if let Some(sequence) = &exercise.sequence {
+        let program_tags: BTreeSet<&Identifier> = exercise
+            .evidence
+            .iter()
+            .filter(|e| matches!(e.source, EvidenceSource::PlcTag { .. }))
+            .map(|e| &e.name)
+            .collect();
+        p.0.extend(crate::sequence::sequence_problems(
+            sequence,
+            &evidence,
+            &program_tags,
+        ));
+    }
     if let Some(t) = &exercise.troubleshooting {
         let options: BTreeSet<&Identifier> = t.diagnosis_options.iter().map(|o| &o.id).collect();
         p.check(options.len() == t.diagnosis_options.len(), || {
