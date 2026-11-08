@@ -276,6 +276,29 @@ try {
     assert.equal(info.ok.contractVersion, 8);
     assert.equal(info.ok.execution, "manual-and-continuous");
     assert.equal(info.ok.buildContext, values.build);
+    // Build metadata from the build itself and, for a staged executable, its manifest.
+    const head = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+    }).stdout.trim();
+    assert.equal(
+      info.ok.sourceCommit,
+      head,
+      "built from the checked-out commit",
+    );
+    assert.match(info.ok.builtAt ?? "", /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+    assert.equal(
+      info.ok.distribution,
+      values.build === "release"
+        ? "UNSIGNED_DEVELOPMENT_BUILD"
+        : "DEVELOPMENT_RUN",
+    );
+    assert.equal(info.ok.signed, false, "no signing claim without a signature");
+    await page.getByRole("button", { name: "About", exact: true }).click();
+    const commit = page.getByTestId("about-commit");
+    await commit.waitFor();
+    assert.equal((await commit.innerText()).trim(), head.slice(0, 12));
+    await page.getByRole("button", { name: "HOME", exact: true }).click();
     const stale = await invoke("core_info", { contractVersion: 7 });
     assert.equal(stale.error.code, "APP-CONTRACT-VERSION");
     const unknown = await invoke("tick", { contractVersion: 8 });
