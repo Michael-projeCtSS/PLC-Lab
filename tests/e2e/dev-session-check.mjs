@@ -34,24 +34,36 @@ Lamp3 := FALSE;
 END_PROGRAM
 `;
 
+// `--exe <path>` runs the same checks against an already built development executable
+// instead of TEST_PLC_LAB.bat (which builds and starts it), for example when Windows
+// refuses a freshly relinked build but allows the one the native smoke ran.
+const exeIndex = process.argv.indexOf("--exe");
+const exe =
+  exeIndex > 0 && process.argv[exeIndex + 1]
+    ? path.resolve(root, process.argv[exeIndex + 1])
+    : null;
 const bat = path.join(root, "TEST_PLC_LAB.bat");
-const session = spawn(
-  process.env.ComSpec ?? "cmd.exe",
-  ["/d", "/s", "/c", `""${bat}""`],
-  {
-    cwd: path.join(root, "apps"),
-    env: {
-      ...process.env,
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
-      WEBVIEW2_USER_DATA_FOLDER: path.join(directory, `webview-${stamp}`),
-      PLC_LAB_DATA_DIR: path.join(directory, `data-${stamp}`),
-      PLC_LAB_NO_PAUSE: "1",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-    // cmd /s /c needs the quoted path exactly as written.
-    windowsVerbatimArguments: true,
-  },
-);
+const environment = {
+  ...process.env,
+  WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}`,
+  WEBVIEW2_USER_DATA_FOLDER: path.join(directory, `webview-${stamp}`),
+  PLC_LAB_DATA_DIR: path.join(directory, `data-${stamp}`),
+  PLC_LAB_NO_PAUSE: "1",
+};
+const launcher = exe ? path.basename(exe) : "TEST_PLC_LAB.bat";
+const session = exe
+  ? spawn(exe, [], {
+      cwd: path.join(root, "apps"),
+      env: environment,
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+  : spawn(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `""${bat}""`], {
+      cwd: path.join(root, "apps"),
+      env: environment,
+      stdio: ["ignore", "pipe", "pipe"],
+      // cmd /s /c needs the quoted path exactly as written.
+      windowsVerbatimArguments: true,
+    });
 let output = "";
 for (const stream of [session.stdout, session.stderr])
   stream.on("data", (chunk) => {
@@ -81,12 +93,12 @@ async function waitText(locator, pattern, timeout = 15_000) {
 
 let browser;
 try {
-  await check("TEST_PLC_LAB.bat opens the native window", async () => {
+  await check(`${launcher} opens the native window`, async () => {
     // The first start builds the development application; the window follows.
     const deadline = Date.now() + 15 * 60_000;
     for (;;) {
       if (exited !== null)
-        throw new Error(`TEST_PLC_LAB.bat ended (exit ${exited}) first`);
+        throw new Error(`${launcher} ended (exit ${exited}) first`);
       try {
         const r = await fetch(`http://127.0.0.1:${port}/json/version`, {
           signal: AbortSignal.timeout(1000),
@@ -107,6 +119,10 @@ try {
     if (!page) await delay(100);
   }
   assert.ok(page, "the native window has no WebView2 page");
+  // In development the window first loads the Vite dev server, which may reload once
+  // while it prepares modules: talk to the backend only once the shell has rendered.
+  await page.getByRole("navigation").first().waitFor({ timeout: 120_000 });
+  await page.waitForLoadState("load");
   const invoke = (command, request) =>
     page.evaluate(
       async ({ command, request }) => {
@@ -283,7 +299,12 @@ try {
       const lines = page.locator('[data-testid="st-editor"] .view-lines');
       const views = page.getByRole("tablist", { name: "Workspace views" });
       await views.getByRole("tab", { name: "Program" }).click();
-      const before = await lines.innerText();
+      // Monaco lays out the program after the tab opens: compare a rendered program.
+      // It renders spaces as non-breaking spaces, which \s matches.
+      const before = await waitText(
+        lines,
+        /VAR\sRETAIN\sCount[\s\S]*END_PROGRAM/,
+      );
       const theme = async (value, background, monaco) => {
         await page
           .getByRole("button", { name: "Settings", exact: true })
@@ -301,7 +322,11 @@ try {
           background,
         );
         await page.locator(`.monaco-editor.${monaco}`).first().waitFor();
-        assert.equal(await lines.innerText(), before, "program unchanged");
+        assert.equal(
+          (await lines.innerText()).trim(),
+          before,
+          "program unchanged",
+        );
       };
       await theme("light", "rgb(238, 241, 244)", "vs");
       await page.screenshot({
@@ -334,7 +359,8 @@ try {
       });
       const deadline = Date.now() + 60_000;
       while (exited === null && Date.now() < deadline) await delay(250);
-      assert.equal(exited, 0, "TEST_PLC_LAB.bat did not end cleanly");
+      assert.equal(exited, 0, `${launcher} did not end cleanly`);
+      if (exe) return;
       assert.match(output, /\[DEV\] Application closed successfully/);
       const log = await readFile(
         path.join(root, "artifacts/test-plc-lab/last-run.log"),

@@ -65,7 +65,9 @@ IPC, the Polish interface, a Free Lab ST program with `VAR RETAIN` and `FIRST_SC
 backend values, the alarm view, warm and cold restarts with their diagnostics, switching
 between the light and dark themes with the program unchanged, and a clean close. Its
 screenshots stay in `artifacts\dev-session-check`; a passing run removes its browser profile
-and data, a failing run keeps them for diagnosis.
+and data, a failing run keeps them for diagnosis. With
+`--exe target\debug\plc-lab-desktop.exe` it runs the same checks against an already built
+development application instead of starting `TEST_PLC_LAB.bat`.
 
 `npm run test:screenshots` captures the real application in both themes at 1366x768,
 1920x1080 and 2560x1440 (Home, program, process, hardware, commissioning; Polish) into
