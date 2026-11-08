@@ -13,7 +13,8 @@ import { DiagnosticsTab } from "./DiagnosticsTab";
 import { CommissioningTab } from "./CommissioningTab";
 import type { AlarmDto } from "@plc-lab/ipc";
 import { AlarmIndicator, AlarmsTab } from "./AlarmsTab";
-import { needsAcknowledgment } from "./alarmText";
+import { needsAcknowledgment, sequenceAlarmLabel } from "./alarmText";
+import { useSequenceDefinition } from "./sequenceDefinition";
 import { Inspector } from "./Inspector";
 import { Dock } from "./Dock";
 import { ForceBanner } from "./ForceBanner";
@@ -38,6 +39,7 @@ export function WorkspacePage({
 }) {
   const { t, preferences } = useInterface();
   const lab = useLab(projectId);
+  const alarmLabel = sequenceAlarmLabel(useSequenceDefinition(lab));
   const [tab, setTab] = useState<CenterTab>("program");
   const [selection, setSelection] = useState<Selection>(null);
   const [rightWidth, setRightWidth] = useState(340);
@@ -112,7 +114,11 @@ export function WorkspacePage({
       )}
       <ForceBanner lab={lab} />
       {mode === "basic" && visibleTab !== "alarms" && (
-        <AlarmIndicator alarms={plantAlarms} open={() => setTab("alarms")} />
+        <AlarmIndicator
+          alarms={plantAlarms}
+          open={() => setTab("alarms")}
+          label={alarmLabel}
+        />
       )}
       <div className="ws-body">
         {!simple && (
@@ -234,6 +240,7 @@ export function WorkspacePage({
                 selection={selection}
                 navigate={navigate}
                 simple={simple}
+                advanced={mode === "advanced"}
               />
             </aside>
           </div>

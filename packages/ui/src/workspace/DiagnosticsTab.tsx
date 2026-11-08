@@ -4,11 +4,14 @@ import { useEvidence } from "./useFrameQuery";
 import { useInterface } from "../locale";
 import { diagnosticTitle } from "../locale/messages";
 import { AlarmSummary } from "./AlarmsTab";
+import { sequenceAlarmLabel } from "./alarmText";
+import { useSequenceDefinition } from "./sequenceDefinition";
 import { DiagnosticBuffer } from "./DiagnosticBuffer";
 import type { Lab } from "./useLab";
 
 export function DiagnosticsTab({ lab }: { lab: Lab }) {
   const { t } = useInterface();
+  const sequence = useSequenceDefinition(lab);
   const { frame, workspace } = lab;
   useEvidence(lab, "diagnostic buffer");
   if (!frame || !workspace) return null;
@@ -57,7 +60,10 @@ export function DiagnosticsTab({ lab }: { lab: Lab }) {
             {frame.alarms.length === 0 && (
               <span className="muted">{t("alarm.none")}</span>
             )}
-            <AlarmSummary alarms={frame.alarms} />
+            <AlarmSummary
+              alarms={frame.alarms}
+              label={sequenceAlarmLabel(sequence)}
+            />
           </div>
         </div>
       </div>

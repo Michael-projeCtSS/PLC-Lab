@@ -1,5 +1,9 @@
 /** Alarm presentation in the interface language: conditions, priorities and states. */
-import type { AlarmDto, AlarmEventDto } from "@plc-lab/ipc";
+import type {
+  AlarmDto,
+  AlarmEventDto,
+  SequenceDefinitionDto,
+} from "@plc-lab/ipc";
 import type { useInterface } from "../locale";
 import type { TranslationKey } from "../locale/en";
 
@@ -17,6 +21,9 @@ const CONDITION: Record<string, TranslationKey> = {
   FIELD_POWER_LOST: "alarm.code.FIELD_POWER_LOST",
   MODULE_FAULT: "alarm.code.MODULE_FAULT",
   COMMUNICATION_LOST: "alarm.code.COMMUNICATION_LOST",
+  SEQUENCE_TIMEOUT: "alarm.code.SEQUENCE_TIMEOUT",
+  SEQUENCE_DEVIATION: "alarm.code.SEQUENCE_DEVIATION",
+  SEQUENCE_INTERLOCK: "alarm.code.SEQUENCE_INTERLOCK",
 };
 const PRIORITY: Record<AlarmDto["priority"], TranslationKey> = {
   CRITICAL: "alarm.priority.CRITICAL",
@@ -53,6 +60,31 @@ export const TRANSITION: Record<AlarmEventDto["transition"], TranslationKey> = {
   RETURNED_TO_NORMAL: "alarm.transition.RETURNED_TO_NORMAL",
   WITHDRAWN: "alarm.transition.WITHDRAWN",
 };
+
+/** An alarm's source as shown: content names are localized, product labels are not. */
+export type AlarmLabel = (a: { id: string; sourceLabel: string }) => string;
+export const plainLabel: AlarmLabel = (a) => a.sourceLabel;
+
+/**
+ * Sequence alarms (`sequence.<id>.…`) carry the English sequence or interlock name; the
+ * workspace shows the localized name from the exercise's sequence definition.
+ */
+export function sequenceAlarmLabel(
+  sequence: SequenceDefinitionDto | null,
+): AlarmLabel {
+  if (!sequence) return plainLabel;
+  const prefix = `sequence.${sequence.id}.`;
+  return (a) => {
+    if (!a.id.startsWith(prefix)) return a.sourceLabel;
+    const rest = a.id.slice(prefix.length);
+    const interlock = rest.startsWith("interlock.")
+      ? sequence.interlocks.find(
+          (i) => i.id === rest.slice("interlock.".length),
+        )
+      : undefined;
+    return interlock?.name ?? sequence.name;
+  };
+}
 
 /** The condition text in the interface language; the canonical text for unknown codes. */
 export function alarmCondition(t: Translate, code: string, text: string) {

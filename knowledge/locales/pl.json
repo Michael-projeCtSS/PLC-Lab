@@ -19946,6 +19946,825 @@
           "text": "Brak profilu symulacji; pojęcia WAGO to wiedza uzupełniająca. Programy napisane dla profilu `generic.iec` wykorzystują te same idee tekstu strukturalnego (Structured Text) IEC 61131-3. **KONCEPCYJNIE**."
         }
       ]
+    },
+    {
+      "id": "ex.tank-sequence",
+      "file": "exercises/ex-tank-sequence.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Batch sequence with permissives, interlocks and HOLD",
+          "text": "Sekwencja wsadu z warunkami zezwalającymi, blokadami i wstrzymaniem"
+        },
+        {
+          "path": "summary",
+          "source": "Program the tank batch as a documented step sequence: open the inlet, fill, close the inlet, drain, complete. Start is refused unless its permissives hold, interlocks protect the plant, Hold pauses a running step and Stop aborts. The sequence inspector shows what each step waits for.",
+          "text": "Zaprogramuj wsad zbiornika jako udokumentowaną sekwencję kroków: otwarcie zaworu dopływowego, napełnianie, zamknięcie zaworu, opróżnianie i zakończenie. Start jest odrzucany, dopóki nie są spełnione warunki zezwalające, blokady chronią instalację, Hold wstrzymuje aktywny krok, a Stop przerywa wsad. Inspektor sekwencji pokazuje, na co czeka każdy krok."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Program a step sequence with permissives, interlocks, HOLD and RESUME",
+          "text": "Zaprogramować sekwencję kroków z warunkami zezwalającymi, blokadami, wstrzymaniem i wznowieniem"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Read the sequence inspector to find what a step is waiting for",
+          "text": "Odczytać z inspektora sekwencji, na co czeka krok"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Step 0 (idle): Start begins a batch only while StopPB is TRUE, HoldPB is FALSE, LevelHigh is FALSE and InletOpen is FALSE.",
+          "text": "Krok 0 (spoczynek): Start rozpoczyna wsad tylko wtedy, gdy StopPB = TRUE, HoldPB = FALSE, LevelHigh = FALSE i InletOpen = FALSE."
+        },
+        {
+          "path": "instructions.1",
+          "source": "Step 1 (open inlet): InletValve on until InletOpen reports the open position.",
+          "text": "Krok 1 (otwarcie dopływu): InletValve włączony, aż InletOpen zgłosi położenie otwarte."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Step 2 (fill): keep InletValve on until LevelHigh.",
+          "text": "Krok 2 (napełnianie): InletValve pozostaje włączony do zadziałania LevelHigh."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Step 3 (close inlet): InletValve off; continue when InletOpen is FALSE and LevelLow is FALSE.",
+          "text": "Krok 3 (zamknięcie dopływu): InletValve wyłączony; przejście dalej, gdy InletOpen = FALSE i LevelLow = FALSE."
+        },
+        {
+          "path": "instructions.4",
+          "source": "Step 4 (drain): DrainPump on until LevelLow.",
+          "text": "Krok 4 (opróżnianie): DrainPump pracuje do zadziałania LevelLow."
+        },
+        {
+          "path": "instructions.5",
+          "source": "Step 5 (complete): outputs off; StartPB returns to step 0 for the next batch.",
+          "text": "Krok 5 (zakończenie): wyjścia wyłączone; StartPB przywraca krok 0 dla kolejnego wsadu."
+        },
+        {
+          "path": "instructions.6",
+          "source": "In steps 1 to 4, HoldPB sets Held: both outputs off and the step stays. StartPB clears Held and the same step continues.",
+          "text": "W krokach od 1 do 4 HoldPB ustawia Held: oba wyjścia wyłączone, krok pozostaje. StartPB kasuje Held i ten sam krok jest kontynuowany."
+        },
+        {
+          "path": "instructions.7",
+          "source": "StopPB FALSE (Stop pressed) returns to step 0 from every step and clears Held.",
+          "text": "StopPB = FALSE (wciśnięty Stop) z każdego kroku przywraca krok 0 i kasuje Held."
+        },
+        {
+          "path": "instructions.8",
+          "source": "Open the Sequence tab: it shows the active step, what it waits for, permissives, interlocks, step timers and the history.",
+          "text": "Otwórz kartę Sekwencja: pokazuje aktywny krok, warunek, na który czeka, warunki zezwalające, blokady, czasy kroków i historię."
+        },
+        {
+          "path": "hints.0",
+          "source": "Handle Stop first, then HOLD, then the CASE: skip the CASE while Held is TRUE.",
+          "text": "Najpierw obsłuż Stop, potem wstrzymanie, na końcu CASE; pomiń CASE, gdy Held = TRUE."
+        },
+        {
+          "path": "hints.1",
+          "source": "Write the outputs after the CASE from Step and Held: InletValve := (Step = 1 OR Step = 2) AND NOT Held;",
+          "text": "Wyjścia zapisz po CASE na podstawie Step i Held: InletValve := (Step = 1 OR Step = 2) AND NOT Held;"
+        },
+        {
+          "path": "hints.2",
+          "source": "If Start does nothing, the Sequence tab lists the permissive or interlock that refuses it.",
+          "text": "Jeśli Start nic nie robi, karta Sekwencja pokazuje warunek zezwalający lub blokadę, która go odrzuca."
+        },
+        {
+          "path": "sequence.name",
+          "source": "Tank batch",
+          "text": "Wsad zbiornika"
+        },
+        {
+          "path": "sequence.steps.0.name",
+          "source": "Idle",
+          "text": "Spoczynek"
+        },
+        {
+          "path": "sequence.steps.1.name",
+          "source": "Open the inlet valve",
+          "text": "Otwarcie zaworu dopływowego"
+        },
+        {
+          "path": "sequence.steps.2.name",
+          "source": "Fill the tank",
+          "text": "Napełnianie zbiornika"
+        },
+        {
+          "path": "sequence.steps.3.name",
+          "source": "Close the inlet valve",
+          "text": "Zamknięcie zaworu dopływowego"
+        },
+        {
+          "path": "sequence.steps.4.name",
+          "source": "Drain the tank",
+          "text": "Opróżnianie zbiornika"
+        },
+        {
+          "path": "sequence.steps.5.name",
+          "source": "Batch complete",
+          "text": "Wsad zakończony"
+        },
+        {
+          "path": "sequence.transitions.0.name",
+          "source": "Start requested",
+          "text": "Żądanie startu"
+        },
+        {
+          "path": "sequence.transitions.0.permissives.0.name",
+          "source": "Stop button released",
+          "text": "Przycisk Stop zwolniony"
+        },
+        {
+          "path": "sequence.transitions.0.permissives.1.name",
+          "source": "Hold button released",
+          "text": "Przycisk Hold zwolniony"
+        },
+        {
+          "path": "sequence.transitions.0.permissives.2.name",
+          "source": "Tank below the high level switch",
+          "text": "Poziom poniżej czujnika górnego"
+        },
+        {
+          "path": "sequence.transitions.1.name",
+          "source": "Inlet valve reports open",
+          "text": "Zawór dopływowy zgłasza otwarcie"
+        },
+        {
+          "path": "sequence.transitions.2.name",
+          "source": "High level reached",
+          "text": "Osiągnięty poziom górny"
+        },
+        {
+          "path": "sequence.transitions.3.name",
+          "source": "Inlet valve left the open position",
+          "text": "Zawór dopływowy opuścił położenie otwarte"
+        },
+        {
+          "path": "sequence.transitions.4.name",
+          "source": "Low level reached",
+          "text": "Osiągnięty poziom dolny"
+        },
+        {
+          "path": "sequence.transitions.5.name",
+          "source": "Start for the next batch",
+          "text": "Start kolejnego wsadu"
+        },
+        {
+          "path": "sequence.interlocks.0.name",
+          "source": "Inlet valve not closed",
+          "text": "Zawór dopływowy niezamknięty"
+        },
+        {
+          "path": "sequence.interlocks.1.name",
+          "source": "Tank at the low level: do not drain",
+          "text": "Zbiornik na poziomie dolnym: nie opróżniać"
+        },
+        {
+          "path": "sequence.interlocks.2.name",
+          "source": "Stop pressed",
+          "text": "Wciśnięty Stop"
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "One complete batch",
+          "text": "Jeden pełny wsad"
+        },
+        {
+          "path": "scenarios.1.title",
+          "source": "Start while Hold is pressed",
+          "text": "Start przy wciśniętym przycisku Hold"
+        },
+        {
+          "path": "scenarios.2.title",
+          "source": "Hold during filling, then resume",
+          "text": "Wstrzymanie podczas napełniania i wznowienie"
+        },
+        {
+          "path": "scenarios.3.title",
+          "source": "Stop during filling",
+          "text": "Stop podczas napełniania"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "Start opens the inlet valve step",
+          "text": "Start uruchamia krok otwarcia zaworu dopływowego"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "The sequence did not reach the fill step within 3.5 s after Start.",
+          "text": "Sekwencja nie osiągnęła kroku napełniania w ciągu 3.5 s od Startu."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "The batch completes",
+          "text": "Wsad zostaje zakończony"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "The batch did not reach step 5 (complete) within 40 s.",
+          "text": "Wsad nie osiągnął kroku 5 (zakończenie) w ciągu 40 s."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "The program follows the documented sequence",
+          "text": "Program realizuje udokumentowaną sekwencję"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "The sequence monitor recorded a deviation or a step timeout.",
+          "text": "Monitor sekwencji zarejestrował odchylenie lub przekroczenie czasu kroku."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "Inlet valve and drain pump never run together",
+          "text": "Zawór dopływowy i pompa spustowa nigdy nie pracują jednocześnie"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "InletValve and DrainPump were on together.",
+          "text": "InletValve i DrainPump były włączone jednocześnie."
+        },
+        {
+          "path": "criteria.4.title",
+          "source": "No overflow",
+          "text": "Brak przelania"
+        },
+        {
+          "path": "criteria.4.onFail",
+          "source": "The tank overflowed.",
+          "text": "Zbiornik się przelał."
+        },
+        {
+          "path": "criteria.5.title",
+          "source": "A pressed Hold button refuses the start",
+          "text": "Wciśnięty przycisk Hold blokuje start"
+        },
+        {
+          "path": "criteria.5.onFail",
+          "source": "The batch started although the Hold button was pressed.",
+          "text": "Wsad wystartował mimo wciśniętego przycisku Hold."
+        },
+        {
+          "path": "criteria.6.title",
+          "source": "HOLD keeps the step and stops the plant",
+          "text": "Wstrzymanie zachowuje krok i zatrzymuje instalację"
+        },
+        {
+          "path": "criteria.6.onFail",
+          "source": "During HOLD the sequence did not stay in the fill step with both outputs off.",
+          "text": "Podczas wstrzymania sekwencja nie pozostała w kroku napełniania z wyłączonymi oboma wyjściami."
+        },
+        {
+          "path": "criteria.7.title",
+          "source": "Start resumes the held batch",
+          "text": "Start wznawia wstrzymany wsad"
+        },
+        {
+          "path": "criteria.7.onFail",
+          "source": "After Start the held batch did not continue to step 5.",
+          "text": "Po Starcie wstrzymany wsad nie dotarł do kroku 5."
+        },
+        {
+          "path": "criteria.8.title",
+          "source": "Nothing advances while held",
+          "text": "Podczas wstrzymania nic nie postępuje"
+        },
+        {
+          "path": "criteria.8.onFail",
+          "source": "The sequence monitor recorded a deviation during or after HOLD.",
+          "text": "Monitor sekwencji zarejestrował odchylenie podczas wstrzymania lub po nim."
+        },
+        {
+          "path": "criteria.9.title",
+          "source": "Stop aborts the batch at once",
+          "text": "Stop natychmiast przerywa wsad"
+        },
+        {
+          "path": "criteria.9.onFail",
+          "source": "Stop did not return the sequence to step 0 with the valve closed within 200 ms.",
+          "text": "Stop nie przywrócił kroku 0 z zamkniętym zaworem w ciągu 200 ms."
+        }
+      ]
+    },
+    {
+      "id": "ts.tank-sequence-stalls",
+      "file": "exercises/ts-tank-sequence-stalls.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "The batch sequence stalls after Start",
+          "text": "Sekwencja wsadu zatrzymuje się po Starcie"
+        },
+        {
+          "path": "summary",
+          "source": "The tank batch sequence starts, but it never gets past its first step and a sequence alarm appears. Use the sequence inspector and the plant to find the cause, repair it and prove that the batch completes again.",
+          "text": "Sekwencja wsadu startuje, ale nie wychodzi poza pierwszy krok i pojawia się alarm sekwencji. Użyj inspektora sekwencji i obserwacji instalacji, aby znaleźć przyczynę, usuń ją i udowodnij, że wsad znów się kończy."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Use the sequence inspector to find the condition a step is waiting for",
+          "text": "Wskazać w inspektorze sekwencji warunek, na który czeka krok"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Separate a command from the field device's response",
+          "text": "Odróżnić polecenie od reakcji urządzenia obiektowego"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Verify a repair with a complete batch",
+          "text": "Zweryfikować naprawę pełnym wsadem"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Start the simulation and press Start, as the operator did.",
+          "text": "Uruchom symulację i naciśnij Start, tak jak zrobił to operator."
+        },
+        {
+          "path": "instructions.1",
+          "source": "Open the Sequence tab: note the active step, the transition it waits for and the step timer.",
+          "text": "Otwórz kartę Sekwencja: zanotuj aktywny krok, przejście, na które czeka, i czas kroku."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Compare what the program commands with what the plant does in the Process view and the alarms.",
+          "text": "Porównaj polecenia programu z zachowaniem instalacji w widoku procesu i w alarmach."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Submit the root cause you can prove, apply the repair, then run Check: the batch must complete without a sequence fault.",
+          "text": "Zgłoś przyczynę, którą potrafisz udowodnić, wykonaj naprawę, a następnie uruchom sprawdzanie: wsad musi się zakończyć bez błędu sekwencji."
+        },
+        {
+          "path": "hints.0",
+          "source": "A step that waits for feedback needs the field device to move. Does the command reach the device?",
+          "text": "Krok czekający na sygnał zwrotny wymaga ruchu urządzenia obiektowego. Czy polecenie do niego dociera?"
+        },
+        {
+          "path": "hints.1",
+          "source": "Watch the tank level while the first step is active.",
+          "text": "Obserwuj poziom w zbiorniku, gdy aktywny jest pierwszy krok."
+        },
+        {
+          "path": "sequence.name",
+          "source": "Tank batch",
+          "text": "Wsad zbiornika"
+        },
+        {
+          "path": "sequence.steps.0.name",
+          "source": "Idle",
+          "text": "Spoczynek"
+        },
+        {
+          "path": "sequence.steps.1.name",
+          "source": "Open the inlet valve",
+          "text": "Otwarcie zaworu dopływowego"
+        },
+        {
+          "path": "sequence.steps.2.name",
+          "source": "Fill the tank",
+          "text": "Napełnianie zbiornika"
+        },
+        {
+          "path": "sequence.steps.3.name",
+          "source": "Close the inlet valve",
+          "text": "Zamknięcie zaworu dopływowego"
+        },
+        {
+          "path": "sequence.steps.4.name",
+          "source": "Drain the tank",
+          "text": "Opróżnianie zbiornika"
+        },
+        {
+          "path": "sequence.steps.5.name",
+          "source": "Batch complete",
+          "text": "Wsad zakończony"
+        },
+        {
+          "path": "sequence.transitions.0.name",
+          "source": "Start requested",
+          "text": "Żądanie startu"
+        },
+        {
+          "path": "sequence.transitions.0.permissives.0.name",
+          "source": "Stop button released",
+          "text": "Przycisk Stop zwolniony"
+        },
+        {
+          "path": "sequence.transitions.0.permissives.1.name",
+          "source": "Hold button released",
+          "text": "Przycisk Hold zwolniony"
+        },
+        {
+          "path": "sequence.transitions.0.permissives.2.name",
+          "source": "Tank below the high level switch",
+          "text": "Poziom poniżej czujnika górnego"
+        },
+        {
+          "path": "sequence.transitions.1.name",
+          "source": "Inlet valve reports open",
+          "text": "Zawór dopływowy zgłasza otwarcie"
+        },
+        {
+          "path": "sequence.transitions.2.name",
+          "source": "High level reached",
+          "text": "Osiągnięty poziom górny"
+        },
+        {
+          "path": "sequence.transitions.3.name",
+          "source": "Inlet valve left the open position",
+          "text": "Zawór dopływowy opuścił położenie otwarte"
+        },
+        {
+          "path": "sequence.transitions.4.name",
+          "source": "Low level reached",
+          "text": "Osiągnięty poziom dolny"
+        },
+        {
+          "path": "sequence.transitions.5.name",
+          "source": "Start for the next batch",
+          "text": "Start kolejnego wsadu"
+        },
+        {
+          "path": "sequence.interlocks.0.name",
+          "source": "Inlet valve not closed",
+          "text": "Zawór dopływowy niezamknięty"
+        },
+        {
+          "path": "sequence.interlocks.1.name",
+          "source": "Tank at the low level: do not drain",
+          "text": "Zbiornik na poziomie dolnym: nie opróżniać"
+        },
+        {
+          "path": "sequence.interlocks.2.name",
+          "source": "Stop pressed",
+          "text": "Wciśnięty Stop"
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "One complete batch",
+          "text": "Jeden pełny wsad"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "The batch completes",
+          "text": "Wsad zostaje zakończony"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "The batch did not reach step 5 (complete) within 40 s.",
+          "text": "Wsad nie osiągnął kroku 5 (zakończenie) w ciągu 40 s."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "No sequence fault",
+          "text": "Brak błędu sekwencji"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "The sequence monitor recorded a step timeout or a deviation.",
+          "text": "Monitor sekwencji zarejestrował przekroczenie czasu kroku lub odchylenie."
+        },
+        {
+          "path": "troubleshooting.symptom",
+          "source": "After Start the batch never gets past step 1 and a sequence alarm appears. The tank level does not change.",
+          "text": "Po Starcie wsad nie wychodzi poza krok 1 i pojawia się alarm sekwencji. Poziom w zbiorniku się nie zmienia."
+        },
+        {
+          "path": "troubleshooting.reportedBy",
+          "source": "Shift operator",
+          "text": "Operator zmiany"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.0.label",
+          "source": "The inlet valve XV-101 does not move although it is commanded open",
+          "text": "Zawór dopływowy XV-101 nie porusza się, choć ma polecenie otwarcia"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.1.label",
+          "source": "The inlet valve opens but its open limit switch never reports it",
+          "text": "Zawór dopływowy otwiera się, ale jego wyłącznik krańcowy otwarcia tego nie zgłasza"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.2.label",
+          "source": "The program never commands InletValve",
+          "text": "Program nigdy nie wysterowuje InletValve"
+        },
+        {
+          "path": "troubleshooting.diagnosisOptions.3.label",
+          "source": "The high level switch LSH-103 is faulty",
+          "text": "Czujnik poziomu górnego LSH-103 jest uszkodzony"
+        },
+        {
+          "path": "troubleshooting.repairs.0.label",
+          "source": "Free and service the inlet valve XV-101",
+          "text": "Odblokuj i serwisuj zawór dopływowy XV-101"
+        },
+        {
+          "path": "troubleshooting.repairs.1.label",
+          "source": "Replace the open limit switch of XV-101",
+          "text": "Wymień wyłącznik krańcowy otwarcia zaworu XV-101"
+        },
+        {
+          "path": "troubleshooting.repairs.2.label",
+          "source": "Replace the high level switch LSH-103",
+          "text": "Wymień czujnik poziomu górnego LSH-103"
+        },
+        {
+          "path": "troubleshooting.debrief.rootCause",
+          "source": "The inlet valve XV-101 was mechanically stuck closed. The program commanded it open in step 1, but the valve never moved.",
+          "text": "Zawór dopływowy XV-101 był mechanicznie zablokowany w położeniu zamkniętym. Program wysterował otwarcie w kroku 1, ale zawór się nie poruszył."
+        },
+        {
+          "path": "troubleshooting.debrief.evidence.0",
+          "source": "The Sequence tab showed step 1 waiting for InletOpen = TRUE while InletValve was TRUE.",
+          "text": "Karta Sekwencja pokazywała krok 1 czekający na InletOpen = TRUE przy InletValve = TRUE."
+        },
+        {
+          "path": "troubleshooting.debrief.evidence.1",
+          "source": "The step timer ran out after 5 s and the step timeout alarm activated.",
+          "text": "Czas kroku upłynął po 5 s i aktywował się alarm przekroczenia czasu kroku."
+        },
+        {
+          "path": "troubleshooting.debrief.evidence.2",
+          "source": "The tank level did not rise, so no water flowed: the valve itself did not open.",
+          "text": "Poziom w zbiorniku nie rósł, więc nie było przepływu: sam zawór się nie otworzył."
+        },
+        {
+          "path": "troubleshooting.debrief.repair",
+          "source": "Free and service the inlet valve, then run a complete batch to verify.",
+          "text": "Odblokuj i serwisuj zawór dopływowy, a następnie sprawdź działanie pełnym wsadem."
+        },
+        {
+          "path": "troubleshooting.debrief.reasoning",
+          "source": "A missing limit switch signal alone would leave the tank filling; a level that does not move proves that the valve did not open although it was commanded.",
+          "text": "Sam brak sygnału z wyłącznika krańcowego nie zatrzymałby napełniania; poziom, który się nie zmienia, dowodzi, że zawór nie otworzył się mimo polecenia."
+        }
+      ]
+    },
+    {
+      "id": "lesson.sequences",
+      "file": "lessons/lesson-26.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Step sequences",
+          "text": "Sekwencje kroków"
+        },
+        {
+          "path": "summary",
+          "source": "Divide a batch into steps, decide when each step ends, and keep it safe with permissives, interlocks, timeouts and HOLD.",
+          "text": "Podziel wsad na kroki, określ, kiedy każdy krok się kończy, i zabezpiecz go warunkami zezwalającymi, blokadami, limitami czasu oraz wstrzymaniem."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Describe a process as steps and transition conditions",
+          "text": "Opisać proces jako kroki i warunki przejść"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Tell permissives, interlocks, timeouts and HOLD apart",
+          "text": "Odróżnić warunki zezwalające, blokady, limity czasu i wstrzymanie"
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "A process in steps",
+          "text": "Proces w krokach"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Many machines work in phases: open a valve, fill, close the valve, drain. A **sequence** makes each phase a **step**. A **transition condition** decides when the next step starts. The program keeps the active step in a variable, for example `Step : INT`.",
+          "text": "Wiele maszyn pracuje fazami: otwarcie zaworu, napełnianie, zamknięcie zaworu, opróżnianie. **Sekwencja** zamienia każdą fazę w **krok**. **Warunek przejścia** decyduje, kiedy zaczyna się następny krok. Program przechowuje aktywny krok w zmiennej, na przykład `Step : INT`."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "The tank batch",
+          "text": "Wsad zbiornika"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "Each box is a step, each arrow a transition with its condition.",
+          "text": "Każde pole to krok, każda strzałka to przejście z jego warunkiem."
+        },
+        {
+          "path": "sections.1.diagram",
+          "source": "[0 Idle] --Start--> [1 Open inlet] --InletOpen--> [2 Fill]\n    ^                                                  |\n  Start                                            LevelHigh\n    |                                                  v\n[5 Complete] <--LevelLow-- [4 Drain] <--NOT InletOpen-- [3 Close inlet]",
+          "text": "[0 Spoczynek] --Start--> [1 Otwarcie dopływu] --InletOpen--> [2 Napełnianie]\n    ^                                                         |\n  Start                                                   LevelHigh\n    |                                                         v\n[5 Koniec] <--LevelLow-- [4 Opróżnianie] <--NOT InletOpen-- [3 Zamknięcie dopływu]"
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "One step in CASE",
+          "text": "Jeden krok w CASE"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "Step 2 fills until the high level switch; the output is written once, after the CASE.",
+          "text": "Krok 2 napełnia zbiornik do czujnika poziomu górnego; wyjście jest zapisywane raz, po CASE."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Permissives, interlocks and HOLD",
+          "text": "Warunki zezwalające, blokady i wstrzymanie"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "A **permissive** must be TRUE to start, for example Stop released and tank not full. An **interlock** protects the plant while the sequence runs: it blocks the start, holds the progress or aborts the sequence. **HOLD** pauses the active step with the plant in a safe state; **RESUME** continues the same step. A **step timeout** reports a step that does not finish in time.",
+          "text": "**Warunek zezwalający** musi być spełniony (TRUE), aby wystartować, na przykład zwolniony Stop i niepełny zbiornik. **Blokada** chroni instalację podczas pracy sekwencji: blokuje start, wstrzymuje postęp albo przerywa sekwencję. **Wstrzymanie (HOLD)** zatrzymuje aktywny krok z instalacją w stanie bezpiecznym; **wznowienie (RESUME)** kontynuuje ten sam krok. **Limit czasu kroku** zgłasza krok, który nie kończy się na czas."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "Common mistake",
+          "text": "Częsty błąd"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "Switching outputs inside several CASE branches and forgetting one. Write each output once after the CASE, from the step: then every step change switches the plant correctly.",
+          "text": "Przełączanie wyjść w kilku gałęziach CASE i pominięcie jednej z nich. Każde wyjście zapisz raz, po CASE, na podstawie kroku: wtedy każda zmiana kroku poprawnie przełącza instalację."
+        },
+        {
+          "path": "sections.5.heading",
+          "source": "Which one?",
+          "text": "Rozpoznaj przyczynę"
+        },
+        {
+          "path": "sections.5.body",
+          "source": "Read the sequence inspector.",
+          "text": "Odczytaj inspektor sekwencji."
+        },
+        {
+          "path": "sections.5.question.question",
+          "source": "Start does nothing and the Sequence tab shows 'Hold button released: not satisfied'. What refuses the start?",
+          "text": "Start nic nie robi, a karta Sekwencja pokazuje „Przycisk Hold zwolniony: niespełniony”. Co odrzuca start?"
+        },
+        {
+          "path": "sections.5.question.options.0",
+          "source": "A permissive",
+          "text": "Warunek zezwalający"
+        },
+        {
+          "path": "sections.5.question.options.1",
+          "source": "A step timeout",
+          "text": "Przekroczenie czasu kroku"
+        },
+        {
+          "path": "sections.5.question.options.2",
+          "source": "A PLC runtime fault",
+          "text": "Błąd wykonania programu w sterowniku"
+        },
+        {
+          "path": "sections.5.question.explanation",
+          "source": "An unsatisfied permissive refuses the start. It is not a fault: release the Hold button and press Start again.",
+          "text": "Niespełniony warunek zezwalający odrzuca start. To nie jest błąd: zwolnij przycisk Hold i ponownie naciśnij Start."
+        },
+        {
+          "path": "sections.6.heading",
+          "source": "Practice: tank batch sequence",
+          "text": "Ćwiczenie: sekwencja wsadu zbiornika"
+        },
+        {
+          "path": "sections.6.body",
+          "source": "Program the batch with permissives, interlocks, HOLD and Stop, and follow it in the Sequence tab.",
+          "text": "Zaprogramuj wsad z warunkami zezwalającymi, blokadami, wstrzymaniem i Stopem, a następnie śledź go na karcie Sekwencja."
+        },
+        {
+          "path": "sections.7.heading",
+          "source": "Summary and troubleshooting note",
+          "text": "Podsumowanie i wskazówka diagnostyczna"
+        },
+        {
+          "path": "sections.7.body",
+          "source": "A sequence is steps plus transition conditions. Permissives allow the start, interlocks protect the plant, timeouts detect a step that never finishes and HOLD pauses safely.\n\n**Troubleshooting note:** When a sequence stops, look at what the active step waits for: the inspector shows the condition with its actual value.",
+          "text": "Sekwencja to kroki i warunki przejść. Warunki zezwalające pozwalają na start, blokady chronią instalację, limity czasu wykrywają krok, który się nie kończy, a wstrzymanie zatrzymuje pracę w bezpieczny sposób.\n\n**Wskazówka diagnostyczna:** Gdy sekwencja staje, sprawdź, na co czeka aktywny krok: inspektor pokazuje warunek z jego rzeczywistą wartością."
+        },
+        {
+          "path": "checkpoint.0.question",
+          "source": "What happens to a step timer during HOLD?",
+          "text": "Co dzieje się z czasem kroku podczas wstrzymania?"
+        },
+        {
+          "path": "checkpoint.0.options.0",
+          "source": "It keeps running",
+          "text": "Biegnie dalej"
+        },
+        {
+          "path": "checkpoint.0.options.1",
+          "source": "It pauses and continues after RESUME",
+          "text": "Zatrzymuje się i biegnie dalej po wznowieniu"
+        },
+        {
+          "path": "checkpoint.0.options.2",
+          "source": "It starts again from zero",
+          "text": "Liczy od zera"
+        },
+        {
+          "path": "checkpoint.0.explanation",
+          "source": "HOLD pauses the step. Its time continues after RESUME, so a pause does not cause a timeout.",
+          "text": "Wstrzymanie zatrzymuje krok. Jego czas biegnie dalej po wznowieniu, więc przerwa nie powoduje przekroczenia czasu."
+        },
+        {
+          "path": "checkpoint.1.question",
+          "source": "What does the sequence inspector do?",
+          "text": "Co robi inspektor sekwencji?"
+        },
+        {
+          "path": "checkpoint.1.options.0",
+          "source": "It switches the outputs off when a step times out",
+          "text": "Wyłącza wyjścia po przekroczeniu czasu kroku"
+        },
+        {
+          "path": "checkpoint.1.options.1",
+          "source": "It observes the program and shows what the active step waits for",
+          "text": "Obserwuje program i pokazuje, na co czeka aktywny krok"
+        },
+        {
+          "path": "checkpoint.1.options.2",
+          "source": "It takes over the plant during HOLD",
+          "text": "Przejmuje sterowanie instalacją podczas wstrzymania"
+        },
+        {
+          "path": "checkpoint.1.explanation",
+          "source": "The inspector only observes. The PLC program stays the only controller of the plant.",
+          "text": "Inspektor tylko obserwuje. Program sterownika pozostaje jedynym sterowaniem instalacji."
+        }
+      ]
+    },
+    {
+      "id": "fundamentals.sequences",
+      "file": "fundamentals/sequences.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Step sequences: steps, transitions, permissives and interlocks",
+          "text": "Sekwencje kroków: kroki, przejścia, warunki zezwalające i blokady"
+        },
+        {
+          "path": "summary",
+          "source": "A sequence divides a process into steps. Each step commands the plant and a transition condition decides when the next step begins. Permissives allow a start, interlocks protect the plant, timeouts detect a step that never finishes and HOLD pauses a running step.",
+          "text": "Sekwencja dzieli proces na kroki. Każdy krok steruje instalacją, a warunek przejścia decyduje, kiedy zaczyna się następny krok. Warunki zezwalające pozwalają na start, blokady chronią instalację, limity czasu wykrywają krok, który się nie kończy, a wstrzymanie (HOLD) zatrzymuje aktywny krok."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Steps and transitions",
+          "text": "Kroki i przejścia"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "- A **step** is one phase of the process, for example *Fill the tank*. While a step is active, the program sets the outputs that belong to it.\n- A **transition** connects two steps. Its **condition** is checked in every scan; when it is TRUE, the next step becomes active.\n- In a simple sequence exactly one step is active at a time. In Structured Text the active step is usually an INT variable and a `CASE` statement:\n\n```\nCASE Step OF\n    1: IF InletOpen THEN Step := 2; END_IF;\n    2: IF LevelHigh THEN Step := 3; END_IF;\nEND_CASE;\n```",
+          "text": "- **Krok** to jedna faza procesu, na przykład *napełnianie zbiornika*. Gdy krok jest aktywny, program ustawia należące do niego wyjścia.\n- **Przejście** łączy dwa kroki. Jego **warunek** jest sprawdzany w każdym cyklu; gdy jest spełniony (TRUE), aktywny staje się następny krok.\n- W prostej sekwencji aktywny jest zawsze dokładnie jeden krok. W Structured Text aktywny krok to zwykle zmienna INT i instrukcja `CASE`:\n\n```\nCASE Step OF\n    1: IF InletOpen THEN Step := 2; END_IF;\n    2: IF LevelHigh THEN Step := 3; END_IF;\nEND_CASE;\n```"
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Permissives",
+          "text": "Warunki zezwalające"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "A **permissive** must be TRUE before a transition may proceed, typically the start of a batch: Stop released, tank not full, no hold request. An unsatisfied permissive is not a fault. It explains why the operation cannot begin, and the operator can remove the reason.",
+          "text": "**Warunek zezwalający** musi być spełniony, zanim przejście może nastąpić, zwykle przy starcie wsadu: Stop zwolniony, zbiornik niepełny, brak żądania wstrzymania. Niespełniony warunek zezwalający nie jest błędem. Wyjaśnia, dlaczego operacja nie może się rozpocząć, a operator może usunąć przyczynę."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Interlocks and their reactions",
+          "text": "Blokady i ich reakcje"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "An **interlock** watches a protective condition while the sequence runs. Its reaction is defined for each interlock:\n- **Block start**: the sequence must not leave its idle step while the interlock is active.\n- **Hold progress**: the sequence must not advance to the next step.\n- **Abort**: the program must return to the idle step within a reaction time.\n\nPLC interlocks protect equipment and product. People are protected by separate safety systems; PLC Lab does not model safety controllers.",
+          "text": "**Blokada** nadzoruje warunek ochronny podczas pracy sekwencji. Reakcja jest określona dla każdej blokady:\n- **Blokada startu**: sekwencja nie może opuścić kroku spoczynkowego, dopóki blokada jest aktywna.\n- **Wstrzymanie postępu**: sekwencja nie może przejść do następnego kroku.\n- **Przerwanie**: program musi wrócić do kroku spoczynkowego w określonym czasie reakcji.\n\nBlokady w sterowniku PLC chronią urządzenia i produkt. Ludzi chronią oddzielne systemy bezpieczeństwa; PLC Lab nie modeluje sterowników bezpieczeństwa."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Step timeouts",
+          "text": "Limity czasu kroków"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "A step that waits for feedback can wait forever: a valve that does not move, a level that does not rise. A **step timeout** limits how long a step may stay active. PLC Lab measures it in simulated world time, so the same test always gives the same result. The time does not run while the PLC is in STOP or the sequence is held.",
+          "text": "Krok czekający na sygnał zwrotny może czekać bez końca: zawór się nie porusza, poziom nie rośnie. **Limit czasu kroku** ogranicza, jak długo krok może pozostać aktywny. PLC Lab mierzy go w symulowanym czasie świata, więc ten sam test zawsze daje ten sam wynik. Czas nie biegnie, gdy sterownik jest w trybie STOP lub sekwencja jest wstrzymana."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "HOLD, RESUME and STOP",
+          "text": "Wstrzymanie (HOLD), wznowienie (RESUME) i STOP"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "- **HOLD** pauses a running step: the program keeps scanning, puts the plant into a safe state and keeps the step.\n- **RESUME** continues the same step. The conditions are checked again; a sequence must not resume into an active interlock.\n- **STOP** (an abort) returns the sequence to its idle step.\n\nHOLD is not PLC STOP: in PLC STOP no scan runs at all.",
+          "text": "- **HOLD** wstrzymuje aktywny krok: program nadal wykonuje cykle, ustawia instalację w stanie bezpiecznym i zachowuje krok.\n- **RESUME** kontynuuje ten sam krok. Warunki są sprawdzane ponownie; sekwencja nie może zostać wznowiona przy aktywnej blokadzie.\n- **STOP** (przerwanie) przywraca sekwencję do kroku spoczynkowego.\n\nHOLD to nie tryb STOP sterownika: w trybie STOP sterownik w ogóle nie wykonuje cykli."
+        },
+        {
+          "path": "sections.5.heading",
+          "source": "The sequence inspector",
+          "text": "Inspektor sekwencji"
+        },
+        {
+          "path": "sections.5.body",
+          "source": "The Sequence tab of the workspace shows the active step, the condition it waits for with the expected and the actual value, the permissives of the start, the interlocks, the step timer and the history of transitions. It observes the program and never switches an output itself, so a wrong program stays visibly wrong.",
+          "text": "Karta Sekwencja w obszarze roboczym pokazuje aktywny krok, warunek, na który czeka, z wartością oczekiwaną i rzeczywistą, warunki zezwalające startu, blokady, czas kroku i historię przejść. Inspektor obserwuje program i nigdy sam nie przełącza wyjść, więc błędny program pozostaje widocznie błędny."
+        }
+      ]
     }
   ]
 }

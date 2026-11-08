@@ -89,6 +89,7 @@ export function frame(overrides: Partial<LiveFrameDto> = {}): LiveFrameDto {
       budgetBytes: "16777216",
     },
     signalsRevision: 2,
+    sequence: null,
     ...overrides,
   };
 }
@@ -260,6 +261,7 @@ export function workspace(overrides: Partial<WorkspaceDto> = {}): WorkspaceDto {
         { id: "starts", title: "Start energizes the contactor", points: 25 },
       ],
       troubleshooting: null,
+      sequence: null,
     },
     frame: frame(),
     ...overrides,

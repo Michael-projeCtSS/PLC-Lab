@@ -181,6 +181,12 @@ impl Workspace {
             profile.clone(),
             session_config(&project),
         )?;
+        // The exercise's documented sequence is observed from the first cycle (ADR-0043).
+        if let Some(e) = &exercise
+            && let Some(sequence) = &e.sequence
+        {
+            session.configure_sequence(sequence.clone(), e.evidence.clone())?;
+        }
         let mut investigation = Investigation::default();
         if let Some(state) = &project.exercise_state {
             investigation = Investigation {
@@ -800,6 +806,7 @@ impl Workspace {
                 budget_bytes: ExactU64(stats.byte_budget as u64),
             },
             signals_revision: self.signals_revision,
+            sequence: crate::sequence::status(s),
         }
     }
 

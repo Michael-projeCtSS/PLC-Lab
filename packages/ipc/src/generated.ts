@@ -107,9 +107,24 @@ diagnosed: boolean,
  */
 repairs: Array<OptionDto>, };
 
-export type ExerciseDto = { id: string, revision: number, title: string, kind: "practice" | "troubleshooting" | "commissioning", difficulty: "beginner" | "intermediate" | "advanced", summary: string, objectives: Array<string>, minutes: number, scene: string, platform: string, requiredInterface: Array<RequiredTagDto>, instructions: Array<string>, hints: Array<string>, knowledgeRefs: Array<RelatedDto>, criteria: Array<CriterionDto>, troubleshooting: TroubleshootingBriefDto | null, };
+export type ExerciseDto = { id: string, revision: number, title: string, kind: "practice" | "troubleshooting" | "commissioning", difficulty: "beginner" | "intermediate" | "advanced", summary: string, objectives: Array<string>, minutes: number, scene: string, platform: string, requiredInterface: Array<RequiredTagDto>, instructions: Array<string>, hints: Array<string>, knowledgeRefs: Array<RelatedDto>, criteria: Array<CriterionDto>, troubleshooting: TroubleshootingBriefDto | null, 
+/**
+ * The documented step sequence (ADR-0043), shaped like the content so the
+ * localization overlay applies by path.
+ */
+sequence: SequenceDefinitionDto | null, };
 
 export type PlatformDto = { id: string, displayName: string, vendor: string, family: string, tier: string, fidelity: FidelityDto, addressing: string, analog: string, };
+
+export type SequenceDefinitionDto = { id: string, name: string, steps: Array<SequenceStepDto>, transitions: Array<SequenceTransitionDto>, interlocks: Array<SequenceInterlockDto>, };
+
+export type SequenceStepDto = { id: string, number: number, name: string, role: "initial" | "normal" | "final", timeoutMs: number | null, };
+
+export type SequenceTransitionDto = { id: string, from: string, to: string, name: string, permissives: Array<SequencePermissiveDto>, };
+
+export type SequencePermissiveDto = { id: string, name: string, };
+
+export type SequenceInterlockDto = { id: string, name: string, reaction: "blockStart" | "holdProgress" | "abortSequence", steps: Array<string>, reactionMs: number | null, };
 
 export type SceneSummaryDto = { id: string, title: string, summary: string, };
 
@@ -334,7 +349,67 @@ state: "RUNNING" | "PAUSED" | "STOPPED", speedPercent: number, runId: ExactU64 |
 
 export type TraceStatsDto = { retainedCycles: ExactU64, droppedCycles: ExactU64, usedBytes: ExactU64, budgetBytes: ExactU64, };
 
-export type LiveFrameDto = { workspaceId: ExactU64, worldTimeUs: ExactU64, cycle: ExactU64, simulation: SimulationStatusDto, plc: PlcStatusDto, components: Array<ComponentStateDto>, watch: Array<WatchValueDto>, causeEffect: CauseEffectDto | null, alarms: Array<AlarmDto>, activeDiagnostics: number, latestEvent: ExactU64 | null, trace: TraceStatsDto, signalsRevision: number, };
+export type SequenceValueDto = { "type": "bool", value: boolean, } | { "type": "number", value: number, };
+
+export type SequenceConditionRowDto = { 
+/**
+ * Evidence name.
+ */
+signal: string, 
+/**
+ * The PLC tag or `component.quantity` it is bound to.
+ */
+source: string, layer: "inputs" | "outputs" | "process" | "next", op: "eq" | "ne" | "gt" | "ge" | "lt" | "le", expected: SequenceValueDto, actual: SequenceValueDto | null, satisfied: boolean | null, 
+/**
+ * The condition needs this comparison to be FALSE (inside a NOT).
+ */
+negated: boolean, };
+
+export type SequenceConditionDto = { 
+/**
+ * Null when evidence is missing (for example the program lacks a tag).
+ */
+satisfied: boolean | null, rows: Array<SequenceConditionRowDto>, };
+
+export type SequenceStepStateDto = { id: string, state: "INACTIVE" | "ACTIVE" | "HELD" | "COMPLETED" | "FAULTED", };
+
+export type SequencePermissiveStateDto = { id: string, condition: SequenceConditionDto, };
+
+export type SequenceTransitionStateDto = { id: string, 
+/**
+ * The transition leaves the active step.
+ */
+fromActive: boolean, condition: SequenceConditionDto, permissives: Array<SequencePermissiveStateDto>, 
+/**
+ * Active interlocks that block it.
+ */
+blockedBy: Array<string>, };
+
+export type SequenceInterlockStateDto = { id: string, applies: boolean, active: boolean, condition: SequenceConditionDto, };
+
+export type SequenceObservedDto = { signal: string, source: string, layer: "inputs" | "outputs" | "process" | "next", value: SequenceValueDto | null, };
+
+export type SequenceEventDto = { seq: ExactU64, timeUs: ExactU64, cycle: ExactU64, code: "runStarted" | "transitionCompleted" | "sequenceStarted" | "sequenceCompleted" | "sequenceAborted" | "startBlocked" | "transitionBlocked" | "interlockActivated" | "interlockCleared" | "held" | "resumed" | "stepTimeout" | "faultCleared" | "unknownStep" | "undefinedTransition" | "conditionNotMet" | "permissiveViolated" | "interlockViolated" | "progressDuringHold" | "progressAfterFault", 
+/**
+ * A deviation or a step timeout.
+ */
+fault: boolean, step: string | null, from: string | null, transition: string | null, interlock: string | null, permissives: Array<string>, interlocks: Array<string>, stepValue: number | null, start: "WARM" | "COLD" | "ATTACHED" | null, values: Array<SequenceObservedDto>, };
+
+export type SequenceStatusDto = { sequenceId: string, state: "UNBOUND" | "STOPPED" | "IDLE" | "RUNNING" | "HELD" | "COMPLETED" | "FAULTED", activeStep: string | null, previousStep: string | null, stepValue: number | null, elapsedUs: ExactU64, timeoutUs: ExactU64 | null, 
+/**
+ * Fault reason code ("stepTimeout" or a deviation code).
+ */
+fault: string | null, faultStep: string | null, steps: Array<SequenceStepStateDto>, transitions: Array<SequenceTransitionStateDto>, interlocks: Array<SequenceInterlockStateDto>, 
+/**
+ * The newest events, oldest first (at most 40).
+ */
+history: Array<SequenceEventDto>, totalEvents: ExactU64, };
+
+export type LiveFrameDto = { workspaceId: ExactU64, worldTimeUs: ExactU64, cycle: ExactU64, simulation: SimulationStatusDto, plc: PlcStatusDto, components: Array<ComponentStateDto>, watch: Array<WatchValueDto>, causeEffect: CauseEffectDto | null, alarms: Array<AlarmDto>, activeDiagnostics: number, latestEvent: ExactU64 | null, trace: TraceStatsDto, signalsRevision: number, 
+/**
+ * The sequence monitor's view, when the project's exercise defines a sequence.
+ */
+sequence: SequenceStatusDto | null, };
 
 export type WorkspaceDto = { workspaceId: ExactU64, projectId: string, scene: SceneDto, platform: PlatformDto, signals: Array<SignalDto>, exercise: ExerciseDto | null, frame: LiveFrameDto, };
 

@@ -12,6 +12,8 @@ import { formatQuantity } from "../format";
 import { processLabel } from "../locale/messages";
 import { useInterface } from "../locale";
 import { AlarmSummary } from "./AlarmsTab";
+import { sequenceAlarmLabel } from "./alarmText";
+import { useSequenceDefinition } from "./sequenceDefinition";
 import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
 
@@ -47,6 +49,7 @@ export function ProcessTab({
   troubleshooting: boolean;
 }) {
   const { t } = useInterface();
+  const sequence = useSequenceDefinition(lab);
   const { workspace, frame, ws } = lab;
   if (!workspace || !frame || !ws) return null;
   const states = new Map(
@@ -90,7 +93,10 @@ export function ProcessTab({
           style={{ padding: "6px 10px", borderBottom: "1px solid var(--line)" }}
           role="status"
         >
-          <AlarmSummary alarms={frame.alarms} />
+          <AlarmSummary
+            alarms={frame.alarms}
+            label={sequenceAlarmLabel(sequence)}
+          />
         </div>
       )}
       <svg

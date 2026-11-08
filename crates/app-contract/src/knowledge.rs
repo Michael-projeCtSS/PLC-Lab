@@ -316,6 +316,58 @@ pub struct ExerciseDto {
     pub knowledge_refs: Vec<RelatedDto>,
     pub criteria: Vec<CriterionDto>,
     pub troubleshooting: Option<TroubleshootingBriefDto>,
+    /// The documented step sequence (ADR-0043), shaped like the content so the
+    /// localization overlay applies by path.
+    pub sequence: Option<SequenceDefinitionDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceDefinitionDto {
+    pub id: String,
+    pub name: String,
+    pub steps: Vec<SequenceStepDto>,
+    pub transitions: Vec<SequenceTransitionDto>,
+    pub interlocks: Vec<SequenceInterlockDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceStepDto {
+    pub id: String,
+    pub number: i16,
+    pub name: String,
+    #[ts(type = "\"initial\" | \"normal\" | \"final\"")]
+    pub role: String,
+    pub timeout_ms: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceTransitionDto {
+    pub id: String,
+    pub from: String,
+    pub to: String,
+    pub name: String,
+    pub permissives: Vec<SequencePermissiveDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequencePermissiveDto {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceInterlockDto {
+    pub id: String,
+    pub name: String,
+    #[ts(type = "\"blockStart\" | \"holdProgress\" | \"abortSequence\"")]
+    pub reaction: String,
+    pub steps: Vec<String>,
+    pub reaction_ms: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -357,6 +409,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         ParameterDto, EquivalentDto, InstructionDto, RelatedDto, TroubleshootingDto, SourceDto, ArticleDto,
         CatalogEntryDto, CatalogDto, QuestionDto, LessonSectionDto, LessonSummaryDto, LessonDto, LessonCompleteRequest,
         ExerciseSummaryDto, RequiredTagDto, CriterionDto, OptionDto, TroubleshootingBriefDto, ExerciseDto, PlatformDto,
+        SequenceDefinitionDto, SequenceStepDto, SequenceTransitionDto, SequencePermissiveDto, SequenceInterlockDto,
         SceneSummaryDto, LibraryDto
     )
 }

@@ -10,6 +10,7 @@ mod convert;
 mod error;
 mod library;
 mod projects;
+mod sequence;
 mod workspace;
 
 pub use error::AppError;

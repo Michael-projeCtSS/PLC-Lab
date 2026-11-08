@@ -229,6 +229,40 @@ export const lesson = obj<G.LessonDto>({
 const difficulty = literal("beginner", "intermediate", "advanced");
 const exerciseKind = literal("practice", "troubleshooting", "commissioning");
 const option = obj<G.OptionDto>({ id: str, label: str });
+const sequenceDefinition = obj<G.SequenceDefinitionDto>({
+  id: str,
+  name: str,
+  steps: arr(
+    obj<G.SequenceStepDto>({
+      id: str,
+      number: i16,
+      name: str,
+      role: literal("initial", "normal", "final"),
+      timeoutMs: nullable(u32),
+    }),
+    64,
+  ),
+  transitions: arr(
+    obj<G.SequenceTransitionDto>({
+      id: str,
+      from: str,
+      to: str,
+      name: str,
+      permissives: arr(obj<G.SequencePermissiveDto>({ id: str, name: str })),
+    }),
+    128,
+  ),
+  interlocks: arr(
+    obj<G.SequenceInterlockDto>({
+      id: str,
+      name: str,
+      reaction: literal("blockStart", "holdProgress", "abortSequence"),
+      steps: arr(str, 64),
+      reactionMs: nullable(u32),
+    }),
+    32,
+  ),
+});
 export const exercise = obj<G.ExerciseDto>({
   id: str,
   revision: u32,
@@ -256,6 +290,7 @@ export const exercise = obj<G.ExerciseDto>({
       repairs: arr(option),
     }),
   ),
+  sequence: nullable(sequenceDefinition),
 });
 export const platform = obj<G.PlatformDto>({
   id: str,
@@ -498,6 +533,126 @@ const alarm = obj<G.AlarmDto>({
   changedUs: nullable(u64),
   acknowledgments: u32,
 });
+const sequenceLayer = literal("inputs", "outputs", "process", "next");
+const sequenceValue: Validator<G.SequenceValueDto> = tagged<G.SequenceValueDto>(
+  {
+    bool: obj({ type: literal("bool"), value: bool }),
+    number: obj({ type: literal("number"), value: num }),
+  },
+);
+const sequenceCondition = obj<G.SequenceConditionDto>({
+  satisfied: nullable(bool),
+  rows: arr(
+    obj<G.SequenceConditionRowDto>({
+      signal: str,
+      source: str,
+      layer: sequenceLayer,
+      op: literal("eq", "ne", "gt", "ge", "lt", "le"),
+      expected: sequenceValue,
+      actual: nullable(sequenceValue),
+      satisfied: nullable(bool),
+      negated: bool,
+    }),
+    64,
+  ),
+});
+const sequenceEvent = obj<G.SequenceEventDto>({
+  seq: u64,
+  timeUs: u64,
+  cycle: u64,
+  code: literal(
+    "runStarted",
+    "transitionCompleted",
+    "sequenceStarted",
+    "sequenceCompleted",
+    "sequenceAborted",
+    "startBlocked",
+    "transitionBlocked",
+    "interlockActivated",
+    "interlockCleared",
+    "held",
+    "resumed",
+    "stepTimeout",
+    "faultCleared",
+    "unknownStep",
+    "undefinedTransition",
+    "conditionNotMet",
+    "permissiveViolated",
+    "interlockViolated",
+    "progressDuringHold",
+    "progressAfterFault",
+  ),
+  fault: bool,
+  step: nullable(str),
+  from: nullable(str),
+  transition: nullable(str),
+  interlock: nullable(str),
+  permissives: arr(str, 64),
+  interlocks: arr(str, 64),
+  stepValue: nullable(i16),
+  start: nullable(literal("WARM", "COLD", "ATTACHED")),
+  values: arr(
+    obj<G.SequenceObservedDto>({
+      signal: str,
+      source: str,
+      layer: sequenceLayer,
+      value: nullable(sequenceValue),
+    }),
+    64,
+  ),
+});
+export const sequenceStatus = obj<G.SequenceStatusDto>({
+  sequenceId: str,
+  state: literal(
+    "UNBOUND",
+    "STOPPED",
+    "IDLE",
+    "RUNNING",
+    "HELD",
+    "COMPLETED",
+    "FAULTED",
+  ),
+  activeStep: nullable(str),
+  previousStep: nullable(str),
+  stepValue: nullable(i16),
+  elapsedUs: u64,
+  timeoutUs: nullable(u64),
+  fault: nullable(str),
+  faultStep: nullable(str),
+  steps: arr(
+    obj<G.SequenceStepStateDto>({
+      id: str,
+      state: literal("INACTIVE", "ACTIVE", "HELD", "COMPLETED", "FAULTED"),
+    }),
+    64,
+  ),
+  transitions: arr(
+    obj<G.SequenceTransitionStateDto>({
+      id: str,
+      fromActive: bool,
+      condition: sequenceCondition,
+      permissives: arr(
+        obj<G.SequencePermissiveStateDto>({
+          id: str,
+          condition: sequenceCondition,
+        }),
+      ),
+      blockedBy: arr(str, 32),
+    }),
+    128,
+  ),
+  interlocks: arr(
+    obj<G.SequenceInterlockStateDto>({
+      id: str,
+      applies: bool,
+      active: bool,
+      condition: sequenceCondition,
+    }),
+    32,
+  ),
+  history: arr(sequenceEvent, 40),
+  totalEvents: u64,
+});
 export const frame = obj<G.LiveFrameDto>({
   workspaceId: u64,
   worldTimeUs: u64,
@@ -545,6 +700,7 @@ export const frame = obj<G.LiveFrameDto>({
     budgetBytes: u64,
   }),
   signalsRevision: u32,
+  sequence: nullable(sequenceStatus),
 });
 export const workspace = obj<G.WorkspaceDto>({
   workspaceId: u64,

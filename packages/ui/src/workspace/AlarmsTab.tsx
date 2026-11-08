@@ -19,21 +19,30 @@ import {
   alarmPriority,
   needsAcknowledgment,
   priorityBadge,
+  plainLabel,
+  sequenceAlarmLabel,
+  type AlarmLabel,
 } from "./alarmText";
 import { useEvidence, useFrameQuery } from "./useFrameQuery";
 import type { Lab } from "./useLab";
+import { useSequenceDefinition } from "./sequenceDefinition";
 
 const PAGE = 50;
 
 /** Compact alarm list for other views: source, condition and state. */
-export function AlarmSummary({ alarms }: { alarms: AlarmDto[] }) {
+export function AlarmSummary({
+  alarms,
+  label = plainLabel,
+}: {
+  alarms: AlarmDto[];
+  label?: AlarmLabel;
+}) {
   const { t } = useInterface();
   return (
     <>
       {alarms.map((a) => (
         <span key={a.id} className={`badge ${priorityBadge(a.priority)}`}>
-          {a.sourceLabel}: {alarmCondition(t, a.kind, a.text)} (
-          {t(STATE[a.state])})
+          {label(a)}: {alarmCondition(t, a.kind, a.text)} ({t(STATE[a.state])})
         </span>
       ))}
     </>
@@ -44,9 +53,11 @@ export function AlarmSummary({ alarms }: { alarms: AlarmDto[] }) {
 export function AlarmIndicator({
   alarms,
   open,
+  label = plainLabel,
 }: {
   alarms: AlarmDto[];
   open: () => void;
+  label?: AlarmLabel;
 }) {
   const { t } = useInterface();
   const top = alarms[0];
@@ -61,7 +72,7 @@ export function AlarmIndicator({
       <div className="grow">
         <strong>{t("alarm.indicator", { count: alarms.length })}</strong>{" "}
         {t("alarm.indicatorExplain", {
-          alarm: `${top.sourceLabel}: ${alarmCondition(t, top.kind, top.text)} (${alarmPriority(t, top.priority)})`,
+          alarm: `${label(top)}: ${alarmCondition(t, top.kind, top.text)} (${alarmPriority(t, top.priority)})`,
         })}
       </div>
       <button className="btn btn-sm" onClick={open}>
@@ -74,9 +85,11 @@ export function AlarmIndicator({
 function AlarmDetail({
   alarm,
   inspect,
+  label,
 }: {
   alarm: AlarmDto;
   inspect: (a: AlarmDto) => void;
+  label: AlarmLabel;
 }) {
   const { t } = useInterface();
   return (
@@ -88,7 +101,7 @@ function AlarmDetail({
     >
       <div className="panel-head row">
         <h4 className="grow">
-          {alarm.sourceLabel}: {alarmCondition(t, alarm.kind, alarm.text)}
+          {label(alarm)}: {alarmCondition(t, alarm.kind, alarm.text)}
         </h4>
         <button className="btn btn-sm btn-ghost" onClick={() => inspect(alarm)}>
           {t("alarm.inspect")}
@@ -130,6 +143,7 @@ export function AlarmsTab({
   inspect: (alarm: AlarmDto) => void;
 }) {
   const { t } = useInterface();
+  const label = sequenceAlarmLabel(useSequenceDefinition(lab));
   const ws = lab.ws;
   useEvidence(lab, "alarm view");
   const [offset, setOffset] = useState(0);
@@ -276,7 +290,7 @@ export function AlarmsTab({
                           <input
                             type="checkbox"
                             aria-label={t("alarm.select", {
-                              alarm: `${a.sourceLabel}: ${message}`,
+                              alarm: `${label(a)}: ${message}`,
                             })}
                             disabled={!eligible.has(a.id)}
                             checked={chosen.includes(a.id)}
@@ -298,7 +312,7 @@ export function AlarmsTab({
                           {alarmPriority(t, a.priority)}
                         </Badge>
                       </td>
-                      <td>{a.sourceLabel}</td>
+                      <td>{label(a)}</td>
                       <td>{message}</td>
                       <td>
                         {a.condition
@@ -337,7 +351,9 @@ export function AlarmsTab({
               </tbody>
             </table>
           )}
-          {shown && <AlarmDetail alarm={shown} inspect={inspect} />}
+          {shown && (
+            <AlarmDetail alarm={shown} inspect={inspect} label={label} />
+          )}
         </div>
       </div>
       {advanced && history && (
@@ -377,7 +393,9 @@ export function AlarmsTab({
                   {history.history.map((e) => (
                     <tr key={e.seq}>
                       <td className="mono">{seconds(e.timeUs)}</td>
-                      <td>{e.sourceLabel}</td>
+                      <td>
+                        {label({ id: e.alarm, sourceLabel: e.sourceLabel })}
+                      </td>
                       <td>{alarmCondition(t, e.code, e.message)}</td>
                       <td>{t(TRANSITION[e.transition])}</td>
                       <td>{alarmPriority(t, e.priority)}</td>

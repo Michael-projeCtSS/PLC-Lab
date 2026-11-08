@@ -1683,3 +1683,122 @@ textarea.input {
   font-size: 11px;
   color: var(--text-2);
 }
+
+/* Sequence inspector (ADR-0043): states read from the backend monitor. */
+.sequence-inspector .seq-note {
+  margin-top: 8px;
+  font-size: 12px;
+}
+.seq-mark {
+  display: inline-block;
+  min-width: 1.2em;
+  font-weight: 700;
+  text-align: center;
+}
+.seq-mark.ok {
+  color: var(--st-running);
+}
+.seq-mark.no {
+  color: var(--st-fault);
+}
+.seq-mark.unknown {
+  color: var(--text-3);
+}
+.seq-rows {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+}
+.seq-rows li {
+  padding: 2px 0;
+}
+.seq-transition + .seq-transition {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.seq-blocked {
+  margin: 6px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--warn-line);
+  background: var(--warn-tint);
+  color: var(--warn-text);
+  border-radius: 4px;
+}
+.seq-permissives h5 {
+  margin: 6px 0 2px;
+  color: var(--text-2);
+}
+.seq-timer {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}
+.seq-timer.expired {
+  accent-color: var(--st-fault);
+}
+.seq-chart {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.seq-step .seq-box {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+.seq-step .seq-number {
+  font-family: var(--mono, monospace);
+  font-weight: 700;
+}
+.seq-step .seq-state {
+  margin-left: auto;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.seq-step.active .seq-box {
+  border-color: var(--st-running);
+  background: var(--ok-tint);
+  color: var(--ok-text);
+  box-shadow: 0 0 0 1px var(--st-running);
+}
+.seq-step.held .seq-box {
+  border-color: var(--warn-line);
+  background: var(--warn-tint);
+  color: var(--warn-text);
+}
+.seq-step.faulted .seq-box {
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+.seq-step.completed .seq-box {
+  border-style: dashed;
+  color: var(--text-2);
+}
+.seq-step.completed .seq-state::before {
+  content: "✓ ";
+}
+.seq-arrow {
+  margin: 2px 0 6px 16px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.seq-interlock + .seq-interlock {
+  margin-top: 8px;
+}
+.seq-alarms {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+.seq-history tr.seq-fault td {
+  color: var(--danger-text);
+  background: var(--danger-tint);
+}

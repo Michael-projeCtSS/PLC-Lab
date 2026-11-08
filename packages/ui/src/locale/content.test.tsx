@@ -63,8 +63,8 @@ const investigations = raw.items.filter((item) =>
 );
 it("every Polish investigation retains the backend repair and debrief gates", () => {
   const cases = investigations;
-  expect(cases).toHaveLength(37);
-  expect(cases.filter((item) => item.id.startsWith("ts."))).toHaveLength(8);
+  expect(cases).toHaveLength(38);
+  expect(cases.filter((item) => item.id.startsWith("ts."))).toHaveLength(9);
   for (const item of cases) {
     const source = canonical(item);
     const brief = source.troubleshooting as Record<string, unknown>;

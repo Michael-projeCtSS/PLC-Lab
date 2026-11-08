@@ -42,6 +42,13 @@ impl LabSession {
         self.sequence.as_ref().map(|s| &s.monitor)
     }
 
+    /// The evidence the sequence's conditions name.
+    pub fn sequence_evidence(&self) -> &[EvidenceSignal] {
+        self.sequence
+            .as_ref()
+            .map_or(&[], |s| s.evidence.as_slice())
+    }
+
     /// The definition and evidence to carry into a fresh world.
     pub(crate) fn sequence_setup(&self) -> Option<(SequenceDefinition, Vec<EvidenceSignal>)> {
         self.sequence

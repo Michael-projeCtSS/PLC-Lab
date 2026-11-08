@@ -537,6 +537,7 @@ pub fn exercise_view(
                 Vec::new()
             },
         }),
+        sequence: e.sequence.as_ref().map(crate::sequence::definition),
     }
 }
 

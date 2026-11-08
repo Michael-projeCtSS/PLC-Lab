@@ -17,25 +17,31 @@ import { processLabel, translateCode } from "../locale/messages";
 import { Badge, Tabs } from "../ui";
 import { isFaultFinding, type Navigate } from "../route";
 import { CauseEffect } from "./CauseEffect";
+import { SequenceTab } from "./SequenceTab";
+import { useSequenceDefinition } from "./sequenceDefinition";
 import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
 import { VariableDetail } from "./VariableDetail";
 
-type Tab = "task" | "cause" | "properties";
+type Tab = "task" | "sequence" | "cause" | "properties";
 
 export function Inspector({
   lab,
   selection,
   navigate,
   simple = false,
+  advanced = false,
 }: {
   simple?: boolean;
+  /** Advanced mode: the sequence inspector shows evaluations, timers and history. */
+  advanced?: boolean;
   lab: Lab;
   selection: Selection;
   navigate: Navigate;
 }) {
   const { t } = useInterface();
   const exercise = lab.workspace?.exercise ?? null;
+  const sequence = useSequenceDefinition(lab);
   const [tab, setTab] = useState<Tab>(exercise ? "task" : "cause");
   // Choosing a variable anywhere shows its online detail (state adjusted while rendering).
   const signal = selection?.kind === "signal" ? selection.id : null;
@@ -61,6 +67,9 @@ export function Inspector({
                 },
               ]
             : []),
+          ...(sequence
+            ? [{ id: "sequence" as const, label: t("ws.sequence") }]
+            : []),
           { id: "cause", label: t("cause.title") },
           ...(!simple
             ? [{ id: "properties" as const, label: t("cause.properties") }]
@@ -79,6 +88,14 @@ export function Inspector({
               navigate={navigate}
             />
           ))}
+        {!simple && tab === "sequence" && sequence && (
+          <SequenceTab
+            definition={sequence}
+            status={lab.frame?.sequence ?? null}
+            alarms={lab.frame?.alarms ?? []}
+            advanced={advanced}
+          />
+        )}
         {(simple || tab === "cause") && (
           <div className="inspector-section">
             <CauseEffect

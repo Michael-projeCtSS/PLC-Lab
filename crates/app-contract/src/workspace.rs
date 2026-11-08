@@ -243,6 +243,143 @@ pub struct LiveFrameDto {
     pub latest_event: Option<ExactU64>,
     pub trace: TraceStatsDto,
     pub signals_revision: u32,
+    /// The sequence monitor's view, when the project's exercise defines a sequence.
+    pub sequence: Option<SequenceStatusDto>,
+}
+
+/// An evidence value: a BOOL or a number.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
+pub enum SequenceValueDto {
+    Bool { value: bool },
+    Number { value: f64 },
+}
+
+/// One comparison of a condition: the signal, what it must be and what it is.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceConditionRowDto {
+    /// Evidence name.
+    pub signal: String,
+    /// The PLC tag or `component.quantity` it is bound to.
+    pub source: String,
+    #[ts(type = "\"inputs\" | \"outputs\" | \"process\" | \"next\"")]
+    pub layer: String,
+    #[ts(type = "\"eq\" | \"ne\" | \"gt\" | \"ge\" | \"lt\" | \"le\"")]
+    pub op: String,
+    pub expected: SequenceValueDto,
+    pub actual: Option<SequenceValueDto>,
+    pub satisfied: Option<bool>,
+    /// The condition needs this comparison to be FALSE (inside a NOT).
+    pub negated: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceConditionDto {
+    /// Null when evidence is missing (for example the program lacks a tag).
+    pub satisfied: Option<bool>,
+    pub rows: Vec<SequenceConditionRowDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceStepStateDto {
+    pub id: String,
+    #[ts(type = "\"INACTIVE\" | \"ACTIVE\" | \"HELD\" | \"COMPLETED\" | \"FAULTED\"")]
+    pub state: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequencePermissiveStateDto {
+    pub id: String,
+    pub condition: SequenceConditionDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceTransitionStateDto {
+    pub id: String,
+    /// The transition leaves the active step.
+    pub from_active: bool,
+    pub condition: SequenceConditionDto,
+    pub permissives: Vec<SequencePermissiveStateDto>,
+    /// Active interlocks that block it.
+    pub blocked_by: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceInterlockStateDto {
+    pub id: String,
+    pub applies: bool,
+    pub active: bool,
+    pub condition: SequenceConditionDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceObservedDto {
+    pub signal: String,
+    pub source: String,
+    #[ts(type = "\"inputs\" | \"outputs\" | \"process\" | \"next\"")]
+    pub layer: String,
+    pub value: Option<SequenceValueDto>,
+}
+
+/// One monitor event; texts are composed by the view from the code and localized content.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceEventDto {
+    pub seq: ExactU64,
+    pub time_us: ExactU64,
+    pub cycle: ExactU64,
+    #[ts(
+        type = "\"runStarted\" | \"transitionCompleted\" | \"sequenceStarted\" | \"sequenceCompleted\" | \"sequenceAborted\" | \"startBlocked\" | \"transitionBlocked\" | \"interlockActivated\" | \"interlockCleared\" | \"held\" | \"resumed\" | \"stepTimeout\" | \"faultCleared\" | \"unknownStep\" | \"undefinedTransition\" | \"conditionNotMet\" | \"permissiveViolated\" | \"interlockViolated\" | \"progressDuringHold\" | \"progressAfterFault\""
+    )]
+    pub code: String,
+    /// A deviation or a step timeout.
+    pub fault: bool,
+    pub step: Option<String>,
+    pub from: Option<String>,
+    pub transition: Option<String>,
+    pub interlock: Option<String>,
+    pub permissives: Vec<String>,
+    pub interlocks: Vec<String>,
+    pub step_value: Option<i16>,
+    #[ts(type = "\"WARM\" | \"COLD\" | \"ATTACHED\" | null")]
+    pub start: Option<String>,
+    pub values: Vec<SequenceObservedDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SequenceStatusDto {
+    pub sequence_id: String,
+    #[ts(
+        type = "\"UNBOUND\" | \"STOPPED\" | \"IDLE\" | \"RUNNING\" | \"HELD\" | \"COMPLETED\" | \"FAULTED\""
+    )]
+    pub state: String,
+    pub active_step: Option<String>,
+    pub previous_step: Option<String>,
+    pub step_value: Option<i16>,
+    pub elapsed_us: ExactU64,
+    pub timeout_us: Option<ExactU64>,
+    /// Fault reason code ("stepTimeout" or a deviation code).
+    pub fault: Option<String>,
+    pub fault_step: Option<String>,
+    pub steps: Vec<SequenceStepStateDto>,
+    pub transitions: Vec<SequenceTransitionStateDto>,
+    pub interlocks: Vec<SequenceInterlockStateDto>,
+    /// The newest events, oldest first (at most 40).
+    pub history: Vec<SequenceEventDto>,
+    pub total_events: ExactU64,
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -1046,7 +1183,9 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
     declarations!(config;
         WorkspaceRequest, WorkspaceOpenRequest, SignalDto, ConfigItemDto, ComponentDto, LayoutDto, CouplingDto, InterfaceSignalDto,
         SceneDto, LedDto, PlcStatusDto, QuantityDto, ComponentStateDto, WatchValueDto, EffectDto, ChangeDto,
-        CauseEffectDto, AlarmDto, SimulationStatusDto, TraceStatsDto, LiveFrameDto, WorkspaceDto, CompileRequest,
+        CauseEffectDto, AlarmDto, SimulationStatusDto, TraceStatsDto, SequenceValueDto, SequenceConditionRowDto,
+        SequenceConditionDto, SequenceStepStateDto, SequencePermissiveStateDto, SequenceTransitionStateDto,
+        SequenceInterlockStateDto, SequenceObservedDto, SequenceEventDto, SequenceStatusDto, LiveFrameDto, WorkspaceDto, CompileRequest,
         DeclarationDto, CompileResultDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
