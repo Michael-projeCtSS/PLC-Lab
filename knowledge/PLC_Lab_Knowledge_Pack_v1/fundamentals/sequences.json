@@ -1,0 +1,51 @@
+{
+  "id": "fundamentals.sequences",
+  "kind": "topic",
+  "title": "Step sequences: steps, transitions, permissives and interlocks",
+  "summary": "A sequence divides a process into steps. Each step commands the plant and a transition condition decides when the next step begins. Permissives allow a start, interlocks protect the plant, timeouts detect a step that never finishes and HOLD pauses a running step.",
+  "tags": [
+    "sequence",
+    "step",
+    "transition",
+    "permissive",
+    "interlock",
+    "timeout",
+    "hold",
+    "resume"
+  ],
+  "sections": [
+    {
+      "heading": "Steps and transitions",
+      "body": "- A **step** is one phase of the process, for example *Fill the tank*. While a step is active, the program sets the outputs that belong to it.\n- A **transition** connects two steps. Its **condition** is checked in every scan; when it is TRUE, the next step becomes active.\n- In a simple sequence exactly one step is active at a time. In Structured Text the active step is usually an INT variable and a `CASE` statement:\n\n```\nCASE Step OF\n    1: IF InletOpen THEN Step := 2; END_IF;\n    2: IF LevelHigh THEN Step := 3; END_IF;\nEND_CASE;\n```"
+    },
+    {
+      "heading": "Permissives",
+      "body": "A **permissive** must be TRUE before a transition may proceed, typically the start of a batch: Stop released, tank not full, no hold request. An unsatisfied permissive is not a fault. It explains why the operation cannot begin, and the operator can remove the reason."
+    },
+    {
+      "heading": "Interlocks and their reactions",
+      "body": "An **interlock** watches a protective condition while the sequence runs. Its reaction is defined for each interlock:\n- **Block start**: the sequence must not leave its idle step while the interlock is active.\n- **Hold progress**: the sequence must not advance to the next step.\n- **Abort**: the program must return to the idle step within a reaction time.\n\nPLC interlocks protect equipment and product. People are protected by separate safety systems; PLC Lab does not model safety controllers."
+    },
+    {
+      "heading": "Step timeouts",
+      "body": "A step that waits for feedback can wait forever: a valve that does not move, a level that does not rise. A **step timeout** limits how long a step may stay active. PLC Lab measures it in simulated world time, so the same test always gives the same result. The time does not run while the PLC is in STOP or the sequence is held."
+    },
+    {
+      "heading": "HOLD, RESUME and STOP",
+      "body": "- **HOLD** pauses a running step: the program keeps scanning, puts the plant into a safe state and keeps the step.\n- **RESUME** continues the same step. The conditions are checked again; a sequence must not resume into an active interlock.\n- **STOP** (an abort) returns the sequence to its idle step.\n\nHOLD is not PLC STOP: in PLC STOP no scan runs at all."
+    },
+    {
+      "heading": "The sequence inspector",
+      "body": "The Sequence tab of the workspace shows the active step, the condition it waits for with the expected and the actual value, the permissives of the start, the interlocks, the step timer and the history of transitions. It observes the program and never switches an output itself, so a wrong program stays visibly wrong."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.interlocks",
+    "fundamentals.timers",
+    "fundamentals.scan-cycle"
+  ]
+}

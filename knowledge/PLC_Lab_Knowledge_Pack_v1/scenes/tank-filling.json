@@ -2,12 +2,13 @@
   "format": "plclab-scene",
   "schemaVersion": 1,
   "id": "scene.tank-filling",
-  "revision": 1,
+  "revision": 2,
   "title": "Tank filling station",
   "summary": "A 150 litre process tank filled through an on/off inlet valve with limit switch feedback and emptied by a drain pump. Point level switches detect low and high level; a 4-20 mA transmitter measures the level continuously. Filling from empty to the high switch takes about 12 seconds.",
   "components": [
     { "id": "start", "label": "Start S1", "kind": { "type": "pushButton", "contact": "normallyOpen", "color": "green" } },
     { "id": "stop", "label": "Stop S2", "kind": { "type": "pushButton", "contact": "normallyClosed", "color": "red" } },
+    { "id": "hold", "label": "Hold S3", "kind": { "type": "pushButton", "contact": "normallyOpen", "color": "amber" } },
     { "id": "inlet", "label": "Inlet valve XV-101", "kind": { "type": "onOffValve", "travelMs": 1500, "flowMlPerS": 10000 } },
     { "id": "pump", "label": "Drain pump P-102", "kind": { "type": "pump", "flowMlPerS": 6000 } },
     { "id": "tank", "label": "Tank T-100", "kind": { "type": "tank", "capacityMl": 150000, "initialMl": 15000, "highHighMl": 142500, "lowLowMl": 7500 } },
@@ -32,6 +33,7 @@
       { "channel": { "rack": 0, "slot": 1, "channel": 2 }, "component": "lsl", "port": "contact" },
       { "channel": { "rack": 0, "slot": 1, "channel": 3 }, "component": "lsh", "port": "contact" },
       { "channel": { "rack": 0, "slot": 1, "channel": 4 }, "component": "inlet", "port": "openSwitch" },
+      { "channel": { "rack": 0, "slot": 1, "channel": 5 }, "component": "hold", "port": "contact" },
       { "channel": { "rack": 0, "slot": 2, "channel": 0 }, "component": "inlet", "port": "solenoid" },
       { "channel": { "rack": 0, "slot": 2, "channel": 1 }, "component": "pump", "port": "motor" },
       { "channel": { "rack": 0, "slot": 3, "channel": 0 }, "component": "lt", "port": "signal" }
@@ -84,7 +86,8 @@
     { "component": "lt", "x": 360, "y": 300 },
     { "component": "pump", "x": 720, "y": 500 },
     { "component": "start", "x": 80, "y": 470 },
-    { "component": "stop", "x": 170, "y": 470 }
+    { "component": "stop", "x": 170, "y": 470 },
+    { "component": "hold", "x": 260, "y": 470 }
   ],
   "knowledgeRefs": ["fundamentals.4-20ma", "fundamentals.level-measurement", "fundamentals.no-nc-contacts"]
 }

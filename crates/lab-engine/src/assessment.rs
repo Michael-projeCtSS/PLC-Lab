@@ -4,21 +4,18 @@
 
 use crate::{
     error::{BindingIssue, EngineError},
-    plc::TagRole,
-    session::{CycleObservation, CycleOutcome, LabEventKind, LabSession, SessionConfig},
-    signals::{SignalId, SignalValue},
+    session::{LabEventKind, LabSession, SessionConfig},
 };
 use grading_core::{
-    CycleFacts, EvidenceEvent, EvidenceValue, GradeReport, GradingEvidence, PlcFaultEvidence,
+    EvidenceEvent, GradeReport, GradingEvidence, PlcFaultEvidence, SequenceEvidence, SequenceFault,
 };
 use lab_model::{
-    exercise::{
-        EvidenceSignal, EvidenceSource, ExerciseDefinition, PlcModeRequest, RequiredTag, Scenario,
-    },
+    exercise::{EvidenceSignal, ExerciseDefinition, PlcModeRequest, RequiredTag, Scenario},
     fault::FaultInjection,
     hardware::StationConfig,
     profile::PlatformProfile,
     scene::{SceneDefinition, SignalDirection, TagType},
+    sequence::SequenceDefinition,
 };
 use plc_types::{PlcType, diagnostics::Diagnostic, symbols::Scope};
 use simulation_core::WorldTime;
@@ -49,6 +46,8 @@ pub struct AssessmentSetup<'a> {
     /// Physical faults present in the installation during the run.
     pub faults: &'a [FaultInjection],
     pub config: SessionConfig,
+    /// The sequence the program implements, observed during every run (ADR-0043).
+    pub sequence: Option<&'a SequenceDefinition>,
 }
 
 fn tag_type(t: TagType) -> PlcType {
@@ -106,68 +105,6 @@ fn direction(d: SignalDirection) -> &'static str {
     }
 }
 
-enum Binding {
-    Input(SignalId),
-    Output(SignalId),
-    Process(SignalId),
-    Missing,
-}
-
-fn evidence_value(v: SignalValue) -> EvidenceValue {
-    match v {
-        SignalValue::Bool(b) => EvidenceValue::Bool(b),
-        SignalValue::Int(i) => EvidenceValue::Number(f64::from(i)),
-        SignalValue::Real(r) => EvidenceValue::Number(f64::from(r)),
-        SignalValue::Time(t) => EvidenceValue::Number(t as f64),
-        SignalValue::Count(c) => EvidenceValue::Number(c as f64),
-    }
-}
-
-fn lookup(layer: &[(SignalId, SignalValue)], signal: SignalId) -> Option<EvidenceValue> {
-    layer
-        .binary_search_by_key(&signal, |(s, _)| *s)
-        .ok()
-        .map(|i| evidence_value(layer[i].1))
-}
-
-fn facts(observation: &CycleObservation, bindings: &[(String, Binding)]) -> CycleFacts {
-    let mut f = CycleFacts {
-        cycle: observation.header.cycle,
-        start_us: observation.header.start_us,
-        end_us: observation.header.end_us,
-        outcome: Some(match observation.header.outcome {
-            CycleOutcome::Scanned => grading_core::CycleOutcome::Scanned,
-            CycleOutcome::Faulted => grading_core::CycleOutcome::Faulted,
-            CycleOutcome::NotScanned(_) => grading_core::CycleOutcome::NotScanned,
-        }),
-        ..Default::default()
-    };
-    for (name, binding) in bindings {
-        match binding {
-            Binding::Input(s) => {
-                if let Some(v) = lookup(&observation.scan_inputs, *s) {
-                    f.inputs.insert(name.clone(), v);
-                }
-                if let Some(v) = lookup(&observation.staged_next, *s) {
-                    f.next.insert(name.clone(), v);
-                }
-            }
-            Binding::Output(s) => {
-                if let Some(v) = lookup(&observation.committed, *s) {
-                    f.outputs.insert(name.clone(), v);
-                }
-            }
-            Binding::Process(s) => {
-                if let Some(v) = lookup(&observation.process_after, *s) {
-                    f.process.insert(name.clone(), v);
-                }
-            }
-            Binding::Missing => {}
-        }
-    }
-    f
-}
-
 /// Run one scenario in a fresh, isolated session and return causal evidence.
 pub fn run_scenario(
     setup: &AssessmentSetup<'_>,
@@ -191,32 +128,10 @@ pub fn run_scenario(
             action.action.clone(),
         )?;
     }
-    let bindings: Vec<(String, Binding)> = evidence
-        .iter()
-        .map(|e| {
-            let binding = match &e.source {
-                EvidenceSource::PlcTag { tag } => session
-                    .tags()
-                    .iter()
-                    .find(|t| t.name.eq_ignore_ascii_case(tag.as_str()))
-                    .map_or(Binding::Missing, |t| {
-                        if t.role == TagRole::Input {
-                            Binding::Input(t.signal)
-                        } else {
-                            Binding::Output(t.signal)
-                        }
-                    }),
-                EvidenceSource::Component {
-                    component,
-                    quantity,
-                } => session
-                    .signals()
-                    .by_path(&format!("process.{component}.{quantity}"))
-                    .map_or(Binding::Missing, Binding::Process),
-            };
-            (e.name.to_string(), binding)
-        })
-        .collect();
+    if let Some(sequence) = setup.sequence {
+        session.configure_sequence(sequence.clone(), evidence.to_vec())?;
+    }
+    let bindings = crate::evidence::bind(&session, evidence);
     let duration = u64::from(scenario.duration_ms) * 1_000;
     let mut result = GradingEvidence {
         scenario: scenario.id.to_string(),
@@ -226,6 +141,7 @@ pub fn run_scenario(
     // Bounded: a faulted scan does not advance time, so allow a few extra steps.
     let max_steps = duration / setup.config.cycle_us.max(1) + 16;
     let mut steps = 0;
+    let mut reached: Vec<(String, u64)> = Vec::new();
     while session.now().as_micros() < duration && steps < max_steps {
         let observation = session.step_cycle()?;
         if let (Some(d), None) = (&observation.fault, &result.plc_fault) {
@@ -235,8 +151,31 @@ pub fn run_scenario(
                 message: d.message().to_owned(),
             });
         }
-        result.cycles.push(facts(&observation, &bindings));
+        result
+            .cycles
+            .push(crate::evidence::facts(&observation, &bindings));
+        if let Some(monitor) = session.sequence()
+            && let Some(step) = &monitor.status().active
+            && !reached.iter().any(|(id, _)| id == step.as_str())
+        {
+            reached.push((step.to_string(), observation.header.end_us));
+        }
         steps += 1;
+    }
+    if session.sequence().is_some() {
+        let mut faults = Vec::new();
+        for (_, event) in session.events().iter() {
+            if let LabEventKind::Sequence { event } = &event.kind
+                && event.kind.is_fault()
+            {
+                faults.push(SequenceFault {
+                    time_us: event.time_us,
+                    code: event.kind.code().to_owned(),
+                    step: event.step.as_ref().map(ToString::to_string),
+                });
+            }
+        }
+        result.sequence = Some(SequenceEvidence { faults, reached });
     }
     for (_, event) in session.events().iter() {
         if let LabEventKind::Process { component, kind } = &event.kind
@@ -308,6 +247,7 @@ pub fn assess(
             seed: 7,
             ..SessionConfig::default()
         },
+        sequence: exercise.sequence.as_ref(),
     };
     let mut evidence = BTreeMap::new();
     for scenario in exercise

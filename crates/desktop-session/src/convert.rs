@@ -1218,6 +1218,212 @@ pub fn describe(
                 None,
             )
         }
+        LabEventKind::Sequence { event } => {
+            let (severity, message) = sequence_message(session, event);
+            ("SEQUENCE".into(), severity, message, None)
+        }
+    }
+}
+
+/// A step as `S<number>` (language-neutral); the inspector shows localized step names.
+fn step_label(session: &LabSession, step: Option<&lab_model::Identifier>) -> String {
+    let number = step.and_then(|id| {
+        session
+            .sequence()
+            .and_then(|m| m.definition().step(id))
+            .map(|s| s.number)
+    });
+    number.map_or_else(|| "?".into(), |n| format!("S{n}"))
+}
+
+/// An event-log line for a sequence event (ADR-0043): coded, with identifiers as data.
+fn sequence_message(
+    session: &LabSession,
+    e: &lab_engine::sequence_core::SequenceEvent,
+) -> (&'static str, Message) {
+    use lab_engine::sequence_core::{Deviation, RunStart, SequenceEventKind as K};
+    let sequence = e.sequence.as_str();
+    let step = step_label(session, e.step.as_ref());
+    let from = step_label(session, e.from.as_ref());
+    let transition = e.transition.as_ref().map_or("", |t| t.as_str());
+    let interlock = e.interlock.as_ref().map_or("", |t| t.as_str());
+    let reasons = e
+        .permissives
+        .iter()
+        .chain(&e.interlocks)
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    match e.kind {
+        K::RunStarted { start } => (
+            "info",
+            message!(
+                "event.sequence.runStarted",
+                "Sequence {sequence}: new run in step {step} ({start})",
+                sequence = sequence,
+                step = step.as_str(),
+                start = match start {
+                    RunStart::Warm => term("sequence.start.warm", "warm start"),
+                    RunStart::Cold => term("sequence.start.cold", "cold start"),
+                    RunStart::Attached => term("sequence.start.attached", "program running"),
+                }
+            ),
+        ),
+        K::TransitionCompleted => (
+            "info",
+            message!(
+                "event.sequence.transition",
+                "Sequence {sequence}: transition {transition}, step {from} → {step}",
+                sequence = sequence,
+                transition = transition,
+                from = from.as_str(),
+                step = step.as_str()
+            ),
+        ),
+        K::SequenceStarted => (
+            "info",
+            message!(
+                "event.sequence.started",
+                "Sequence {sequence} started",
+                sequence = sequence
+            ),
+        ),
+        K::SequenceCompleted => (
+            "info",
+            message!(
+                "event.sequence.completed",
+                "Sequence {sequence} completed",
+                sequence = sequence
+            ),
+        ),
+        K::SequenceAborted => (
+            "warning",
+            message!(
+                "event.sequence.aborted",
+                "Sequence {sequence} aborted in step {from}",
+                sequence = sequence,
+                from = from.as_str()
+            ),
+        ),
+        K::StartBlocked => (
+            "warning",
+            message!(
+                "event.sequence.startBlocked",
+                "Sequence {sequence}: start refused ({reasons})",
+                sequence = sequence,
+                reasons = reasons.as_str()
+            ),
+        ),
+        K::TransitionBlocked => (
+            "warning",
+            message!(
+                "event.sequence.transitionBlocked",
+                "Sequence {sequence}: transition {transition} refused ({reasons})",
+                sequence = sequence,
+                transition = transition,
+                reasons = reasons.as_str()
+            ),
+        ),
+        K::InterlockActivated => (
+            "warning",
+            message!(
+                "event.sequence.interlockActive",
+                "Sequence {sequence}: interlock {interlock} active in step {step}",
+                sequence = sequence,
+                interlock = interlock,
+                step = step.as_str()
+            ),
+        ),
+        K::InterlockCleared => (
+            "info",
+            message!(
+                "event.sequence.interlockCleared",
+                "Sequence {sequence}: interlock {interlock} cleared",
+                sequence = sequence,
+                interlock = interlock
+            ),
+        ),
+        K::Held => (
+            "info",
+            message!(
+                "event.sequence.held",
+                "Sequence {sequence} held in step {step}",
+                sequence = sequence,
+                step = step.as_str()
+            ),
+        ),
+        K::Resumed => (
+            "info",
+            message!(
+                "event.sequence.resumed",
+                "Sequence {sequence} resumed in step {step}",
+                sequence = sequence,
+                step = step.as_str()
+            ),
+        ),
+        K::StepTimeout => (
+            "error",
+            message!(
+                "event.sequence.timeout",
+                "Sequence {sequence}: step {step} timed out",
+                sequence = sequence,
+                step = step.as_str()
+            ),
+        ),
+        K::FaultCleared => (
+            "info",
+            message!(
+                "event.sequence.faultCleared",
+                "Sequence {sequence}: fault cleared",
+                sequence = sequence
+            ),
+        ),
+        K::Deviation(d) => {
+            let deviation = match d {
+                Deviation::UnknownStep => {
+                    term("sequence.deviation.unknownStep", "unknown step value")
+                }
+                Deviation::UndefinedTransition => term(
+                    "sequence.deviation.undefinedTransition",
+                    "step change not defined",
+                ),
+                Deviation::ConditionNotMet => term(
+                    "sequence.deviation.conditionNotMet",
+                    "transition condition not met",
+                ),
+                Deviation::PermissiveViolated => term(
+                    "sequence.deviation.permissiveViolated",
+                    "started without permission",
+                ),
+                Deviation::InterlockViolated => term(
+                    "sequence.deviation.interlockViolated",
+                    "interlock not respected",
+                ),
+                Deviation::ProgressDuringHold => term(
+                    "sequence.deviation.progressDuringHold",
+                    "advanced while held",
+                ),
+                Deviation::ProgressAfterFault => term(
+                    "sequence.deviation.progressAfterFault",
+                    "advanced after a fault",
+                ),
+            };
+            let at = if e.step.is_some() {
+                step
+            } else {
+                e.step_value.map_or_else(|| "?".into(), |v| v.to_string())
+            };
+            (
+                "error",
+                message!(
+                    "event.sequence.deviation",
+                    "Sequence {sequence}: {deviation} (step {step})",
+                    sequence = sequence,
+                    deviation = deviation,
+                    step = at.as_str()
+                ),
+            )
+        }
     }
 }
 

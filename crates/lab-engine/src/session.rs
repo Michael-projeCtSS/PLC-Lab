@@ -177,6 +177,10 @@ pub enum LabEventKind {
     },
     /// A memory reset initialized all program memory and cleared every force.
     MemoryReset,
+    /// The sequence monitor recorded an event (ADR-0043).
+    Sequence {
+        event: sequence_core::SequenceEvent,
+    },
     /// An alarm changed its state (activated, acknowledged, returned or withdrawn).
     Alarm {
         id: String,
@@ -205,6 +209,7 @@ impl TraceEvent for LabEvent {
                 LabEventKind::Alarm {
                     id, code, message, ..
                 } => id.len() + code.len() + message.len(),
+                LabEventKind::Sequence { event } => 64 + 48 * event.values.len(),
                 _ => 0,
             }
     }
@@ -255,6 +260,8 @@ pub struct LabSession {
     /// Plant alarms and the conditions behind them, in alarm id order.
     pub(crate) alarms: AlarmEngine,
     pub(crate) alarm_conditions: Vec<(String, crate::alarms::AlarmCondition)>,
+    /// The sequence the program implements, when an exercise defines one (ADR-0043).
+    pub(crate) sequence: Option<crate::sequence::Supervision>,
 }
 
 fn startup_kind(kind: StartKind) -> StartupKind {
@@ -317,6 +324,7 @@ impl LabSession {
             alarms: AlarmEngine::new(Vec::new(), alarm_core::HISTORY_CAPACITY)
                 .map_err(|e| EngineError::Internal(e.to_string()))?,
             alarm_conditions: Vec::new(),
+            sequence: None,
         };
         session.register_physical();
         session.register_channels();
@@ -905,7 +913,8 @@ impl LabSession {
         let task_time = self.plc.task_time();
         let segment = self.plc.segment;
         let outcome = self.plc.scan()?;
-        if let Some(kind) = self.plc.first_scan_done.take() {
+        let started = self.plc.first_scan_done.take();
+        if let Some(kind) = started {
             self.events.append(LabEvent {
                 time_us: start.as_micros(),
                 cycle: self.cycle,
@@ -955,10 +964,6 @@ impl LabSession {
         }
         self.drain_world_events();
         self.sample()?;
-        self.evaluate_alarms();
-        let mut tests = std::mem::take(&mut self.tests);
-        tests.observe(self);
-        self.tests = tests;
         let observation = CycleObservation {
             header: CycleHeader {
                 cycle: self.cycle,
@@ -975,6 +980,13 @@ impl LabSession {
             staged_next: self.plc_layer(Image::Staged),
             fault,
         };
+        // One snapshot per cycle: the sequence is judged before alarms are evaluated, so a
+        // sequence alarm activates in the cycle of its cause (ADR-0043).
+        self.observe_sequence(&observation, started);
+        self.evaluate_alarms();
+        let mut tests = std::mem::take(&mut self.tests);
+        tests.observe(self);
+        self.tests = tests;
         self.trace
             .append(
                 observation.header,
@@ -1230,6 +1242,7 @@ impl LabSession {
             tags,
             blocks,
         });
+        self.rebind_sequence();
         self.plc.fault = None;
         self.plc.mode = PlcMode::Stop;
         self.plc.segment += 1;
@@ -1279,12 +1292,16 @@ impl LabSession {
                 fault: fault.clone(),
             })
             .collect();
+        let sequence = self.sequence_setup();
         let mut fresh = Self::new(
             self.scene_def.clone(),
             station,
             self.profile.clone(),
             self.config,
         )?;
+        if let Some((definition, evidence)) = sequence {
+            fresh.configure_sequence(definition, evidence)?;
+        }
         // Keep signal identities stable across world resets.
         fresh.signals = self.signals.clone();
         fresh.register_physical();

@@ -1948,6 +1948,7 @@ dependencies = [
  "plc-runtime",
  "plc-types",
  "process-simulation",
+ "sequence-core",
  "simulation-core",
  "st-frontend",
  "trace-core",

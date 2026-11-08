@@ -1,0 +1,605 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ts.tank-sequence-stalls",
+  "revision": 1,
+  "title": "The batch sequence stalls after Start",
+  "kind": "troubleshooting",
+  "difficulty": "intermediate",
+  "summary": "The tank batch sequence starts, but it never gets past its first step and a sequence alarm appears. Use the sequence inspector and the plant to find the cause, repair it and prove that the batch completes again.",
+  "objectives": [
+    "Use the sequence inspector to find the condition a step is waiting for",
+    "Separate a command from the field device's response",
+    "Verify a repair with a complete batch"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.tank-filling",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL;\n    StopPB : BOOL;\n    HoldPB : BOOL;\n    LevelLow : BOOL;\n    LevelHigh : BOOL;\n    InletOpen : BOOL;\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL;\n    DrainPump : BOOL;\nEND_VAR\nVAR\n    Step : INT;\n    Held : BOOL;\nEND_VAR\n\n(* Stop aborts the batch from every step. *)\nIF NOT StopPB THEN\n    Step := 0;\n    Held := FALSE;\nEND_IF;\n\n(* HOLD keeps a running step and stops the plant; Start resumes the same step. *)\nIF Step >= 1 AND Step <= 4 THEN\n    IF HoldPB THEN\n        Held := TRUE;\n    ELSIF Held AND StartPB THEN\n        Held := FALSE;\n    END_IF;\nELSE\n    Held := FALSE;\nEND_IF;\n\nIF NOT Held THEN\n    CASE Step OF\n        0:\n            IF StartPB AND StopPB AND NOT HoldPB AND NOT LevelHigh AND NOT InletOpen THEN\n                Step := 1;\n            END_IF;\n        1:\n            IF InletOpen THEN\n                Step := 2;\n            END_IF;\n        2:\n            IF LevelHigh THEN\n                Step := 3;\n            END_IF;\n        3:\n            IF NOT InletOpen AND NOT LevelLow THEN\n                Step := 4;\n            END_IF;\n        4:\n            IF LevelLow THEN\n                Step := 5;\n            END_IF;\n        5:\n            IF StartPB THEN\n                Step := 0;\n            END_IF;\n    END_CASE;\nEND_IF;\n\nInletValve := (Step = 1 OR Step = 2) AND NOT Held;\nDrainPump := Step = 4 AND NOT Held;\nEND_PROGRAM\n",
+  "starterStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA",
+            "diagnostics": true
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          },
+          {
+            "channel": 2,
+            "mode": "disabled"
+          },
+          {
+            "channel": 3,
+            "mode": "disabled"
+          }
+        ]
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "LevelLow"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "tag": "LevelHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 4
+        },
+        "tag": "InletOpen"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 5
+        },
+        "tag": "HoldPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "DrainPump"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "tag": "LevelRaw"
+      }
+    ]
+  },
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "HoldPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelLow",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Start the simulation and press Start, as the operator did.",
+    "Open the Sequence tab: note the active step, the transition it waits for and the step timer.",
+    "Compare what the program commands with what the plant does in the Process view and the alarms.",
+    "Submit the root cause you can prove, apply the repair, then run Check: the batch must complete without a sequence fault."
+  ],
+  "hints": [
+    "A step that waits for feedback needs the field device to move. Does the command reach the device?",
+    "Watch the tank level while the first step is active."
+  ],
+  "curriculumOrder": 9,
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "stop",
+      "source": {
+        "type": "plcTag",
+        "tag": "StopPB"
+      }
+    },
+    {
+      "name": "hold",
+      "source": {
+        "type": "plcTag",
+        "tag": "HoldPB"
+      }
+    },
+    {
+      "name": "low",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelLow"
+      }
+    },
+    {
+      "name": "high",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelHigh"
+      }
+    },
+    {
+      "name": "open",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletOpen"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "pump",
+      "source": {
+        "type": "plcTag",
+        "tag": "DrainPump"
+      }
+    },
+    {
+      "name": "step",
+      "source": {
+        "type": "plcTag",
+        "tag": "Step"
+      }
+    },
+    {
+      "name": "held",
+      "source": {
+        "type": "plcTag",
+        "tag": "Held"
+      }
+    }
+  ],
+  "sequence": {
+    "id": "tank-batch",
+    "name": "Tank batch",
+    "stepSignal": "step",
+    "heldSignal": "held",
+    "steps": [
+      {
+        "id": "idle",
+        "number": 0,
+        "name": "Idle",
+        "role": "initial"
+      },
+      {
+        "id": "open-inlet",
+        "number": 1,
+        "name": "Open the inlet valve",
+        "timeoutMs": 5000
+      },
+      {
+        "id": "fill",
+        "number": 2,
+        "name": "Fill the tank",
+        "timeoutMs": 30000
+      },
+      {
+        "id": "close-inlet",
+        "number": 3,
+        "name": "Close the inlet valve",
+        "timeoutMs": 5000
+      },
+      {
+        "id": "drain",
+        "number": 4,
+        "name": "Drain the tank",
+        "timeoutMs": 40000
+      },
+      {
+        "id": "complete",
+        "number": 5,
+        "name": "Batch complete",
+        "role": "final"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "start",
+        "from": "idle",
+        "to": "open-inlet",
+        "name": "Start requested",
+        "condition": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "permissives": [
+          {
+            "id": "stop-released",
+            "name": "Stop button released",
+            "condition": {
+              "type": "compare",
+              "signal": "stop",
+              "layer": "inputs",
+              "op": "eq",
+              "value": true
+            }
+          },
+          {
+            "id": "hold-released",
+            "name": "Hold button released",
+            "condition": {
+              "type": "compare",
+              "signal": "hold",
+              "layer": "inputs",
+              "op": "eq",
+              "value": false
+            }
+          },
+          {
+            "id": "tank-not-full",
+            "name": "Tank below the high level switch",
+            "condition": {
+              "type": "compare",
+              "signal": "high",
+              "layer": "inputs",
+              "op": "eq",
+              "value": false
+            }
+          }
+        ]
+      },
+      {
+        "id": "opened",
+        "from": "open-inlet",
+        "to": "fill",
+        "name": "Inlet valve reports open",
+        "condition": {
+          "type": "compare",
+          "signal": "open",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      {
+        "id": "full",
+        "from": "fill",
+        "to": "close-inlet",
+        "name": "High level reached",
+        "condition": {
+          "type": "compare",
+          "signal": "high",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      {
+        "id": "closed",
+        "from": "close-inlet",
+        "to": "drain",
+        "name": "Inlet valve left the open position",
+        "condition": {
+          "type": "compare",
+          "signal": "open",
+          "layer": "inputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      {
+        "id": "empty",
+        "from": "drain",
+        "to": "complete",
+        "name": "Low level reached",
+        "condition": {
+          "type": "compare",
+          "signal": "low",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      {
+        "id": "next-batch",
+        "from": "complete",
+        "to": "idle",
+        "name": "Start for the next batch",
+        "condition": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        }
+      }
+    ],
+    "interlocks": [
+      {
+        "id": "inlet-not-closed",
+        "name": "Inlet valve not closed",
+        "condition": {
+          "type": "compare",
+          "signal": "open",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "reaction": "blockStart",
+        "steps": [
+          "idle"
+        ]
+      },
+      {
+        "id": "tank-empty",
+        "name": "Tank at the low level: do not drain",
+        "condition": {
+          "type": "compare",
+          "signal": "low",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "reaction": "holdProgress",
+        "steps": [
+          "close-inlet"
+        ]
+      },
+      {
+        "id": "stop-pressed",
+        "name": "Stop pressed",
+        "condition": {
+          "type": "compare",
+          "signal": "stop",
+          "layer": "inputs",
+          "op": "eq",
+          "value": false
+        },
+        "reaction": "abortSequence",
+        "steps": [
+          "open-inlet",
+          "fill",
+          "close-inlet",
+          "drain"
+        ],
+        "reactionMs": 200
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "batch",
+      "title": "One complete batch",
+      "durationMs": 45000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "completes",
+      "title": "The batch completes",
+      "points": 50,
+      "scenario": "batch",
+      "rule": {
+        "type": "sequenceReached",
+        "step": "complete",
+        "byMs": 40000
+      },
+      "onFail": "The batch did not reach step 5 (complete) within 40 s."
+    },
+    {
+      "id": "conforms",
+      "title": "No sequence fault",
+      "points": 50,
+      "scenario": "batch",
+      "rule": {
+        "type": "sequenceConforms"
+      },
+      "onFail": "The sequence monitor recorded a step timeout or a deviation."
+    }
+  ],
+  "troubleshooting": {
+    "symptom": "After Start the batch never gets past step 1 and a sequence alarm appears. The tank level does not change.",
+    "reportedBy": "Shift operator",
+    "faults": [
+      {
+        "id": "inlet-stuck",
+        "fault": {
+          "type": "valveStuck",
+          "component": "inlet",
+          "position": "closed"
+        }
+      }
+    ],
+    "loadedProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL;\n    StopPB : BOOL;\n    HoldPB : BOOL;\n    LevelLow : BOOL;\n    LevelHigh : BOOL;\n    InletOpen : BOOL;\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL;\n    DrainPump : BOOL;\nEND_VAR\nVAR\n    Step : INT;\n    Held : BOOL;\nEND_VAR\n\n(* Stop aborts the batch from every step. *)\nIF NOT StopPB THEN\n    Step := 0;\n    Held := FALSE;\nEND_IF;\n\n(* HOLD keeps a running step and stops the plant; Start resumes the same step. *)\nIF Step >= 1 AND Step <= 4 THEN\n    IF HoldPB THEN\n        Held := TRUE;\n    ELSIF Held AND StartPB THEN\n        Held := FALSE;\n    END_IF;\nELSE\n    Held := FALSE;\nEND_IF;\n\nIF NOT Held THEN\n    CASE Step OF\n        0:\n            IF StartPB AND StopPB AND NOT HoldPB AND NOT LevelHigh AND NOT InletOpen THEN\n                Step := 1;\n            END_IF;\n        1:\n            IF InletOpen THEN\n                Step := 2;\n            END_IF;\n        2:\n            IF LevelHigh THEN\n                Step := 3;\n            END_IF;\n        3:\n            IF NOT InletOpen AND NOT LevelLow THEN\n                Step := 4;\n            END_IF;\n        4:\n            IF LevelLow THEN\n                Step := 5;\n            END_IF;\n        5:\n            IF StartPB THEN\n                Step := 0;\n            END_IF;\n    END_CASE;\nEND_IF;\n\nInletValve := (Step = 1 OR Step = 2) AND NOT Held;\nDrainPump := Step = 4 AND NOT Held;\nEND_PROGRAM\n",
+    "diagnosisOptions": [
+      {
+        "id": "valve-stuck",
+        "label": "The inlet valve XV-101 does not move although it is commanded open"
+      },
+      {
+        "id": "open-switch",
+        "label": "The inlet valve opens but its open limit switch never reports it"
+      },
+      {
+        "id": "program",
+        "label": "The program never commands InletValve"
+      },
+      {
+        "id": "high-switch",
+        "label": "The high level switch LSH-103 is faulty"
+      }
+    ],
+    "rootCauses": [
+      "valve-stuck"
+    ],
+    "repairs": [
+      {
+        "id": "free-valve",
+        "label": "Free and service the inlet valve XV-101",
+        "clears": [
+          "inlet-stuck"
+        ]
+      },
+      {
+        "id": "replace-switch",
+        "label": "Replace the open limit switch of XV-101",
+        "clears": []
+      },
+      {
+        "id": "replace-lsh",
+        "label": "Replace the high level switch LSH-103",
+        "clears": []
+      }
+    ],
+    "verification": [
+      "completes",
+      "conforms"
+    ],
+    "learningRefs": [
+      "fundamentals.sequences"
+    ],
+    "debriefRefs": [
+      "troubleshooting.valve-stuck"
+    ],
+    "debrief": {
+      "rootCause": "The inlet valve XV-101 was mechanically stuck closed. The program commanded it open in step 1, but the valve never moved.",
+      "evidence": [
+        "The Sequence tab showed step 1 waiting for InletOpen = TRUE while InletValve was TRUE.",
+        "The step timer ran out after 5 s and the step timeout alarm activated.",
+        "The tank level did not rise, so no water flowed: the valve itself did not open."
+      ],
+      "repair": "Free and service the inlet valve, then run a complete batch to verify.",
+      "reasoning": "A missing limit switch signal alone would leave the tank filling; a level that does not move proves that the valve did not open although it was commanded."
+    }
+  }
+}

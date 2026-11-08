@@ -1,0 +1,867 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.tank-sequence",
+  "revision": 1,
+  "title": "Batch sequence with permissives, interlocks and HOLD",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "Program the tank batch as a documented step sequence: open the inlet, fill, close the inlet, drain, complete. Start is refused unless its permissives hold, interlocks protect the plant, Hold pauses a running step and Stop aborts. The sequence inspector shows what each step waits for.",
+  "objectives": [
+    "Program a step sequence with permissives, interlocks, HOLD and RESUME",
+    "Read the sequence inspector to find what a step is waiting for"
+  ],
+  "prerequisites": [
+    "ex.tank-batch-sequence"
+  ],
+  "estimatedMinutes": 40,
+  "scene": "scene.tank-filling",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    StartPB : BOOL; (* Start button S1 (normally open). *)\n    StopPB : BOOL; (* Stop button S2 (normally closed: TRUE while not pressed). *)\n    HoldPB : BOOL; (* Hold button S3 (normally open). *)\n    LevelLow : BOOL; (* TRUE while the level is below the low switch (LSL-104 contact closes when dry). *)\n    LevelHigh : BOOL; (* TRUE while the level is at or above the high switch (LSH-103 contact closes when wet). *)\n    InletOpen : BOOL; (* Inlet valve fully-open limit switch. *)\nEND_VAR\nVAR_OUTPUT\n    InletValve : BOOL; (* Inlet valve solenoid XV-101: TRUE opens the valve. *)\n    DrainPump : BOOL; (* Drain pump P-102 contactor. *)\nEND_VAR\nVAR\n    Step : INT; (* Active step: 0 idle, 1 open inlet, 2 fill, 3 close inlet, 4 drain, 5 complete. *)\n    Held : BOOL; (* TRUE while the sequence is held. *)\nEND_VAR\n\n(* Write the sequence: CASE Step OF ... END_CASE; then the outputs from Step and Held. *)\n\nEND_PROGRAM\n",
+  "starterStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.compact",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 1
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA",
+            "diagnostics": true
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          },
+          {
+            "channel": 2,
+            "mode": "disabled"
+          },
+          {
+            "channel": 3,
+            "mode": "disabled"
+          }
+        ]
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 0
+        },
+        "tag": "StartPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 1
+        },
+        "tag": "StopPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 2
+        },
+        "tag": "LevelLow"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 3
+        },
+        "tag": "LevelHigh"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 4
+        },
+        "tag": "InletOpen"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 1,
+          "channel": 5
+        },
+        "tag": "HoldPB"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "InletValve"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 1
+        },
+        "tag": "DrainPump"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "tag": "LevelRaw"
+      }
+    ]
+  },
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "HoldPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelLow",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletOpen",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Step 0 (idle): Start begins a batch only while StopPB is TRUE, HoldPB is FALSE, LevelHigh is FALSE and InletOpen is FALSE.",
+    "Step 1 (open inlet): InletValve on until InletOpen reports the open position.",
+    "Step 2 (fill): keep InletValve on until LevelHigh.",
+    "Step 3 (close inlet): InletValve off; continue when InletOpen is FALSE and LevelLow is FALSE.",
+    "Step 4 (drain): DrainPump on until LevelLow.",
+    "Step 5 (complete): outputs off; StartPB returns to step 0 for the next batch.",
+    "In steps 1 to 4, HoldPB sets Held: both outputs off and the step stays. StartPB clears Held and the same step continues.",
+    "StopPB FALSE (Stop pressed) returns to step 0 from every step and clears Held.",
+    "Open the Sequence tab: it shows the active step, what it waits for, permissives, interlocks, step timers and the history."
+  ],
+  "hints": [
+    "Handle Stop first, then HOLD, then the CASE: skip the CASE while Held is TRUE.",
+    "Write the outputs after the CASE from Step and Held: InletValve := (Step = 1 OR Step = 2) AND NOT Held;",
+    "If Start does nothing, the Sequence tab lists the permissive or interlock that refuses it."
+  ],
+  "knowledgeRefs": [
+    "fundamentals.sequences",
+    "fundamentals.interlocks"
+  ],
+  "curriculumOrder": 13,
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "stop",
+      "source": {
+        "type": "plcTag",
+        "tag": "StopPB"
+      }
+    },
+    {
+      "name": "hold",
+      "source": {
+        "type": "plcTag",
+        "tag": "HoldPB"
+      }
+    },
+    {
+      "name": "low",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelLow"
+      }
+    },
+    {
+      "name": "high",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelHigh"
+      }
+    },
+    {
+      "name": "open",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletOpen"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "pump",
+      "source": {
+        "type": "plcTag",
+        "tag": "DrainPump"
+      }
+    },
+    {
+      "name": "step",
+      "source": {
+        "type": "plcTag",
+        "tag": "Step"
+      }
+    },
+    {
+      "name": "held",
+      "source": {
+        "type": "plcTag",
+        "tag": "Held"
+      }
+    }
+  ],
+  "sequence": {
+    "id": "tank-batch",
+    "name": "Tank batch",
+    "stepSignal": "step",
+    "heldSignal": "held",
+    "steps": [
+      {
+        "id": "idle",
+        "number": 0,
+        "name": "Idle",
+        "role": "initial"
+      },
+      {
+        "id": "open-inlet",
+        "number": 1,
+        "name": "Open the inlet valve",
+        "timeoutMs": 5000
+      },
+      {
+        "id": "fill",
+        "number": 2,
+        "name": "Fill the tank",
+        "timeoutMs": 30000
+      },
+      {
+        "id": "close-inlet",
+        "number": 3,
+        "name": "Close the inlet valve",
+        "timeoutMs": 5000
+      },
+      {
+        "id": "drain",
+        "number": 4,
+        "name": "Drain the tank",
+        "timeoutMs": 40000
+      },
+      {
+        "id": "complete",
+        "number": 5,
+        "name": "Batch complete",
+        "role": "final"
+      }
+    ],
+    "transitions": [
+      {
+        "id": "start",
+        "from": "idle",
+        "to": "open-inlet",
+        "name": "Start requested",
+        "condition": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "permissives": [
+          {
+            "id": "stop-released",
+            "name": "Stop button released",
+            "condition": {
+              "type": "compare",
+              "signal": "stop",
+              "layer": "inputs",
+              "op": "eq",
+              "value": true
+            }
+          },
+          {
+            "id": "hold-released",
+            "name": "Hold button released",
+            "condition": {
+              "type": "compare",
+              "signal": "hold",
+              "layer": "inputs",
+              "op": "eq",
+              "value": false
+            }
+          },
+          {
+            "id": "tank-not-full",
+            "name": "Tank below the high level switch",
+            "condition": {
+              "type": "compare",
+              "signal": "high",
+              "layer": "inputs",
+              "op": "eq",
+              "value": false
+            }
+          }
+        ]
+      },
+      {
+        "id": "opened",
+        "from": "open-inlet",
+        "to": "fill",
+        "name": "Inlet valve reports open",
+        "condition": {
+          "type": "compare",
+          "signal": "open",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      {
+        "id": "full",
+        "from": "fill",
+        "to": "close-inlet",
+        "name": "High level reached",
+        "condition": {
+          "type": "compare",
+          "signal": "high",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      {
+        "id": "closed",
+        "from": "close-inlet",
+        "to": "drain",
+        "name": "Inlet valve left the open position",
+        "condition": {
+          "type": "compare",
+          "signal": "open",
+          "layer": "inputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      {
+        "id": "empty",
+        "from": "drain",
+        "to": "complete",
+        "name": "Low level reached",
+        "condition": {
+          "type": "compare",
+          "signal": "low",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      {
+        "id": "next-batch",
+        "from": "complete",
+        "to": "idle",
+        "name": "Start for the next batch",
+        "condition": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        }
+      }
+    ],
+    "interlocks": [
+      {
+        "id": "inlet-not-closed",
+        "name": "Inlet valve not closed",
+        "condition": {
+          "type": "compare",
+          "signal": "open",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "reaction": "blockStart",
+        "steps": [
+          "idle"
+        ]
+      },
+      {
+        "id": "tank-empty",
+        "name": "Tank at the low level: do not drain",
+        "condition": {
+          "type": "compare",
+          "signal": "low",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "reaction": "holdProgress",
+        "steps": [
+          "close-inlet"
+        ]
+      },
+      {
+        "id": "stop-pressed",
+        "name": "Stop pressed",
+        "condition": {
+          "type": "compare",
+          "signal": "stop",
+          "layer": "inputs",
+          "op": "eq",
+          "value": false
+        },
+        "reaction": "abortSequence",
+        "steps": [
+          "open-inlet",
+          "fill",
+          "close-inlet",
+          "drain"
+        ],
+        "reactionMs": 200
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "batch",
+      "title": "One complete batch",
+      "durationMs": 45000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "refused",
+      "title": "Start while Hold is pressed",
+      "durationMs": 3000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 200,
+          "action": {
+            "type": "press",
+            "component": "hold"
+          }
+        },
+        {
+          "atMs": 2500,
+          "action": {
+            "type": "release",
+            "component": "hold"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 900,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hold",
+      "title": "Hold during filling, then resume",
+      "durationMs": 60000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 5000,
+          "action": {
+            "type": "press",
+            "component": "hold"
+          }
+        },
+        {
+          "atMs": 5300,
+          "action": {
+            "type": "release",
+            "component": "hold"
+          }
+        },
+        {
+          "atMs": 9000,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 9300,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stop",
+      "title": "Stop during filling",
+      "durationMs": 10000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 5000,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 5300,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "starts",
+      "title": "Start opens the inlet valve step",
+      "points": 10,
+      "scenario": "batch",
+      "rule": {
+        "type": "sequenceReached",
+        "step": "fill",
+        "byMs": 3500
+      },
+      "onFail": "The sequence did not reach the fill step within 3.5 s after Start."
+    },
+    {
+      "id": "completes",
+      "title": "The batch completes",
+      "points": 20,
+      "scenario": "batch",
+      "rule": {
+        "type": "sequenceReached",
+        "step": "complete",
+        "byMs": 40000
+      },
+      "onFail": "The batch did not reach step 5 (complete) within 40 s."
+    },
+    {
+      "id": "conforms",
+      "title": "The program follows the documented sequence",
+      "points": 15,
+      "scenario": "batch",
+      "rule": {
+        "type": "sequenceConforms"
+      },
+      "onFail": "The sequence monitor recorded a deviation or a step timeout."
+    },
+    {
+      "id": "exclusive",
+      "title": "Inlet valve and drain pump never run together",
+      "points": 10,
+      "scenario": "batch",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "pump",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      "onFail": "InletValve and DrainPump were on together."
+    },
+    {
+      "id": "no-overflow",
+      "title": "No overflow",
+      "points": 5,
+      "scenario": "batch",
+      "rule": {
+        "type": "eventAbsent",
+        "event": "overflow"
+      },
+      "onFail": "The tank overflowed."
+    },
+    {
+      "id": "refuses",
+      "title": "A pressed Hold button refuses the start",
+      "points": 10,
+      "scenario": "refused",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2000,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "step",
+              "layer": "outputs",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      "onFail": "The batch started although the Hold button was pressed."
+    },
+    {
+      "id": "holds",
+      "title": "HOLD keeps the step and stops the plant",
+      "points": 10,
+      "scenario": "hold",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 8000,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "held",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "step",
+              "layer": "outputs",
+              "op": "eq",
+              "value": 2
+            },
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "type": "compare",
+              "signal": "pump",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      "onFail": "During HOLD the sequence did not stay in the fill step with both outputs off."
+    },
+    {
+      "id": "resumes",
+      "title": "Start resumes the held batch",
+      "points": 10,
+      "scenario": "hold",
+      "rule": {
+        "type": "sequenceReached",
+        "step": "complete",
+        "byMs": 55000
+      },
+      "onFail": "After Start the held batch did not continue to step 5."
+    },
+    {
+      "id": "hold-conforms",
+      "title": "Nothing advances while held",
+      "points": 5,
+      "scenario": "hold",
+      "rule": {
+        "type": "sequenceConforms"
+      },
+      "onFail": "The sequence monitor recorded a deviation during or after HOLD."
+    },
+    {
+      "id": "aborts",
+      "title": "Stop aborts the batch at once",
+      "points": 5,
+      "scenario": "stop",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "stop",
+          "layer": "inputs",
+          "op": "eq",
+          "value": false
+        },
+        "response": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "step",
+              "layer": "outputs",
+              "op": "eq",
+              "value": 0
+            },
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        },
+        "withinMs": 200
+      },
+      "onFail": "Stop did not return the sequence to step 0 with the valve closed within 200 ms."
+    }
+  ]
+}

@@ -32,6 +32,7 @@ fn evidence(scene: &SceneDefinition, body: &str) -> GradingEvidence {
         program: &source,
         faults: &[],
         config: SessionConfig::default(),
+        sequence: None,
     };
     // Press S1 twice with releases in between, so both input values occur repeatedly.
     let scenario: Scenario = serde_json::from_value(serde_json::json!({
@@ -181,6 +182,7 @@ END_PROGRAM";
         program: source,
         faults: &[],
         config: SessionConfig::default(),
+        sequence: None,
     };
     let scenario: Scenario = serde_json::from_value(serde_json::json!({
         "id": "start", "title": "Press Start", "durationMs": 1500,

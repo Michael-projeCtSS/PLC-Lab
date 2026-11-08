@@ -9,9 +9,11 @@ mod alarms;
 mod assessment;
 mod commissioning;
 mod error;
+mod evidence;
 mod faults;
 mod plc;
 mod queries;
+mod sequence;
 mod session;
 mod signals;
 
@@ -29,6 +31,7 @@ pub use error::{BindingIssue, EngineError};
 pub use plc::{BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile};
 pub use plc_runtime::StartKind;
 pub use queries::{CauseEffect, Change, Effect, HistoryRow, TrendLayer, TrendSeries, VariableRow};
+pub use sequence_core;
 pub use session::{
     ActiveForce, CycleHeader, CycleObservation, CycleOutcome, DownloadReport, ForceTarget,
     LAYER_APPLIED, LAYER_COMMITTED, LAYER_INPUTS, LAYER_NEXT, LAYER_PROCESS, LAYERS, LabEvent,

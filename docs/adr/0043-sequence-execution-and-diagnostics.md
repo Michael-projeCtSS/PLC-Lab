@@ -149,7 +149,7 @@ history. Forces act as they do for the program: a forced input is what the scan 
 The monitor feeds the existing alarm engine (ADR-0037), source `sequence.<id>`,
 category `PROCESS`: `sequence.<id>.step-timeout` (ALARM; active from the timeout until
 the step changes or the run restarts), `sequence.<id>.deviation` (ALARM; active while a
-deviation fault is latched) and `sequence.<id>.<interlock>` (WARNING; active while the
+deviation fault is latched) and `sequence.<id>.interlock.<interlock>` (WARNING; active while the
 interlock is active where it applies). Alarm lifecycles, acknowledgment and history are
 unchanged; a held condition activates once. Every sequence event is also written to the
 session event log. The monitor keeps the newest 200 events and counts all. Event codes,

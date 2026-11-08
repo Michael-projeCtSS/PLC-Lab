@@ -16,6 +16,7 @@ network-core.workspace = true
 trace-core.workspace = true
 grading-core.workspace = true
 alarm-core.workspace = true
+sequence-core.workspace = true
 st-frontend.workspace = true
 
 

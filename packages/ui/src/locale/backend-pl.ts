@@ -333,6 +333,27 @@ export const backendPl: Readonly<Record<string, string>> = {
   "event.reason.warm": "restart ciepły",
   "event.reason.worldReset": "reset symulacji",
   "event.repair": "Naprawa: {label}",
+  "event.sequence.aborted": "Sekwencja {sequence} przerwana w kroku {from}",
+  "event.sequence.completed": "Sekwencja {sequence} zakończona",
+  "event.sequence.deviation": "Sekwencja {sequence}: {deviation} (krok {step})",
+  "event.sequence.faultCleared": "Sekwencja {sequence}: błąd skasowany",
+  "event.sequence.held": "Sekwencja {sequence} wstrzymana w kroku {step}",
+  "event.sequence.interlockActive":
+    "Sekwencja {sequence}: blokada {interlock} aktywna w kroku {step}",
+  "event.sequence.interlockCleared":
+    "Sekwencja {sequence}: blokada {interlock} ustąpiła",
+  "event.sequence.resumed": "Sekwencja {sequence} wznowiona w kroku {step}",
+  "event.sequence.runStarted":
+    "Sekwencja {sequence}: nowy przebieg w kroku {step} ({start})",
+  "event.sequence.startBlocked":
+    "Sekwencja {sequence}: start zablokowany ({reasons})",
+  "event.sequence.started": "Sekwencja {sequence} uruchomiona",
+  "event.sequence.timeout":
+    "Sekwencja {sequence}: przekroczony czas kroku {step}",
+  "event.sequence.transition":
+    "Sekwencja {sequence}: przejście {transition}, krok {from} → {step}",
+  "event.sequence.transitionBlocked":
+    "Sekwencja {sequence}: przejście {transition} zablokowane ({reasons})",
   "event.warmStart":
     "Start ciepły: dane nieretencyjne zainicjalizowane, zachowane zmienne retencyjne: {retained}",
   "event.worldReset": "Symulacja przywrócona do początkowego stanu instalacji.",
@@ -385,6 +406,17 @@ export const backendPl: Readonly<Record<string, string>> = {
   "mode.disabled": "wyłączony",
   "module.product": "{product} ({name})",
   "module.unknown": "moduł",
+  "sequence.deviation.conditionNotMet": "warunek przejścia niespełniony",
+  "sequence.deviation.interlockViolated": "blokada nieprzestrzegana",
+  "sequence.deviation.permissiveViolated":
+    "start bez spełnionych warunków zezwalających",
+  "sequence.deviation.progressAfterFault": "postęp mimo błędu",
+  "sequence.deviation.progressDuringHold": "postęp podczas wstrzymania",
+  "sequence.deviation.undefinedTransition": "niezdefiniowana zmiana kroku",
+  "sequence.deviation.unknownStep": "nieznana wartość kroku",
+  "sequence.start.attached": "program w trybie RUN",
+  "sequence.start.cold": "start zimny",
+  "sequence.start.warm": "start ciepły",
   "signal.0-10V": "0-10 V",
   "signal.0-20mA": "0-20 mA",
   "signal.4-20mA": "4-20 mA",

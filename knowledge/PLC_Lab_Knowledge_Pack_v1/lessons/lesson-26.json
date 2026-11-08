@@ -1,0 +1,93 @@
+{
+  "id": "lesson.sequences",
+  "number": 26,
+  "title": "Step sequences",
+  "summary": "Divide a batch into steps, decide when each step ends, and keep it safe with permissives, interlocks, timeouts and HOLD.",
+  "level": "beginner",
+  "minutes": 20,
+  "objectives": [
+    "Describe a process as steps and transition conditions",
+    "Tell permissives, interlocks, timeouts and HOLD apart"
+  ],
+  "sections": [
+    {
+      "type": "concept",
+      "heading": "A process in steps",
+      "body": "Many machines work in phases: open a valve, fill, close the valve, drain. A **sequence** makes each phase a **step**. A **transition condition** decides when the next step starts. The program keeps the active step in a variable, for example `Step : INT`."
+    },
+    {
+      "type": "visual",
+      "heading": "The tank batch",
+      "body": "Each box is a step, each arrow a transition with its condition.",
+      "diagram": "[0 Idle] --Start--> [1 Open inlet] --InletOpen--> [2 Fill]\n    ^                                                  |\n  Start                                            LevelHigh\n    |                                                  v\n[5 Complete] <--LevelLow-- [4 Drain] <--NOT InletOpen-- [3 Close inlet]"
+    },
+    {
+      "type": "example",
+      "heading": "One step in CASE",
+      "body": "Step 2 fills until the high level switch; the output is written once, after the CASE.",
+      "code": "CASE Step OF\n    2: IF LevelHigh THEN\n           Step := 3;\n       END_IF;\nEND_CASE;\nInletValve := Step = 1 OR Step = 2;"
+    },
+    {
+      "type": "concept",
+      "heading": "Permissives, interlocks and HOLD",
+      "body": "A **permissive** must be TRUE to start, for example Stop released and tank not full. An **interlock** protects the plant while the sequence runs: it blocks the start, holds the progress or aborts the sequence. **HOLD** pauses the active step with the plant in a safe state; **RESUME** continues the same step. A **step timeout** reports a step that does not finish in time."
+    },
+    {
+      "type": "mistake",
+      "heading": "Common mistake",
+      "body": "Switching outputs inside several CASE branches and forgetting one. Write each output once after the CASE, from the step: then every step change switches the plant correctly."
+    },
+    {
+      "type": "challenge",
+      "heading": "Which one?",
+      "body": "Read the sequence inspector.",
+      "question": {
+        "question": "Start does nothing and the Sequence tab shows 'Hold button released: not satisfied'. What refuses the start?",
+        "options": [
+          "A permissive",
+          "A step timeout",
+          "A PLC runtime fault"
+        ],
+        "answer": 0,
+        "explanation": "An unsatisfied permissive refuses the start. It is not a fault: release the Hold button and press Start again."
+      }
+    },
+    {
+      "type": "task",
+      "heading": "Practice: tank batch sequence",
+      "body": "Program the batch with permissives, interlocks, HOLD and Stop, and follow it in the Sequence tab.",
+      "exercise": "ex.tank-sequence"
+    },
+    {
+      "type": "summary",
+      "heading": "Summary and troubleshooting note",
+      "body": "A sequence is steps plus transition conditions. Permissives allow the start, interlocks protect the plant, timeouts detect a step that never finishes and HOLD pauses safely.\n\n**Troubleshooting note:** When a sequence stops, look at what the active step waits for: the inspector shows the condition with its actual value."
+    }
+  ],
+  "checkpoint": [
+    {
+      "question": "What happens to a step timer during HOLD?",
+      "options": [
+        "It keeps running",
+        "It pauses and continues after RESUME",
+        "It starts again from zero"
+      ],
+      "answer": 1,
+      "explanation": "HOLD pauses the step. Its time continues after RESUME, so a pause does not cause a timeout."
+    },
+    {
+      "question": "What does the sequence inspector do?",
+      "options": [
+        "It switches the outputs off when a step times out",
+        "It observes the program and shows what the active step waits for",
+        "It takes over the plant during HOLD"
+      ],
+      "answer": 1,
+      "explanation": "The inspector only observes. The PLC program stays the only controller of the plant."
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.sequences",
+    "fundamentals.interlocks"
+  ]
+}

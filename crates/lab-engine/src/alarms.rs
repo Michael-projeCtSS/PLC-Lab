@@ -35,6 +35,12 @@ pub(crate) enum AlarmCondition {
     ModuleFault { slot: SlotRef },
     /// A Modbus connection fails.
     Connection { scan: usize },
+    /// The active sequence step timed out (ADR-0043).
+    SequenceTimeout,
+    /// The sequence monitor latched a deviation.
+    SequenceDeviation,
+    /// A sequence interlock is active where it applies.
+    SequenceInterlock { index: usize },
 }
 
 pub(crate) struct PlantAlarm {
@@ -149,6 +155,25 @@ const COMMUNICATION_LOST: Spec = spec(
     "communication lost",
 );
 
+const SEQUENCE_TIMEOUT: Spec = spec(
+    "SEQUENCE_TIMEOUT",
+    "step-timeout",
+    AlarmPriority::Alarm,
+    "step timeout",
+);
+const SEQUENCE_DEVIATION: Spec = spec(
+    "SEQUENCE_DEVIATION",
+    "deviation",
+    AlarmPriority::Alarm,
+    "sequence deviation",
+);
+const SEQUENCE_INTERLOCK: Spec = spec(
+    "SEQUENCE_INTERLOCK",
+    "interlock",
+    AlarmPriority::Warning,
+    "interlock active",
+);
+
 /// A valve is given twice its travel time, and at least one second, to reach a position.
 fn discrepancy_delay_us(travel_ms: u32) -> u64 {
     (u64::from(travel_ms) * 2).max(1000) * 1000
@@ -260,6 +285,42 @@ pub(crate) fn plant_alarms(session: &LabSession) -> Vec<PlantAlarm> {
             ));
         }
     }
+    if let Some(monitor) = session.sequence() {
+        let sequence = monitor.definition();
+        let source = format!("sequence.{}", sequence.id);
+        let category = AlarmCategory::Process;
+        out.push(plant_alarm(
+            &SEQUENCE_TIMEOUT,
+            &source,
+            &sequence.name,
+            category,
+            0,
+            AlarmCondition::SequenceTimeout,
+        ));
+        out.push(plant_alarm(
+            &SEQUENCE_DEVIATION,
+            &source,
+            &sequence.name,
+            category,
+            0,
+            AlarmCondition::SequenceDeviation,
+        ));
+        for (index, interlock) in sequence.interlocks.iter().enumerate() {
+            out.push(PlantAlarm {
+                definition: AlarmDefinition {
+                    id: format!("{source}.interlock.{}", interlock.id),
+                    code: SEQUENCE_INTERLOCK.code.into(),
+                    source: source.clone(),
+                    source_label: interlock.name.clone(),
+                    category,
+                    priority: SEQUENCE_INTERLOCK.priority,
+                    message: format!("{}: {}", interlock.name, SEQUENCE_INTERLOCK.text),
+                    on_delay_us: 0,
+                },
+                condition: AlarmCondition::SequenceInterlock { index },
+            });
+        }
+    }
     for (scan, view) in session.network.scan_views().into_iter().enumerate() {
         let source = format!("modbus.{}", view.id);
         let label = format!("Modbus TCP {} unit {}", view.server, view.unit_id);
@@ -318,5 +379,12 @@ pub(crate) fn holds(session: &LabSession, condition: &AlarmCondition) -> bool {
             session.network.scan_status(scan),
             None | Some(ScanStatus::Idle | ScanStatus::Ok)
         ),
+        AlarmCondition::SequenceTimeout => session.sequence().is_some_and(|m| m.timed_out()),
+        AlarmCondition::SequenceDeviation => {
+            session.sequence().is_some_and(|m| m.deviation_latched())
+        }
+        AlarmCondition::SequenceInterlock { index } => session
+            .sequence()
+            .is_some_and(|m| m.interlock_active(index)),
     }
 }
