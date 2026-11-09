@@ -46,6 +46,9 @@ pub struct PouSummary {
     /// The comment block right before the POU.
     pub description: Option<String>,
     pub span: TextSpan,
+    /// 1 for the main program document, 2 and above for the library documents in the
+    /// order they were compiled (ADR-0045).
+    pub document: u32,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParameterSummary {
@@ -89,7 +92,60 @@ pub fn compile_st(
     source: &str,
     configuration: CompilerConfig,
 ) -> Result<CompiledProgram, Vec<Diagnostic>> {
-    let ast = crate::parse_st(source, configuration)?;
+    compile_st_documents(source, &[], configuration)
+}
+
+/// Library documents a project may have beside its main program (ADR-0045).
+pub const MAX_LIBRARY_DOCUMENTS: usize = 31;
+
+/// Compile the main program document together with the project library documents
+/// (FUNCTIONs and FUNCTION_BLOCKs only) into one canonical program (ADR-0045). Source
+/// anchors and diagnostics name their document: 1 for the main program, 2 and above for
+/// `library` in order.
+pub fn compile_st_documents(
+    source: &str,
+    library: &[&str],
+    configuration: CompilerConfig,
+) -> Result<CompiledProgram, Vec<Diagnostic>> {
+    if library.len() > MAX_LIBRARY_DOCUMENTS {
+        return Err(vec![crate::diagnostics::error(
+            codes::LIMIT,
+            format!("A project has at most {MAX_LIBRARY_DOCUMENTS} library documents."),
+            None,
+        )]);
+    }
+    let mut errors = Vec::new();
+    let main = crate::parse_st(source, configuration)
+        .map_err(|e| errors.extend(e))
+        .ok();
+    let mut pous = Vec::new();
+    let mut texts = vec![source];
+    for (index, text) in library.iter().enumerate() {
+        let number = u32::try_from(index + 2).expect("bounded library documents");
+        let document = DocumentId::new(number).expect("nonzero document number");
+        texts.push(text);
+        match crate::parse_st_library(text, configuration) {
+            Ok(parsed) => pous.extend(parsed.into_iter().map(|mut pou| {
+                pou.document = number;
+                pou
+            })),
+            Err(found) => errors.extend(
+                found
+                    .into_iter()
+                    .map(|d| crate::diagnostics::relocate(d, document)),
+            ),
+        }
+    }
+    let ast = match main {
+        Some(mut ast) if errors.is_empty() => {
+            ast.library.extend(pous);
+            ast
+        }
+        _ => {
+            errors.truncate(configuration.diagnostics);
+            return Err(errors);
+        }
+    };
     let owner = PouId::new(1).expect("fixed entry identity");
     let document = DocumentId::new(1).expect("fixed document identity");
     let mut compiler = Compiler {
@@ -120,6 +176,14 @@ pub fn compile_st(
         .sources
         .register_document(document, SourceLanguage::St)
         .expect("fresh source registry");
+    for number in 2..=texts.len() {
+        let library = DocumentId::new(u32::try_from(number).expect("bounded library documents"))
+            .expect("nonzero document number");
+        compiler
+            .sources
+            .register_document(library, SourceLanguage::St)
+            .expect("distinct library documents");
+    }
     compiler.anchor(ast.span);
     let pou = Pou::new(owner, &ast.name.text, PouKind::Program).map_err(|e| {
         vec![
@@ -147,7 +211,11 @@ pub fn compile_st(
         }
         return Err(compiler.errors.items);
     }
-    let pous = ast.library.iter().map(|pou| summary(source, pou)).collect();
+    let pous = ast
+        .library
+        .iter()
+        .map(|pou| summary(texts[pou.document as usize - 1], pou))
+        .collect();
     Ok(CompiledProgram {
         program,
         name: ast.name.text,
@@ -280,6 +348,7 @@ fn summary(source: &str, pou: &ast::PouAst) -> PouSummary {
         parameters,
         description,
         span: pou.span,
+        document: pou.document,
     }
 }
 
@@ -607,6 +676,16 @@ impl Compiler {
             }
         }
     }
+    /// Run `work` in the document that defines library POU `index`, so its source
+    /// anchors and diagnostics name that document (ADR-0045).
+    fn in_document<T>(&mut self, index: usize, work: impl FnOnce(&mut Self) -> T) -> T {
+        let document =
+            DocumentId::new(self.library[index].document).expect("registered library document");
+        let saved = std::mem::replace(&mut self.document, document);
+        let result = work(self);
+        self.document = saved;
+        result
+    }
     /// Index the document's POUs by name and refuse clashes.
     fn index_library(&mut self, program: &ast::Name) {
         for index in 0..self.library.len() {
@@ -616,14 +695,16 @@ impl Compiler {
                 || ConversionFunction::from_name(&name.text).is_some()
                 || SystemVariable::named(&name.text).is_some();
             if reserved || self.library_index.contains_key(&upper) {
-                self.report(
-                    codes::DUPLICATE,
-                    format!(
-                        "'{}' is already the name of the program, another POU or a built-in function.",
-                        name.text
-                    ),
-                    name.span,
-                );
+                self.in_document(index, |c| {
+                    c.report(
+                        codes::DUPLICATE,
+                        format!(
+                            "'{}' is already the name of the program, another POU or a built-in function.",
+                            name.text
+                        ),
+                        name.span,
+                    )
+                });
                 self.broken[index] = true;
                 continue;
             }
@@ -663,17 +744,12 @@ impl Compiler {
             if let Some((via, span)) = found {
                 let name = self.library[start].name.text.clone();
                 let through = self.library[via].name.text.clone();
-                self.report(
-                    codes::UNSUPPORTED,
-                    if via == start {
-                        format!("'{name}' uses itself; recursion is not supported.")
-                    } else {
-                        format!(
-                            "'{name}' uses itself through '{through}'; recursion is not supported."
-                        )
-                    },
-                    span,
-                );
+                let message = if via == start {
+                    format!("'{name}' uses itself; recursion is not supported.")
+                } else {
+                    format!("'{name}' uses itself through '{through}'; recursion is not supported.")
+                };
+                self.in_document(via, |c| c.report(codes::UNSUPPORTED, message, span));
                 self.broken[start] = true;
             }
         }
@@ -711,12 +787,14 @@ impl Compiler {
             );
             self.checking = true;
             self.expanding.push(index);
-            self.declare(&pou.declarations, true);
-            if let ast::PouKind::Function(returns) = pou.kind {
-                let qualified = self.frame.qualified(&pou.name.text);
-                self.temp(&qualified, returns);
-            }
-            let _ = self.body(&pou.body);
+            self.in_document(index, |c| {
+                c.declare(&pou.declarations, true);
+                if let ast::PouKind::Function(returns) = pou.kind {
+                    let qualified = c.frame.qualified(&pou.name.text);
+                    c.temp(&qualified, returns);
+                }
+                let _ = c.body(&pou.body);
+            });
             self.expanding.pop();
             self.checking = false;
             self.frame = saved;
@@ -830,7 +908,7 @@ impl Compiler {
                 aliases: BTreeMap::new(),
             },
         );
-        self.declare(&pou.declarations, false);
+        self.in_document(index, |c| c.declare(&pou.declarations, false));
         self.frame = saved;
     }
     /// Compile a POU body for one instance or call (ADR-0044).
@@ -861,7 +939,7 @@ impl Compiler {
             },
         );
         self.expanding.push(index);
-        let body = self.body(&pou.body);
+        let body = self.in_document(index, |c| c.body(&pou.body));
         self.expanding.pop();
         self.frame = saved;
         Some(body)

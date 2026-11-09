@@ -397,6 +397,17 @@ pub struct WorkspaceDto {
 pub struct CompileRequest {
     pub contract_version: u32,
     pub source: String,
+    /// The project library documents compiled with `source` (ADR-0045).
+    #[serde(default)]
+    pub library: Vec<SourceDocumentDto>,
+}
+/// A project library document: FUNCTIONs and FUNCTION_BLOCKs (ADR-0045).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SourceDocumentDto {
+    /// The project's program document id.
+    pub id: String,
+    pub source: String,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -439,6 +450,8 @@ pub struct PouDto {
     pub description: Option<String>,
     /// First line of the POU in the document.
     pub line: u32,
+    /// The library document that defines it; `None` for the main program (ADR-0045).
+    pub document: Option<String>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -446,6 +459,9 @@ pub struct BuildLoadRequest {
     pub contract_version: u32,
     pub workspace_id: ExactU64,
     pub source: String,
+    /// The project library documents compiled with `source` (ADR-0045).
+    #[serde(default)]
+    pub library: Vec<SourceDocumentDto>,
     pub revision: ExactU64,
     pub station: Option<StationDto>,
     /// Basic mode: switch the PLC to RUN and start the simulation after a successful load.
@@ -1157,6 +1173,9 @@ pub struct CheckRequest {
     pub contract_version: u32,
     pub workspace_id: ExactU64,
     pub source: String,
+    /// The project library documents compiled with `source` (ADR-0045).
+    #[serde(default)]
+    pub library: Vec<SourceDocumentDto>,
     pub station: Option<StationDto>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -1210,7 +1229,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SceneDto, LedDto, PlcStatusDto, QuantityDto, ComponentStateDto, WatchValueDto, EffectDto, ChangeDto,
         CauseEffectDto, AlarmDto, SimulationStatusDto, TraceStatsDto, SequenceValueDto, SequenceConditionRowDto,
         SequenceConditionDto, SequenceStepStateDto, SequencePermissiveStateDto, SequenceTransitionStateDto,
-        SequenceInterlockStateDto, SequenceObservedDto, SequenceEventDto, SequenceStatusDto, LiveFrameDto, WorkspaceDto, CompileRequest,
+        SequenceInterlockStateDto, SequenceObservedDto, SequenceEventDto, SequenceStatusDto, LiveFrameDto, WorkspaceDto, CompileRequest, SourceDocumentDto,
         DeclarationDto, CompileResultDto, PouParameterDto, PouDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
         SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,

@@ -99,6 +99,9 @@ pub struct Workspace {
     pub investigation: Investigation,
     pub signals_revision: u32,
     pub failure: Option<String>,
+    /// Ids of the library documents of the program in the PLC, in compile order, so its
+    /// runtime faults name their document (ADR-0045).
+    pub loaded_library: Vec<String>,
 }
 
 /// Alarms acknowledged in one request at most.
@@ -195,6 +198,7 @@ impl Workspace {
                 repairs: state.repairs.clone(),
             };
         }
+        let mut loaded_library = Vec::new();
         if let Some(t) = exercise.as_ref().and_then(|e| e.troubleshooting.as_ref()) {
             for fault in &t.faults {
                 session.inject_fault(fault)?;
@@ -213,11 +217,15 @@ impl Workspace {
                 .as_ref()
                 .map(|e| e.starter_program.as_str())
                 .unwrap_or_default();
-            let running = match &t.loaded_program {
-                Some(loaded) if main == starter => loaded.clone(),
-                _ => main,
+            // The lab's own program has no library; the student's program runs with the
+            // project library.
+            let (running, library) = match &t.loaded_program {
+                Some(loaded) if main == starter => (loaded.clone(), Vec::new()),
+                _ => (main, project.library_documents().to_vec()),
             };
-            session.download(&running, 0, None)?;
+            let sources: Vec<String> = library.iter().map(|d| d.source.clone()).collect();
+            session.download_documents(&running, &sources, 0, None)?;
+            loaded_library = library.iter().map(|d| d.id.to_string()).collect();
             session.set_plc_switch(PlcModeRequest::Run)?;
         }
         Ok(Self {
@@ -233,6 +241,7 @@ impl Workspace {
             investigation,
             signals_revision: 1,
             failure: None,
+            loaded_library,
         })
     }
 
@@ -275,6 +284,7 @@ impl Workspace {
     pub fn build_and_load(
         &mut self,
         source: &str,
+        library: &(Vec<String>, Vec<String>),
         revision: u64,
         station: Option<StationConfig>,
     ) -> AppResult<BuildLoadResultDto> {
@@ -288,11 +298,28 @@ impl Workspace {
             ));
         }
         self.latest_revision = revision;
-        match self.session.download(source, revision, station.clone()) {
+        let (ids, sources) = library;
+        match self
+            .session
+            .download_documents(source, sources, revision, station.clone())
+        {
             Ok(report) => {
                 self.signals_revision += 1;
+                self.loaded_library = ids.clone();
                 if let Some(main) = self.project.main_program_mut() {
                     main.source = source.to_owned();
+                }
+                // The downloaded library sources are the project's from now on.
+                for (id, text) in ids.iter().zip(sources) {
+                    if let Some(document) = self
+                        .project
+                        .programs
+                        .iter_mut()
+                        .skip(1)
+                        .find(|d| d.id.as_str() == id)
+                    {
+                        document.source = text.clone();
+                    }
                 }
                 // A downloaded configuration is what the PLC has and what the project
                 // expects from now on.
@@ -313,7 +340,7 @@ impl Workspace {
             }
             Err(EngineError::Compile(d)) => Ok(self.build_result(
                 "COMPILE_FAILED",
-                d.iter().map(convert::diagnostic).collect(),
+                d.iter().map(|d| convert::diagnostic_in(d, ids)).collect(),
                 Vec::new(),
                 None,
             )),
@@ -778,7 +805,9 @@ impl Workspace {
                 segment: s.plc_segment(),
                 scans: ExactU64(s.plc_scans()),
                 task_time_us: ExactU64(s.plc_task_time_us()),
-                fault: s.plc_fault().map(convert::diagnostic),
+                fault: s
+                    .plc_fault()
+                    .map(|f| convert::diagnostic_in(f, &self.loaded_library)),
                 forces: u32::try_from(s.forces().len()).unwrap_or(u32::MAX),
                 leds: convert::cpu_leds(s),
                 last_start: s.last_start().map(|k| convert::start_kind(k).into()),

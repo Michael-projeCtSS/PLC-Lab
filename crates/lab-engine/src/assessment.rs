@@ -22,6 +22,7 @@ use lab_model::{
 };
 use plc_types::{PlcType, diagnostics::Diagnostic, symbols::Scope};
 use simulation_core::WorldTime;
+use st_frontend::CompiledProgram;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,6 +47,8 @@ pub struct AssessmentSetup<'a> {
     pub station: &'a StationConfig,
     pub profile: &'a PlatformProfile,
     pub program: &'a str,
+    /// The project library documents compiled with `program` (ADR-0045).
+    pub library: &'a [String],
     /// Physical faults present in the installation during the run.
     pub faults: &'a [FaultInjection],
     pub config: SessionConfig,
@@ -63,11 +66,7 @@ fn tag_type(t: TagType) -> PlcType {
 }
 
 /// Check the program declares every required tag with the right type and direction.
-pub fn interface_problems(
-    source: &str,
-    required: &[RequiredTag],
-) -> Result<Vec<String>, Vec<Diagnostic>> {
-    let compiled = crate::plc::compile(source)?;
+pub fn interface_problems(compiled: &CompiledProgram, required: &[RequiredTag]) -> Vec<String> {
     let program = compiled.program();
     let scope = Scope::Pou(program.entry());
     let mut problems = Vec::new();
@@ -99,18 +98,11 @@ pub fn interface_problems(
             }
         }
     }
-    Ok(problems)
+    problems
 }
 /// Check the program defines every user function and function block the exercise asks
 /// for (ADR-0044).
-pub fn pou_problems(
-    source: &str,
-    required: &[RequiredPou],
-) -> Result<Vec<String>, Vec<Diagnostic>> {
-    if required.is_empty() {
-        return Ok(Vec::new());
-    }
-    let compiled = crate::plc::compile(source)?;
+pub fn pou_problems(compiled: &CompiledProgram, required: &[RequiredPou]) -> Vec<String> {
     let mut problems = Vec::new();
     for r in required {
         let (keyword, kind) = match r.kind {
@@ -129,7 +121,7 @@ pub fn pou_problems(
             Some(_) => {}
         }
     }
-    Ok(problems)
+    problems
 }
 
 fn direction(d: SignalDirection) -> &'static str {
@@ -154,7 +146,7 @@ pub fn run_scenario(
     for fault in setup.faults {
         session.inject_fault(fault)?;
     }
-    session.download(setup.program, 1, None)?;
+    session.download_documents(setup.program, setup.library, 1, None)?;
     session.set_plc_switch(PlcModeRequest::Run)?;
     for action in &scenario.actions {
         session.schedule(
@@ -258,15 +250,38 @@ pub fn assess(
     faults: &[FaultInjection],
     criteria_filter: Option<&[lab_model::Identifier]>,
 ) -> Result<AssessmentOutcome, AssessmentError> {
-    match interface_problems(program, &exercise.required_interface).and_then(|mut problems| {
-        problems.extend(pou_problems(program, &exercise.required_pous)?);
-        Ok(problems)
-    }) {
+    assess_documents(
+        exercise,
+        scene,
+        station,
+        profile,
+        program,
+        &[],
+        faults,
+        criteria_filter,
+    )
+}
+
+/// [`assess`] for a main program with project library documents (ADR-0045).
+#[allow(clippy::too_many_arguments)]
+pub fn assess_documents(
+    exercise: &ExerciseDefinition,
+    scene: &SceneDefinition,
+    station: &StationConfig,
+    profile: &PlatformProfile,
+    program: &str,
+    library: &[String],
+    faults: &[FaultInjection],
+    criteria_filter: Option<&[lab_model::Identifier]>,
+) -> Result<AssessmentOutcome, AssessmentError> {
+    let compiled = match crate::plc::compile_documents(program, library) {
+        Ok(compiled) => compiled,
         Err(d) => return Ok(AssessmentOutcome::CompileFailed(d)),
-        Ok(problems) if !problems.is_empty() => {
-            return Ok(AssessmentOutcome::InterfaceMismatch(problems));
-        }
-        Ok(_) => {}
+    };
+    let mut problems = interface_problems(&compiled, &exercise.required_interface);
+    problems.extend(pou_problems(&compiled, &exercise.required_pous));
+    if !problems.is_empty() {
+        return Ok(AssessmentOutcome::InterfaceMismatch(problems));
     }
     let criteria: Vec<_> = exercise
         .criteria
@@ -279,6 +294,7 @@ pub fn assess(
         station,
         profile,
         program,
+        library,
         faults,
         config: SessionConfig {
             seed: 7,

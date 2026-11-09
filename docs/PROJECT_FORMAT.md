@@ -5,7 +5,7 @@ A project is one JSON file `<id>.plclab` (`project-model`, ADR-0023).
 ```json
 {
   "format": "plclab-project",
-  "formatVersion": 5,
+  "formatVersion": 6,
   "id": "p-1793140000-0",
   "name": "Tank test bench",
   "createdAt": "2026-10-27T10:00:00Z",
@@ -55,7 +55,11 @@ deterministic session.
 
 ## Versioning and migration
 
-`formatVersion` 5 is current: up to 16 named `watchTables` of up to 64 rows, each a
+`formatVersion` 6 is current: the first entry of `programs` is the main program and
+every further entry a project library document with FUNCTIONs and FUNCTION_BLOCKs
+compiled with it (ADR-0045); document names have 1 to 64 characters and ids and names
+are unique. A format 5 file migrates by its version alone, its documents unchanged.
+Format 5 added up to 16 named `watchTables` of up to 64 rows, each a
 canonical signal path and an integer display format (ADR-0032); a format 4 `watch`
 list becomes the table "Watch 1". Since format 4 `station` is the configuration the
 project expects

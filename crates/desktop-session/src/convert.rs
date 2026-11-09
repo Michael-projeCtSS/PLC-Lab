@@ -141,7 +141,23 @@ pub fn value_from_dto(v: SignalValueDto) -> Option<SignalValue> {
 }
 
 pub fn diagnostic(d: &Diagnostic) -> DiagnosticDto {
+    diagnostic_in(d, &[])
+}
+
+/// The project document id of compiled document `number`: 1 is the main program
+/// (`None`), 2 and above the library documents in the order they were compiled
+/// (ADR-0045).
+pub fn document_id(number: u32, library: &[String]) -> Option<String> {
+    let index = usize::try_from(number).ok()?.checked_sub(2)?;
+    library.get(index).cloned()
+}
+
+/// A diagnostic of a program compiled with the library documents `library` (their ids).
+pub fn diagnostic_in(d: &Diagnostic, library: &[String]) -> DiagnosticDto {
     DiagnosticDto {
+        document: d
+            .source()
+            .and_then(|s| document_id(s.reference().document_id().get(), library)),
         code: d.code().to_owned(),
         severity: match d.severity() {
             Severity::Error => "error",
@@ -1503,9 +1519,11 @@ pub fn format_value(v: SignalValue) -> String {
     }
 }
 
-/// A user function or function block for the library browser (ADR-0044).
-pub fn pou(p: &st_frontend::PouSummary) -> PouDto {
+/// A user function or function block for the library browser (ADR-0044), with the
+/// library document that defines it (ADR-0045).
+pub fn pou(p: &st_frontend::PouSummary, library: &[String]) -> PouDto {
     PouDto {
+        document: document_id(p.document, library),
         name: p.name.clone(),
         kind: p.kind.clone(),
         return_type: p.return_type.clone(),

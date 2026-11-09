@@ -22,14 +22,16 @@ pub use alarm_core::{
     AlarmStatus, AlarmTransition,
 };
 pub use assessment::{
-    AssessmentError, AssessmentOutcome, AssessmentSetup, assess, interface_problems, pou_problems,
-    run_scenario,
+    AssessmentError, AssessmentOutcome, AssessmentSetup, assess, assess_documents,
+    interface_problems, pou_problems, run_scenario,
 };
 pub use commissioning::{
     CheckCategory, CheckItem, CheckState, Checklist, FEEDBACK_WAIT_US, SignalMapRow,
 };
 pub use error::{BindingIssue, EngineError};
-pub use plc::{BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile};
+pub use plc::{
+    BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile, compile_documents,
+};
 pub use plc_runtime::StartKind;
 pub use queries::{CauseEffect, Change, Effect, HistoryRow, TrendLayer, TrendSeries, VariableRow};
 pub use sequence_core;

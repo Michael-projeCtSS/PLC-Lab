@@ -549,31 +549,38 @@ impl DesktopApp {
                     "Program documents are limited to 256 KiB.".into(),
                 ));
             }
-            Ok(match lab_engine::compile(&request.source) {
-                Ok(compiled) => CompileResultDto {
-                    success: true,
-                    program_name: Some(compiled.program_name().to_owned()),
-                    diagnostics: Vec::new(),
-                    declarations: compiled
-                        .declarations()
-                        .iter()
-                        .map(|d| DeclarationDto {
-                            name: d.name.clone(),
-                            data_type: d.type_name.clone(),
-                            role: d.role.clone(),
-                            retained: d.retained,
-                        })
-                        .collect(),
-                    pous: compiled.pous().iter().map(convert::pou).collect(),
+            let (ids, sources) = library_documents(&request.library)?;
+            Ok(
+                match lab_engine::compile_documents(&request.source, &sources) {
+                    Ok(compiled) => CompileResultDto {
+                        success: true,
+                        program_name: Some(compiled.program_name().to_owned()),
+                        diagnostics: Vec::new(),
+                        declarations: compiled
+                            .declarations()
+                            .iter()
+                            .map(|d| DeclarationDto {
+                                name: d.name.clone(),
+                                data_type: d.type_name.clone(),
+                                role: d.role.clone(),
+                                retained: d.retained,
+                            })
+                            .collect(),
+                        pous: compiled
+                            .pous()
+                            .iter()
+                            .map(|p| convert::pou(p, &ids))
+                            .collect(),
+                    },
+                    Err(d) => CompileResultDto {
+                        success: false,
+                        program_name: None,
+                        diagnostics: d.iter().map(|d| convert::diagnostic_in(d, &ids)).collect(),
+                        declarations: Vec::new(),
+                        pous: Vec::new(),
+                    },
                 },
-                Err(d) => CompileResultDto {
-                    success: false,
-                    program_name: None,
-                    diagnostics: d.iter().map(convert::diagnostic).collect(),
-                    declarations: Vec::new(),
-                    pous: Vec::new(),
-                },
-            })
+            )
         })())
     }
 
@@ -600,7 +607,9 @@ impl DesktopApp {
                 .as_mut()
                 .filter(|w| w.id == request.workspace_id.0)
                 .ok_or(AppError::StaleWorkspace)?;
-            let mut result = w.build_and_load(&request.source, request.revision.0, station)?;
+            let library = library_documents(&request.library)?;
+            let mut result =
+                w.build_and_load(&request.source, &library, request.revision.0, station)?;
             let mut start = None;
             if result.outcome == "LOADED" {
                 w.project.updated_at = projects::timestamp();
@@ -1006,12 +1015,14 @@ impl DesktopApp {
                 .troubleshooting
                 .as_ref()
                 .map(|t| t.verification.clone());
-            let outcome = lab_engine::assess(
+            let (ids, sources) = library_documents(&request.library)?;
+            let outcome = lab_engine::assess_documents(
                 &exercise,
                 &scene,
                 &station,
                 &profile,
                 &request.source,
+                &sources,
                 &faults,
                 filter.as_deref(),
             )
@@ -1083,7 +1094,7 @@ impl DesktopApp {
                 }
                 AssessmentOutcome::CompileFailed(d) => not_graded(
                     "COMPILE_FAILED",
-                    d.iter().map(convert::diagnostic).collect(),
+                    d.iter().map(|d| convert::diagnostic_in(d, &ids)).collect(),
                     Vec::new(),
                 ),
                 AssessmentOutcome::InterfaceMismatch(p) => {
@@ -1146,4 +1157,33 @@ fn not_graded(
         problems,
         debrief: None,
     }
+}
+
+/// The ids and sources of a request's project library documents (ADR-0045).
+fn library_documents(
+    documents: &[app_contract::SourceDocumentDto],
+) -> Result<(Vec<String>, Vec<String>), AppError> {
+    if documents.len() > st_frontend::MAX_LIBRARY_DOCUMENTS {
+        return Err(AppError::InvalidRequest(format!(
+            "A project has at most {} library documents.",
+            st_frontend::MAX_LIBRARY_DOCUMENTS
+        )));
+    }
+    let mut ids = std::collections::BTreeSet::new();
+    for d in documents {
+        if d.source.len() > 256 * 1024 {
+            return Err(AppError::InvalidRequest(
+                "Program documents are limited to 256 KiB.".into(),
+            ));
+        }
+        if d.id.is_empty() || d.id.len() > 64 || !ids.insert(d.id.as_str()) {
+            return Err(AppError::InvalidRequest(
+                "Library documents need distinct ids of 1 to 64 characters.".into(),
+            ));
+        }
+    }
+    Ok(documents
+        .iter()
+        .map(|d| (d.id.clone(), d.source.clone()))
+        .unzip())
 }

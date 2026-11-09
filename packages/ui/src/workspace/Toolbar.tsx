@@ -100,7 +100,9 @@ export function Toolbar({
               disabled={busy}
               onClick={() =>
                 void lab
-                  .act("compile", () => api.compile(lab.source))
+                  .act("compile", () =>
+                    api.compile(lab.source, lab.librarySources),
+                  )
                   .then((r) => {
                     if (r)
                       lab.log(
@@ -111,7 +113,9 @@ export function Toolbar({
                               count: r.diagnostics.length,
                             }),
                         r.diagnostics
-                          .map((d) => diagnosticLine(t, d))
+                          .map((d) =>
+                            diagnosticLine(t, d, lab.documentName(d.document)),
+                          )
                           .join("\n") || undefined,
                       );
                   })

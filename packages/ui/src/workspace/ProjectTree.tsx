@@ -30,11 +30,41 @@ export function ProjectTree({
     <div className="tree">
       <div className="tree-title">{t("ws.program")}</div>
       <button
-        aria-current={tab === "program"}
-        onClick={() => setTab("program")}
+        aria-current={tab === "program" && lab.activeDocument === null}
+        onClick={() => {
+          lab.setActiveDocument(null);
+          setTab("program");
+        }}
       >
         ▤ {project.programs[0]?.name ?? "Main"}{" "}
         <span className="dim">(ST)</span>
+      </button>
+      <div
+        className="tree-title"
+        style={{ marginTop: 8 }}
+        title={t("doc.libraryHelp")}
+      >
+        {t("doc.library")}
+      </div>
+      {lab.library.map((d) => (
+        <button
+          key={d.id}
+          className="indent"
+          aria-current={tab === "program" && lab.activeDocument === d.id}
+          onClick={() => {
+            lab.setActiveDocument(d.id);
+            setTab("program");
+          }}
+        >
+          ▤ {d.name} <span className="dim">(ST)</span>
+        </button>
+      ))}
+      <button
+        className="indent dim"
+        disabled={lab.busy !== null || lab.library.length >= 31}
+        onClick={() => void lab.addDocument().then(() => setTab("program"))}
+      >
+        + {t("doc.new")}
       </button>
       <div className="tree-title" style={{ marginTop: 8 }}>
         {t("ws.hardware")}

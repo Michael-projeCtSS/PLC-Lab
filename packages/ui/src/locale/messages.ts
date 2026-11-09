@@ -150,9 +150,14 @@ export function diagnosticTitle(t: Translate, code: string): string {
 }
 
 /** One diagnostic for the message log: line, code, title and the original message. */
-export function diagnosticLine(t: Translate, d: DiagnosticDto): string {
+/** One diagnostic as a line of text; `document` names the library document it is in. */
+export function diagnosticLine(
+  t: Translate,
+  d: DiagnosticDto,
+  document?: string | null,
+): string {
   const line = d.span ? t("toolbar.line", { line: d.span.start.line }) : "";
-  return `${line}${d.code}${diagnosticTitle(t, d.code)}: ${d.message}`;
+  return `${document ? `${document} · ` : ""}${line}${d.code}${diagnosticTitle(t, d.code)}: ${d.message}`;
 }
 
 /**

@@ -33,6 +33,10 @@
     {
       "heading": "How PLC Lab runs your blocks",
       "body": "PLC Lab compiles each call of your functions and function blocks into the same canonical program that the one PLC runtime executes; there is no separate interpreter for blocks. Instance variables appear in online monitoring under their dotted names, and a runtime fault inside a block points to the line in the block. A block may not call itself, directly or indirectly. The **Library** tab of the inspector lists your blocks and the standard blocks with their signatures, parameters and a usage example."
+    },
+    {
+      "heading": "Project library documents",
+      "body": "Blocks you want to keep apart from the program go into a **library document** of the project: choose **New library document** under Project library in the project tree. A library document holds FUNCTIONs and FUNCTION_BLOCKs only; every build compiles it together with the main program, and compile errors and runtime faults name the document they are in."
     }
   ],
   "facts": [],

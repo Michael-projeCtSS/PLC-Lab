@@ -63,6 +63,7 @@ export const diagnostic = obj<G.DiagnosticDto>({
   message: str,
   span: nullable(span),
   category: literal("compiler", "runtime", "internal"),
+  document: nullable(str),
 });
 
 export const coreInfo = obj<G.CoreInfo>({
@@ -811,6 +812,7 @@ export const compileResult = obj<G.CompileResultDto>({
       ),
       description: nullable(str),
       line: u32,
+      document: nullable(str),
     }),
     256,
   ),

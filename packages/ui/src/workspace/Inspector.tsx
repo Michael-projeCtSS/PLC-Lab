@@ -109,7 +109,11 @@ export function Inspector({
           </div>
         )}
         {!simple && tab === "library" && (
-          <LibraryTab pous={lab.pous} current={lab.pousCurrent} />
+          <LibraryTab
+            pous={lab.pous}
+            current={lab.pousCurrent}
+            documentName={lab.documentName}
+          />
         )}
         {!simple && tab === "properties" && (
           <Properties lab={lab} selection={selection} />

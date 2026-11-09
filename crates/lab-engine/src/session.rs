@@ -1134,7 +1134,17 @@ impl LabSession {
         source: &str,
         station: Option<&StationConfig>,
     ) -> Result<Vec<BindingIssue>, EngineError> {
-        let compiled = plc::compile(source).map_err(EngineError::Compile)?;
+        self.check_documents(source, &[], station)
+    }
+
+    /// [`Self::check`] for a main program with project library documents (ADR-0045).
+    pub fn check_documents(
+        &self,
+        source: &str,
+        library: &[String],
+        station: Option<&StationConfig>,
+    ) -> Result<Vec<BindingIssue>, EngineError> {
+        let compiled = plc::compile_documents(source, library).map_err(EngineError::Compile)?;
         let station = station.unwrap_or(self.station.configuration());
         let mut scratch = self.signals.clone();
         plc::link(&compiled, station, &self.profile, &mut scratch)
@@ -1150,7 +1160,19 @@ impl LabSession {
         revision: u64,
         station: Option<StationConfig>,
     ) -> Result<DownloadReport, EngineError> {
-        let compiled = plc::compile(source).map_err(EngineError::Compile)?;
+        self.download_documents(source, &[], revision, station)
+    }
+
+    /// [`Self::download`] for a main program with project library documents: all of
+    /// them compile into the one program the CPU runs (ADR-0045).
+    pub fn download_documents(
+        &mut self,
+        source: &str,
+        library: &[String],
+        revision: u64,
+        station: Option<StationConfig>,
+    ) -> Result<DownloadReport, EngineError> {
+        let compiled = plc::compile_documents(source, library).map_err(EngineError::Compile)?;
         let target_station = station
             .clone()
             .unwrap_or_else(|| self.station.configuration().clone());

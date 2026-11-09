@@ -46,7 +46,12 @@ severity: "error" | "warning" | "info", message: string, span: SpanDto | null,
 /**
  * "compiler" | "runtime" | "internal"
  */
-category: "compiler" | "runtime" | "internal", };
+category: "compiler" | "runtime" | "internal", 
+/**
+ * The project library document the span is in; `None` for the main program
+ * (ADR-0045).
+ */
+document: string | null, };
 
 export type StandardParameterDto = { name: string, dataType: string, direction: "Input" | "Output" | "InOut", required: boolean, };
 
@@ -439,7 +444,17 @@ sequence: SequenceStatusDto | null, };
 
 export type WorkspaceDto = { workspaceId: ExactU64, projectId: string, scene: SceneDto, platform: PlatformDto, signals: Array<SignalDto>, exercise: ExerciseDto | null, frame: LiveFrameDto, };
 
-export type CompileRequest = { contractVersion: number, source: string, };
+export type CompileRequest = { contractVersion: number, source: string, 
+/**
+ * The project library documents compiled with `source` (ADR-0045).
+ */
+library: Array<SourceDocumentDto>, };
+
+export type SourceDocumentDto = { 
+/**
+ * The project's program document id.
+ */
+id: string, source: string, };
 
 export type DeclarationDto = { name: string, dataType: string, role: string, 
 /**
@@ -467,9 +482,17 @@ description: string | null,
 /**
  * First line of the POU in the document.
  */
-line: number, };
+line: number, 
+/**
+ * The library document that defines it; `None` for the main program (ADR-0045).
+ */
+document: string | null, };
 
-export type BuildLoadRequest = { contractVersion: number, workspaceId: ExactU64, source: string, revision: ExactU64, station: StationDto | null, 
+export type BuildLoadRequest = { contractVersion: number, workspaceId: ExactU64, source: string, 
+/**
+ * The project library documents compiled with `source` (ADR-0045).
+ */
+library: Array<SourceDocumentDto>, revision: ExactU64, station: StationDto | null, 
 /**
  * Basic mode: switch the PLC to RUN and start the simulation after a successful load.
  */
@@ -817,7 +840,11 @@ export type RepairRequest = { contractVersion: number, workspaceId: ExactU64, re
 
 export type RepairResultDto = { message: string, frame: LiveFrameDto, };
 
-export type CheckRequest = { contractVersion: number, workspaceId: ExactU64, source: string, station: StationDto | null, };
+export type CheckRequest = { contractVersion: number, workspaceId: ExactU64, source: string, 
+/**
+ * The project library documents compiled with `source` (ADR-0045).
+ */
+library: Array<SourceDocumentDto>, station: StationDto | null, };
 
 export type CriterionResultDto = { id: string, title: string, points: number, earned: number, passed: boolean, feedback: string, detail: string, };
 

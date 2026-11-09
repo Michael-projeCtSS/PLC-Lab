@@ -113,7 +113,16 @@ fn type_name(kind: PlcType) -> &'static str {
 }
 
 pub fn compile(source: &str) -> Result<CompiledProgram, Vec<Diagnostic>> {
-    st_frontend::compile_st(source, CompilerConfig::default())
+    compile_documents(source, &[])
+}
+
+/// The main program document with the project library documents (ADR-0045).
+pub fn compile_documents(
+    source: &str,
+    library: &[String],
+) -> Result<CompiledProgram, Vec<Diagnostic>> {
+    let library: Vec<&str> = library.iter().map(String::as_str).collect();
+    st_frontend::compile_st_documents(source, &library, CompilerConfig::default())
 }
 
 /// Linked tags, function-block outputs and non-blocking binding warnings.

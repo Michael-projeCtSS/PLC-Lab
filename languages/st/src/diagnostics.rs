@@ -72,6 +72,18 @@ pub(crate) fn location(span: TextSpan, element: u32) -> SourceLocation {
         Some(span),
     )
 }
+/// The same diagnostic, anchored in `document` instead of the main document
+/// (ADR-0045): the parser numbers every document as document 1.
+pub(crate) fn relocate(diagnostic: Diagnostic, document: DocumentId) -> Diagnostic {
+    let source = diagnostic.source().map(|s| {
+        SourceLocation::new(
+            SourceRef::new(document, s.reference().element_id()),
+            s.language(),
+            s.text_span(),
+        )
+    });
+    diagnostic.with_source(source)
+}
 pub(crate) fn error(code: &str, message: impl Into<String>, span: Option<TextSpan>) -> Diagnostic {
     Diagnostic::new(
         DiagnosticCode::new(code).expect("fixed ST code"),

@@ -30,6 +30,26 @@ pub(crate) fn parse(
         }
     }
 }
+/// A project library document: FUNCTIONs and FUNCTION_BLOCKs only (ADR-0045).
+pub(crate) fn parse_library(
+    tokens: &[Token],
+    config: CompilerConfig,
+) -> Result<Vec<PouAst>, Vec<Diagnostic>> {
+    let mut parser = Parser {
+        tokens,
+        cursor: 0,
+        config,
+        errors: Diagnostics::new(config.diagnostics),
+    };
+    match parser.library_document() {
+        Ok(pous) if parser.errors.items.is_empty() => Ok(pous),
+        Ok(_) => Err(parser.errors.items),
+        Err(diagnostic) => {
+            parser.errors.push(diagnostic);
+            Err(parser.errors.items)
+        }
+    }
+}
 struct Parser<'a> {
     tokens: &'a [Token],
     cursor: usize,
@@ -126,6 +146,30 @@ impl Parser<'_> {
         program.library = library;
         Ok(program)
     }
+    /// A library document: user FUNCTIONs and FUNCTION_BLOCKs, no PROGRAM (ADR-0045).
+    fn library_document(&mut self) -> Result<Vec<PouAst>, Diagnostic> {
+        let mut library = Vec::new();
+        while !self.at(&TokenKind::Eof) && !self.errors.stopped {
+            match self.peek().kind {
+                TokenKind::Keyword(Keyword::Function | Keyword::FunctionBlock) => {
+                    library.push(self.pou()?);
+                }
+                TokenKind::Keyword(Keyword::Program) => {
+                    return Err(error(
+                        codes::UNSUPPORTED,
+                        "A library document holds FUNCTIONs and FUNCTION_BLOCKs only; the PROGRAM belongs in the main program document.",
+                        Some(self.peek().span),
+                    ));
+                }
+                _ => {
+                    return Err(
+                        self.syntax("Expected FUNCTION or FUNCTION_BLOCK at the start of a POU.")
+                    );
+                }
+            }
+        }
+        Ok(library)
+    }
     fn program(&mut self) -> Result<ProgramAst, Diagnostic> {
         let start = self
             .expect(
@@ -191,6 +235,7 @@ impl Parser<'_> {
             declarations,
             body,
             span: joined(keyword.span, end.span),
+            document: 1,
         })
     }
     /// VAR, VAR_INPUT, VAR_OUTPUT and VAR_IN_OUT sections; the compiler checks which

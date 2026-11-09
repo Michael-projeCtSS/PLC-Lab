@@ -458,9 +458,14 @@ previous green run; `1356125` moves it to 1.14.1 and changes nothing else.
   with reference solution and tests proving each criterion catches its mistake; article
   `fundamentals.pous`; complete Polish overlays.
 - Native acceptance: `tests/e2e/pou-session.mjs` (part of `npm run test:desktop`).
-- Not in this checkpoint: several source documents per project, a project library
-  persisted apart from the program, libraries shared between projects, retentive user
-  block instances.
+- ADR-0045, project library documents: every program document after the main program
+  holds FUNCTIONs and FUNCTION_BLOCKs compiled with it into the one IR; diagnostics, POUs
+  and runtime faults name their document (`document` in the DTOs); requests carry
+  `library: [{id, source}]`; project format 6 (format 5 migrates unchanged). The project
+  tree lists the library with New, the editor shows the selected document with Rename
+  and Delete.
+- Not in this checkpoint: libraries shared between projects, retentive user block
+  instances.
 
 ## Product consolidation (Claude, 2026-11-04 to 2026-11-06)
 

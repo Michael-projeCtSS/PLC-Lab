@@ -35,6 +35,7 @@ const pous: PouDto[] = [
     ],
     description: "Start/stop with seal-in.",
     line: 2,
+    document: null,
   },
   {
     name: "Clamp",
@@ -46,6 +47,7 @@ const pous: PouDto[] = [
     ],
     description: null,
     line: 20,
+    document: "lib-1",
   },
 ];
 
@@ -59,7 +61,11 @@ function show(language: "en" | "pl", current = true) {
         theme: "dark",
       }}
     >
-      <LibraryTab pous={pous} current={current} />
+      <LibraryTab
+        pous={pous}
+        current={current}
+        documentName={(id) => (id === "lib-1" ? "Utilities" : null)}
+      />
     </Context.Provider>,
   );
 }
@@ -81,6 +87,9 @@ it("lists the program's blocks and functions with signatures, parameters and exa
   expect(clamp).toHaveTextContent("Clamp(Value : INT, Low : INT) : INT");
   expect(clamp).toHaveTextContent("Result := Clamp(Value, Low);");
   expect(clamp).toHaveTextContent("No description");
+  // Where each block is defined: the program or a project library document.
+  expect(motor).toHaveTextContent("Line 2 of the program");
+  expect(clamp).toHaveTextContent("Line 20 of the library document Utilities");
   // The standard blocks come from the backend's signatures.
   const ton = await screen.findByTestId("lib-TON");
   expect(ton).toHaveTextContent(

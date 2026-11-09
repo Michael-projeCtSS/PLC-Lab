@@ -135,6 +135,9 @@ pub struct DiagnosticDto {
     /// "compiler" | "runtime" | "internal"
     #[ts(type = "\"compiler\" | \"runtime\" | \"internal\"")]
     pub category: String,
+    /// The project library document the span is in; `None` for the main program
+    /// (ADR-0045).
+    pub document: Option<String>,
 }
 
 macro_rules! declarations {

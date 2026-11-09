@@ -160,6 +160,7 @@ fn practice_workflow_build_load_run_and_grade() {
             contract_version: V,
             workspace_id: id,
             source: "PROGRAM Main x := ; END_PROGRAM".into(),
+            library: Vec::new(),
             revision: ExactU64(1),
             station: None,
             run_after_load: false,
@@ -175,6 +176,7 @@ fn practice_workflow_build_load_run_and_grade() {
             contract_version: V,
             workspace_id: id,
             source: MOTOR_SOLUTION.into(),
+            library: Vec::new(),
             revision: ExactU64(2),
             station: None,
             run_after_load: true,
@@ -193,6 +195,7 @@ fn practice_workflow_build_load_run_and_grade() {
             contract_version: V,
             workspace_id: id,
             source: "PROGRAM Old END_PROGRAM".into(),
+            library: Vec::new(),
             revision: ExactU64(1),
             station: None,
             run_after_load: false,
@@ -316,6 +319,7 @@ fn practice_workflow_build_load_run_and_grade() {
             contract_version: V,
             workspace_id: id,
             source: MOTOR_SOLUTION.into(),
+            library: Vec::new(),
             station: None,
         })
         .unwrap();
@@ -329,6 +333,7 @@ fn practice_workflow_build_load_run_and_grade() {
             contract_version: V,
             workspace_id: id,
             source: missing_seal,
+            library: Vec::new(),
             station: None,
         })
         .unwrap();
@@ -441,6 +446,7 @@ fn troubleshooting_workflow_requires_evidence_diagnosis_repair_and_verification(
             contract_version: V,
             workspace_id: id,
             source: source.clone(),
+            library: Vec::new(),
             station: None,
         })
         .unwrap();
@@ -484,6 +490,7 @@ fn troubleshooting_workflow_requires_evidence_diagnosis_repair_and_verification(
             contract_version: V,
             workspace_id: id,
             source,
+            library: Vec::new(),
             station: None,
         })
         .unwrap();
@@ -542,6 +549,7 @@ fn free_lab_projects_round_trip_and_reject_bad_input() {
         .compile(CompileRequest {
             contract_version: V,
             source: project.programs[0].source.clone(),
+            library: Vec::new(),
         })
         .unwrap();
     assert!(
@@ -621,6 +629,7 @@ fn free_lab_projects_round_trip_and_reject_bad_input() {
                 contract_version: V,
                 workspace_id: w.workspace_id,
                 source: String::new(),
+                library: Vec::new(),
                 station: None
             })
             .unwrap_err()
@@ -644,4 +653,178 @@ fn free_lab_projects_round_trip_and_reject_bad_input() {
         })
     };
     assert_eq!(step_running.unwrap_err().code, "APP-SIMULATION-RUNNING");
+}
+
+/// The toggle exercise with its blocks in project library documents (ADR-0045).
+#[test]
+fn project_library_documents_compile_build_and_grade_with_the_program() {
+    let f = fixture("library-documents");
+    let (project, w) = open_exercise(&f.app, "ex.toggle-block");
+    let id = w.workspace_id;
+    let solution = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/conformance/solutions/ex.toggle-block.st"),
+    )
+    .unwrap();
+    let both_at = solution.find("(* TRUE when both").unwrap();
+    let main_at = solution.find("PROGRAM Main").unwrap();
+    let (toggle, both, main) = (
+        solution[..both_at].to_owned(),
+        solution[both_at..main_at].to_owned(),
+        solution[main_at..].to_owned(),
+    );
+    let library = |both: &str| {
+        vec![
+            SourceDocumentDto {
+                id: "lib-1".into(),
+                source: toggle.clone(),
+            },
+            SourceDocumentDto {
+                id: "lib-2".into(),
+                source: both.to_owned(),
+            },
+        ]
+    };
+
+    // The documents are saved in the project and read back.
+    let mut edited = project.clone();
+    edited.programs[0].source = main.clone();
+    for (doc, name, source) in [("lib-1", "Blocks", &toggle), ("lib-2", "Functions", &both)] {
+        edited.programs.push(ProgramDocumentDto {
+            id: doc.into(),
+            name: name.into(),
+            language: "ST".into(),
+            source: source.clone(),
+        });
+    }
+    f.app
+        .save_project(ProjectSaveRequest {
+            contract_version: V,
+            project: edited,
+        })
+        .unwrap();
+    let stored = f
+        .app
+        .project(IdRequest {
+            contract_version: V,
+            id: project.id.clone(),
+        })
+        .unwrap();
+    let names: Vec<&str> = stored.programs.iter().map(|d| d.name.as_str()).collect();
+    assert_eq!(names, ["Main", "Blocks", "Functions"]);
+
+    // Compiled together, each POU names the document that defines it.
+    let compiled = f
+        .app
+        .compile(CompileRequest {
+            contract_version: V,
+            source: main.clone(),
+            library: library(&both),
+        })
+        .unwrap();
+    assert!(compiled.success, "{:?}", compiled.diagnostics);
+    let pous: Vec<(&str, Option<&str>)> = compiled
+        .pous
+        .iter()
+        .map(|p| (p.name.as_str(), p.document.as_deref()))
+        .collect();
+    assert_eq!(pous, [("Toggle", Some("lib-1")), ("Both", Some("lib-2"))]);
+    // An error in a library document names that document and its line.
+    let broken = compiled_diagnostics(&f.app, &main, library(&both.replace("A AND B", "A + 1")));
+    assert!(!broken.is_empty());
+    for d in &broken {
+        assert_eq!(d.document.as_deref(), Some("lib-2"), "{d:?}");
+        assert_eq!(d.span.as_ref().unwrap().start.line, 7, "{d:?}");
+    }
+    // Without its library the program does not compile.
+    assert!(!compiled_diagnostics(&f.app, &main, Vec::new()).is_empty());
+
+    // Build & Load and isolated grading use the same documents.
+    let (loaded, _) = f
+        .app
+        .build_and_load(BuildLoadRequest {
+            contract_version: V,
+            workspace_id: id,
+            source: main.clone(),
+            library: library(&both),
+            revision: ExactU64(1),
+            station: None,
+            run_after_load: false,
+        })
+        .unwrap();
+    assert_eq!(loaded.outcome, "LOADED", "{:?}", loaded.diagnostics);
+    let report = f
+        .app
+        .check(CheckRequest {
+            contract_version: V,
+            workspace_id: id,
+            source: main.clone(),
+            library: library(&both),
+            station: None,
+        })
+        .unwrap();
+    assert_eq!(report.outcome, "GRADED");
+    assert!(report.passed, "{:?}", report.criteria);
+    let without = f
+        .app
+        .check(CheckRequest {
+            contract_version: V,
+            workspace_id: id,
+            source: main.clone(),
+            library: Vec::new(),
+            station: None,
+        })
+        .unwrap();
+    assert_eq!(without.outcome, "COMPILE_FAILED");
+
+    // A runtime fault inside a library function names its document and line.
+    let ratio = "FUNCTION Ratio : INT\nVAR_INPUT A : INT; B : INT; END_VAR\nRatio := A / B;\nEND_FUNCTION\n";
+    let faulty = main.replace(
+        "Lamp3 := Both(Lamp1, Lamp2);",
+        "Lamp3 := Both(Lamp1, Lamp2) AND Ratio(1, 0) = 0;",
+    );
+    let mut documents = library(&both);
+    documents.push(SourceDocumentDto {
+        id: "lib-3".into(),
+        source: ratio.into(),
+    });
+    let (loaded, _) = f
+        .app
+        .build_and_load(BuildLoadRequest {
+            contract_version: V,
+            workspace_id: id,
+            source: faulty,
+            library: documents,
+            revision: ExactU64(2),
+            station: None,
+            run_after_load: false,
+        })
+        .unwrap();
+    assert_eq!(loaded.outcome, "LOADED", "{:?}", loaded.diagnostics);
+    f.app
+        .plc_mode(PlcModeRequest {
+            contract_version: V,
+            workspace_id: id,
+            mode: "RUN".into(),
+        })
+        .unwrap();
+    let frame = step(&f.app, id, 3);
+    let fault = frame.plc.fault.expect("a division by zero");
+    assert_eq!(fault.category, "runtime");
+    assert_eq!(fault.document.as_deref(), Some("lib-3"));
+    assert_eq!(fault.span.unwrap().start.line, 3);
+}
+
+fn compiled_diagnostics(
+    app: &DesktopApp,
+    source: &str,
+    library: Vec<SourceDocumentDto>,
+) -> Vec<DiagnosticDto> {
+    app.compile(CompileRequest {
+        contract_version: V,
+        source: source.into(),
+        library,
+    })
+    .unwrap()
+    .diagnostics
 }

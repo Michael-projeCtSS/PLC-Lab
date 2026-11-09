@@ -1591,10 +1591,25 @@ textarea.input {
   height: 100%;
   min-height: 0;
 }
+/* In the program panel the editor is a flex child below the document bar and the
+   compile problems, not an overlay of the whole centre panel. */
 .program-panel .st-editor {
+  position: relative;
+  inset: auto;
   flex: 1;
   min-height: 100px;
   height: auto;
+}
+.document-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
 }
 .compile-problems {
   flex: none;

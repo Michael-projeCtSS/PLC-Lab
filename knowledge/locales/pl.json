@@ -20992,6 +20992,16 @@
           "path": "sections.4.body",
           "source": "PLC Lab compiles each call of your functions and function blocks into the same canonical program that the one PLC runtime executes; there is no separate interpreter for blocks. Instance variables appear in online monitoring under their dotted names, and a runtime fault inside a block points to the line in the block. A block may not call itself, directly or indirectly. The **Library** tab of the inspector lists your blocks and the standard blocks with their signatures, parameters and a usage example.",
           "text": "PLC Lab kompiluje każde wywołanie Twoich funkcji i bloków funkcyjnych do tego samego kanonicznego programu, który wykonuje jedyne środowisko wykonawcze PLC; nie ma osobnego interpretera dla bloków. Zmienne instancji są widoczne w podglądzie online pod nazwami z kropką, a błąd wykonania wewnątrz bloku wskazuje linię w bloku. Blok nie może wywoływać samego siebie, ani bezpośrednio, ani pośrednio. Karta **Biblioteka** w inspektorze pokazuje Twoje bloki i bloki standardowe wraz z sygnaturami, parametrami i przykładem użycia."
+        },
+        {
+          "path": "sections.5.heading",
+          "source": "Project library documents",
+          "text": "Dokumenty biblioteki projektu"
+        },
+        {
+          "path": "sections.5.body",
+          "source": "Blocks you want to keep apart from the program go into a **library document** of the project: choose **New library document** under Project library in the project tree. A library document holds FUNCTIONs and FUNCTION_BLOCKs only; every build compiles it together with the main program, and compile errors and runtime faults name the document they are in.",
+          "text": "Bloki, które chcesz trzymać osobno od programu, umieść w **dokumencie biblioteki** projektu: wybierz **Nowy dokument biblioteki** w sekcji Biblioteka projektu w drzewie projektu. Dokument biblioteki zawiera wyłącznie funkcje (FUNCTION) i bloki funkcyjne (FUNCTION_BLOCK); każda kompilacja łączy go z programem głównym, a błędy kompilacji i błędy wykonania wskazują dokument, w którym wystąpiły."
         }
       ]
     }

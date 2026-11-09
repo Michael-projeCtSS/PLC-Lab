@@ -157,17 +157,27 @@ export const api = {
   openWorkspace: (projectId: string) =>
     call("open_workspace", { projectId }, V.workspace),
   closeWorkspace: (w: Ws) => call("close_workspace", w, unit),
-  compile: (source: string) => call("compile", { source }, V.compileResult),
+  /** Compile the main program with the project library documents (ADR-0045). */
+  compile: (source: string, library: G.SourceDocumentDto[] = []) =>
+    call("compile", { source, library }, V.compileResult),
   buildAndLoad: (
     w: Ws,
     source: string,
     revision: number,
     station: G.StationDto | null,
     runAfterLoad: boolean,
+    library: G.SourceDocumentDto[] = [],
   ) =>
     call(
       "build_and_load",
-      { ...w, source, revision: String(revision), station, runAfterLoad },
+      {
+        ...w,
+        source,
+        library,
+        revision: String(revision),
+        station,
+        runAfterLoad,
+      },
       V.buildLoadResult,
     ),
   plcMode: (w: Ws, mode: "RUN" | "STOP") =>
@@ -244,8 +254,12 @@ export const api = {
   diagnose: (w: Ws, option: string) =>
     call("diagnose", { ...w, option }, V.diagnosis),
   repair: (w: Ws, repair: string) => call("repair", { ...w, repair }, V.repair),
-  check: (w: Ws, source: string, station: G.StationDto | null) =>
-    call("check", { ...w, source, station }, V.gradeReport),
+  check: (
+    w: Ws,
+    source: string,
+    station: G.StationDto | null,
+    library: G.SourceDocumentDto[] = [],
+  ) => call("check", { ...w, source, library, station }, V.gradeReport),
 
   /** The project another launch asked to open, once (resolved by the host). */
   takeOpenRequest: () => call("take_open_request", {}, V.openRequest),

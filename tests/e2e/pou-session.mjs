@@ -152,10 +152,38 @@ try {
     const button = page.getByRole("button", {
       name: `${label} (hold to press)`,
     });
+    // Each gesture waits until the backend reports the button's new state, as an
+    // operator sees it: a gesture made while another request is in flight is not sent.
     await button.dispatchEvent("pointerdown", { pointerId: 1 });
+    await button
+      .and(page.locator('[aria-pressed="true"]'))
+      .waitFor({ timeout: 10_000 });
     await delay(400);
     await button.dispatchEvent("pointerup", { pointerId: 1 });
+    await button
+      .and(page.locator('[aria-pressed="false"]'))
+      .waitFor({ timeout: 10_000 });
   };
+  // Replace the document in the editor by pasting, as a student copies a program in:
+  // typed text would be auto-indented line by line, and a typed "(" over a selection
+  // surrounds it.
+  const paste = async (text) => {
+    await editor.click({ position: { x: 300, y: 12 } });
+    await page.keyboard.press("Control+A");
+    await page.keyboard.press("Delete");
+    const clipboard = await page
+      .evaluate(async (value) => {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }, text)
+      .catch(() => false);
+    assert.ok(clipboard, "the WebView clipboard is unavailable");
+    await page.keyboard.press("Control+V");
+    await delay(300);
+    assert.equal(await editorText(page), text);
+  };
+  const messages = (pattern) =>
+    page.locator(".ws-dock").getByText(pattern).count();
   const lamps = async (h1, h2, h3) => {
     for (const [n, on] of [
       [1, h1],
@@ -194,21 +222,7 @@ try {
   });
 
   await check("the program with its own blocks compiles and runs", async () => {
-    await editor.click({ position: { x: 300, y: 12 } });
-    // Pasted with Ctrl+V, as a student copies a program in: typed text would be
-    // auto-indented line by line, and a typed "(" over a selection surrounds it.
-    await page.keyboard.press("Control+A");
-    await page.keyboard.press("Delete");
-    const clipboard = await page
-      .evaluate(async (value) => {
-        await navigator.clipboard.writeText(value);
-        return true;
-      }, solution)
-      .catch(() => false);
-    assert.ok(clipboard, "the WebView clipboard is unavailable");
-    await page.keyboard.press("Control+V");
-    await delay(300);
-    assert.equal(await editorText(page), solution);
+    await paste(solution);
     await page
       .getByRole("toolbar")
       .getByRole("button", { name: "Build & Load to PLC" })
@@ -295,6 +309,98 @@ try {
     await waitText(result, /100\s*\/\s*100/);
   });
 
+  const programAt = solution.indexOf("PROGRAM Main");
+  const blocksText = `${solution.slice(0, programAt).trimEnd()}\n`;
+  const mainText = solution.slice(programAt);
+  const bar = page.getByTestId("document-bar");
+  const tree = (name) =>
+    page.getByRole("button", { name: `▤ ${name} (ST)`, exact: true });
+
+  await check(
+    "the blocks move into a project library document and still run",
+    async () => {
+      await views.getByRole("tab", { name: "Program", exact: true }).click();
+      await page
+        .getByRole("button", { name: "+ New library document" })
+        .click();
+      await waitText(bar, /^Library 1/);
+      await bar.getByRole("button", { name: "Rename" }).click();
+      await page.getByLabel("Document name").fill("Blocks");
+      await bar.getByRole("button", { name: "Save" }).click();
+      await waitText(bar, /^Blocks/);
+      await paste(blocksText);
+      await tree("Main").click();
+      await waitText(bar, /^Main/);
+      await paste(mainText);
+      // The live compile finds the blocks in their document.
+      await inspector
+        .getByRole("tab", { name: "Library", exact: true })
+        .click();
+      const toggle = page.getByTestId("lib-Toggle");
+      if (!(await toggle.evaluate((e) => e.open)))
+        await toggle.locator("summary").click();
+      await waitText(toggle, /Line 2 of the library document Blocks/);
+      // Build & Load compiles both documents into the PLC.
+      await page
+        .getByRole("tablist", { name: "Monitoring" })
+        .getByRole("tab", { name: /^Messages/ })
+        .click();
+      const loads = await messages("Program Main loaded into the PLC.");
+      await page
+        .getByRole("toolbar")
+        .getByRole("button", { name: "Build & Load to PLC" })
+        .click();
+      await page
+        .locator(".ws-dock")
+        .getByText("Program Main loaded into the PLC.")
+        .nth(loads)
+        .waitFor({ timeout: 30_000 });
+      await page.getByText("Sim running").first().waitFor({ timeout: 30_000 });
+      await views.getByRole("tab", { name: "Process" }).click();
+      const h1 = page.locator('[aria-label^="Lamp H1: "]');
+      const before = await h1.getAttribute("aria-label");
+      await press("Pushbutton S1");
+      await page
+        .locator(
+          `[aria-label="Lamp H1: ${before?.endsWith(": on") ? "off" : "on"}"]`,
+        )
+        .waitFor({ timeout: 10_000 });
+      // Grading uses the library too.
+      await page.getByRole("button", { name: "Pause" }).click();
+      const passes = await messages(/Check: 100 \/ 100 points — passed\./);
+      await page.getByRole("button", { name: "Check solution" }).click();
+      await page
+        .locator(".ws-dock")
+        .getByText(/Check: 100 \/ 100 points — passed\./)
+        .nth(passes)
+        .waitFor({ timeout: 30_000 });
+      await views.getByRole("tab", { name: "Program", exact: true }).click();
+      await tree("Blocks").click();
+      await page.screenshot({ path: path.join(directory, "documents.png") });
+    },
+  );
+
+  await check("the library document is saved with the project", async () => {
+    await delay(1500);
+    await page
+      .getByRole("button", { name: "Back", exact: true })
+      .first()
+      .click();
+    await page
+      .getByRole("button", { name: "Start Reusable toggle function block" })
+      .click();
+    await editor.waitFor({ timeout: 60_000 });
+    await views.getByRole("tab", { name: "Program", exact: true }).click();
+    await tree("Blocks").click();
+    await waitText(bar, /^Blocks/);
+    await delay(300);
+    assert.equal(await editorText(page), blocksText);
+    await tree("Main").click();
+    await waitText(bar, /^Main/);
+    await delay(300);
+    assert.equal(await editorText(page), mainText);
+  });
+
   await check("the exercise and library speak Polish", async () => {
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("combobox", { name: "Language" }).selectOption("pl");
@@ -315,6 +421,7 @@ try {
       .getByRole("region", { name: "Biblioteka użytkownika (ten program)" })
       .waitFor();
     await waitText(page.getByTestId("lib-Toggle"), /BLOK FUNKCYJNY/);
+    await page.getByText("Biblioteka projektu", { exact: true }).waitFor();
     await page.screenshot({ path: path.join(directory, "library-pl.png") });
   });
 

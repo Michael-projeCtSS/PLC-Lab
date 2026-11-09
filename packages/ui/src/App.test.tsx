@@ -35,6 +35,7 @@ const fake = vi.hoisted(() => ({
   repair: vi.fn(),
   createProject: vi.fn(),
   updateSource: vi.fn(),
+  saveProject: vi.fn(),
   catalog: vi.fn(),
   search: vi.fn(),
   takeOpenRequest: vi.fn(),
@@ -653,6 +654,109 @@ it("an open troubleshooting lab shows only general concepts and no repair", asyn
   fireEvent.click(screen.getByRole("button", { name: "Submit diagnosis" }));
   expect(await screen.findByRole("button", { name: REPAIR })).toBeEnabled();
   expect(document.body.textContent).not.toContain(GUIDE);
+});
+
+it("project library documents compile with the program and are added, renamed and deleted", async () => {
+  const BLOCKS = "FUNCTION_BLOCK Toggle\nEND_FUNCTION_BLOCK\n";
+  const MAIN = "PROGRAM Main\nEND_PROGRAM\n";
+  const p = project({
+    programs: [
+      ...project().programs,
+      { id: "lib-1", name: "Blocks", language: "ST", source: BLOCKS },
+    ],
+  });
+  fake.project.mockResolvedValue(p);
+  fake.saveProject.mockImplementation((next: typeof p) =>
+    Promise.resolve(next),
+  );
+  fake.compile.mockResolvedValue({
+    success: false,
+    programName: null,
+    diagnostics: [
+      {
+        code: "PLC-ST-007",
+        severity: "error",
+        message: "Type mismatch.",
+        span: {
+          start: { line: 3, column: 1 },
+          end: { line: 3, column: 5 },
+        },
+        category: "compiler",
+        document: "lib-1",
+      },
+    ],
+    declarations: [],
+    pous: [],
+  });
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  expect(await screen.findByText("Project library")).toBeInTheDocument();
+  const blocks = screen.getByRole("button", { name: /Blocks/ });
+  // The live compile sends the library with the program.
+  await waitFor(() =>
+    expect(fake.compile).toHaveBeenCalledWith(MAIN, [
+      { id: "lib-1", source: BLOCKS },
+    ]),
+  );
+  // A diagnostic names its document; following it opens that document.
+  const problem = await screen.findByRole("button", {
+    name: /Blocks · 3: PLC-ST-007/,
+  });
+  expect(blocks).not.toHaveAttribute("aria-current", "true");
+  fireEvent.click(problem);
+  expect(blocks).toHaveAttribute("aria-current", "true");
+  expect(screen.getByTestId("document-bar")).toHaveTextContent("Blocks");
+  // Build & Load sends the library too.
+  fireEvent.click(screen.getByRole("button", { name: "Build & Load to PLC" }));
+  await waitFor(() => expect(fake.buildAndLoad).toHaveBeenCalledTimes(1));
+  expect(fake.buildAndLoad.mock.calls[0]?.[5]).toEqual([
+    { id: "lib-1", source: BLOCKS },
+  ]);
+  // A new document is saved in the project and opened.
+  fireEvent.click(
+    screen.getByRole("button", { name: "+ New library document" }),
+  );
+  await waitFor(() => expect(fake.saveProject).toHaveBeenCalledTimes(1));
+  const added = fake.saveProject.mock.calls[0]?.[0] as typeof p;
+  expect(added.programs.map((d) => [d.id, d.name, d.source])).toEqual([
+    ["main", "Main", MAIN],
+    ["lib-1", "Blocks", BLOCKS],
+    ["lib-2", "Library 2", ""],
+  ]);
+  await waitFor(() =>
+    expect(screen.getByTestId("document-bar")).toHaveTextContent("Library 2"),
+  );
+  // Rename it.
+  fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+  fireEvent.change(screen.getByLabelText("Document name"), {
+    target: { value: "Functions" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(fake.saveProject).toHaveBeenCalledTimes(2));
+  expect(
+    (fake.saveProject.mock.calls[1]?.[0] as typeof p).programs[2]?.name,
+  ).toBe("Functions");
+  // Deleting asks once more, then removes only this document.
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Delete document" }),
+  );
+  expect(fake.saveProject).toHaveBeenCalledTimes(2);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Delete Functions permanently" }),
+  );
+  await waitFor(() => expect(fake.saveProject).toHaveBeenCalledTimes(3));
+  expect(
+    (fake.saveProject.mock.calls[2]?.[0] as typeof p).programs.map((d) => d.id),
+  ).toEqual(["main", "lib-1"]);
+  // The main program is shown again.
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /^▤ Main/ })).toHaveAttribute(
+      "aria-current",
+      "true",
+    ),
+  );
 });
 
 it("the task brief lists the functions and function blocks the exercise requires", async () => {

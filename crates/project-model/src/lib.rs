@@ -18,7 +18,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// I/O channels by module id (`io.<moduleId>.ch<n>`) instead of position. 4: the station
 /// configuration last downloaded into the PLC is stored apart from the expected one.
 /// 5: named watch tables replace the single watch list.
-pub const FORMAT_VERSION: u32 = 5;
+pub const FORMAT_VERSION: u32 = 6;
 /// Watch table limits.
 pub const MAX_WATCH_TABLES: usize = 16;
 pub const MAX_WATCH_ROWS: usize = 64;
@@ -175,6 +175,11 @@ impl Project {
     pub fn main_program_mut(&mut self) -> Option<&mut ProgramDocument> {
         self.programs.first_mut()
     }
+    /// The project library: every document after the main program, holding FUNCTIONs and
+    /// FUNCTION_BLOCKs that compile together with it (ADR-0045).
+    pub fn library_documents(&self) -> &[ProgramDocument] {
+        self.programs.get(1..).unwrap_or(&[])
+    }
     pub fn validate(&self) -> Result<(), ProjectError> {
         if self.format_version != FORMAT_VERSION {
             return Err(ProjectError::UnsupportedVersion(self.format_version));
@@ -197,6 +202,21 @@ impl Project {
             return Err(ProjectError::Invalid(
                 "program documents must be Structured Text of at most 256 KiB".into(),
             ));
+        }
+        let mut ids = std::collections::BTreeSet::new();
+        let mut names = std::collections::BTreeSet::new();
+        for document in &self.programs {
+            let name = document.name.trim();
+            if name.is_empty() || name.chars().count() > 64 {
+                return Err(ProjectError::Invalid(
+                    "a program document name must have 1 to 64 characters".into(),
+                ));
+            }
+            if !ids.insert(document.id.as_str()) || !names.insert(name.to_lowercase()) {
+                return Err(ProjectError::Invalid(format!(
+                    "program document '{name}' is not the only one with its id or name"
+                )));
+            }
         }
         validate_watch_tables(&self.watch_tables)?;
         if !(10..=1000).contains(&self.simulation.cycle_ms)
@@ -278,6 +298,9 @@ pub fn parse(text: &str) -> Result<Project, ProjectError> {
     }
     if version <= 4 {
         value = migrate_v4(value)?;
+    }
+    if version <= 5 {
+        value = migrate_v5(value)?;
     }
     let project: Project =
         serde_json::from_value(value).map_err(|e| ProjectError::Parse(e.to_string()))?;
@@ -382,6 +405,17 @@ fn migrate_v4(mut value: serde_json::Value) -> Result<serde_json::Value, Project
     };
     object.insert("watchTables".into(), tables);
     object.insert("formatVersion".into(), serde_json::json!(5));
+    Ok(value)
+}
+
+/// Format 6 compiles every document after the first as a project library document
+/// (ADR-0045). PLC Lab never wrote more than one document before, so the content is kept
+/// as it is; a hand-made extra document is now compiled and its errors are shown.
+fn migrate_v5(mut value: serde_json::Value) -> Result<serde_json::Value, ProjectError> {
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| ProjectError::Parse("project root must be an object".into()))?;
+    object.insert("formatVersion".into(), serde_json::json!(6));
     Ok(value)
 }
 
@@ -885,6 +919,65 @@ mod tests {
     }
 
     #[test]
+    fn version_five_documents_become_the_project_library() {
+        let mut v5: serde_json::Value = serde_json::from_str(&project_json(5)).unwrap();
+        v5["programs"].as_array_mut().unwrap().push(
+            serde_json::json!({"id": "lib-1", "name": "Blocks", "language": "ST",
+                "source": "FUNCTION_BLOCK Toggle END_FUNCTION_BLOCK"}),
+        );
+        let p = parse(&v5.to_string()).unwrap();
+        assert_eq!(p.format_version, 6);
+        assert_eq!(p.main_program().unwrap().name, "Main");
+        let library: Vec<&str> = p
+            .library_documents()
+            .iter()
+            .map(|d| d.source.as_str())
+            .collect();
+        assert_eq!(library, ["FUNCTION_BLOCK Toggle END_FUNCTION_BLOCK"]);
+        // The migrated file is written as format 6 and reads back the same.
+        let text = to_json(&p).unwrap();
+        assert!(text.contains("\"formatVersion\": 6"));
+        assert_eq!(parse(&text).unwrap(), p);
+        // A project without library documents has an empty library.
+        assert!(
+            parse(&project_json(5))
+                .unwrap()
+                .library_documents()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn program_documents_have_distinct_ids_and_names() {
+        let mut p = parse(&project_json(FORMAT_VERSION)).unwrap();
+        let document = |id: &str, name: &str| ProgramDocument {
+            id: Identifier::new(id).unwrap(),
+            name: name.into(),
+            language: "ST".into(),
+            source: String::new(),
+        };
+        p.programs.push(document("lib-1", "Blocks"));
+        p.programs.push(document("lib-2", "Functions"));
+        assert_eq!(p.validate(), Ok(()));
+        let mut twice = p.clone();
+        twice.programs.push(document("lib-1", "Other"));
+        assert!(twice.validate().is_err(), "duplicate id");
+        let mut same = p.clone();
+        same.programs.push(document("lib-3", "blocks"));
+        assert!(same.validate().is_err(), "duplicate name, ignoring case");
+        let mut empty = p.clone();
+        empty.programs.push(document("lib-3", "  "));
+        assert!(empty.validate().is_err(), "empty name");
+        let mut many = p;
+        while many.programs.len() < 33 {
+            let n = many.programs.len();
+            many.programs
+                .push(document(&format!("lib-{n}"), &format!("Library {n}")));
+        }
+        assert!(many.validate().is_err(), "at most 32 documents");
+    }
+
+    #[test]
     fn version_zero_migrates_and_future_versions_are_rejected() {
         let v0 = serde_json::json!({
             "format": "plclab-project", "formatVersion": 0, "id": "p-0", "name": "Old",
@@ -899,8 +992,8 @@ mod tests {
             "PROGRAM Old END_PROGRAM"
         );
         assert_eq!(
-            parse(&project_json(6)),
-            Err(ProjectError::UnsupportedVersion(6))
+            parse(&project_json(FORMAT_VERSION + 1)),
+            Err(ProjectError::UnsupportedVersion(FORMAT_VERSION + 1))
         );
         assert!(parse(&project_json(1).replace("\"name\":\"My lab\"", "\"name\":\"\"")).is_err());
         assert!(parse("{not json").is_err());

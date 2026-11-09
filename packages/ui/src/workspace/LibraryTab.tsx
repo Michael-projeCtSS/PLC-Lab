@@ -88,8 +88,15 @@ function Parameters({
   );
 }
 
-function UserPou({ pou }: { pou: PouDto }) {
+function UserPou({
+  pou,
+  documentName,
+}: {
+  pou: PouDto;
+  documentName: (id: string | null) => string | null;
+}) {
   const { t } = useInterface();
+  const document = documentName(pou.document);
   return (
     <details className="lib-entry" data-testid={`lib-${pou.name}`}>
       <summary>
@@ -102,7 +109,11 @@ function UserPou({ pou }: { pou: PouDto }) {
         {signature(pou.name, pou.parameters, pou.returnType)}
       </code>
       <p>{pou.description ?? t("lib.noDescription")}</p>
-      <p className="muted">{t("lib.line", { line: pou.line })}</p>
+      <p className="muted">
+        {document
+          ? t("lib.lineIn", { line: pou.line, document })
+          : t("lib.line", { line: pou.line })}
+      </p>
       <Parameters parameters={pou.parameters} />
       <Example code={pouExample(pou)} />
     </details>
@@ -130,9 +141,12 @@ function Standard({ block }: { block: StandardBlockDto }) {
 export function LibraryTab({
   pous,
   current,
+  documentName = () => null,
 }: {
   pous: PouDto[];
   current: boolean;
+  /** The name of a project library document (ADR-0045). */
+  documentName?: (id: string | null) => string | null;
 }) {
   const { t } = useInterface();
   const library = useLoad(() => api.library(), []);
@@ -168,13 +182,17 @@ export function LibraryTab({
         )}
         <h5>{t("lib.functionBlocks")}</h5>
         {blocks.length ? (
-          blocks.map((p) => <UserPou key={p.name} pou={p} />)
+          blocks.map((p) => (
+            <UserPou key={p.name} pou={p} documentName={documentName} />
+          ))
         ) : (
           <p className="muted">{t("lib.none")}</p>
         )}
         <h5>{t("lib.functions")}</h5>
         {functions.length ? (
-          functions.map((p) => <UserPou key={p.name} pou={p} />)
+          functions.map((p) => (
+            <UserPou key={p.name} pou={p} documentName={documentName} />
+          ))
         ) : (
           <p className="muted">{t("lib.none")}</p>
         )}

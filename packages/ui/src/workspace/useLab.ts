@@ -14,6 +14,7 @@ import {
   type PouDto,
   type ProjectDto,
   type SignalDto,
+  type SourceDocumentDto,
   type StationDto,
   type WatchTableDto,
   type WorkspaceDto,
@@ -35,6 +36,14 @@ export type Message = {
 };
 
 export type Lab = ReturnType<typeof useLab>;
+
+/** A project library document: FUNCTIONs and FUNCTION_BLOCKs (ADR-0045). */
+export type LibraryDocument = { id: string; name: string; source: string };
+
+/** Each library document's text by id. */
+function texts(documents: LibraryDocument[]): Record<string, string> {
+  return Object.fromEntries(documents.map((d) => [d.id, d.source]));
+}
 
 export function useLab(projectId: string) {
   const { preferences } = useInterface();
@@ -59,6 +68,20 @@ export function useLab(projectId: string) {
     null,
   );
   const [loadedSource, setLoadedSource] = useState<string | null>(null);
+  // The project library documents and the document shown in the editor (`null` is the
+  // main program), with the texts their diagnostics and the PLC's program belong to.
+  const [library, setLibrary] = useState<LibraryDocument[]>([]);
+  const [activeDocument, setActiveDocument] = useState<string | null>(null);
+  const [diagnosticsLibrary, setDiagnosticsLibrary] = useState<
+    Record<string, string>
+  >({});
+  const [loadedLibrary, setLoadedLibrary] = useState<Record<string, string>>(
+    {},
+  );
+  const librarySources = useMemo<SourceDocumentDto[]>(
+    () => library.map(({ id, source }) => ({ id, source })),
+    [library],
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [report, setReport] = useState<GradeReportDto | null>(null);
   const [watchTables, setWatchTables] = useState<WatchTableDto[]>([]);
@@ -133,6 +156,11 @@ export function useLab(projectId: string) {
       setSignals(w.signals);
       setSourceState(p.programs[0]?.source ?? "");
       setLoadedSource(p.programs[0]?.source ?? null);
+      const documents = p.programs
+        .slice(1)
+        .map(({ id, name, source }) => ({ id, name, source }));
+      setLibrary(documents);
+      setLoadedLibrary(texts(documents));
       setWatchTables(p.watchTables);
       setActiveTable(p.watchTables[0]?.id ?? null);
     })().catch((e: unknown) => active && setFatal(e));
@@ -214,13 +242,29 @@ export function useLab(projectId: string) {
     },
     [projectId],
   );
+  /** Show `value` in the active document: the main program or a library document. */
+  const setEditorText = useCallback(
+    (value: string) => {
+      if (activeDocument === null) setSource(value);
+      else
+        setLibrary((documents) =>
+          documents.map((d) =>
+            d.id === activeDocument ? { ...d, source: value } : d,
+          ),
+        );
+    },
+    [activeDocument, setSource],
+  );
   useEffect(() => {
     if (!project) return;
     const timer = setTimeout(() => {
-      api.compile(source).then(
+      api.compile(source, librarySources).then(
         (r) => {
           setDiagnostics(r.diagnostics);
           setDiagnosticsSource(source);
+          setDiagnosticsLibrary(
+            Object.fromEntries(librarySources.map((d) => [d.id, d.source])),
+          );
           if (r.success) setPous(r.pous);
           setPousCurrent(r.success);
         },
@@ -228,7 +272,41 @@ export function useLab(projectId: string) {
       );
     }, 350);
     return () => clearTimeout(timer);
-  }, [source, project]);
+  }, [source, librarySources, project]);
+  // Library documents are saved like the main program, each on its own.
+  useEffect(() => {
+    if (!project) return;
+    const changed = library.filter((d) =>
+      project.programs.some((p) => p.id === d.id && p.source !== d.source),
+    );
+    if (!changed.length) return;
+    const timer = setTimeout(() => {
+      for (const d of changed) {
+        revision.current += 1;
+        api.updateSource(project.id, d.id, d.source, revision.current).then(
+          () =>
+            setProject((p) =>
+              p
+                ? {
+                    ...p,
+                    programs: p.programs.map((x) =>
+                      x.id === d.id ? { ...x, source: d.source } : x,
+                    ),
+                  }
+                : p,
+            ),
+          (e: unknown) =>
+            log(
+              "error",
+              say("build.autosave", {
+                error: e instanceof Error ? e.message : String(e),
+              }),
+            ),
+        );
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [library, project, log, say]);
   useEffect(() => {
     const doc = project?.programs[0];
     if (!project || !doc || doc.source === source) return;
@@ -258,12 +336,29 @@ export function useLab(projectId: string) {
     return () => clearTimeout(timer);
   }, [source, project, log, say]);
 
+  /** The name of a library document, or `null` for the main program. */
+  const documentName = useCallback(
+    (id: string | null | undefined) =>
+      id ? (library.find((d) => d.id === id)?.name ?? id) : null,
+    [library],
+  );
   const applyBuild = useCallback(
-    (r: BuildLoadResultDto, built: string) => {
+    (
+      r: BuildLoadResultDto,
+      built: string,
+      builtLibrary: SourceDocumentDto[],
+    ) => {
+      const builtTexts = Object.fromEntries(
+        builtLibrary.map((d) => [d.id, d.source]),
+      );
       setSignals(r.signals);
       setDiagnostics(r.diagnostics);
       setDiagnosticsSource(built);
-      if (r.outcome === "LOADED") setLoadedSource(built);
+      setDiagnosticsLibrary(builtTexts);
+      if (r.outcome === "LOADED") {
+        setLoadedSource(built);
+        setLoadedLibrary(builtTexts);
+      }
       const issues = r.bindingIssues
         .map((i) => `${i.tag}: ${i.message}`)
         .join("\n");
@@ -280,7 +375,9 @@ export function useLab(projectId: string) {
         log(
           "error",
           say("build.failed", { count: r.diagnostics.length }),
-          r.diagnostics.map((d) => diagnosticLine(say, d)).join("\n"),
+          r.diagnostics
+            .map((d) => diagnosticLine(say, d, documentName(d.document)))
+            .join("\n"),
         );
       else if (r.outcome === "BINDING_FAILED")
         log("error", say("build.binding"), issues);
@@ -288,7 +385,7 @@ export function useLab(projectId: string) {
         log("error", say("build.hardware"), r.message ?? undefined);
       return r.frame;
     },
-    [log, say],
+    [log, say, documentName],
   );
 
   const buildAndLoad = useCallback(
@@ -296,22 +393,25 @@ export function useLab(projectId: string) {
       if (!ws) return Promise.resolve(null);
       revision.current += 1;
       const rev = revision.current;
+      const built = librarySources;
       return act(
         "build",
-        () => api.buildAndLoad(ws, source, rev, station, runAfterLoad),
-        (r) => applyBuild(r, source),
+        () => api.buildAndLoad(ws, source, rev, station, runAfterLoad, built),
+        (r) => applyBuild(r, source, built),
       ).then((r) => {
         if (r?.outcome === "LOADED" && station)
           setProject((p) => (p ? { ...p, station } : p));
         return r;
       });
     },
-    [ws, source, act, applyBuild],
+    [ws, source, librarySources, act, applyBuild],
   );
 
   const check = useCallback(async () => {
     if (!ws) return;
-    const r = await act("check", () => api.check(ws, source, null));
+    const r = await act("check", () =>
+      api.check(ws, source, null, librarySources),
+    );
     if (!r) return;
     setReport(r);
     if (r.outcome === "GRADED")
@@ -328,9 +428,71 @@ export function useLab(projectId: string) {
         say("check.notRun", {
           reason: r.outcome.replaceAll("_", " ").toLowerCase(),
         }),
-        [...r.problems, ...r.diagnostics.map((d) => d.message)].join("\n"),
+        [
+          ...r.problems,
+          ...r.diagnostics.map((d) =>
+            diagnosticLine(say, d, documentName(d.document)),
+          ),
+        ].join("\n"),
       );
-  }, [ws, source, act, log, say]);
+  }, [ws, source, librarySources, act, log, say, documentName]);
+
+  /** The project's documents with the texts being edited. */
+  const currentPrograms = useCallback(
+    (p: ProjectDto, documents: LibraryDocument[] = library) => [
+      ...p.programs.slice(0, 1).map((d) => ({ ...d, source })),
+      ...documents.map((d) => ({ ...d, language: "ST" })),
+    ],
+    [source, library],
+  );
+  /** Save a changed list of library documents in the project (ADR-0045). */
+  const saveLibrary = useCallback(
+    async (documents: LibraryDocument[]): Promise<boolean> => {
+      if (!project) return false;
+      try {
+        const saved = await api.saveProject({
+          ...project,
+          programs: currentPrograms(project, documents),
+        });
+        setProject(saved);
+        setLibrary(documents);
+        return true;
+      } catch (e) {
+        log("error", e instanceof Error ? e.message : String(e));
+        return false;
+      }
+    },
+    [project, currentPrograms, log],
+  );
+  const addDocument = useCallback(async () => {
+    const ids = new Set(library.map((d) => d.id));
+    let n = 1;
+    while (ids.has(`lib-${n}`)) n += 1;
+    const names = new Set(library.map((d) => d.name.toLowerCase()));
+    let k = library.length + 1;
+    while (names.has(say("doc.defaultName", { n: k }).toLowerCase())) k += 1;
+    const document = {
+      id: `lib-${n}`,
+      name: say("doc.defaultName", { n: k }),
+      source: "",
+    };
+    if (await saveLibrary([...library, document]))
+      setActiveDocument(document.id);
+  }, [library, saveLibrary, say]);
+  const renameDocument = useCallback(
+    (id: string, name: string) =>
+      saveLibrary(
+        library.map((d) => (d.id === id ? { ...d, name: name.trim() } : d)),
+      ),
+    [library, saveLibrary],
+  );
+  const deleteDocument = useCallback(
+    async (id: string) => {
+      if (await saveLibrary(library.filter((d) => d.id !== id)))
+        setActiveDocument((active) => (active === id ? null : active));
+    },
+    [library, saveLibrary],
+  );
 
   /** Save an edited station configuration into the project. The backend validates it;
    * the returned project is the authoritative state (it reaches the PLC on download). */
@@ -340,9 +502,7 @@ export function useLab(projectId: string) {
       const next = {
         ...project,
         station,
-        programs: project.programs.map((d, i) =>
-          i === 0 ? { ...d, source } : d,
-        ),
+        programs: currentPrograms(project),
       };
       try {
         setProject(await api.saveProject(next));
@@ -352,7 +512,7 @@ export function useLab(projectId: string) {
         return false;
       }
     },
-    [log, project, source],
+    [log, project, currentPrograms],
   );
 
   /** Save the watch tables in the project; the backend validates the limits. */
@@ -364,9 +524,7 @@ export function useLab(projectId: string) {
       const next = {
         ...project,
         watchTables: tables,
-        programs: project.programs.map((d, i) =>
-          i === 0 ? { ...d, source } : d,
-        ),
+        programs: currentPrograms(project),
       };
       setProject(next);
       api
@@ -375,7 +533,7 @@ export function useLab(projectId: string) {
           log("error", e instanceof Error ? e.message : String(e)),
         );
     },
-    [log, project, source],
+    [log, project, currentPrograms],
   );
 
   /** Watch exactly these signal paths in the active table (created when none exists). */
@@ -410,6 +568,18 @@ export function useLab(projectId: string) {
     ws,
     source,
     setSource,
+    library,
+    librarySources,
+    activeDocument,
+    setActiveDocument,
+    editorText: library.find((d) => d.id === activeDocument)?.source ?? source,
+    setEditorText,
+    documentName,
+    addDocument,
+    renameDocument,
+    deleteDocument,
+    diagnosticsLibrary,
+    loadedLibrary,
     diagnostics,
     diagnosticsSource,
     pous,

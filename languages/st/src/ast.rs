@@ -53,6 +53,9 @@ pub struct PouAst {
     pub declarations: Vec<Declaration>,
     pub body: Vec<Statement>,
     pub span: TextSpan,
+    /// The source document that defines the POU: 1 is the main program document,
+    /// 2 and above the project library documents in order (ADR-0045).
+    pub document: u32,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Literal {
