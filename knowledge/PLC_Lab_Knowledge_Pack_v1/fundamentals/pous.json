@@ -1,0 +1,49 @@
+{
+  "id": "fundamentals.pous",
+  "kind": "topic",
+  "title": "Functions and function blocks",
+  "summary": "Program organisation units let you write logic once and reuse it. A function computes a result from its inputs and remembers nothing; a function block keeps its own memory in every instance.",
+  "tags": [
+    "POU",
+    "FUNCTION",
+    "FUNCTION_BLOCK",
+    "instance",
+    "VAR_INPUT",
+    "VAR_OUTPUT",
+    "VAR_IN_OUT",
+    "library"
+  ],
+  "sections": [
+    {
+      "heading": "Program organisation units",
+      "body": "IEC 61131-3 structures a PLC application into **program organisation units** (POUs): the **PROGRAM** that the PLC task runs, **FUNCTION_BLOCK**s and **FUNCTION**s. Writing a piece of logic once and calling it wherever it is needed keeps a program short and makes a correction apply everywhere at once."
+    },
+    {
+      "heading": "Functions",
+      "body": "A **FUNCTION** computes one result from its inputs and keeps nothing between calls: the same inputs always give the same result. The result is assigned to the function's own name.\n\n```\nFUNCTION Both : BOOL\nVAR_INPUT\n    A : BOOL;\n    B : BOOL;\nEND_VAR\nBoth := A AND B;\nEND_FUNCTION\n```\n\nIt is called inside an expression, for example `Lamp3 := Both(Lamp1, Lamp2);`."
+    },
+    {
+      "heading": "Function blocks and instances",
+      "body": "A **FUNCTION_BLOCK** has memory. Before it is used, the program declares an **instance** of it, and every instance has its own copy of the block's inputs, outputs and internal variables. Two instances of the same toggle block therefore remember two different lamp states. The standard timers and counters such as TON and CTU are function blocks in exactly this sense.\n\n```\nVAR\n    Toggle1 : Toggle;\nEND_VAR\nToggle1(Press := Button1, On => Lamp1);\n```\n\nThe values of an instance stay readable after the call, for example `Toggle1.On`."
+    },
+    {
+      "heading": "Parameters",
+      "body": "- **VAR_INPUT** values are passed into the block with `:=`. An input that is not passed keeps its previous value in a function block.\n- **VAR_OUTPUT** values are read after the call with `=>` or as `Instance.Output`.\n- **VAR_IN_OUT** passes the caller's variable itself, so the block reads and writes it directly.\n- **VAR** inside a function block is internal memory that persists from scan to scan."
+    },
+    {
+      "heading": "How PLC Lab runs your blocks",
+      "body": "PLC Lab compiles each call of your functions and function blocks into the same canonical program that the one PLC runtime executes; there is no separate interpreter for blocks. Instance variables appear in online monitoring under their dotted names, and a runtime fault inside a block points to the line in the block. A block may not call itself, directly or indirectly. The **Library** tab of the inspector lists your blocks and the standard blocks with their signatures, parameters and a usage example."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.iec-61131-3",
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.counters-edges",
+    "fundamentals.timers",
+    "instruction.r-trig",
+    "instruction.ton"
+  ]
+}

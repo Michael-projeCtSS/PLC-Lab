@@ -270,6 +270,14 @@ pub struct RequiredTagDto {
     pub data_type: String,
     pub direction: String,
 }
+/// A user function or function block the exercise asks for (ADR-0044).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RequiredPouDto {
+    pub name: String,
+    #[ts(type = "\"FUNCTION\" | \"FUNCTION_BLOCK\"")]
+    pub kind: String,
+}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CriterionDto {
@@ -311,6 +319,7 @@ pub struct ExerciseDto {
     pub scene: String,
     pub platform: String,
     pub required_interface: Vec<RequiredTagDto>,
+    pub required_pous: Vec<RequiredPouDto>,
     pub instructions: Vec<String>,
     pub hints: Vec<String>,
     pub knowledge_refs: Vec<RelatedDto>,
@@ -428,7 +437,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         PackDto, KnowledgeStatusDto, KnowledgeSearchRequest, SearchHitDto, IdRequest, SectionDto, FactDto, FidelityDto,
         ParameterDto, EquivalentDto, InstructionDto, RelatedDto, TroubleshootingDto, SourceDto, ArticleDto,
         CatalogEntryDto, CatalogDto, QuestionDto, LessonSectionDto, LessonSummaryDto, LessonDto, LessonCompleteRequest,
-        ExerciseSummaryDto, RequiredTagDto, CriterionDto, OptionDto, TroubleshootingBriefDto, ExerciseDto, PlatformDto,
+        ExerciseSummaryDto, RequiredTagDto, RequiredPouDto, CriterionDto, OptionDto, TroubleshootingBriefDto, ExerciseDto, PlatformDto,
         SequenceDefinitionDto, SequenceStepDto, SequenceTransitionDto, SequencePermissiveDto, SequenceInterlockDto,
         SceneSummaryDto, LibraryDto
     )

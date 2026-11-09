@@ -12,7 +12,9 @@ use knowledge_core::{
 };
 use lab_model::{
     Identifier,
-    exercise::{Difficulty, ExerciseDefinition, ExerciseKind, TroubleshootingSetup},
+    exercise::{
+        Difficulty, ExerciseDefinition, ExerciseKind, RequiredPouKind, TroubleshootingSetup,
+    },
     scene::{SignalDirection, TagType},
 };
 use project_model::Progress;
@@ -487,6 +489,18 @@ pub fn exercise_view(
                 tag: t.tag.to_string(),
                 data_type: tag_type(t.tag_type).into(),
                 direction: direction(t.direction).into(),
+            })
+            .collect(),
+        required_pous: e
+            .required_pous
+            .iter()
+            .map(|p| RequiredPouDto {
+                name: p.name.to_string(),
+                kind: match p.kind {
+                    RequiredPouKind::Function => "FUNCTION",
+                    RequiredPouKind::FunctionBlock => "FUNCTION_BLOCK",
+                }
+                .into(),
             })
             .collect(),
         instructions: e.instructions.clone(),

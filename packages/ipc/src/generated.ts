@@ -112,6 +112,8 @@ kind: "practice" | "troubleshooting" | "commissioning", difficulty: "beginner" |
 
 export type RequiredTagDto = { tag: string, dataType: string, direction: string, };
 
+export type RequiredPouDto = { name: string, kind: "FUNCTION" | "FUNCTION_BLOCK", };
+
 export type CriterionDto = { id: string, title: string, points: number, };
 
 export type OptionDto = { id: string, label: string, };
@@ -127,7 +129,7 @@ diagnosed: boolean,
  */
 repairs: Array<OptionDto>, };
 
-export type ExerciseDto = { id: string, revision: number, title: string, kind: "practice" | "troubleshooting" | "commissioning", difficulty: "beginner" | "intermediate" | "advanced", summary: string, objectives: Array<string>, minutes: number, scene: string, platform: string, requiredInterface: Array<RequiredTagDto>, instructions: Array<string>, hints: Array<string>, knowledgeRefs: Array<RelatedDto>, criteria: Array<CriterionDto>, troubleshooting: TroubleshootingBriefDto | null, 
+export type ExerciseDto = { id: string, revision: number, title: string, kind: "practice" | "troubleshooting" | "commissioning", difficulty: "beginner" | "intermediate" | "advanced", summary: string, objectives: Array<string>, minutes: number, scene: string, platform: string, requiredInterface: Array<RequiredTagDto>, requiredPous: Array<RequiredPouDto>, instructions: Array<string>, hints: Array<string>, knowledgeRefs: Array<RelatedDto>, criteria: Array<CriterionDto>, troubleshooting: TroubleshootingBriefDto | null, 
 /**
  * The documented step sequence (ADR-0043), shaped like the content so the
  * localization overlay applies by path.

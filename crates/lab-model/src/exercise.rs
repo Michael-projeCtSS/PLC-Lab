@@ -63,6 +63,9 @@ pub struct ExerciseDefinition {
     #[serde(default)]
     pub starter_station: Option<StationConfig>,
     pub required_interface: Vec<RequiredTag>,
+    /// User functions and function blocks the program must define (ADR-0044).
+    #[serde(default)]
+    pub required_pous: Vec<RequiredPou>,
     pub instructions: Vec<String>,
     #[serde(default)]
     pub hints: Vec<String>,
@@ -82,6 +85,21 @@ pub struct ExerciseDefinition {
     /// The documented step sequence the program implements (ADR-0043).
     #[serde(default)]
     pub sequence: Option<crate::sequence::SequenceDefinition>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RequiredPouKind {
+    Function,
+    FunctionBlock,
+}
+
+/// A user POU an exercise asks for, checked before grading like the interface.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RequiredPou {
+    pub name: TagName,
+    pub kind: RequiredPouKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

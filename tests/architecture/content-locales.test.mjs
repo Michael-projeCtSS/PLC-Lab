@@ -24,9 +24,9 @@ test("the Polish overlay validates all declared complete categories and reports 
       complete,
     ]),
     [
-      ["exercises", 51, 51, 51],
+      ["exercises", 52, 52, 52],
       ["lessons", 26, 26, 26],
-      ["fundamentals", 26, 26, 26],
+      ["fundamentals", 27, 27, 27],
       ["instructions", 7, 7, 7],
       ["protocols", 9, 9, 9],
       ["troubleshooting", 30, 30, 30],

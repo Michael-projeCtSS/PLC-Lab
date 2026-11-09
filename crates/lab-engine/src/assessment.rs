@@ -10,7 +10,10 @@ use grading_core::{
     EvidenceEvent, GradeReport, GradingEvidence, PlcFaultEvidence, SequenceEvidence, SequenceFault,
 };
 use lab_model::{
-    exercise::{EvidenceSignal, ExerciseDefinition, PlcModeRequest, RequiredTag, Scenario},
+    exercise::{
+        EvidenceSignal, ExerciseDefinition, PlcModeRequest, RequiredPou, RequiredPouKind,
+        RequiredTag, Scenario,
+    },
     fault::FaultInjection,
     hardware::StationConfig,
     profile::PlatformProfile,
@@ -98,6 +101,37 @@ pub fn interface_problems(
     }
     Ok(problems)
 }
+/// Check the program defines every user function and function block the exercise asks
+/// for (ADR-0044).
+pub fn pou_problems(
+    source: &str,
+    required: &[RequiredPou],
+) -> Result<Vec<String>, Vec<Diagnostic>> {
+    if required.is_empty() {
+        return Ok(Vec::new());
+    }
+    let compiled = crate::plc::compile(source)?;
+    let mut problems = Vec::new();
+    for r in required {
+        let (keyword, kind) = match r.kind {
+            RequiredPouKind::Function => ("FUNCTION", "FUNCTION"),
+            RequiredPouKind::FunctionBlock => ("FUNCTION_BLOCK", "FUNCTION_BLOCK"),
+        };
+        match compiled
+            .pous()
+            .iter()
+            .find(|p| p.name.eq_ignore_ascii_case(r.name.as_str()))
+        {
+            None => problems.push(format!("Write {keyword} {}.", r.name)),
+            Some(p) if p.kind != kind => {
+                problems.push(format!("'{}' must be a {keyword}.", p.name))
+            }
+            Some(_) => {}
+        }
+    }
+    Ok(problems)
+}
+
 fn direction(d: SignalDirection) -> &'static str {
     match d {
         SignalDirection::Input => "VAR_INPUT",
@@ -224,7 +258,10 @@ pub fn assess(
     faults: &[FaultInjection],
     criteria_filter: Option<&[lab_model::Identifier]>,
 ) -> Result<AssessmentOutcome, AssessmentError> {
-    match interface_problems(program, &exercise.required_interface) {
+    match interface_problems(program, &exercise.required_interface).and_then(|mut problems| {
+        problems.extend(pou_problems(program, &exercise.required_pous)?);
+        Ok(problems)
+    }) {
         Err(d) => return Ok(AssessmentOutcome::CompileFailed(d)),
         Ok(problems) if !problems.is_empty() => {
             return Ok(AssessmentOutcome::InterfaceMismatch(problems));

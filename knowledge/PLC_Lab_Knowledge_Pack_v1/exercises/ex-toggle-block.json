@@ -1,0 +1,345 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.toggle-block",
+  "revision": 1,
+  "title": "Reusable toggle function block",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "Write the logic once and use it twice. The function block Toggle flips its output at each press; two instances drive Lamp1 and Lamp2 independently. A function Both lights Lamp3 when both lamps are on.",
+  "objectives": [
+    "Write a FUNCTION_BLOCK with inputs, outputs and internal memory",
+    "Use two instances of the same function block, each with its own state",
+    "Write and call a FUNCTION that returns a value"
+  ],
+  "estimatedMinutes": 20,
+  "scene": "scene.io-basics",
+  "starterProgram": "(* A reusable toggle: each press of Press flips On. *)\nFUNCTION_BLOCK Toggle\nVAR_INPUT\n    Press : BOOL; (* The pushbutton. *)\nEND_VAR\nVAR_OUTPUT\n    On : BOOL; (* The toggled state. *)\nEND_VAR\nVAR\n    Edge : R_TRIG;\nEND_VAR\n\n(* Flip On at each rising edge of Press. *)\n\nEND_FUNCTION_BLOCK\n\nPROGRAM Main\nVAR_INPUT\n    Button1 : BOOL; (* Pushbutton S1, normally open. *)\n    Button2 : BOOL; (* Pushbutton S2, normally open. *)\n    AutoMode : BOOL; (* Selector S3 in position AUTO. *)\n    PartPresent : BOOL; (* Proximity sensor B1 detects a part. *)\nEND_VAR\nVAR_OUTPUT\n    Lamp1 : BOOL; (* Green lamp H1. *)\n    Lamp2 : BOOL; (* Amber lamp H2. *)\n    Lamp3 : BOOL; (* Red lamp H3. *)\nEND_VAR\nVAR\n    Toggle1 : Toggle; (* One instance for S1 and H1. *)\n    Toggle2 : Toggle; (* One instance for S2 and H2. *)\nEND_VAR\n\n(* Call Toggle1 for Button1/Lamp1 and Toggle2 for Button2/Lamp2.\n   Write FUNCTION Both and use it: Lamp3 := Both(Lamp1, Lamp2); *)\n\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "Button1",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Button2",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Lamp1",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "Lamp2",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "Lamp3",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "requiredPous": [
+    {
+      "name": "Toggle",
+      "kind": "functionBlock"
+    },
+    {
+      "name": "Both",
+      "kind": "function"
+    }
+  ],
+  "instructions": [
+    "Complete FUNCTION_BLOCK Toggle: each rising edge of Press flips On; holding Press flips it only once.",
+    "Call instance Toggle1 with Button1 and write its On to Lamp1. Call instance Toggle2 with Button2 and write its On to Lamp2.",
+    "Write FUNCTION Both : BOOL with inputs A and B that returns A AND B.",
+    "Lamp3 := Both(Lamp1, Lamp2);"
+  ],
+  "hints": [
+    "The R_TRIG instance Edge inside Toggle gives one pulse per press: Edge(CLK := Press);",
+    "IF Edge.Q THEN On := NOT On; END_IF;",
+    "Each instance keeps its own Edge and On, so Toggle1 and Toggle2 do not affect each other.",
+    "A function assigns its result to its own name: Both := A AND B;",
+    "Open the Library tab of the inspector to see the signatures of Toggle and Both after a successful build."
+  ],
+  "knowledgeRefs": [
+    "fundamentals.pous",
+    "fundamentals.counters-edges",
+    "instruction.r-trig"
+  ],
+  "evidence": [
+    {
+      "name": "lamp1",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp1"
+      }
+    },
+    {
+      "name": "lamp2",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp2"
+      }
+    },
+    {
+      "name": "lamp3",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp3"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "toggle",
+      "title": "Press S1 twice",
+      "durationMs": 3000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 700,
+          "action": {
+            "type": "release",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 1500,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 1700,
+          "action": {
+            "type": "release",
+            "component": "pb1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hold",
+      "title": "Hold S1 down",
+      "durationMs": 3000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "both",
+      "title": "Switch on both lamps, then one off",
+      "durationMs": 3000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 700,
+          "action": {
+            "type": "release",
+            "component": "pb1"
+          }
+        },
+        {
+          "atMs": 1000,
+          "action": {
+            "type": "press",
+            "component": "pb2"
+          }
+        },
+        {
+          "atMs": 1200,
+          "action": {
+            "type": "release",
+            "component": "pb2"
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "press",
+            "component": "pb2"
+          }
+        },
+        {
+          "atMs": 2200,
+          "action": {
+            "type": "release",
+            "component": "pb2"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "first-press",
+      "title": "The first press switches Lamp1 on",
+      "points": 20,
+      "scenario": "toggle",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 1000,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp1",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp1 was off after the first press of S1."
+    },
+    {
+      "id": "second-press",
+      "title": "The second press switches Lamp1 off",
+      "points": 15,
+      "scenario": "toggle",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2000,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp1",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "Lamp1 stayed on after the second press of S1."
+    },
+    {
+      "id": "independent",
+      "title": "The instances are independent",
+      "points": 15,
+      "scenario": "toggle",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "lamp2",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp2 switched on although only S1 was pressed. Each lamp needs its own instance of Toggle."
+    },
+    {
+      "id": "hold",
+      "title": "Holding S1 flips Lamp1 only once",
+      "points": 15,
+      "scenario": "hold",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "lamp1",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "fromMs": 1000
+      },
+      "onFail": "Lamp1 did not stay on while S1 was held. Toggle on the rising edge, not on the level."
+    },
+    {
+      "id": "only-one",
+      "title": "One lamp alone does not light Lamp3",
+      "points": 15,
+      "scenario": "both",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 800,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp3",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "Lamp3 was on with only Lamp1 on. Both must return A AND B."
+    },
+    {
+      "id": "both-on",
+      "title": "Both lamps on light Lamp3",
+      "points": 10,
+      "scenario": "both",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 1500,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp3",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp3 was off although Lamp1 and Lamp2 were on."
+    },
+    {
+      "id": "both-off",
+      "title": "Lamp3 goes off with Lamp2",
+      "points": 10,
+      "scenario": "both",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2500,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp3",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "Lamp3 stayed on after Lamp2 was switched off."
+    }
+  ],
+  "curriculumOrder": 14
+}

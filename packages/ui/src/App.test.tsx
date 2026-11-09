@@ -655,6 +655,34 @@ it("an open troubleshooting lab shows only general concepts and no repair", asyn
   expect(document.body.textContent).not.toContain(GUIDE);
 });
 
+it("the task brief lists the functions and function blocks the exercise requires", async () => {
+  const w = workspace();
+  if (!w.exercise) throw new Error("fixture has no exercise");
+  fake.openWorkspace.mockResolvedValue(
+    workspace({
+      exercise: {
+        ...w.exercise,
+        requiredPous: [
+          { name: "Toggle", kind: "FUNCTION_BLOCK" },
+          { name: "Both", kind: "FUNCTION" },
+        ],
+      },
+    }),
+  );
+  render(<App />);
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  expect(
+    await screen.findByText("Required functions and function blocks"),
+  ).toBeInTheDocument();
+  const rows = within(screen.getByTestId("required-pous")).getAllByRole("row");
+  expect(rows.map((r) => r.textContent)).toEqual([
+    "ToggleFUNCTION BLOCK",
+    "BothFUNCTION",
+  ]);
+});
+
 it("the debrief names the cause and links its guide only after verification", async () => {
   fake.openWorkspace.mockResolvedValue(troubleshootingWorkspace());
   fake.check.mockResolvedValue({

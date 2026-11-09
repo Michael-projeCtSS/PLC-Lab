@@ -22,7 +22,8 @@ pub use alarm_core::{
     AlarmStatus, AlarmTransition,
 };
 pub use assessment::{
-    AssessmentError, AssessmentOutcome, AssessmentSetup, assess, interface_problems, run_scenario,
+    AssessmentError, AssessmentOutcome, AssessmentSetup, assess, interface_problems, pou_problems,
+    run_scenario,
 };
 pub use commissioning::{
     CheckCategory, CheckItem, CheckState, Checklist, FEEDBACK_WAIT_US, SignalMapRow,

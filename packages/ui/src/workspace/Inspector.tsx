@@ -317,6 +317,27 @@ function TaskBrief({
             ))}
           </tbody>
         </table>
+        {exercise.requiredPous.length > 0 && (
+          <>
+            <h4>{t("brief.requiredPous")}</h4>
+            <table className="table" data-testid="required-pous">
+              <tbody>
+                {exercise.requiredPous.map((pou) => (
+                  <tr key={pou.name}>
+                    <td className="mono">{pou.name}</td>
+                    <td className="muted">
+                      {t(
+                        pou.kind === "FUNCTION"
+                          ? "lib.function"
+                          : "lib.functionBlock",
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
       <div className="inspector-section">
         <h4>{t("brief.checks")}</h4>

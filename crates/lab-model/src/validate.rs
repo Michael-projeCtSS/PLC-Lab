@@ -557,6 +557,12 @@ pub fn validate_exercise(
         }
     }
     p.check(total > 0, || "exercise criteria award no points".into());
+    let mut pous = BTreeSet::new();
+    for r in &exercise.required_pous {
+        p.check(pous.insert(r.name.as_str().to_ascii_uppercase()), || {
+            format!("required POU '{}' is duplicated", r.name)
+        });
+    }
     if let Some(sequence) = &exercise.sequence {
         let program_tags: BTreeSet<&Identifier> = exercise
             .evidence

@@ -362,3 +362,102 @@ fn restart_labs_are_graded_by_their_behavior_over_real_restarts() {
     let nothing_kept = startup.replace("VAR RETAIN", "VAR");
     assert_eq!(failed("ex.safe-startup", &nothing_kept), ["batch-kept"]);
 }
+
+#[test]
+fn the_function_block_lab_grades_structure_and_behavior() {
+    let lib = library();
+    let e = lib.exercise("ex.toggle-block").unwrap();
+    let scene = lib.scene(e.scene.as_str()).unwrap();
+    let profile = lib.profile("generic.iec").unwrap();
+    let outcome = |program: &str| {
+        assess(
+            e,
+            scene,
+            &scene.reference_station,
+            &profile,
+            program,
+            &[],
+            None,
+        )
+        .unwrap()
+    };
+    let solution =
+        std::fs::read_to_string(root().join("tests/conformance/solutions/ex.toggle-block.st"))
+            .unwrap();
+    assert!(failed("ex.toggle-block", &solution).is_empty());
+    // The starter has the block but not the function: graded as an interface problem.
+    match outcome(&e.starter_program) {
+        AssessmentOutcome::InterfaceMismatch(p) => assert_eq!(p, ["Write FUNCTION Both."]),
+        other => panic!("{other:?}"),
+    }
+    // Correct behavior written inline, without a function block, is not the exercise.
+    let inline = "PROGRAM Main
+VAR_INPUT Button1 : BOOL; Button2 : BOOL; END_VAR
+VAR_OUTPUT Lamp1 : BOOL; Lamp2 : BOOL; Lamp3 : BOOL; END_VAR
+VAR E1 : R_TRIG; E2 : R_TRIG; END_VAR
+E1(CLK := Button1); IF E1.Q THEN Lamp1 := NOT Lamp1; END_IF;
+E2(CLK := Button2); IF E2.Q THEN Lamp2 := NOT Lamp2; END_IF;
+Lamp3 := Lamp1 AND Lamp2;
+END_PROGRAM";
+    match outcome(inline) {
+        AssessmentOutcome::InterfaceMismatch(p) => {
+            assert_eq!(p, ["Write FUNCTION_BLOCK Toggle.", "Write FUNCTION Both."])
+        }
+        other => panic!("{other:?}"),
+    }
+    // A function block where a function is required, although it behaves correctly.
+    let block = solution
+        .replace(
+            "FUNCTION Both : BOOL\nVAR_INPUT\n    A : BOOL;\n    B : BOOL;\nEND_VAR\nBoth := A AND B;\nEND_FUNCTION",
+            "FUNCTION_BLOCK Both\nVAR_INPUT\n    A : BOOL;\n    B : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Q : BOOL;\nEND_VAR\nQ := A AND B;\nEND_FUNCTION_BLOCK",
+        )
+        .replace(
+            "    Toggle2 : Toggle; (* One instance for S2 and H2. *)\n",
+            "    Toggle2 : Toggle; (* One instance for S2 and H2. *)\n    Both1 : Both;\n",
+        )
+        .replace(
+            "Lamp3 := Both(Lamp1, Lamp2);",
+            "Both1(A := Lamp1, B := Lamp2, Q => Lamp3);",
+        );
+    assert_eq!(block.matches("Both1").count(), 2, "{block}");
+    match outcome(&block) {
+        AssessmentOutcome::InterfaceMismatch(p) => assert_eq!(p, ["'Both' must be a FUNCTION."]),
+        other => panic!("{other:?}"),
+    }
+    // Toggling on the level flickers while the button is held.
+    let level = solution.replace(
+        "Edge(CLK := Press);\nIF Edge.Q THEN",
+        "Edge(CLK := Press);\nIF Press THEN",
+    );
+    assert_ne!(level, solution);
+    assert!(failed("ex.toggle-block", &level).contains(&"hold".to_string()));
+    // One shared instance drives both lamps.
+    let shared = solution.replace(
+        "Toggle2(Press := Button2, On => Lamp2);",
+        "Toggle1(Press := Button2, On => Lamp2);",
+    );
+    assert_ne!(shared, solution);
+    assert!(failed("ex.toggle-block", &shared).contains(&"independent".to_string()));
+    // OR instead of AND.
+    let or = solution.replace("Both := A AND B;", "Both := A OR B;");
+    assert_ne!(or, solution);
+    assert_eq!(failed("ex.toggle-block", &or), ["only-one", "both-off"]);
+}
+
+#[test]
+fn an_exercise_may_not_require_the_same_pou_twice() {
+    let lib = library();
+    let mut e = lib.exercise("ex.toggle-block").unwrap().clone();
+    let scene = lib.scene(e.scene.as_str()).unwrap();
+    lab_model::validate_exercise(&e, scene).unwrap();
+    let mut again = e.required_pous[0].clone();
+    again.name = lab_model::ids::TagName::new("TOGGLE").unwrap();
+    e.required_pous.push(again);
+    let error = lab_model::validate_exercise(&e, scene)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("required POU 'TOGGLE' is duplicated"),
+        "{error}"
+    );
+}

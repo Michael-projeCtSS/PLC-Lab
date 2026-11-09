@@ -254,6 +254,7 @@ export function workspace(overrides: Partial<WorkspaceDto> = {}): WorkspaceDto {
       requiredInterface: [
         { tag: "StartPB", dataType: "BOOL", direction: "input" },
       ],
+      requiredPous: [],
       instructions: ["Pressing Start energizes MotorContactor."],
       hints: ["Use a seal-in."],
       knowledgeRefs: [],

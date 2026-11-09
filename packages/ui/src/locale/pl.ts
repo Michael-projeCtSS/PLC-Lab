@@ -155,6 +155,7 @@ export const pl = {
   "progress.active": "W trakcie",
   "progress.new": "Nie rozpoczęto",
   "brief.required": "Wymagany interfejs",
+  "brief.requiredPous": "Wymagane funkcje i bloki funkcyjne",
   "brief.task": "Wymagane działanie programu",
   "brief.checks": "Kryteria sprawdzenia",
   "brief.hints": "Podpowiedzi",

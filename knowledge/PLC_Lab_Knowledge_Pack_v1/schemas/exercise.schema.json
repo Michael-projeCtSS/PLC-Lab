@@ -427,6 +427,28 @@
     },
     "sequence": {
       "$ref": "#/$defs/sequence"
+    },
+    "requiredPous": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/tag"
+          },
+          "kind": {
+            "enum": [
+              "function",
+              "functionBlock"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "kind"
+        ]
+      }
     }
   },
   "additionalProperties": false,

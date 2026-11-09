@@ -152,6 +152,7 @@ export const en = {
   "progress.active": "In progress",
   "progress.new": "Not started",
   "brief.required": "Required interface",
+  "brief.requiredPous": "Required functions and function blocks",
   "brief.task": "What the program must do",
   "brief.checks": "Checks",
   "brief.hints": "Hints",

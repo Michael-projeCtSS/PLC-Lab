@@ -288,6 +288,12 @@ export const exercise = obj<G.ExerciseDto>({
   requiredInterface: arr(
     obj<G.RequiredTagDto>({ tag: str, dataType: str, direction: str }),
   ),
+  requiredPous: arr(
+    obj<G.RequiredPouDto>({
+      name: str,
+      kind: literal("FUNCTION", "FUNCTION_BLOCK"),
+    }),
+  ),
   instructions: arr(str),
   hints: arr(str),
   knowledgeRefs: arr(related),
