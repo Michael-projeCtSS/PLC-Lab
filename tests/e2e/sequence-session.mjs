@@ -154,10 +154,25 @@ try {
   const explain = page.getByTestId("sequence-explain");
   const button = (label) =>
     page.getByRole("button", { name: `${label} (hold to press)` });
-  const press = async (label, ms = 400) => {
+  // Each gesture waits until the backend reports the button's new state, as an operator
+  // sees it, before the next one: the workspace runs one request at a time and a
+  // gesture made while another is in flight is not sent.
+  const down = async (label) => {
     await button(label).dispatchEvent("pointerdown", { pointerId: 1 });
-    await delay(ms);
+    await button(label)
+      .and(page.locator('[aria-pressed="true"]'))
+      .waitFor({ timeout: 10_000 });
+  };
+  const up = async (label) => {
     await button(label).dispatchEvent("pointerup", { pointerId: 1 });
+    await button(label)
+      .and(page.locator('[aria-pressed="false"]'))
+      .waitFor({ timeout: 10_000 });
+  };
+  const press = async (label, ms = 400) => {
+    await down(label);
+    await delay(ms);
+    await up(label);
   };
   const tank = page.locator('[aria-label^="Tank T-100: "]');
   const valve = page.locator('[aria-label^="Inlet valve XV-101: "]');
@@ -198,14 +213,14 @@ try {
   await views.getByRole("tab", { name: "Process" }).click();
 
   await check("an unsatisfied permissive refuses the start", async () => {
-    await button("Hold S3").dispatchEvent("pointerdown", { pointerId: 1 });
+    await down("Hold S3");
     await delay(300);
     await press("Start S1");
     await waitText(
       page.getByRole("note"),
       /Not permitted: Hold button released/,
     );
-    await button("Hold S3").dispatchEvent("pointerup", { pointerId: 1 });
+    await up("Hold S3");
     await waitText(state, /^IDLE$/);
     await page.screenshot({ path: path.join(directory, "refused.png") });
   });
