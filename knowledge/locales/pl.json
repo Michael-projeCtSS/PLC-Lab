@@ -21004,6 +21004,92 @@
           "text": "Bloki, które chcesz trzymać osobno od programu, umieść w **dokumencie biblioteki** projektu: wybierz **Nowy dokument biblioteki** w sekcji Biblioteka projektu w drzewie projektu. Dokument biblioteki zawiera wyłącznie funkcje (FUNCTION) i bloki funkcyjne (FUNCTION_BLOCK); każda kompilacja łączy go z programem głównym, a błędy kompilacji i błędy wykonania wskazują dokument, w którym wystąpiły."
         }
       ]
+    },
+    {
+      "id": "fundamentals.pid",
+      "file": "fundamentals/pid.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Closed-loop control with PID",
+          "text": "Regulacja w układzie zamkniętym z PID"
+        },
+        {
+          "path": "summary",
+          "source": "A PID controller measures the process value, compares it with the setpoint and adjusts the output until they match. Its proportional, integral and derivative parts each have a job, and its limits and manual mode matter as much as its gains.",
+          "text": "Regulator PID mierzy wartość procesową, porównuje ją z wartością zadaną i zmienia sygnał sterujący, aż obie będą zgodne. Każdy z jego członów, proporcjonalny, całkujący i różniczkujący, ma swoje zadanie, a ograniczenia i tryb ręczny są równie ważne jak nastawy."
+        },
+        {
+          "path": "sections.0.heading",
+          "source": "Open loop and closed loop",
+          "text": "Otwarty i zamknięty układ regulacji"
+        },
+        {
+          "path": "sections.0.body",
+          "source": "Switching a heater on for a fixed time is **open-loop** control: nothing checks whether the vessel actually got warm. A **closed loop** measures the process value (**PV**, here the temperature), compares it with the setpoint (**SP**) and adjusts the manipulated variable (**MV**, here the heater power) until the error SP - PV is gone. A PID controller is the most common way to compute MV from the error.",
+          "text": "Włączenie grzałki na stały czas to sterowanie w **układzie otwartym**: nic nie sprawdza, czy zbiornik rzeczywiście się nagrzał. **Układ zamknięty** mierzy wartość procesową (**PV**, tu temperaturę), porównuje ją z wartością zadaną (**SP**) i zmienia sygnał sterujący (**MV**, tu moc grzałki), aż uchyb SP - PV zniknie. Regulator PID to najczęstszy sposób wyznaczania MV z uchybu."
+        },
+        {
+          "path": "sections.1.heading",
+          "source": "Proportional action",
+          "text": "Działanie proporcjonalne"
+        },
+        {
+          "path": "sections.1.body",
+          "source": "The **P** part is the gain **KP** times the error: a large error gives a large output. P alone always leaves an **offset**: the heater only works while there is an error. In PLC Lab's vessel, KP 4 settles at about 50.5 °C instead of 60 °C. A larger KP shrinks the offset but makes the loop nervous and, with process lag, makes it oscillate.",
+          "text": "Składnik **P** to wzmocnienie **KP** razy uchyb: duży uchyb daje duży sygnał. Sam człon P zawsze pozostawia **uchyb ustalony**: grzałka pracuje tylko wtedy, gdy uchyb istnieje. W zbiorniku PLC Lab KP 4 ustala temperaturę na około 50.5 °C zamiast 60 °C. Większe KP zmniejsza uchyb, ale czyni regulację nerwową, a przy opóźnieniach procesu prowadzi do oscylacji."
+        },
+        {
+          "path": "sections.2.heading",
+          "source": "Integral action",
+          "text": "Działanie całkujące"
+        },
+        {
+          "path": "sections.2.body",
+          "source": "The **I** part adds up the error over time, so it keeps growing until the error is zero: it removes the offset. The integral time **TI** says how fast: after TI with a constant error, I has grown as large as P. A short TI acts fast but overshoots; a long TI is calm but slow. In the steady state the whole output comes from I.",
+          "text": "Składnik **I** sumuje uchyb w czasie, więc rośnie tak długo, aż uchyb spadnie do zera: usuwa uchyb ustalony. Czas całkowania **TI** określa szybkość: po czasie TI przy stałym uchybie I osiąga wartość P. Krótki TI działa szybko, ale powoduje przeregulowanie; długi TI jest spokojny, ale wolny. W stanie ustalonym cały sygnał pochodzi z członu I."
+        },
+        {
+          "path": "sections.3.heading",
+          "source": "Derivative action",
+          "text": "Działanie różniczkujące"
+        },
+        {
+          "path": "sections.3.body",
+          "source": "The **D** part reacts to how fast the measurement changes and brakes the output before the PV reaches the setpoint. The derivative time **TD** sets its strength. PLC Lab's PID differentiates the measurement, not the error, so a setpoint step gives no jump in D. Real measurements are noisy and D amplifies noise, which is why many loops run as PI.",
+          "text": "Składnik **D** reaguje na szybkość zmian pomiaru i hamuje sygnał, zanim PV osiągnie wartość zadaną. Czas różniczkowania **TD** określa jego siłę. PID w PLC Lab różniczkuje pomiar, a nie uchyb, więc skok wartości zadanej nie powoduje skoku członu D. Rzeczywiste pomiary są zaszumione, a D wzmacnia szumy, dlatego wiele pętli pracuje jako PI."
+        },
+        {
+          "path": "sections.4.heading",
+          "source": "Limits, windup and manual mode",
+          "text": "Ograniczenia, nasycenie członu całkującego i tryb ręczny"
+        },
+        {
+          "path": "sections.4.body",
+          "source": "A heater cannot deliver more than 100 % or less than 0 %. While MV sits at a limit, an integral that kept growing would **wind up** and cause a large overshoot later. PLC Lab's PID stops integrating while the output is saturated (SAT is TRUE). In **manual** mode the operator sets MV_MAN directly; the integral follows it, so switching back to automatic continues from the manual output without a jump (**bumpless transfer**).",
+          "text": "Grzałka nie może dać więcej niż 100 % ani mniej niż 0 %. Gdy MV pozostaje na ograniczeniu, rosnący dalej człon całkujący **nasyca się** i później powoduje duże przeregulowanie. PID w PLC Lab przestaje całkować, gdy wyjście jest nasycone (SAT ma wartość TRUE). W trybie **ręcznym** operator zadaje MV_MAN bezpośrednio; człon całkujący nadąża za nim, więc powrót do trybu automatycznego następuje od wartości ręcznej bez skoku (**przełączanie bezuderzeniowe**)."
+        },
+        {
+          "path": "sections.5.heading",
+          "source": "Tuning in practice",
+          "text": "Dobór nastaw w praktyce"
+        },
+        {
+          "path": "sections.5.body",
+          "source": "Start with P only and raise KP until the loop reacts briskly without oscillating. Then add I with a TI close to the slowest time constant of the process and shorten it while the overshoot stays acceptable. Watch the trend of SP, PV and MV: a PV that swings around SP means too much gain or too short a TI; an MV that sits at a limit means the actuator is too small for the request. Dead time limits how fast any controller can be.",
+          "text": "Zacznij od samego członu P i zwiększaj KP, aż pętla będzie reagować żwawo bez oscylacji. Następnie dodaj człon I z TI zbliżonym do największej stałej czasowej procesu i skracaj go, dopóki przeregulowanie pozostaje dopuszczalne. Obserwuj przebiegi SP, PV i MV: PV kołysząca się wokół SP oznacza zbyt duże wzmocnienie lub zbyt krótki TI; MV stojące na ograniczeniu oznacza, że element wykonawczy jest za słaby dla żądania. Czas martwy ogranicza szybkość każdego regulatora."
+        },
+        {
+          "path": "sections.6.heading",
+          "source": "The PID block in PLC Lab",
+          "text": "Blok PID w PLC Lab"
+        },
+        {
+          "path": "sections.6.body",
+          "source": "PID is a standard function block of the PLC runtime, called like TON:\n\n```\nLoop(SP := Setpoint, PV := Temperature, KP := 3.0, TI := T#20s,\n     MANUAL := NOT AutoMode, MV_MAN := 25.0, MV => Heater);\n```\n\nIts outputs MV, E, P, I, D and SAT appear online under the instance name, for example `Loop.I`. It runs on the simulated task time and gives the same result on every computer. It is a generic educational controller; vendor PID blocks differ in names, units and algorithms.",
+          "text": "PID to standardowy blok funkcyjny środowiska wykonawczego PLC, wywoływany jak TON:\n\n```\nLoop(SP := Setpoint, PV := Temperature, KP := 3.0, TI := T#20s,\n     MANUAL := NOT AutoMode, MV_MAN := 25.0, MV => Heater);\n```\n\nJego wyjścia MV, E, P, I, D i SAT są widoczne online pod nazwą instancji, na przykład `Loop.I`. Działa w symulowanym czasie zadania i daje ten sam wynik na każdym komputerze. To ogólny regulator dydaktyczny; bloki PID producentów różnią się nazwami, jednostkami i algorytmami."
+        }
+      ]
     }
   ]
 }

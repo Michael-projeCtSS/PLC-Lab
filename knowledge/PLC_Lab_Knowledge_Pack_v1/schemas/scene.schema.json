@@ -53,7 +53,8 @@
                   "levelSwitch",
                   "levelTransmitter",
                   "presenceSensor",
-                  "variableFrequencyDrive"
+                  "variableFrequencyDrive",
+                  "heatedVessel"
                 ]
               }
             },

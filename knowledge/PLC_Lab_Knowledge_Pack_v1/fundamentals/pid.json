@@ -1,0 +1,56 @@
+{
+  "id": "fundamentals.pid",
+  "kind": "topic",
+  "title": "Closed-loop control with PID",
+  "summary": "A PID controller measures the process value, compares it with the setpoint and adjusts the output until they match. Its proportional, integral and derivative parts each have a job, and its limits and manual mode matter as much as its gains.",
+  "tags": [
+    "PID",
+    "closed loop",
+    "setpoint",
+    "process value",
+    "tuning",
+    "anti-windup",
+    "bumpless",
+    "temperature control"
+  ],
+  "sections": [
+    {
+      "heading": "Open loop and closed loop",
+      "body": "Switching a heater on for a fixed time is **open-loop** control: nothing checks whether the vessel actually got warm. A **closed loop** measures the process value (**PV**, here the temperature), compares it with the setpoint (**SP**) and adjusts the manipulated variable (**MV**, here the heater power) until the error SP - PV is gone. A PID controller is the most common way to compute MV from the error."
+    },
+    {
+      "heading": "Proportional action",
+      "body": "The **P** part is the gain **KP** times the error: a large error gives a large output. P alone always leaves an **offset**: the heater only works while there is an error. In PLC Lab's vessel, KP 4 settles at about 50.5 °C instead of 60 °C. A larger KP shrinks the offset but makes the loop nervous and, with process lag, makes it oscillate."
+    },
+    {
+      "heading": "Integral action",
+      "body": "The **I** part adds up the error over time, so it keeps growing until the error is zero: it removes the offset. The integral time **TI** says how fast: after TI with a constant error, I has grown as large as P. A short TI acts fast but overshoots; a long TI is calm but slow. In the steady state the whole output comes from I."
+    },
+    {
+      "heading": "Derivative action",
+      "body": "The **D** part reacts to how fast the measurement changes and brakes the output before the PV reaches the setpoint. The derivative time **TD** sets its strength. PLC Lab's PID differentiates the measurement, not the error, so a setpoint step gives no jump in D. Real measurements are noisy and D amplifies noise, which is why many loops run as PI."
+    },
+    {
+      "heading": "Limits, windup and manual mode",
+      "body": "A heater cannot deliver more than 100 % or less than 0 %. While MV sits at a limit, an integral that kept growing would **wind up** and cause a large overshoot later. PLC Lab's PID stops integrating while the output is saturated (SAT is TRUE). In **manual** mode the operator sets MV_MAN directly; the integral follows it, so switching back to automatic continues from the manual output without a jump (**bumpless transfer**)."
+    },
+    {
+      "heading": "Tuning in practice",
+      "body": "Start with P only and raise KP until the loop reacts briskly without oscillating. Then add I with a TI close to the slowest time constant of the process and shorten it while the overshoot stays acceptable. Watch the trend of SP, PV and MV: a PV that swings around SP means too much gain or too short a TI; an MV that sits at a limit means the actuator is too small for the request. Dead time limits how fast any controller can be."
+    },
+    {
+      "heading": "The PID block in PLC Lab",
+      "body": "PID is a standard function block of the PLC runtime, called like TON:\n\n```\nLoop(SP := Setpoint, PV := Temperature, KP := 3.0, TI := T#20s,\n     MANUAL := NOT AutoMode, MV_MAN := 25.0, MV => Heater);\n```\n\nIts outputs MV, E, P, I, D and SAT appear online under the instance name, for example `Loop.I`. It runs on the simulated task time and gives the same result on every computer. It is a generic educational controller; vendor PID blocks differ in names, units and algorithms."
+    }
+  ],
+  "facts": [],
+  "sources": [
+    "src.plclab-simulation"
+  ],
+  "related": [
+    "fundamentals.analog-io",
+    "fundamentals.scaling",
+    "fundamentals.pous",
+    "fundamentals.timers"
+  ]
+}

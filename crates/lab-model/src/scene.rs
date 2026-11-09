@@ -193,6 +193,27 @@ pub enum ComponentKind {
         #[serde(default = "keypad_speed")]
         keypad_permille: u32,
     },
+    /// Electrically heated vessel with a built-in temperature transmitter (generic
+    /// educational model, ADR-0047). Ports: `power` (analog heater power command,
+    /// 0..100 % over the `power` signal range) and `temperature` (transmitter output over
+    /// `rangeMinC..rangeMaxC`). Heating element and vessel are two first-order lags after
+    /// a dead time; the steady-state rise above ambient is `gainMilliCPerPercent` per %
+    /// of power. An open door (operator action) adds a heat loss of `doorLossPermille` of
+    /// the vessel's rise: a disturbance.
+    HeatedVessel {
+        ambient_c: i32,
+        gain_milli_c_per_percent: u32,
+        element_lag_ms: u32,
+        vessel_lag_ms: u32,
+        dead_time_ms: u32,
+        door_loss_permille: u32,
+        power: AnalogSignal,
+        range_min_c: i32,
+        range_max_c: i32,
+        signal: AnalogSignal,
+        #[serde(default)]
+        wiring: TransmitterWiring,
+    },
 }
 
 fn full_speed() -> u32 {
@@ -216,6 +237,7 @@ impl ComponentKind {
             Self::LevelTransmitter { .. } => "levelTransmitter",
             Self::PresenceSensor { .. } => "presenceSensor",
             Self::VariableFrequencyDrive { .. } => "variableFrequencyDrive",
+            Self::HeatedVessel { .. } => "heatedVessel",
         }
     }
     /// Electrical ports exposed by the component.
@@ -271,6 +293,10 @@ impl ComponentKind {
             Self::Pump { .. } => vec![("motor", PortKind::DigitalSink)],
             Self::Tank { .. } => Vec::new(),
             Self::LevelTransmitter { .. } => vec![("signal", PortKind::AnalogSource)],
+            Self::HeatedVessel { .. } => vec![
+                ("power", PortKind::AnalogSink),
+                ("temperature", PortKind::AnalogSource),
+            ],
         }
     }
     /// For a digital sink port, the quantity that shows the command the device received
@@ -297,7 +323,8 @@ impl ComponentKind {
             | Self::Tank { .. }
             | Self::LevelSwitch { .. }
             | Self::LevelTransmitter { .. }
-            | Self::PresenceSensor { .. } => return None,
+            | Self::PresenceSensor { .. }
+            | Self::HeatedVessel { .. } => return None,
         })
     }
     /// What a declared port means for commissioning and diagnostics. Names are
@@ -305,7 +332,7 @@ impl ComponentKind {
     pub fn port_role(&self, port: &str) -> Option<PortRole> {
         let (_, kind) = self.ports().into_iter().find(|(name, _)| *name == port)?;
         Some(match (self, kind) {
-            (_, PortKind::DigitalSink) => PortRole::Command,
+            (_, PortKind::DigitalSink | PortKind::AnalogSink) => PortRole::Command,
             (_, PortKind::AnalogSource) => PortRole::Measurement,
             (Self::MotorStarter { .. }, _) if port == "aux" => PortRole::Feedback,
             (Self::OnOffValve { .. }, _) => PortRole::Feedback,
@@ -324,7 +351,8 @@ impl ComponentKind {
                 Self::PilotLamp { .. }
                 | Self::Pump { .. }
                 | Self::Tank { .. }
-                | Self::LevelTransmitter { .. },
+                | Self::LevelTransmitter { .. }
+                | Self::HeatedVessel { .. },
                 _,
             ) => return None,
         })
@@ -366,6 +394,8 @@ pub enum PortKind {
     DigitalSink,
     /// Produces a current or voltage signal.
     AnalogSource,
+    /// Consumes a current or voltage command from an analog output.
+    AnalogSink,
 }
 
 /// Physical process connections between components.

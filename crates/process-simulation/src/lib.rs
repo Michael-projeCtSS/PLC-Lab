@@ -19,7 +19,7 @@ use lab_model::{
     },
 };
 use simulation_core::{WorldTime, deterministic_hash};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -222,6 +222,96 @@ enum State {
         present: bool,
     },
     Drive(Drive),
+    Vessel(Vessel),
+}
+
+/// Thermal processes advance on a fixed grid of world time (every 10 ms, at absolute
+/// multiples), so their state never depends on how the caller partitions time.
+const GRID_US: u64 = 10_000;
+
+/// Electrically heated vessel (ADR-0047): heater power after a dead time feeds two
+/// first-order lags, the heating element and the vessel, integrated with explicit
+/// Euler steps on the grid in micro-degrees Celsius with integer arithmetic.
+///
+/// - `element' = (gain * power - element) / element_lag`
+/// - `vessel' = (element - vessel - door_loss * vessel) / vessel_lag` (door open)
+///
+/// Both are rises above ambient; the measured temperature is `ambient + vessel`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Vessel {
+    ambient_uc: i64,
+    /// Steady-state rise per per mille of power, micro-degrees.
+    gain_uc_per_permille: i64,
+    element_lag_us: i64,
+    vessel_lag_us: i64,
+    door_loss_permille: i64,
+    power_signal: AnalogSignal,
+    range_min_mc: i64,
+    range_max_mc: i64,
+    signal: AnalogSignal,
+    wiring: TransmitterWiring,
+    element_uc: i64,
+    vessel_uc: i64,
+    /// Heater power command received at the `power` terminals, per mille (0..=1000).
+    power_permille: i64,
+    /// Power commands of the last dead-time grid steps, oldest first.
+    delay: VecDeque<i64>,
+    door_open: bool,
+    /// The last grid time the state was advanced to.
+    grid: u64,
+}
+
+/// `numerator / denominator` rounded half away from zero; the denominator is positive.
+fn rounded(numerator: i128, denominator: i128) -> i64 {
+    let half = denominator / 2;
+    let q = if numerator >= 0 {
+        (numerator + half) / denominator
+    } else {
+        (numerator - half) / denominator
+    };
+    i64::try_from(q).unwrap_or(if q < 0 { i64::MIN } else { i64::MAX })
+}
+
+impl Vessel {
+    fn temperature_mc(&self) -> i64 {
+        (self.ambient_uc + self.vessel_uc).div_euclid(1_000)
+    }
+    fn element_mc(&self) -> i64 {
+        (self.ambient_uc + self.element_uc).div_euclid(1_000)
+    }
+    /// One grid step: the power that reaches the element is the command of one dead
+    /// time ago.
+    fn step(&mut self) {
+        let power = if self.delay.is_empty() {
+            self.power_permille
+        } else {
+            self.delay.push_back(self.power_permille);
+            self.delay.pop_front().unwrap_or(0)
+        };
+        let dt = i128::from(GRID_US);
+        let target = i128::from(self.gain_uc_per_permille) * i128::from(power);
+        self.element_uc += rounded(
+            (target - i128::from(self.element_uc)) * dt,
+            i128::from(self.element_lag_us),
+        );
+        let loss = if self.door_open {
+            i128::from(self.door_loss_permille)
+        } else {
+            0
+        };
+        let flow = (i128::from(self.element_uc) - i128::from(self.vessel_uc)) * 1_000
+            - loss * i128::from(self.vessel_uc);
+        self.vessel_uc += rounded(flow * dt, 1_000 * i128::from(self.vessel_lag_us));
+    }
+    /// Advance through every grid time in `(grid, until]`.
+    fn advance(&mut self, until: u64) {
+        let mut next = (self.grid / GRID_US + 1) * GRID_US;
+        while next <= until {
+            self.step();
+            self.grid = next;
+            next += GRID_US;
+        }
+    }
 }
 
 /// Generic VFD behavioral model (not a specific product): terminals, ready chain,
@@ -440,6 +530,36 @@ impl SceneRuntime {
                     trip_cause: false,
                     started: None,
                 }),
+                ComponentKind::HeatedVessel {
+                    ambient_c,
+                    gain_milli_c_per_percent,
+                    element_lag_ms,
+                    vessel_lag_ms,
+                    dead_time_ms,
+                    door_loss_permille,
+                    power,
+                    range_min_c,
+                    range_max_c,
+                    signal,
+                    wiring,
+                } => State::Vessel(Vessel {
+                    ambient_uc: i64::from(*ambient_c) * 1_000_000,
+                    gain_uc_per_permille: i64::from(*gain_milli_c_per_percent) * 100,
+                    element_lag_us: i64::from((*element_lag_ms).max(100)) * 1_000,
+                    vessel_lag_us: i64::from((*vessel_lag_ms).max(100)) * 1_000,
+                    door_loss_permille: i64::from(*door_loss_permille),
+                    power_signal: *power,
+                    range_min_mc: i64::from(*range_min_c) * 1_000,
+                    range_max_mc: i64::from((*range_max_c).max(range_min_c + 1)) * 1_000,
+                    signal: *signal,
+                    wiring: *wiring,
+                    element_uc: 0,
+                    vessel_uc: 0,
+                    power_permille: 0,
+                    delay: std::iter::repeat_n(0, (*dead_time_ms / 10) as usize).collect(),
+                    door_open: false,
+                    grid: 0,
+                }),
             });
         }
         let mut fills = Vec::new();
@@ -652,6 +772,11 @@ impl SceneRuntime {
 
     fn integrate(&mut self, dt: u64) {
         let start = self.now;
+        for state in &mut self.states {
+            if let State::Vessel(vessel) = state {
+                vessel.advance(start + dt);
+            }
+        }
         for tank in 0..self.states.len() {
             if !matches!(self.states[tank], State::Tank { .. }) {
                 continue;
@@ -860,6 +985,63 @@ impl SceneRuntime {
             _ => Err(SceneError::NotOperable(component.into())),
         }
     }
+    /// True for a port that consumes an analog command (a heater's power input).
+    pub fn is_analog_sink(&self, component: usize, port: &str) -> bool {
+        matches!(self.states.get(component), Some(State::Vessel(_))) && port == "power"
+    }
+
+    /// The current or voltage an analog output drives into an analog sink port at the
+    /// current world time. A signal of the wrong kind (a voltage into a current input)
+    /// is no signal; a value outside the range saturates at 0 or 100 %.
+    pub fn set_analog_input(
+        &mut self,
+        component: usize,
+        port: &str,
+        unit: AnalogUnit,
+        value: i64,
+    ) -> Result<(), SceneError> {
+        let id = self
+            .ids
+            .get(component)
+            .map(ToString::to_string)
+            .unwrap_or_default();
+        let Some(State::Vessel(vessel)) = self.states.get_mut(component) else {
+            return Err(SceneError::UnknownPort {
+                component: id,
+                port: port.into(),
+            });
+        };
+        if port != "power" {
+            return Err(SceneError::UnknownPort {
+                component: id,
+                port: port.into(),
+            });
+        }
+        let (expected, zero, span) = match vessel.power_signal {
+            AnalogSignal::Current4To20mA => (AnalogUnit::Microamp, 4_000, 16_000),
+            AnalogSignal::Current0To20mA => (AnalogUnit::Microamp, 0, 20_000),
+            AnalogSignal::Voltage0To10V => (AnalogUnit::Millivolt, 0, 10_000),
+        };
+        vessel.power_permille = if unit == expected {
+            ((value - zero) * 1_000 / span).clamp(0, 1_000)
+        } else {
+            0
+        };
+        Ok(())
+    }
+
+    /// Open or close a heated vessel's door (a disturbance: extra heat loss).
+    pub fn set_door(&mut self, component: &str, open: bool) -> Result<(), SceneError> {
+        let i = self.component_mut(component)?;
+        match &mut self.states[i] {
+            State::Vessel(vessel) => {
+                vessel.door_open = open;
+                Ok(())
+            }
+            _ => Err(SceneError::NotOperable(component.into())),
+        }
+    }
+
     pub fn set_presence(&mut self, component: &str, present: bool) -> Result<(), SceneError> {
         let i = self.component_mut(component)?;
         match &mut self.states[i] {
@@ -1127,27 +1309,36 @@ impl SceneRuntime {
             .get(component)
             .map(ToString::to_string)
             .unwrap_or_default();
-        let Some(State::Transmitter {
-            tank,
-            min,
-            max,
-            signal,
-            wiring,
-        }) = self.states.get(component)
-        else {
-            return Err(SceneError::UnknownPort {
-                component: id,
-                port: port.into(),
-            });
+        let unknown = || SceneError::UnknownPort {
+            component: id.clone(),
+            port: port.into(),
         };
-        if port != "signal" {
-            return Err(SceneError::UnknownPort {
-                component: id,
-                port: port.into(),
-            });
-        }
-        let level = i128::from(self.tank_volume(*tank));
-        let fraction_ppm = ((level - i128::from(*min)) * 1_000_000) / i128::from(max - min);
+        let (fraction_ppm, signal, wiring) = match self.states.get(component) {
+            Some(State::Transmitter {
+                tank,
+                min,
+                max,
+                signal,
+                wiring,
+            }) if port == "signal" => {
+                let level = i128::from(self.tank_volume(*tank));
+                (
+                    ((level - i128::from(*min)) * 1_000_000) / i128::from(max - min),
+                    signal,
+                    wiring,
+                )
+            }
+            Some(State::Vessel(vessel)) if port == "temperature" => {
+                let t = i128::from(vessel.temperature_mc());
+                (
+                    ((t - i128::from(vessel.range_min_mc)) * 1_000_000)
+                        / i128::from(vessel.range_max_mc - vessel.range_min_mc),
+                    &vessel.signal,
+                    &vessel.wiring,
+                )
+            }
+            _ => return Err(unknown()),
+        };
         let (unit, base) = match signal {
             AnalogSignal::Current4To20mA => {
                 let v = 4_000 + fraction_ppm * 16_000 / 1_000_000;
@@ -1306,6 +1497,19 @@ impl SceneRuntime {
                     .unwrap_or(0);
                 vec![("signal", Quantity::Integer(signal))]
             }
+            State::Vessel(v) => {
+                let signal = self
+                    .analog_output(component, "temperature")
+                    .map(|a| a.value)
+                    .unwrap_or(0);
+                vec![
+                    ("temperatureMilliC", Quantity::Integer(v.temperature_mc())),
+                    ("elementMilliC", Quantity::Integer(v.element_mc())),
+                    ("powerPermille", Quantity::Integer(v.power_permille)),
+                    ("doorOpen", Quantity::Bool(v.door_open)),
+                    ("signal", Quantity::Integer(signal)),
+                ]
+            }
             State::Presence { present, .. } => {
                 let conducting = self
                     .digital_output(component, "output")
@@ -1358,7 +1562,12 @@ impl SceneRuntime {
     pub fn is_operable(&self, component: usize) -> bool {
         matches!(
             self.states.get(component),
-            Some(State::PushButton { .. } | State::Selector { .. } | State::Presence { .. })
+            Some(
+                State::PushButton { .. }
+                    | State::Selector { .. }
+                    | State::Presence { .. }
+                    | State::Vessel(_)
+            )
         )
     }
 }

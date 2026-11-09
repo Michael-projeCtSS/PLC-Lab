@@ -156,6 +156,47 @@ pub fn validate_scene(scene: &SceneDefinition) -> Result<(), ModelError> {
                     format!("valve '{}' travel time is too short", c.id)
                 });
             }
+            ComponentKind::HeatedVessel {
+                ambient_c,
+                gain_milli_c_per_percent,
+                element_lag_ms,
+                vessel_lag_ms,
+                dead_time_ms,
+                door_loss_permille,
+                range_min_c,
+                range_max_c,
+                ..
+            } => {
+                p.check((-50..=200).contains(ambient_c), || {
+                    format!(
+                        "vessel '{}' ambient temperature is outside -50..200 °C",
+                        c.id
+                    )
+                });
+                p.check((1..=10_000).contains(gain_milli_c_per_percent), || {
+                    format!(
+                        "vessel '{}' needs a heating gain of 1..10000 m°C per %",
+                        c.id
+                    )
+                });
+                for lag in [element_lag_ms, vessel_lag_ms] {
+                    p.check((100..=3_600_000).contains(lag), || {
+                        format!("vessel '{}' lags must be 100 ms .. 1 h", c.id)
+                    });
+                }
+                p.check(*dead_time_ms <= 60_000 && dead_time_ms % 10 == 0, || {
+                    format!(
+                        "vessel '{}' dead time must be a multiple of 10 ms up to 60 s",
+                        c.id
+                    )
+                });
+                p.check(*door_loss_permille <= 10_000, || {
+                    format!("vessel '{}' door loss is limited to 10000 per mille", c.id)
+                });
+                p.check(range_min_c < range_max_c, || {
+                    format!("'{}' measuring range is empty", c.id)
+                });
+            }
             _ => {}
         }
     }
@@ -223,6 +264,7 @@ pub fn validate_scene(scene: &SceneDefinition) -> Result<(), ModelError> {
                     (ModuleClass::DigitalInput { .. }, PortKind::DigitalSource)
                         | (ModuleClass::DigitalOutput { .. }, PortKind::DigitalSink)
                         | (ModuleClass::AnalogInput { .. }, PortKind::AnalogSource)
+                        | (ModuleClass::AnalogOutput { .. }, PortKind::AnalogSink)
                 );
                 p.check(compatible, || {
                     format!(
@@ -491,7 +533,8 @@ pub fn validate_exercise(
                 ScenarioAction::Press { component }
                 | ScenarioAction::Release { component }
                 | ScenarioAction::SetSelector { component, .. }
-                | ScenarioAction::SetPresence { component, .. } => Some(component),
+                | ScenarioAction::SetPresence { component, .. }
+                | ScenarioAction::SetDoor { component, .. } => Some(component),
                 ScenarioAction::InjectFault { fault } => {
                     fault_ids.insert(fault.id.clone());
                     fault_component(&fault.fault)

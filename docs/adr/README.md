@@ -52,3 +52,4 @@ as history; their session, process and controller details are superseded as note
 | [0044](0044-user-functions-and-function-blocks.md)     | User functions and function blocks by expansion into the IR          | Accepted (CP9-A)                    |
 | [0045](0045-project-library-documents.md)              | Project library documents compiled with the program                  | Accepted (CP9-A)                    |
 | [0046](0046-deterministic-pid-block.md)                | A deterministic PID standard block                                   | Accepted (CP9-B)                    |
+| [0047](0047-heated-vessel-and-analog-outputs.md)       | A heated vessel process and analog outputs into the process          | Accepted (CP9-B)                    |

@@ -66,6 +66,8 @@ export function formatQuantity(value: number, unit: string | null): string {
       return `${(value / 1000).toFixed(2)} mA`;
     case "mV":
       return `${(value / 1000).toFixed(2)} V`;
+    case "m°C":
+      return `${(value / 1000).toFixed(1)} °C`;
     default:
       return unit ? `${value} ${unit}` : String(value);
   }

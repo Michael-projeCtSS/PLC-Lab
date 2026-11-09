@@ -525,6 +525,9 @@ pub enum OperateActionDto {
     Selector { position: u8 },
     #[serde(rename = "presence")]
     Presence { present: bool },
+    /// Open or close a heated vessel's door (ADR-0047).
+    #[serde(rename = "door")]
+    Door { open: bool },
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

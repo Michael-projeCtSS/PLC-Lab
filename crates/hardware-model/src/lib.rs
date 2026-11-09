@@ -805,6 +805,46 @@ impl StationRuntime {
         self.analog_outputs = states;
     }
 
+    /// Drive wired analog sink ports (a heater's power input, ADR-0047) with the field
+    /// value of their analog output channel, after [`Self::drive_analog`]. A sink whose
+    /// channel drives nothing (no module, open circuit, CPU stopped) receives 0 mA.
+    pub fn drive_analog_sinks(&self, scene: &mut SceneRuntime) -> Result<(), HardwareError> {
+        let effective = self.effective();
+        let mut fields: BTreeMap<(String, String), (process_simulation::AnalogUnit, i64)> =
+            BTreeMap::new();
+        for wire in &self.installation.wiring {
+            let Ok(index) = scene.index_of_str(wire.component.as_str()) else {
+                continue;
+            };
+            if scene.is_analog_sink(index, &wire.port) {
+                fields.insert(
+                    (wire.component.to_string(), wire.port.clone()),
+                    (process_simulation::AnalogUnit::Microamp, 0),
+                );
+            }
+        }
+        for (channel, state) in &self.analog_outputs {
+            if self.open(*channel) {
+                continue;
+            }
+            let Some((component, port)) = self.wire_at(*channel, &effective) else {
+                continue;
+            };
+            if let Some(slot) = fields.get_mut(&(component.to_string(), port.to_string())) {
+                *slot = match state.field {
+                    Measurement::Microamps(v) => (process_simulation::AnalogUnit::Microamp, v),
+                    Measurement::Millivolts(v) => (process_simulation::AnalogUnit::Millivolt, v),
+                    Measurement::NoModule => (process_simulation::AnalogUnit::Microamp, 0),
+                };
+            }
+        }
+        for ((component, port), (unit, value)) in fields {
+            let index = scene.index_of_str(&component)?;
+            scene.set_analog_input(index, &port, unit, value)?;
+        }
+        Ok(())
+    }
+
     /// Apply output channel commands (CPU in RUN) and drive wired actuators.
     pub fn drive_outputs(
         &mut self,

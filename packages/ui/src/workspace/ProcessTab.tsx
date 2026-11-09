@@ -537,6 +537,119 @@ function Symbol({
         </g>
       );
     }
+    case "heatedVessel": {
+      // ADR-0047: the vessel's temperature, the heating element's glow from the power
+      // it receives, and the door (a disturbance the operator opens and closes).
+      const w = l.width ?? 220;
+      const h = l.height ?? 260;
+      const temperature = n(q, "temperatureMilliC");
+      const power = Math.min(1000, Math.max(0, n(q, "powerPermille")));
+      const door = b(q, "doorOpen");
+      const min = Number(config.rangeMinC ?? 0) * 1000;
+      const max = Number(config.rangeMaxC ?? 150) * 1000;
+      const share = Math.min(1, Math.max(0, (temperature - min) / (max - min)));
+      const fill = (h - 40) * share;
+      const toggle = () => operate(c.id, { type: "door", open: !door });
+      return (
+        <g
+          aria-label={t("process.vessel", {
+            label: c.label,
+            temperature: formatQuantity(temperature, "m°C"),
+            power: formatQuantity(power, "‰"),
+          })}
+        >
+          <rect
+            x={l.x}
+            y={l.y}
+            width={w}
+            height={h - 30}
+            rx={8}
+            className="symbol"
+          />
+          <rect
+            x={l.x + 3}
+            y={l.y + h - 33 - fill}
+            width={w - 6}
+            height={fill}
+            rx={5}
+            className="fluid"
+            style={{ fillOpacity: 0.25 + 0.55 * share }}
+          />
+          <rect
+            x={l.x + 20}
+            y={l.y + h - 24}
+            width={w - 40}
+            height={10}
+            rx={3}
+            className="symbol"
+            style={
+              power > 0
+                ? {
+                    fill: "var(--lamp-red)",
+                    fillOpacity: 0.2 + 0.8 * (power / 1000),
+                  }
+                : undefined
+            }
+          />
+          <text
+            x={l.x + w / 2}
+            y={l.y + 32}
+            textAnchor="middle"
+            className="value-text"
+            style={{ fontSize: 20 }}
+          >
+            {formatQuantity(temperature, "m°C")}
+          </text>
+          <text
+            x={l.x + w / 2}
+            y={l.y + 52}
+            textAnchor="middle"
+            className="label"
+          >
+            {t("process.heater", { power: formatQuantity(power, "‰") })}
+          </text>
+          <line
+            x1={l.x + w}
+            y1={l.y + 40}
+            x2={door ? l.x + w + 34 : l.x + w}
+            y2={door ? l.y + 20 : l.y + h - 70}
+            style={{
+              stroke: door ? "var(--st-warning)" : "var(--symbol-stroke)",
+              strokeWidth: 5,
+            }}
+          />
+          <g
+            role="button"
+            tabIndex={0}
+            aria-label={t(door ? "process.closeDoor" : "process.openDoor", {
+              label: c.label,
+            })}
+            onClick={toggle}
+            onKeyDown={(e) =>
+              (e.key === " " || e.key === "Enter") && !e.repeat && toggle()
+            }
+          >
+            <rect
+              x={l.x + w + 12}
+              y={l.y + h - 66}
+              width={86}
+              height={26}
+              rx={4}
+              className={`symbol${door ? " fault" : ""}`}
+            />
+            <text
+              x={l.x + w + 55}
+              y={l.y + h - 49}
+              textAnchor="middle"
+              className="label"
+            >
+              {t(door ? "process.doorOpen" : "process.doorClosed")}
+            </text>
+          </g>
+          {label(h + 2, l.x + w / 2)}
+        </g>
+      );
+    }
     case "levelSwitch": {
       const conducting = b(q, "conducting");
       const tank = config.tank ? layout.get(config.tank) : undefined;

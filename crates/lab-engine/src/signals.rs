@@ -159,6 +159,8 @@ pub fn unit_of(quantity: &str) -> Option<&'static str> {
         Some("ml/s")
     } else if quantity.ends_with("Ma") {
         Some("mA")
+    } else if quantity.ends_with("MilliC") {
+        Some("m°C")
     } else if quantity == "signal" {
         Some("µA/mV")
     } else {

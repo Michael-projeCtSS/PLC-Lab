@@ -1,0 +1,306 @@
+{
+  "format": "plclab-scene",
+  "schemaVersion": 1,
+  "id": "scene.heater-loop",
+  "revision": 1,
+  "title": "Heated vessel temperature loop",
+  "summary": "An electrically heated vessel with a temperature transmitter TT-1 and a heater power controller driven by an analog output. A selector chooses manual or automatic operation; the vessel door can be opened as a disturbance. Used to learn closed-loop PID control.",
+  "components": [
+    {
+      "id": "oven",
+      "label": "Vessel E-1",
+      "kind": {
+        "type": "heatedVessel",
+        "ambientC": 20,
+        "gainMilliCPerPercent": 800,
+        "elementLagMs": 3000,
+        "vesselLagMs": 20000,
+        "deadTimeMs": 1000,
+        "doorLossPermille": 500,
+        "power": "current4To20mA",
+        "rangeMinC": 0,
+        "rangeMaxC": 150,
+        "signal": "current4To20mA"
+      }
+    },
+    {
+      "id": "sel",
+      "label": "Selector S1",
+      "kind": {
+        "type": "selectorSwitch",
+        "positions": [
+          "MAN",
+          "AUTO"
+        ],
+        "initial": 0
+      }
+    },
+    {
+      "id": "h1",
+      "label": "Lamp H1",
+      "kind": {
+        "type": "pilotLamp",
+        "color": "green"
+      }
+    },
+    {
+      "id": "h2",
+      "label": "Lamp H2",
+      "kind": {
+        "type": "pilotLamp",
+        "color": "red"
+      }
+    }
+  ],
+  "couplings": [],
+  "installation": {
+    "cpu": "cpu.modular",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "di8.24vdc.sink"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "do8.24vdc"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 4
+        },
+        "module": "ai4.ui"
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 5
+        },
+        "module": "ao2.ui"
+      }
+    ],
+    "wiring": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "component": "sel",
+        "port": "position1"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "component": "h1",
+        "port": "coil"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 1
+        },
+        "component": "h2",
+        "port": "coil"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 4,
+          "channel": 0
+        },
+        "component": "oven",
+        "port": "temperature"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 5,
+          "channel": 0
+        },
+        "component": "oven",
+        "port": "power"
+      }
+    ]
+  },
+  "referenceStation": {
+    "name": "PLC_1",
+    "cpu": "cpu.modular",
+    "modules": [
+      {
+        "position": {
+          "rack": 0,
+          "slot": 2
+        },
+        "module": "di8.24vdc.sink",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 3
+        },
+        "module": "do8.24vdc",
+        "startAddress": 0
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 4
+        },
+        "module": "ai4.ui",
+        "startAddress": 64,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA",
+            "diagnostics": true
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          },
+          {
+            "channel": 2,
+            "mode": "disabled"
+          },
+          {
+            "channel": 3,
+            "mode": "disabled"
+          }
+        ]
+      },
+      {
+        "position": {
+          "rack": 0,
+          "slot": 5
+        },
+        "module": "ao2.ui",
+        "startAddress": 80,
+        "channels": [
+          {
+            "channel": 0,
+            "mode": "current4To20mA"
+          },
+          {
+            "channel": 1,
+            "mode": "disabled"
+          }
+        ]
+      }
+    ],
+    "ioMap": [
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 2,
+          "channel": 0
+        },
+        "tag": "AutoMode"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 0
+        },
+        "tag": "HeaterLamp"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 3,
+          "channel": 1
+        },
+        "tag": "AlarmLamp"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 4,
+          "channel": 0
+        },
+        "tag": "TempRaw"
+      },
+      {
+        "channel": {
+          "rack": 0,
+          "slot": 5,
+          "channel": 0
+        },
+        "tag": "HeaterRaw"
+      }
+    ]
+  },
+  "interface": [
+    {
+      "tag": "AutoMode",
+      "type": "BOOL",
+      "direction": "input",
+      "description": "Selector S1 in position AUTO."
+    },
+    {
+      "tag": "TempRaw",
+      "type": "INT",
+      "direction": "input",
+      "description": "Temperature transmitter TT-1, 4-20 mA for 0..150 °C."
+    },
+    {
+      "tag": "HeaterRaw",
+      "type": "INT",
+      "direction": "output",
+      "description": "Heater power controller, 4-20 mA for 0..100 %."
+    },
+    {
+      "tag": "HeaterLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Lamp H1: the heater is on."
+    },
+    {
+      "tag": "AlarmLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "description": "Lamp H2: overtemperature."
+    }
+  ],
+  "layout": [
+    {
+      "component": "oven",
+      "x": 330,
+      "y": 80,
+      "width": 220,
+      "height": 260
+    },
+    {
+      "component": "sel",
+      "x": 160,
+      "y": 400
+    },
+    {
+      "component": "h1",
+      "x": 680,
+      "y": 400
+    },
+    {
+      "component": "h2",
+      "x": 780,
+      "y": 400
+    }
+  ],
+  "knowledgeRefs": [
+    "fundamentals.pid",
+    "fundamentals.analog-io",
+    "fundamentals.scaling"
+  ]
+}

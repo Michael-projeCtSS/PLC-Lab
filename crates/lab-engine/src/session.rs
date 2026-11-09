@@ -108,10 +108,25 @@ pub enum ModeReason {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperatorAction {
-    Press { component: String },
-    Release { component: String },
-    SetSelector { component: String, position: u8 },
-    SetPresence { component: String, present: bool },
+    Press {
+        component: String,
+    },
+    Release {
+        component: String,
+    },
+    SetSelector {
+        component: String,
+        position: u8,
+    },
+    SetPresence {
+        component: String,
+        present: bool,
+    },
+    /// Open or close a heated vessel's door (ADR-0047).
+    SetDoor {
+        component: String,
+        open: bool,
+    },
 }
 
 /// What a force replaces (only the two the runtime models correctly).
@@ -619,6 +634,7 @@ impl LabSession {
         self.station
             .drive_outputs(&commands, running, &mut self.scene)?;
         self.station.drive_analog(&analog, running);
+        self.station.drive_analog_sinks(&mut self.scene)?;
         for (channel, signal) in &self.channels {
             if let Some(out) = self.station.output(*channel) {
                 self.channel_values.insert(*signal, SignalValue::Bool(out));
@@ -1039,6 +1055,9 @@ impl LabSession {
             ScenarioAction::SetPresence { component, present } => {
                 self.scene.set_presence(component.as_str(), *present)?
             }
+            ScenarioAction::SetDoor { component, open } => {
+                self.scene.set_door(component.as_str(), *open)?
+            }
             ScenarioAction::SetPlcMode { mode } => {
                 self.plc.switch = *mode;
                 let change = self.plc.settle_mode();
@@ -1074,6 +1093,7 @@ impl LabSession {
             OperatorAction::SetPresence { component, present } => {
                 self.scene.set_presence(component, *present)?
             }
+            OperatorAction::SetDoor { component, open } => self.scene.set_door(component, *open)?,
         }
         self.events.append(LabEvent {
             time_us: self.now().as_micros(),

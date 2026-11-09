@@ -182,6 +182,11 @@ pub enum ScenarioAction {
         component: Identifier,
         present: bool,
     },
+    /// Open or close a heated vessel's door: a heat-loss disturbance (ADR-0047).
+    SetDoor {
+        component: Identifier,
+        open: bool,
+    },
     SetPlcMode {
         mode: PlcModeRequest,
     },

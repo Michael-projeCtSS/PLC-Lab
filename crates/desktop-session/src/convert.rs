@@ -1122,6 +1122,16 @@ pub fn describe(
                         term("event.op.removed", "removed")
                     }
                 ),
+                OperatorAction::SetDoor { component, open } => message!(
+                    "event.op.door",
+                    "{device} door {state}",
+                    device = component_label(session, component),
+                    state = if *open {
+                        term("event.op.doorOpened", "opened")
+                    } else {
+                        term("event.op.doorClosed", "closed")
+                    }
+                ),
             };
             ("OPERATOR".into(), "info", text, None)
         }

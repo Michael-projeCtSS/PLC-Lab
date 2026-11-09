@@ -520,7 +520,7 @@ command: "RUN" | "PAUSE" | "STEP" | "STOP", };
 
 export type SpeedRequest = { contractVersion: number, workspaceId: ExactU64, speedPercent: number, };
 
-export type OperateActionDto = { "type": "press" } | { "type": "release" } | { "type": "selector", position: number, } | { "type": "presence", present: boolean, };
+export type OperateActionDto = { "type": "press" } | { "type": "release" } | { "type": "selector", position: number, } | { "type": "presence", present: boolean, } | { "type": "door", open: boolean, };
 
 export type OperateRequest = { contractVersion: number, workspaceId: ExactU64, component: string, action: OperateActionDto, };
 

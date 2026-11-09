@@ -485,6 +485,10 @@ impl Workspace {
                 component,
                 present: *present,
             },
+            OperateActionDto::Door { open } => OperatorAction::SetDoor {
+                component,
+                open: *open,
+            },
         };
         self.engine(|s| s.operate(action))
     }
