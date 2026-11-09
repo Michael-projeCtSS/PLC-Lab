@@ -558,7 +558,24 @@ mod tests {
     }
     #[test]
     fn identifier_policy_and_diagnostic_codes_are_deliberate() {
-        for name in ["", " ", "1motor", "tank-level", "żółć", "A.B"] {
+        // Dotted paths name the members of user function block instances and function
+        // call temporaries (ADR-0044); every segment must still be an identifier.
+        for name in [
+            "",
+            " ",
+            "1motor",
+            "tank-level",
+            "żółć",
+            "A..B",
+            ".A",
+            "A.",
+            "A.1b",
+            "A#",
+            "A#x",
+            "#1",
+            "A#1#2",
+            "A.b-c",
+        ] {
             let error = Symbol::new(
                 sid(1),
                 name,
@@ -568,19 +585,22 @@ mod tests {
                 None,
             )
             .unwrap_err();
-            assert_eq!(error.diagnostic().code(), "PLC-COMP-006");
+            assert_eq!(error.diagnostic().code(), "PLC-COMP-006", "{name}");
         }
-        assert!(
-            Symbol::new(
-                sid(1),
-                "_Motor2",
-                PlcType::Bool,
-                Scope::Global,
-                VariableCategory::Local,
-                None
-            )
-            .is_ok()
-        );
+        for name in ["_Motor2", "Pump1.Running", "Line.Pump1.Edge", "Both#3.A"] {
+            assert!(
+                Symbol::new(
+                    sid(1),
+                    name,
+                    PlcType::Bool,
+                    Scope::Global,
+                    VariableCategory::Local,
+                    None
+                )
+                .is_ok(),
+                "{name}"
+            );
+        }
         assert_eq!(
             SymbolError::UnknownSymbol(sid(7)).diagnostic().related(),
             Some(RelatedIdentity::Symbol(sid(7)))
