@@ -129,6 +129,18 @@ pub enum OperatorAction {
     },
 }
 
+/// A PID controller of the loaded program (ADR-0048).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ControlLoop {
+    /// The instance path, e.g. `Loop`.
+    pub instance: String,
+    /// Its observed outputs and inputs by parameter name (MV, E, P, I, D, SAT, SP, PV,
+    /// KP, TI, TD, MANUAL, MV_MAN).
+    pub signals: Vec<(&'static str, SignalId)>,
+    /// Inputs bound to plain program variables: writing the variable changes the input.
+    pub bindings: Vec<(&'static str, SignalId)>,
+}
+
 /// What a force replaces (only the two the runtime models correctly).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ForceTarget {
@@ -173,6 +185,11 @@ pub enum LabEventKind {
     },
     Operator {
         action: OperatorAction,
+    },
+    /// A variable written online (ADR-0048).
+    Modified {
+        signal: SignalId,
+        value: SignalValue,
     },
     Force {
         signal: SignalId,
@@ -1276,10 +1293,13 @@ impl LabSession {
         }
         let before = self.plc.mode;
         let name = compiled.program_name().to_owned();
+        let bindings = compiled.input_bindings().to_vec();
         self.plc.program = Some(LoadedProgram {
             name: name.clone(),
             revision,
             source: source.to_owned(),
+            library: library.to_vec(),
+            bindings,
             runtime: plc_runtime::Runtime::new(plan, self.plc.config),
             tags,
             blocks,
@@ -1324,7 +1344,7 @@ impl LabSession {
             .plc
             .program
             .as_ref()
-            .map(|p| (p.source.clone(), p.revision));
+            .map(|p| (p.source.clone(), p.library.clone(), p.revision));
         let switch = self.plc.switch;
         let faults: Vec<FaultInjection> = self
             .active_faults
@@ -1352,8 +1372,8 @@ impl LabSession {
             fresh.inject_fault(fault)?;
         }
         fresh.plc.switch = switch;
-        if let Some((source, revision)) = program {
-            fresh.download(&source, revision, None)?;
+        if let Some((source, library, revision)) = program {
+            fresh.download_documents(&source, &library, revision, None)?;
         }
         fresh.plc.settle_mode();
         fresh.events = std::mem::replace(
@@ -1407,6 +1427,62 @@ impl LabSession {
         });
         self.sample()?;
         self.drive()
+    }
+
+    /// Write a PLC variable or output online, once, between cycles (ADR-0048): the next
+    /// scan starts from the written value and the program may overwrite it. Inputs come
+    /// from the process image; a force replaces them.
+    pub fn modify(&mut self, signal: SignalId, value: SignalValue) -> Result<(), EngineError> {
+        let tag = self
+            .plc
+            .tags()
+            .iter()
+            .find(|t| t.signal == signal)
+            .ok_or_else(|| EngineError::UnknownSignal(format!("{}", signal.0)))?;
+        if tag.role == TagRole::Input {
+            return Err(EngineError::InvalidAction(
+                "Inputs come from the process image; force an input to replace it.".into(),
+            ));
+        }
+        let plc = value
+            .to_plc()
+            .filter(|v| v.plc_type() == tag.plc_type)
+            .ok_or_else(|| EngineError::InvalidAction("The value has the wrong type.".into()))?;
+        let symbol = tag.symbol;
+        self.plc.modify(symbol, plc)?;
+        self.events.append(LabEvent {
+            time_us: self.now().as_micros(),
+            cycle: self.cycle,
+            kind: LabEventKind::Modified { signal, value },
+        });
+        self.drive()
+    }
+
+    /// The PID controllers of the program in the PLC with their observed signals and
+    /// the variables their inputs are bound to (ADR-0048).
+    pub fn control_loops(&self) -> Vec<ControlLoop> {
+        let Some(program) = &self.plc.program else {
+            return Vec::new();
+        };
+        program
+            .blocks
+            .iter()
+            .filter(|b| b.kind == plc_types::function_blocks::StandardFunctionBlock::Pid)
+            .map(|b| ControlLoop {
+                instance: b.name.clone(),
+                signals: b.outputs.clone(),
+                bindings: program
+                    .bindings
+                    .iter()
+                    .filter(|x| x.instance == b.name)
+                    .filter_map(|x| {
+                        let tag = program.tags.iter().find(|t| t.name == x.variable)?;
+                        let parameter = b.kind.parameter_named(&x.parameter)?.name;
+                        Some((parameter, tag.signal))
+                    })
+                    .collect(),
+            })
+            .collect()
     }
 
     /// Remove every active force in one request; each removal is logged like a single one.

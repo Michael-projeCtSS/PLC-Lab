@@ -36,9 +36,9 @@ pub use plc_runtime::StartKind;
 pub use queries::{CauseEffect, Change, Effect, HistoryRow, TrendLayer, TrendSeries, VariableRow};
 pub use sequence_core;
 pub use session::{
-    ActiveForce, CycleHeader, CycleObservation, CycleOutcome, DownloadReport, ForceTarget,
-    LAYER_APPLIED, LAYER_COMMITTED, LAYER_INPUTS, LAYER_NEXT, LAYER_PROCESS, LAYERS, LabEvent,
-    LabEventKind, LabSession, Layer, ModeReason, OperatorAction, SessionConfig,
+    ActiveForce, ControlLoop, CycleHeader, CycleObservation, CycleOutcome, DownloadReport,
+    ForceTarget, LAYER_APPLIED, LAYER_COMMITTED, LAYER_INPUTS, LAYER_NEXT, LAYER_PROCESS, LAYERS,
+    LabEvent, LabEventKind, LabSession, Layer, ModeReason, OperatorAction, SessionConfig,
 };
 pub use signals::{SignalDescriptor, SignalId, SignalKind, SignalRegistry, SignalValue, ValueType};
 

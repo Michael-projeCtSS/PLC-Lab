@@ -57,6 +57,18 @@ export const signalValue: Validator<G.SignalValueDto> =
 
 const position = obj<G.PositionDto>({ line: u32, column: u32 });
 const span = obj<G.SpanDto>({ start: position, end: position });
+const loopSignal = obj<G.LoopSignalDto>({ parameter: str, signal: u32 });
+export const controlLoops = obj<G.ControlLoopsDto>({
+  loops: arr(
+    obj<G.ControlLoopDto>({
+      instance: str,
+      signals: arr(loopSignal, 32),
+      bindings: arr(loopSignal, 32),
+    }),
+    64,
+  ),
+});
+
 export const diagnostic = obj<G.DiagnosticDto>({
   code: str,
   severity: literal("error", "warning", "info"),

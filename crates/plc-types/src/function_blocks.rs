@@ -136,6 +136,14 @@ impl StandardFunctionBlock {
             Self::Pid => &PID,
         }
     }
+    /// Inputs the runtime reports with the outputs, so a controller's setpoint,
+    /// measurement and tuning can be observed online (ADR-0048).
+    pub fn observed_inputs(self) -> &'static [&'static str] {
+        match self {
+            Self::Pid => &["SP", "PV", "KP", "TI", "TD", "MANUAL", "MV_MAN"],
+            _ => &[],
+        }
+    }
     pub fn parameter_named(self, name: &str) -> Option<StandardParameter> {
         self.signature()
             .iter()

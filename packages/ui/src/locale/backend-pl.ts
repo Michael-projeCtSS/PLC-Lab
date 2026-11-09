@@ -292,6 +292,7 @@ export const backendPl: Readonly<Record<string, string>> = {
   "event.firstScanWarm": "Pierwszy cykl po starcie ciepłym",
   "event.force": "Wymuszenie {name} = {value}",
   "event.forceRemoved": "Usunięto wymuszenie z {name}",
+  "event.modified": "Zmieniono {name} = {value}",
   "event.hardwareDownloaded": "Wgrano konfigurację sprzętu.",
   "event.memoryReset":
     "Reset pamięci: dane programu zainicjalizowane, wymuszenia usunięte",

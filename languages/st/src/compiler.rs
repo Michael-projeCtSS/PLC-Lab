@@ -60,6 +60,17 @@ pub struct ParameterSummary {
     pub description: Option<String>,
 }
 
+/// A standard block input bound to a plain variable, e.g. `Loop(KP := Kp)`: the tuning
+/// screen writes the variable to change the input (ADR-0048).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InputBinding {
+    /// The instance path, e.g. `Loop` or `Line.Loop`.
+    pub instance: String,
+    pub parameter: String,
+    /// The variable's path in the program.
+    pub variable: String,
+}
+
 /// An owned, immutable candidate that passed IR validation at construction.
 /// Borrowed validation is explicit at the existing runtime-lowering boundary.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,8 +79,13 @@ pub struct CompiledProgram {
     name: String,
     declarations: Vec<DeclarationSummary>,
     pous: Vec<PouSummary>,
+    bindings: Vec<InputBinding>,
 }
 impl CompiledProgram {
+    /// Standard block inputs bound to plain variables, in program order.
+    pub fn input_bindings(&self) -> &[InputBinding] {
+        &self.bindings
+    }
     pub fn program_name(&self) -> &str {
         &self.name
     }
@@ -160,6 +176,7 @@ pub fn compile_st_documents(
         definitions: BTreeMap::new(),
         instances: BTreeMap::new(),
         declarations: Vec::new(),
+        bindings: Vec::new(),
         errors: Diagnostics::new(configuration.diagnostics),
         library: ast.library.clone(),
         library_index: BTreeMap::new(),
@@ -221,6 +238,7 @@ pub fn compile_st_documents(
         name: ast.name.text,
         declarations: compiler.declarations,
         pous,
+        bindings: compiler.bindings,
     })
 }
 
@@ -438,6 +456,7 @@ struct Compiler {
     emitted: usize,
     /// Checking a POU on its own: other POUs' bodies are not expanded.
     checking: bool,
+    bindings: Vec<InputBinding>,
 }
 impl Compiler {
     fn anchor(&mut self, span: TextSpan) -> SourceRef {
@@ -1888,6 +1907,20 @@ impl Compiler {
                                 expression.span,
                             );
                         } else {
+                            if let ast::ExpressionKind::Identifier(variable) = &expression.kind
+                                && !self.checking
+                            {
+                                let path = self.frame.qualified(&variable.text);
+                                if let Ok(symbol) =
+                                    self.symbols.resolve(Scope::Pou(self.owner), &path)
+                                {
+                                    self.bindings.push(InputBinding {
+                                        instance: self.frame.qualified(&name.text),
+                                        parameter: parameter.name.into(),
+                                        variable: symbol.name().to_owned(),
+                                    });
+                                }
+                            }
                             bindings.push(CallBinding::input(id, value));
                         }
                     }

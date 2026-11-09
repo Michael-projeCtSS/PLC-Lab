@@ -45,6 +45,8 @@ export const COMMANDS = [
   "set_speed",
   "operate",
   "force",
+  "modify",
+  "control_loops",
   "diagnostic_buffer",
   "alarms",
   "acknowledge_alarm",
@@ -194,6 +196,11 @@ export const api = {
     call("operate", { ...w, component, action }, V.frame),
   force: (w: Ws, signal: number, value: G.SignalValueDto | null) =>
     call("force", { ...w, signal, value }, V.frame),
+  /** Write a PLC variable or output online, once (ADR-0048). */
+  modify: (w: Ws, signal: number, value: G.SignalValueDto) =>
+    call("modify", { ...w, signal, value }, V.frame),
+  /** The PID controllers of the program in the PLC (ADR-0048). */
+  controlLoops: (w: Ws) => call("control_loops", w, V.controlLoops),
   /** The CPU diagnostic buffer, newest first, filtered and paged. */
   diagnosticBuffer: (
     w: Ws,

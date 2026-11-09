@@ -55,6 +55,13 @@ impl FunctionBlockStateSnapshot {
                 ("I", PlcValue::Real(o.i)),
                 ("D", PlcValue::Real(o.d)),
                 ("SAT", PlcValue::Bool(o.sat)),
+                ("SP", PlcValue::Real(o.sp)),
+                ("PV", PlcValue::Real(o.pv)),
+                ("KP", PlcValue::Real(o.kp)),
+                ("TI", PlcValue::Time(o.ti)),
+                ("TD", PlcValue::Time(o.td)),
+                ("MANUAL", PlcValue::Bool(o.manual)),
+                ("MV_MAN", PlcValue::Real(o.mv_man)),
             ],
         }
     }

@@ -12,7 +12,8 @@ use crate::{
 };
 use plc_types::{PlcReal, PlcTime};
 
-/// The block's outputs: MV, E, P, I, D and SAT.
+/// The block's outputs (MV, E, P, I, D, SAT) and the inputs it reports for online
+/// observation (SP, PV, KP, TI, TD, MANUAL, MV_MAN, ADR-0048).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PidOutputs {
     pub mv: PlcReal,
@@ -21,6 +22,13 @@ pub struct PidOutputs {
     pub i: PlcReal,
     pub d: PlcReal,
     pub sat: bool,
+    pub sp: PlcReal,
+    pub pv: PlcReal,
+    pub kp: PlcReal,
+    pub ti: PlcTime,
+    pub td: PlcTime,
+    pub manual: bool,
+    pub mv_man: PlcReal,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +44,9 @@ pub(crate) struct PidState {
     enable: bool,
     reset: bool,
     ts: PlcTime,
+    // The required inputs of the last call, for observation.
+    sp: PlcReal,
+    pv: PlcReal,
     // Controller memory.
     integral: PlcReal,
     previous_pv: Option<PlcReal>,
@@ -63,6 +74,8 @@ impl Default for PidState {
             enable: true,
             reset: false,
             ts: PlcTime::ZERO,
+            sp: zero(),
+            pv: zero(),
             integral: zero(),
             previous_pv: None,
             last_sample: None,
@@ -73,6 +86,13 @@ impl Default for PidState {
                 i: zero(),
                 d: zero(),
                 sat: false,
+                sp: zero(),
+                pv: zero(),
+                kp: zero(),
+                ti: PlcTime::ZERO,
+                td: PlcTime::ZERO,
+                manual: false,
+                mv_man: zero(),
             },
         }
     }
@@ -80,15 +100,25 @@ impl Default for PidState {
 
 impl PidState {
     pub(crate) fn outputs(&self) -> PidOutputs {
-        self.outputs
+        PidOutputs {
+            sp: self.sp,
+            pv: self.pv,
+            kp: self.kp,
+            ti: self.ti,
+            td: self.td,
+            manual: self.manual,
+            mv_man: self.mv_man,
+            ..self.outputs
+        }
     }
 
     /// One call at the scan-start task time. All checks complete before any field
     /// changes.
     pub(crate) fn call(&mut self, inputs: &CallInputs<'_>, now: PlcTime) -> Result<(), BlockError> {
-        let sp = inputs.real(1, None)?.get();
-        let pv = inputs.real(2, None)?.get();
         let mut next = self.clone();
+        next.sp = inputs.real(1, None)?;
+        next.pv = inputs.real(2, None)?;
+        let (sp, pv) = (next.sp.get(), next.pv.get());
         next.kp = inputs.real(3, Some(self.kp))?;
         next.ti = inputs.time_or(4, self.ti)?;
         next.td = inputs.time_or(5, self.td)?;
@@ -118,6 +148,7 @@ impl PidState {
                 i: zero(),
                 d: zero(),
                 sat: false,
+                ..next.outputs
             };
             *self = next;
             return Ok(());
@@ -144,6 +175,7 @@ impl PidState {
                 i: next.integral,
                 d: zero(),
                 sat: next.mv_man.get() < lo || next.mv_man.get() > hi,
+                ..next.outputs
             };
             *self = next;
             return Ok(());
@@ -196,6 +228,7 @@ impl PidState {
             i,
             d,
             sat: u.get() > hi || u.get() < lo,
+            ..next.outputs
         };
         *self = next;
         Ok(())

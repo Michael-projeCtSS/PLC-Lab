@@ -526,6 +526,23 @@ export type OperateRequest = { contractVersion: number, workspaceId: ExactU64, c
 
 export type ForceRequest = { contractVersion: number, workspaceId: ExactU64, signal: number, value: SignalValueDto | null, };
 
+export type ModifyRequest = { contractVersion: number, workspaceId: ExactU64, signal: number, value: SignalValueDto, };
+
+export type LoopSignalDto = { parameter: string, signal: number, };
+
+export type ControlLoopDto = { instance: string, 
+/**
+ * Observed outputs and inputs: MV, E, P, I, D, SAT, SP, PV, KP, TI, TD, MANUAL,
+ * MV_MAN.
+ */
+signals: Array<LoopSignalDto>, 
+/**
+ * Inputs bound to plain program variables; writing the variable changes the input.
+ */
+bindings: Array<LoopSignalDto>, };
+
+export type ControlLoopsDto = { loops: Array<ControlLoopDto>, };
+
 export type ForceEntryDto = { signal: number, path: string, label: string, target: "INPUT_IMAGE" | "OUTPUT_IMAGE", value: SignalValueDto, };
 
 export type ForceListDto = { forces: Array<ForceEntryDto>, };

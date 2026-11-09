@@ -53,6 +53,8 @@ commands! {
     set_speed(SpeedRequest) -> LiveFrameDto => set_speed;
     operate(OperateRequest) -> LiveFrameDto => operate;
     force(ForceRequest) -> LiveFrameDto => force;
+    modify(ModifyRequest) -> LiveFrameDto => modify;
+    control_loops(WorkspaceRequest) -> ControlLoopsDto => control_loops;
     frame(FrameRequest) -> LiveFrameDto => frame;
     cycle(CycleRequest) -> Option<CauseEffectDto> => cycle;
     diagnostic_buffer(DiagnosticBufferRequest) -> DiagnosticBufferDto => diagnostic_buffer;

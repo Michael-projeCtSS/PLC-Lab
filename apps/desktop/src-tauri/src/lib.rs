@@ -170,6 +170,8 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             commands::set_speed,
             commands::operate,
             commands::force,
+            commands::modify,
+            commands::control_loops,
             commands::diagnostic_buffer,
             commands::alarms,
             commands::acknowledge_alarm,

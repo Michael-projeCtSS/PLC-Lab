@@ -504,6 +504,37 @@ impl Workspace {
         self.engine(|s| s.force(SignalId(signal), value))
     }
 
+    /// Write a PLC variable or output online, once (ADR-0048).
+    pub fn modify(&mut self, signal: u32, value: SignalValueDto) -> AppResult<()> {
+        let value = convert::value_from_dto(value)
+            .ok_or_else(|| AppError::InvalidRequest("A REAL value must be finite.".into()))?;
+        self.engine(|s| s.modify(SignalId(signal), value))
+    }
+
+    /// The PID controllers of the program in the PLC (ADR-0048).
+    pub fn control_loops(&self) -> ControlLoopsDto {
+        let pairs = |list: &[(&'static str, SignalId)]| {
+            list.iter()
+                .map(|(parameter, signal)| LoopSignalDto {
+                    parameter: (*parameter).into(),
+                    signal: signal.0,
+                })
+                .collect()
+        };
+        ControlLoopsDto {
+            loops: self
+                .session
+                .control_loops()
+                .iter()
+                .map(|l| ControlLoopDto {
+                    instance: l.instance.clone(),
+                    signals: pairs(&l.signals),
+                    bindings: pairs(&l.bindings),
+                })
+                .collect(),
+        }
+    }
+
     /// The CPU diagnostic buffer, newest first, filtered and paged.
     pub fn diagnostic_buffer(&self, filter: &DiagnosticBufferRequest) -> DiagnosticBufferDto {
         let s = &self.session;

@@ -1135,6 +1135,23 @@ pub fn describe(
             };
             ("OPERATOR".into(), "info", text, None)
         }
+        LabEventKind::Modified { signal, value } => {
+            let name = session
+                .signals()
+                .get(*signal)
+                .map_or_else(|| signal.0.to_string(), |d| d.label.clone());
+            (
+                "MODIFY".into(),
+                "info",
+                message!(
+                    "event.modified",
+                    "Modified {name} = {value}",
+                    name = name.as_str(),
+                    value = format_value(*value)
+                ),
+                Some("CPU".into()),
+            )
+        }
         LabEventKind::Force { signal, value } => {
             let name = session
                 .signals()

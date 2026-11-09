@@ -545,6 +545,38 @@ pub struct ForceRequest {
     pub signal: u32,
     pub value: Option<SignalValueDto>,
 }
+/// Write a PLC variable or output online, once (ADR-0048).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ModifyRequest {
+    pub contract_version: u32,
+    pub workspace_id: ExactU64,
+    pub signal: u32,
+    pub value: SignalValueDto,
+}
+/// A parameter of a control loop and the signal that carries it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LoopSignalDto {
+    pub parameter: String,
+    pub signal: u32,
+}
+/// A PID controller of the program in the PLC (ADR-0048).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ControlLoopDto {
+    pub instance: String,
+    /// Observed outputs and inputs: MV, E, P, I, D, SAT, SP, PV, KP, TI, TD, MANUAL,
+    /// MV_MAN.
+    pub signals: Vec<LoopSignalDto>,
+    /// Inputs bound to plain program variables; writing the variable changes the input.
+    pub bindings: Vec<LoopSignalDto>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ControlLoopsDto {
+    pub loops: Vec<ControlLoopDto>,
+}
 /// An active force: the signal, what it replaces and the forced value.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -1234,7 +1266,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SequenceConditionDto, SequenceStepStateDto, SequencePermissiveStateDto, SequenceTransitionStateDto,
         SequenceInterlockStateDto, SequenceObservedDto, SequenceEventDto, SequenceStatusDto, LiveFrameDto, WorkspaceDto, CompileRequest, SourceDocumentDto,
         DeclarationDto, CompileResultDto, PouParameterDto, PouDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
-        SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
+        SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ModifyRequest, LoopSignalDto, ControlLoopDto, ControlLoopsDto, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticDetailDto, DiagnosticEntryDto, DiagnosticBufferRequest, DiagnosticBufferDto,
         PlcRestartRequest, AlarmsRequest, AlarmEventDto, AlarmsDto, AlarmAckRequest, AlarmAckResultDto, ModuleTypeDto,

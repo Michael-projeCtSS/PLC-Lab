@@ -89,6 +89,8 @@ pub enum ConfigurationError {
 pub enum InputError {
     UnknownSymbol(SymbolId),
     NotExternalInput(SymbolId),
+    /// An online write to an input: the process image writes inputs (ADR-0048).
+    ExternalInput(SymbolId),
     TypeMismatch {
         symbol: SymbolId,
         expected: PlcType,
@@ -136,6 +138,11 @@ impl std::fmt::Display for InputError {
             Self::NotExternalInput(id) => {
                 write!(f, "Symbol {} is not an external entry input.", id.get())
             }
+            Self::ExternalInput(id) => write!(
+                f,
+                "Symbol {} is an input: the process image writes it.",
+                id.get()
+            ),
             Self::TypeMismatch {
                 symbol,
                 expected,

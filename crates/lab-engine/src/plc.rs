@@ -71,6 +71,10 @@ pub(crate) struct LoadedProgram {
     pub name: String,
     pub revision: u64,
     pub source: String,
+    /// The project library documents compiled with `source` (ADR-0045).
+    pub library: Vec<String>,
+    /// Standard block inputs bound to plain variables (ADR-0048).
+    pub bindings: Vec<st_frontend::InputBinding>,
     pub runtime: Runtime,
     pub tags: Vec<TagBinding>,
     pub blocks: Vec<BlockBinding>,
@@ -184,7 +188,10 @@ pub(crate) fn link(
             let outputs = kind
                 .signature()
                 .iter()
-                .filter(|p| p.direction == plc_types::function_blocks::ParameterDirection::Output)
+                .filter(|p| {
+                    p.direction == plc_types::function_blocks::ParameterDirection::Output
+                        || kind.observed_inputs().contains(&p.name)
+                })
                 .map(|p| {
                     (
                         p.name,
@@ -434,6 +441,15 @@ impl PlcParticipant {
         p.runtime
             .set_input(symbol, value)
             .map_err(|e| EngineError::Internal(format!("input staging failed: {e}")))
+    }
+    /// An online write of a variable or output between scans (ADR-0048).
+    pub fn modify(&mut self, symbol: SymbolId, value: PlcValue) -> Result<(), EngineError> {
+        let Some(p) = &mut self.program else {
+            return Err(EngineError::NoProgram);
+        };
+        p.runtime
+            .modify(symbol, value)
+            .map_err(|e| EngineError::InvalidAction(e.to_string()))
     }
     pub fn scan(&mut self) -> Result<ScanOutcome, EngineError> {
         if self.mode != PlcMode::Run {

@@ -8,8 +8,8 @@ mod literals;
 mod parser;
 
 pub use compiler::{
-    CompiledProgram, DeclarationSummary, MAX_LIBRARY_DOCUMENTS, ParameterSummary, PouSummary,
-    compile_st, compile_st_documents,
+    CompiledProgram, DeclarationSummary, InputBinding, MAX_LIBRARY_DOCUMENTS, ParameterSummary,
+    PouSummary, compile_st, compile_st_documents,
 };
 pub use diagnostics::{CompilerConfig, codes};
 

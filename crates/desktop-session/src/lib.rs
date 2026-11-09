@@ -716,6 +716,24 @@ impl DesktopApp {
         })())
     }
 
+    pub fn modify(&self, request: ModifyRequest) -> Result<LiveFrameDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            let w = state.workspace(request.workspace_id)?;
+            w.modify(request.signal, request.value)?;
+            Ok(w.frame(&[]))
+        })())
+    }
+
+    pub fn control_loops(&self, request: WorkspaceRequest) -> Result<ControlLoopsDto, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            Ok(state.workspace(request.workspace_id)?.control_loops())
+        })())
+    }
+
     pub fn diagnostic_buffer(
         &self,
         request: DiagnosticBufferRequest,

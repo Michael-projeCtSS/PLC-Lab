@@ -70,6 +70,31 @@ impl Memory {
         self.staged_inputs.insert(id, value);
         Ok(())
     }
+    /// An online write between scans (ADR-0048): the committed value of a variable or
+    /// output; the next scan starts from it. Inputs belong to the process image.
+    pub(crate) fn modify(
+        &mut self,
+        layout: &BTreeMap<SymbolId, Slot>,
+        id: SymbolId,
+        value: PlcValue,
+    ) -> Result<(), InputError> {
+        let slot = layout.get(&id).ok_or(InputError::UnknownSymbol(id))?;
+        if slot.role == MemoryRole::ExternalInput {
+            return Err(InputError::ExternalInput(id));
+        }
+        if value.plc_type() != slot.plc_type {
+            return Err(InputError::TypeMismatch {
+                symbol: id,
+                expected: slot.plc_type,
+                actual: value.plc_type(),
+            });
+        }
+        self.committed.insert(id, value);
+        if slot.role == MemoryRole::ExternalOutput {
+            self.outputs.insert(id, value);
+        }
+        Ok(())
+    }
     /// Warm initialization: non-retained cells return to their initial values, retained
     /// cells keep theirs; the input images are rebuilt and sampled again (ADR-0038).
     pub(crate) fn warm(&mut self, layout: &BTreeMap<SymbolId, Slot>) {
