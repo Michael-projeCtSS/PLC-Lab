@@ -79,8 +79,13 @@ The compiler expands user POUs; the IR and runtime are unchanged in kind.
 Compile results carry the POUs of the document (kind, name, return type, parameters with
 direction, type and the comment after the declaration, the leading comment as the
 description). The library browser lists them beside the standard blocks (TON, TOF, TP,
-R_TRIG, F_TRIG, CTU, CTD, CTUD) with signatures, descriptions and usage examples. Online,
-instance variables appear under their paths.
+R_TRIG, F_TRIG, CTU, CTD) with signatures, descriptions and usage examples. Online,
+instance variables appear under their paths (`Toggle1.On`), and the arguments and result
+of the latest call of a function under its call path (`Both#1.A`).
+
+Exercises may require user POUs (`requiredPous`: name and `function` or `functionBlock`).
+They are checked before grading, like the required interface, so a program that behaves
+correctly without the requested block is told what to write instead of being graded.
 
 ## Alternatives considered
 

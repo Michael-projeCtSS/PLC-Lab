@@ -43,7 +43,10 @@ as history; their session, process and controller details are superseded as note
 | [0035](0035-interface-preferences-and-localization.md) | Typed interface localization and presentation preferences            | Accepted                            |
 | [0036](0036-bundled-educational-content-locales.md)    | Source-guarded educational content overlays                          | Accepted                            |
 | [0037](0037-industrial-alarm-model.md)                 | A generic industrial alarm model                                     | Accepted                            |
+| [0038](0038-plc-startup-and-retentive-memory.md)       | PLC startup, restart and retentive memory                            | Accepted                            |
 | [0039](0039-windows-release-signing.md)                | Trusted production signatures and signed distribution catalog        | Accepted for this signing task      |
 | [0040](0040-browser-ui-preview-boundary.md)            | Read-only development browser presentation                           | Superseded: browser preview retired |
 | [0041](0041-coded-backend-messages.md)                 | Coded backend messages for the interface language                    | Accepted for localization           |
 | [0042](0042-semantic-colour-tokens-and-light-theme.md) | Semantic colour tokens, a light theme and a system theme             | Accepted                            |
+| [0043](0043-sequence-execution-and-diagnostics.md)     | Sequence execution and diagnostic model                              | Accepted                            |
+| [0044](0044-user-functions-and-function-blocks.md)     | User functions and function blocks by expansion into the IR          | Accepted (CP9-A)                    |

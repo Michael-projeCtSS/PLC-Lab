@@ -425,6 +425,43 @@ previous green run; `1356125` moves it to 1.14.1 and changes nothing else.
   stuck closed), lesson 26, article `fundamentals.sequences`; complete Polish overlays.
 - Native acceptance: `tests/e2e/sequence-session.mjs` (part of `npm run test:desktop`).
 
+## Updater and build metadata (Claude, 2026-11-08)
+
+- `UPDATE_PLC_LAB.bat` (`scripts/update-exe.mjs`) updates the root `PLC Lab.exe` from the
+  checked-out source with the existing release pipeline: it refuses a dirty tree and a
+  signed production release, builds, probes whether Windows lets the new executable run,
+  keeps a verified backup in `artifacts/plc-lab-backups`, stages atomically, verifies the
+  hashes, source commit and release kind, runs the native release smoke on the installed
+  executable and restores the backup if anything fails. It reports success only after
+  that smoke. Smart App Control is never bypassed; `TEST_PLC_LAB.bat` stays available.
+- About shows the source commit, build date, distribution (development run, release
+  build, unsigned development build, signed production release) and signing, from the
+  compiled build metadata and a manifest that names the same commit.
+
+## Checkpoint 9-A: user functions and function blocks (Claude, 2026-11-08 to 2026-11-09)
+
+- ADR-0044. Structured Text documents may hold `FUNCTION` and `FUNCTION_BLOCK` POUs beside
+  the one `PROGRAM`, with `VAR_INPUT`, `VAR_OUTPUT`, `VAR_IN_OUT`, `VAR`, typed parameters
+  and nested block instances. The compiler expands every call into the canonical IR
+  (instance memory as program symbols with dotted paths, function code hoisted before its
+  statement, `VAR_IN_OUT` as an alias of the caller's variable), so the one runtime
+  executes them with its budgets, transactions, traces and monitoring. Recursion is
+  refused; diagnostics and runtime faults point to the line in the POU; each POU is
+  checked once even if unused.
+- IPC (contract 8, additive): `CompileResultDto.pous`, `LibraryDto.standardBlocks`,
+  `ExerciseDto.requiredPous`.
+- UI: inspector tab "Library" (user library from the latest successful compile, the
+  standard library from the runtime's signatures, search, parameters, descriptions from
+  comments, usage examples with Copy); the task brief lists required functions and
+  function blocks.
+- Content: exercise `ex.toggle-block` (a Toggle block, two instances, a Both function)
+  with reference solution and tests proving each criterion catches its mistake; article
+  `fundamentals.pous`; complete Polish overlays.
+- Native acceptance: `tests/e2e/pou-session.mjs` (part of `npm run test:desktop`).
+- Not in this checkpoint: several source documents per project, a project library
+  persisted apart from the program, libraries shared between projects, retentive user
+  block instances.
+
 ## Product consolidation (Claude, 2026-11-04 to 2026-11-06)
 
 No PLC functionality was added. Commits on `claude/product-development-v2`:
@@ -468,7 +505,9 @@ native smoke test. Antivirus settings are never changed by the agent.
    C sequence diagnostic foundation (steps, transitions, timeouts, hold and resume,
    interlocks and permissives, a sequence inspector, a process sequence). A, B and C are
    implemented; all content in English and Polish.
-2. Checkpoint 9: ST depth, multiple POUs and FB instances (P11), then LAD readiness.
+2. Checkpoint 9: A user functions and function blocks with a library browser
+   (implemented); B deterministic PID control with a tuning screen; C a LAD editor on the
+   canonical IR; then the hardware configuration audit.
 
 ## How to continue
 

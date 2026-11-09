@@ -113,6 +113,14 @@ step, the reference ST program, a start refused by a permissive, the tank fillin
 HOLD and RESUME, completion and history, the stuck-valve lab's step timeout with its
 alarm, Polish, both themes, ST editing with Enter and Backspace and a clean close.
 
+`npm run test:pou` (`node tests/e2e/pou-session.mjs`, part of `npm run test:desktop`)
+runs the function block exercise natively: the required blocks in the task brief, the
+starter told which function is missing, the pasted reference program with its own
+FUNCTION_BLOCK and FUNCTION compiling and running, signatures and examples in the Library
+tab, two instances of one block lighting two lamps independently and the function lighting
+the third, instance memory (`Toggle1.On`) in the variable list, grading, Polish, both
+themes, ST editing and a clean close. Screenshots stay in `artifacts\pou-session`.
+
 `npm run test:screenshots` captures the real application in both themes at 1366x768,
 1920x1080 and 2560x1440 (Home, program, process, hardware, commissioning; Polish) into
 `artifacts\theme-screenshots` and fails when a page overflows or a label is clipped.
