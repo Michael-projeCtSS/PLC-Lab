@@ -31,7 +31,8 @@ export const pl = {
   "brief.more": "Więcej o tej usterce",
   "brief.compileFailed":
     "Program nie kompiluje się. Popraw błędy wskazane w edytorze.",
-  "brief.interfaceMismatch": "Program nie deklaruje wymaganych zmiennych:",
+  "brief.interfaceMismatch":
+    "Program nie zawiera elementów wymaganych przez zadanie (zmiennych, funkcji lub bloków funkcyjnych):",
   "brief.bindingFailed": "Program nie odpowiada konfiguracji I/O:",
   "brief.points": "pkt",
   "invest.report": "Zgłoszenie usterki",

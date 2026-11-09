@@ -30,7 +30,8 @@ export const en = {
   "brief.more": "Read more about this fault",
   "brief.compileFailed":
     "The program does not compile. Fix the errors shown in the editor.",
-  "brief.interfaceMismatch": "The program does not declare the required tags:",
+  "brief.interfaceMismatch":
+    "The program does not have what the exercise requires (tags, functions or function blocks):",
   "brief.bindingFailed": "The program does not match the I/O configuration:",
   "brief.points": "pt",
   "invest.report": "Fault report",
