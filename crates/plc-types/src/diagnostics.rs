@@ -93,6 +93,7 @@ pub mod codes {
     pub const NON_FINITE_REAL: &str = "PLC-RUNTIME-004";
     pub const CLOCK_OVERFLOW: &str = "PLC-RUNTIME-005";
     pub const SCAN_COUNTER_OVERFLOW: &str = "PLC-RUNTIME-006";
+    pub const INVALID_LIMITS: &str = "PLC-RUNTIME-007";
     pub const INTERNAL_INVARIANT: &str = "APP-CORE-001";
 }
 

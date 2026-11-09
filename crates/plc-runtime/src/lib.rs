@@ -5,6 +5,7 @@ mod executor;
 mod function_blocks;
 mod memory;
 mod operators;
+mod pid;
 mod plan;
 mod runtime;
 
@@ -12,6 +13,7 @@ pub use errors::{
     ConfigurationError, InputError, InternalError, LoweringError, RuntimeFault, ScanError,
 };
 pub use function_blocks::FunctionBlockStateSnapshot;
+pub use pid::PidOutputs;
 pub use plan::{ExecutionPlan, MemoryRole, lower};
 pub use runtime::{Runtime, RuntimeConfig, RuntimeSnapshot, RuntimeState, ScanResult, StartKind};
 

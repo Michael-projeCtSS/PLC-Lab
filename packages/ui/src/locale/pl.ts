@@ -1060,6 +1060,7 @@ export const pl = {
   "code.PLC-RUNTIME-004": "Nieskończona lub nieokreślona wartość REAL",
   "code.PLC-RUNTIME-005": "Przepełnienie zegara",
   "code.PLC-RUNTIME-006": "Przepełnienie licznika cykli",
+  "code.PLC-RUNTIME-007": "Odwrócone ograniczenia wyjścia",
   "check.title": "Lista kontrolna uruchamiania",
   "check.intro":
     "Pracuj od kategorii Zasilanie do kategorii Proces. Uruchom każdy przycisk i czujnik oraz przełącz każde wyjście: kontrole oznaczone jako „Do przetestowania” zmieniają się w wyniki, gdy symulacja je zaobserwuje. Brak sygnału zwrotnego jest zgłaszany, gdy element wykonawczy jest zasilany przez {seconds} s.",
@@ -1421,4 +1422,6 @@ export const pl = {
     "Licznik w górę: każde zbocze narastające CU zwiększa CV o jeden; R zeruje licznik; Q jest TRUE, gdy CV osiągnie PV.",
   "lib.std.CTD":
     "Licznik w dół: LD wpisuje PV do CV; każde zbocze narastające CD zmniejsza CV o jeden; Q jest TRUE, gdy CV osiągnie zero.",
+  "lib.std.PID":
+    "Regulator PID: steruje MV tak, aby PV nadążała za SP, ze wzmocnieniem KP, czasem całkowania TI i czasem różniczkowania TD; MV pozostaje w zakresie MV_MIN..MV_MAX bez nasycania członu całkującego; MANUAL przekazuje MV do MV_MAN i z powrotem bez skoku. P, I i D pokazują trzy składniki MV.",
 } satisfies Record<TranslationKey, string>;

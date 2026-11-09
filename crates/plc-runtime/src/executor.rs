@@ -1,6 +1,6 @@
 use crate::{
     errors::{FaultKind, InternalError, RuntimeFault, ScanError},
-    function_blocks::{CallInputs, InstanceStates},
+    function_blocks::{BlockError, CallInputs, InstanceStates},
     memory::WorkingState,
     operators::{self, OperationError},
     plan::{ExecExpression, ExecExpressionKind, ExecStatement, ExecStatementKind, ExecutionPlan},
@@ -177,9 +177,14 @@ impl<'a> Executor<'a> {
                                 .at(self.plan.sources.get(source).cloned()),
                         )
                     })?;
-                    state.call(CallInputs(&values), self.now).map_err(|e| {
-                        ScanError::Internal(e.at(self.plan.sources.get(source).cloned()))
-                    })?;
+                    if let Err(error) = state.call(CallInputs(&values), self.now) {
+                        return Err(match error {
+                            BlockError::Fault(kind) => self.fault(kind, source, None),
+                            BlockError::Internal(e) => {
+                                ScanError::Internal(e.at(self.plan.sources.get(source).cloned()))
+                            }
+                        });
+                    }
                     for (parameter, target) in outputs {
                         let value = self.instances[instance]
                             .output(plc_types::identity::ParameterId::new(*parameter).map_err(

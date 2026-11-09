@@ -14,21 +14,22 @@ and ADRs.
 
 ## Structured Text
 
-| Feature                                                        | Status      |
-| -------------------------------------------------------------- | ----------- |
-| One PROGRAM, VAR_INPUT / VAR_OUTPUT / VAR sections             | Implemented |
-| BOOL, INT (16-bit), REAL (finite f32), TIME (µs)               | Implemented |
-| Assignments, IF / ELSIF / ELSE                                 | Implemented |
-| CASE with values, ranges, lists, ELSE                          | Implemented |
-| NOT, AND, OR, XOR, arithmetic, MOD, comparisons                | Implemented |
-| INT_TO_REAL, REAL_TO_INT (round half to even, overflow faults) | Implemented |
-| TIME literals (`T#1s500ms`)                                    | Implemented |
-| Standard FB instances: TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD  | Implemented |
-| FB calls with named inputs, `=>` outputs, member reads (`T.Q`) | Implemented |
-| Comments `(* *)` and `//`                                      | Implemented |
-| DINT and other wide types, ARRAY, STRUCT                       | Planned     |
-| User functions and function blocks, FOR/WHILE/REPEAT           | Planned     |
-| CTUD, retentive memory, multiple tasks                         | Planned     |
+| Feature                                                                       | Status      |
+| ----------------------------------------------------------------------------- | ----------- |
+| One PROGRAM, VAR_INPUT / VAR_OUTPUT / VAR sections                            | Implemented |
+| BOOL, INT (16-bit), REAL (finite f32), TIME (µs)                              | Implemented |
+| Assignments, IF / ELSIF / ELSE                                                | Implemented |
+| CASE with values, ranges, lists, ELSE                                         | Implemented |
+| NOT, AND, OR, XOR, arithmetic, MOD, comparisons                               | Implemented |
+| INT_TO_REAL, REAL_TO_INT (round half to even, overflow faults)                | Implemented |
+| TIME literals (`T#1s500ms`)                                                   | Implemented |
+| Standard FB instances: TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, PID (ADR-0046) | Implemented |
+| FB calls with named inputs, `=>` outputs, member reads (`T.Q`)                | Implemented |
+| Comments `(* *)` and `//`                                                     | Implemented |
+| DINT and other wide types, ARRAY, STRUCT                                      | Planned     |
+| User functions and function blocks, library documents (ADR-0044, ADR-0045)    | Implemented |
+| FOR/WHILE/REPEAT                                                              | Planned     |
+| CTUD, retentive memory, multiple tasks                                        | Planned     |
 
 ## Runtime
 

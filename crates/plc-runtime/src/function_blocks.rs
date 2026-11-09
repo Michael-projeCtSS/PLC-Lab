@@ -3,7 +3,10 @@
 //! Every block uses the scan-start PLC task time. Working copies are cloned per scan and
 //! published only when the whole scan commits, so faults roll back block state too.
 //! Unbound optional inputs keep their previous value (function-block inputs persist).
-use crate::errors::InternalError;
+use crate::{
+    errors::{FaultKind, InternalError},
+    pid::{PidOutputs, PidState},
+};
 use plc_types::{
     PlcTime, PlcValue,
     function_blocks::StandardFunctionBlock,
@@ -20,6 +23,7 @@ pub enum FunctionBlockStateSnapshot {
     FTrig { q: bool },
     Ctu { q: bool, cv: i16 },
     Ctd { q: bool, cv: i16 },
+    Pid(PidOutputs),
 }
 impl FunctionBlockStateSnapshot {
     pub fn kind(self) -> StandardFunctionBlock {
@@ -31,6 +35,7 @@ impl FunctionBlockStateSnapshot {
             Self::FTrig { .. } => StandardFunctionBlock::FTrig,
             Self::Ctu { .. } => StandardFunctionBlock::Ctu,
             Self::Ctd { .. } => StandardFunctionBlock::Ctd,
+            Self::Pid(_) => StandardFunctionBlock::Pid,
         }
     }
     /// Public outputs in signature order.
@@ -43,6 +48,14 @@ impl FunctionBlockStateSnapshot {
             Self::Ctu { q, cv } | Self::Ctd { q, cv } => {
                 vec![("Q", PlcValue::Bool(q)), ("CV", PlcValue::Int(cv))]
             }
+            Self::Pid(o) => vec![
+                ("MV", PlcValue::Real(o.mv)),
+                ("E", PlcValue::Real(o.e)),
+                ("P", PlcValue::Real(o.p)),
+                ("I", PlcValue::Real(o.i)),
+                ("D", PlcValue::Real(o.d)),
+                ("SAT", PlcValue::Bool(o.sat)),
+            ],
         }
     }
     pub fn output(self, parameter: ParameterId) -> Option<PlcValue> {
@@ -99,10 +112,24 @@ pub(crate) enum InstanceState {
         q: bool,
         cv: i16,
     },
+    Pid(PidState),
 }
 pub(crate) type InstanceStates = BTreeMap<FunctionBlockInstanceId, InstanceState>;
 
-fn elapsed(now: PlcTime, since: PlcTime) -> Result<u64, InternalError> {
+/// Why a block call did not complete: a runtime fault of the student's program, or a
+/// broken internal invariant.
+#[derive(Debug)]
+pub(crate) enum BlockError {
+    Fault(FaultKind),
+    Internal(InternalError),
+}
+impl From<InternalError> for BlockError {
+    fn from(error: InternalError) -> Self {
+        Self::Internal(error)
+    }
+}
+
+pub(crate) fn elapsed(now: PlcTime, since: PlcTime) -> Result<u64, InternalError> {
     now.as_micros()
         .checked_sub(since.as_micros())
         .ok_or_else(|| {
@@ -132,6 +159,33 @@ impl CallInputs<'_> {
                 "A validated timer preset is missing or mistyped.",
             )),
         }
+    }
+    /// An optional TIME input, or its last value.
+    pub(crate) fn time_or(&self, id: u32, fallback: PlcTime) -> Result<PlcTime, InternalError> {
+        match self.get(id) {
+            None => Ok(fallback),
+            Some(PlcValue::Time(t)) => Ok(t),
+            Some(_) => Err(InternalError::new(
+                "A validated TIME input has an incompatible type.",
+            )),
+        }
+    }
+    /// A REAL input, or its last value when it is optional and unbound.
+    pub(crate) fn real(
+        &self,
+        id: u32,
+        fallback: Option<plc_types::PlcReal>,
+    ) -> Result<plc_types::PlcReal, InternalError> {
+        match (self.get(id), fallback) {
+            (Some(PlcValue::Real(r)), _) => Ok(r),
+            (None, Some(r)) => Ok(r),
+            _ => Err(InternalError::new(
+                "A validated REAL input is missing or mistyped.",
+            )),
+        }
+    }
+    pub(crate) fn flag(&self, id: u32, fallback: bool) -> Result<bool, InternalError> {
+        self.bool(id, fallback)
     }
     fn int(&self, id: u32, fallback: i16) -> Result<i16, InternalError> {
         match self.get(id) {
@@ -186,6 +240,7 @@ impl InstanceState {
                 q: true,
                 cv: 0,
             },
+            StandardFunctionBlock::Pid => Self::Pid(PidState::default()),
         }
     }
     pub(crate) fn snapshot(&self) -> FunctionBlockStateSnapshot {
@@ -197,6 +252,7 @@ impl InstanceState {
             Self::FTrig { q, .. } => FunctionBlockStateSnapshot::FTrig { q },
             Self::Ctu { q, cv, .. } => FunctionBlockStateSnapshot::Ctu { q, cv },
             Self::Ctd { q, cv, .. } => FunctionBlockStateSnapshot::Ctd { q, cv },
+            Self::Pid(ref pid) => FunctionBlockStateSnapshot::Pid(pid.outputs()),
         }
     }
     pub(crate) fn output(&self, parameter: ParameterId) -> Option<PlcValue> {
@@ -204,12 +260,9 @@ impl InstanceState {
     }
 
     /// Execute one call. All checks complete before any field changes.
-    pub(crate) fn call(
-        &mut self,
-        inputs: CallInputs<'_>,
-        now: PlcTime,
-    ) -> Result<(), InternalError> {
+    pub(crate) fn call(&mut self, inputs: CallInputs<'_>, now: PlcTime) -> Result<(), BlockError> {
         match self {
+            Self::Pid(pid) => pid.call(&inputs, now)?,
             Self::Ton {
                 active_since,
                 q,
@@ -373,6 +426,9 @@ mod tests {
                 ms(4),
             )
             .unwrap_err();
+        let BlockError::Internal(error) = error else {
+            panic!("an internal error expected")
+        };
         assert_eq!(error.diagnostic().code(), "APP-CORE-001");
         assert_eq!(state, before);
     }

@@ -29,6 +29,7 @@ const STANDARD: Record<string, TranslationKey> = {
   F_TRIG: "lib.std.F_TRIG",
   CTU: "lib.std.CTU",
   CTD: "lib.std.CTD",
+  PID: "lib.std.PID",
 };
 
 function Example({ code }: { code: string }) {

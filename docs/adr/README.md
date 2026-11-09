@@ -51,3 +51,4 @@ as history; their session, process and controller details are superseded as note
 | [0043](0043-sequence-execution-and-diagnostics.md)     | Sequence execution and diagnostic model                              | Accepted                            |
 | [0044](0044-user-functions-and-function-blocks.md)     | User functions and function blocks by expansion into the IR          | Accepted (CP9-A)                    |
 | [0045](0045-project-library-documents.md)              | Project library documents compiled with the program                  | Accepted (CP9-A)                    |
+| [0046](0046-deterministic-pid-block.md)                | A deterministic PID standard block                                   | Accepted (CP9-B)                    |

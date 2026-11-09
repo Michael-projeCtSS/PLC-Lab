@@ -158,6 +158,8 @@ pub(crate) enum FaultKind {
     NonFiniteReal,
     ClockOverflow,
     ScanCounterOverflow,
+    /// A block's lower output limit is above its upper limit (PID, ADR-0046).
+    InvalidLimits,
 }
 impl FaultKind {
     pub(crate) fn diagnostic(self) -> Diagnostic {
@@ -185,6 +187,10 @@ impl FaultKind {
             Self::ScanCounterOverflow => (
                 codes::SCAN_COUNTER_OVERFLOW,
                 "Completing this scan would exceed the scan counter range.",
+            ),
+            Self::InvalidLimits => (
+                codes::INVALID_LIMITS,
+                "The block's output limits are inverted: the lower limit (MV_MIN) is above the upper limit (MV_MAX).",
             ),
         };
         diagnostic(code, DiagnosticCategory::RuntimeFault, message)

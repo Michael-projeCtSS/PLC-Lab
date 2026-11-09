@@ -23,6 +23,8 @@ pub enum StandardFunctionBlock {
     FTrig,
     Ctu,
     Ctd,
+    /// Educational PID controller (ADR-0046).
+    Pid,
 }
 
 /// One parameter of a standard block signature. IDs are local to the signature.
@@ -68,6 +70,28 @@ const UP_COUNTER: [StandardParameter; 5] = [
     param(4, "Q", OUT, PlcType::Bool, false),
     param(5, "CV", OUT, PlcType::Int, false),
 ];
+/// ADR-0046. Optional inputs keep their last bound value; their initial values are
+/// set by the runtime (KP 1.0, MV_MAX 100.0, ENABLE TRUE, the rest zero or FALSE).
+const PID: [StandardParameter; 18] = [
+    param(1, "SP", IN, PlcType::Real, true),
+    param(2, "PV", IN, PlcType::Real, true),
+    param(3, "KP", IN, PlcType::Real, false),
+    param(4, "TI", IN, PlcType::Time, false),
+    param(5, "TD", IN, PlcType::Time, false),
+    param(6, "MV_MIN", IN, PlcType::Real, false),
+    param(7, "MV_MAX", IN, PlcType::Real, false),
+    param(8, "MANUAL", IN, PlcType::Bool, false),
+    param(9, "MV_MAN", IN, PlcType::Real, false),
+    param(10, "ENABLE", IN, PlcType::Bool, false),
+    param(11, "RESET", IN, PlcType::Bool, false),
+    param(12, "TS", IN, PlcType::Time, false),
+    param(13, "MV", OUT, PlcType::Real, false),
+    param(14, "E", OUT, PlcType::Real, false),
+    param(15, "P", OUT, PlcType::Real, false),
+    param(16, "I", OUT, PlcType::Real, false),
+    param(17, "D", OUT, PlcType::Real, false),
+    param(18, "SAT", OUT, PlcType::Bool, false),
+];
 const DOWN_COUNTER: [StandardParameter; 5] = [
     param(1, "CD", IN, PlcType::Bool, true),
     param(2, "LD", IN, PlcType::Bool, false),
@@ -77,7 +101,7 @@ const DOWN_COUNTER: [StandardParameter; 5] = [
 ];
 
 impl StandardFunctionBlock {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Ton,
         Self::Tof,
         Self::Tp,
@@ -85,6 +109,7 @@ impl StandardFunctionBlock {
         Self::FTrig,
         Self::Ctu,
         Self::Ctd,
+        Self::Pid,
     ];
     pub fn name(self) -> &'static str {
         match self {
@@ -95,6 +120,7 @@ impl StandardFunctionBlock {
             Self::FTrig => "F_TRIG",
             Self::Ctu => "CTU",
             Self::Ctd => "CTD",
+            Self::Pid => "PID",
         }
     }
     pub fn from_name(name: &str) -> Option<Self> {
@@ -107,6 +133,7 @@ impl StandardFunctionBlock {
             Self::RTrig | Self::FTrig => &TRIGGER,
             Self::Ctu => &UP_COUNTER,
             Self::Ctd => &DOWN_COUNTER,
+            Self::Pid => &PID,
         }
     }
     pub fn parameter_named(self, name: &str) -> Option<StandardParameter> {

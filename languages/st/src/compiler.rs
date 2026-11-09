@@ -850,7 +850,7 @@ impl Compiler {
             self.report(
                 codes::UNSUPPORTED,
                 format!(
-                    "Type '{}' is unknown; use BOOL, INT, REAL, TIME, a standard block (TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD) or a FUNCTION_BLOCK of this program.",
+                    "Type '{}' is unknown; use BOOL, INT, REAL, TIME, a standard block (TON, TOF, TP, R_TRIG, F_TRIG, CTU, CTD, PID) or a FUNCTION_BLOCK of this program.",
                     type_name.text
                 ),
                 type_name.span,

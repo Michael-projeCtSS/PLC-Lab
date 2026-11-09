@@ -503,13 +503,13 @@ fn the_library_browsers_standard_examples_compile() {
         "../../../packages/ui/src/workspace/standard-examples.json"
     ))
     .unwrap();
-    assert_eq!(examples.len(), 7);
+    assert_eq!(examples.len(), 8);
     for (block, example) in examples {
         let (declaration, body) = example.split_once('\n').unwrap();
         let program = format!(
             "PROGRAM Main
-VAR_INPUT StartPB : BOOL; Running : BOOL; PartPresent : BOOL; ResetPB : BOOL; LoadPB : BOOL; END_VAR
-VAR_OUTPUT Lamp : BOOL; Fan : BOOL; Horn : BOOL; BatchDone : BOOL; Empty : BOOL; END_VAR
+VAR_INPUT StartPB : BOOL; Running : BOOL; PartPresent : BOOL; ResetPB : BOOL; LoadPB : BOOL; Temperature : REAL; END_VAR
+VAR_OUTPUT Lamp : BOOL; Fan : BOOL; Horn : BOOL; BatchDone : BOOL; Empty : BOOL; Heater : REAL; END_VAR
 VAR Count : INT; Stops : INT; END_VAR
 {declaration}
 {body}

@@ -5,5 +5,6 @@
   "R_TRIG": "VAR Edge : R_TRIG; END_VAR\nEdge(CLK := StartPB);\nIF Edge.Q THEN Count := Count + 1; END_IF;",
   "F_TRIG": "VAR Fall : F_TRIG; END_VAR\nFall(CLK := Running);\nIF Fall.Q THEN Stops := Stops + 1; END_IF;",
   "CTU": "VAR Parts : CTU; END_VAR\nParts(CU := PartPresent, R := ResetPB, PV := 10);\nBatchDone := Parts.Q;",
-  "CTD": "VAR Remaining : CTD; END_VAR\nRemaining(CD := PartPresent, LD := LoadPB, PV := 10);\nEmpty := Remaining.Q;"
+  "CTD": "VAR Remaining : CTD; END_VAR\nRemaining(CD := PartPresent, LD := LoadPB, PV := 10);\nEmpty := Remaining.Q;",
+  "PID": "VAR Loop : PID; END_VAR\nLoop(SP := 60.0, PV := Temperature, KP := 4.0, TI := T#30s, MV => Heater);"
 }

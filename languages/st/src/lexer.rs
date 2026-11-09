@@ -361,9 +361,10 @@ fn word(name: String, upper: &str) -> TokenKind {
         "INT" => return TokenKind::Type(PlcType::Int),
         "REAL" => return TokenKind::Type(PlcType::Real),
         "TIME" => return TokenKind::Type(PlcType::Time),
-        "TON" | "TOF" | "TP" | "R_TRIG" | "F_TRIG" | "CTU" | "CTD" => {
+        // Every standard block of the runtime is a type name (TON ... CTD, PID).
+        _ if StandardFunctionBlock::from_name(upper).is_some() => {
             return TokenKind::FunctionBlockType(
-                StandardFunctionBlock::from_name(upper).expect("listed standard block name"),
+                StandardFunctionBlock::from_name(upper).expect("a standard block name"),
             );
         }
         "TRUE" => return TokenKind::Literal(Literal::Bool(true)),

@@ -1048,6 +1048,7 @@ export const en = {
   "code.PLC-RUNTIME-004": "Non-finite REAL value",
   "code.PLC-RUNTIME-005": "Clock overflow",
   "code.PLC-RUNTIME-006": "Scan counter overflow",
+  "code.PLC-RUNTIME-007": "Inverted output limits",
   "check.title": "Commissioning checklist",
   "check.intro":
     'Work from Power to Process. Operate every button and sensor and switch every output: checks marked "To test" turn into results as the simulation observes them. Missing feedback is reported after an actuator has been energized for {seconds} s.',
@@ -1405,5 +1406,7 @@ export const en = {
     "Up counter: each rising edge of CU adds one to CV; R resets it; Q is TRUE when CV reaches PV.",
   "lib.std.CTD":
     "Down counter: LD loads PV into CV; each rising edge of CD subtracts one; Q is TRUE when CV reaches zero.",
+  "lib.std.PID":
+    "PID controller: drives MV so that PV follows SP, with gain KP, integral time TI and derivative time TD; MV stays within MV_MIN..MV_MAX without integral windup; MANUAL hands MV to MV_MAN and back without a bump. P, I and D show the three parts of MV.",
 } as const;
 export type TranslationKey = keyof typeof en;
