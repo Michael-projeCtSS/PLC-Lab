@@ -70,7 +70,14 @@ export async function editorText(page, selector = EDITOR) {
   const lines = [];
   for (const row of rows)
     if (row.start || lines.length === 0) lines.push(row.text);
-    else lines[lines.length - 1] += row.text;
+    else {
+      // Monaco draws a continuation row indented like its line (wrappingIndent
+      // "same"); that indentation is drawn, it is not text.
+      const line = lines[lines.length - 1];
+      const indent = /^ */.exec(line)[0].length;
+      const drawn = Math.min(indent, /^ */.exec(row.text)[0].length);
+      lines[lines.length - 1] = line + row.text.slice(drawn);
+    }
   return lines.join("\n");
 }
 

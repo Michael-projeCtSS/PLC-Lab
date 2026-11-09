@@ -214,6 +214,27 @@ try {
         await text(),
         PROGRAM.replace("END_PROGRAM", `${long}END_PROGRAM`),
       );
+      // An indented long line: Monaco draws each of its rows indented, the text has
+      // the indentation once. Pasted, because typed lines are auto-indented.
+      const indented = PROGRAM.replace(
+        "END_PROGRAM",
+        `    ${long}\nEND_PROGRAM`,
+      );
+      const clipboard = await page
+        .evaluate(async (value) => {
+          await navigator.clipboard.writeText(value);
+          return true;
+        }, indented)
+        .catch(() => false);
+      assert.ok(clipboard, "the WebView clipboard is unavailable");
+      await page.keyboard.press("Control+A");
+      await page.keyboard.press("Control+V");
+      await delay(150);
+      assert.ok(
+        (await wrappedRows(page)) > 0,
+        "the indented line did not wrap",
+      );
+      assert.equal(await text(), indented);
       await page.keyboard.press("Control+A");
       await page.keyboard.insertText(PROGRAM);
       assert.equal(await text(), PROGRAM);
