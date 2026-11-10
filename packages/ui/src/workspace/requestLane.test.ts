@@ -23,7 +23,7 @@ describe("request lane", () => {
     expect(sent).toEqual(["press"]);
   });
 
-  it("sends each request only after the previous one settled", async () => {
+  it("sends each request only after the previous one was answered", async () => {
     const lane = createLane(1000);
     const sent: string[] = [];
     const press = deferred<string>();
@@ -64,36 +64,61 @@ describe("request lane", () => {
     expect(await next).toBe("sent");
   });
 
-  it("a request that never answers stops holding the lane after the limit", async () => {
+  it("a slow request is never overtaken: the next one waits for its late answer", async () => {
     vi.useFakeTimers();
     const lane = createLane(5000);
-    const stalls: string[] = [];
-    const hung = lane.run(
-      () => new Promise<never>(() => undefined),
-      () => stalls.push("build"),
-    );
-    const sent: string[] = [];
-    const release = lane.run(async () => sent.push("release"));
-    await vi.advanceTimersByTimeAsync(4999);
-    expect(sent).toEqual([]);
-    expect(stalls).toEqual([]);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(stalls).toEqual(["build"]);
-    await release;
-    expect(sent).toEqual(["release"]);
-    void hung;
+    const applied: string[] = [];
+    const press = deferred<void>();
+    const pressed = lane.run(async () => {
+      await press.promise;
+      applied.push("press");
+    });
+    const released = lane.run(async () => {
+      applied.push("release");
+    });
+    // Long past the stall time the release is still not sent.
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(applied).toEqual([]);
+    press.resolve();
+    await pressed;
+    await released;
+    expect(applied).toEqual(["press", "release"]);
   });
 
-  it("a request that answers in time is not reported as stalled", async () => {
+  it("reports a stall with the requests waiting behind it, then the late answer", async () => {
+    vi.useFakeTimers();
+    let clock = 0;
+    const lane = createLane(5000, () => clock);
+    const reports: string[] = [];
+    const build = deferred<void>();
+    const building = lane.run(() => build.promise, {
+      onStall: (waiting) => reports.push(`stalled, ${waiting} waiting`),
+      onLateAnswer: (ms) => reports.push(`answered after ${ms} ms`),
+    });
+    void lane.run(async () => "release");
+    void lane.run(async () => "press");
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(reports).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(reports).toEqual(["stalled, 2 waiting"]);
+    clock = 7000;
+    build.resolve();
+    await building;
+    expect(reports).toEqual(["stalled, 2 waiting", "answered after 7000 ms"]);
+  });
+
+  it("a request answered in time is not reported", async () => {
     vi.useFakeTimers();
     const lane = createLane(5000);
     const onStall = vi.fn();
-    await lane.run(async () => "fast", onStall);
+    const onLateAnswer = vi.fn();
+    await lane.run(async () => "fast", { onStall, onLateAnswer });
     await vi.advanceTimersByTimeAsync(10_000);
     expect(onStall).not.toHaveBeenCalled();
+    expect(onLateAnswer).not.toHaveBeenCalled();
   });
 
-  it("is idle again once everything settled", async () => {
+  it("is idle again once everything was answered", async () => {
     const lane = createLane(1000);
     await lane.run(async () => "first");
     await flush();

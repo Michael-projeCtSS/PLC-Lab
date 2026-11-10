@@ -605,6 +605,11 @@ function buttonBackend() {
     },
   );
   fake.frame.mockImplementation(async () => startPressed(state.pressed));
+  // A workspace opens with a fresh process: every button released.
+  fake.openWorkspace.mockImplementation(async () => {
+    state.pressed = false;
+    return workspace();
+  });
   return {
     state,
     sent,
@@ -735,6 +740,39 @@ it("leaving the workspace releases a held button before the workspace closes", a
   expect(fake.operate.mock.invocationCallOrder[1]).toBeLessThan(
     fake.closeWorkspace.mock.invocationCallOrder[0] ?? 0,
   );
+});
+
+it("a release that fails while the workspace closes is recorded and shown when a workspace opens", async () => {
+  const backend = buttonBackend();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  const button = await openStartButton();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  backend.refuse("The core refused the release.");
+  fireEvent.click(screen.getByRole("button", { name: "HOME" }));
+  await waitFor(() => expect(fake.closeWorkspace).toHaveBeenCalledTimes(1));
+  expect(backend.sent).toEqual(["start press", "start release"]);
+  expect(warn).toHaveBeenCalledWith(
+    expect.stringContaining(
+      "Releasing Start S1 while closing Motor start/stop failed: The core refused the release.",
+    ),
+  );
+  // The next workspace reports it, and its process starts with the button released.
+  fireEvent.click(
+    await screen.findByRole("button", { name: /Motor start\/stop/ }),
+  );
+  fireEvent.click(await screen.findByRole("tab", { name: "Process" }));
+  await reported(
+    await screen.findByRole("button", { name: "Start S1 (hold to press)" }),
+    false,
+  );
+  fireEvent.click(screen.getByRole("tab", { name: /Messages/ }));
+  expect(
+    await screen.findByText(
+      "When Motor start/stop was closed, the release of Start S1 was not confirmed. The reopened project starts with every button released. Reason: The core refused the release.",
+    ),
+  ).toBeInTheDocument();
+  warn.mockRestore();
 });
 
 it("a failed press is reported, its release is still sent and later gestures work", async () => {

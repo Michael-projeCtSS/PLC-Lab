@@ -1250,7 +1250,26 @@ export const pl = {
   "process.action.presence": "zmiana obecności obiektu",
   "process.action.door": "zmiana stanu drzwi",
   "request.stalled":
-    "Rdzeń aplikacji nie odpowiada od {seconds} s. Kolejne akcje operatora i polecenia są wysyłane bez czekania na odpowiedź.",
+    "{request}: brak odpowiedzi od {seconds} s. Liczba czekających akcji: {waiting}; zachowają swoją kolejność.",
+  "request.lateAnswer":
+    "{request}: odpowiedź nadeszła po {seconds} s. Czekające akcje są wysyłane dalej w kolejności.",
+  "request.gesture": "{component}: {action}",
+  "request.command.build": "Kompiluj i wgraj",
+  "request.command.check": "Sprawdzenie",
+  "request.command.compile": "Kompilacja",
+  "request.command.sim": "Polecenie symulacji",
+  "request.command.mode": "Przełącznik trybu PLC",
+  "request.command.speed": "Zmiana prędkości",
+  "request.command.force": "Wymuszenie",
+  "request.command.restart": "Restart PLC",
+  "request.command.alarm": "Potwierdzenie alarmu",
+  "request.command.diagnose": "Diagnoza",
+  "request.command.repair": "Naprawa",
+  "request.command.other": "Polecenie",
+  "close.releaseFailed":
+    "Przy zamykaniu {project} nie potwierdzono zwolnienia {component}. Ponownie otwarty projekt startuje ze wszystkimi przyciskami zwolnionymi. Przyczyna: {error}",
+  "close.failed":
+    "Nie potwierdzono zamknięcia {project}; otwarcie projektu zapisuje go. Przyczyna: {error}",
   "direction.input": "wejście",
   "direction.output": "wyjście",
   "crash.title": "Część interfejsu przestała działać",

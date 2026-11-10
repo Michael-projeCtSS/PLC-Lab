@@ -6,7 +6,7 @@
  */
 export type Problem = {
   time: string;
-  kind: "render" | "error" | "rejection" | "editor";
+  kind: "render" | "error" | "rejection" | "editor" | "workspace";
   message: string;
   detail?: string;
 };

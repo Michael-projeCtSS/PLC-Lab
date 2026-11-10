@@ -27,11 +27,27 @@ import { diagnosticLine } from "../locale/messages";
 import { rememberDraft } from "../error-log";
 import { localizeContent } from "../locale/content";
 import { newTableId, newTableName, setRows, updateTable } from "./watchEdit";
-import { createLane } from "./requestLane";
+import { createLane, type LaneEvents } from "./requestLane";
+import { reportClosing, takeClosingReports } from "./closingReports";
 import { HeldButtons, type Holder, type HolderMatch } from "./heldButtons";
 
-/** After this long without an answer a request stops holding the lane (ADR-0048). */
+/** After this long without an answer a request is reported as stalled (ADR-0048). */
 const STALL_SECONDS = 30;
+
+/** Names of the commands that `act` runs, for reports about them. */
+const COMMAND: Record<string, TranslationKey> = {
+  build: "request.command.build",
+  check: "request.command.check",
+  compile: "request.command.compile",
+  sim: "request.command.sim",
+  mode: "request.command.mode",
+  speed: "request.command.speed",
+  force: "request.command.force",
+  restart: "request.command.restart",
+  alarm: "request.command.alarm",
+  diagnose: "request.command.diagnose",
+  repair: "request.command.repair",
+};
 
 const ACTION: Record<OperateActionDto["type"], TranslationKey> = {
   press: "process.action.press",
@@ -169,10 +185,12 @@ export function useLab(projectId: string) {
   useEffect(() => {
     let active = true;
     let opened: WorkspaceDto | null = null;
+    let name = projectId;
     (async () => {
       const p = await api.project(projectId);
       const w = await api.openWorkspace(projectId);
       opened = w;
+      name = p.name;
       if (!active) {
         void api
           .closeWorkspace({ workspaceId: w.workspaceId })
@@ -192,21 +210,47 @@ export function useLab(projectId: string) {
       setLoadedLibrary(texts(documents));
       setWatchTables(p.watchTables);
       setActiveTable(p.watchTables[0]?.id ?? null);
+      // Failures while the previous workspace closed have had no screen until now.
+      for (const r of takeClosingReports())
+        log(
+          "warning",
+          r.component
+            ? wording.current.say("close.releaseFailed", {
+                project: r.project,
+                component: r.component,
+                error: r.error,
+              })
+            : wording.current.say("close.failed", {
+                project: r.project,
+                error: r.error,
+              }),
+        );
     })().catch((e: unknown) => active && setFatal(e));
     return () => {
       active = false;
       if (!opened) return;
       const target = { workspaceId: opened.workspaceId };
       // Closing saves the project, so held buttons are released first and the close
-      // waits for every earlier request of this workspace. Nothing is left on screen to
-      // report a failure to, as before.
+      // waits for every earlier request of this workspace. Nothing of this workspace is
+      // left on screen: a failure goes to the problem log and to the next workspace.
+      const labels = wording.current.labels;
       for (const component of held.releaseAll())
         void lane
           .run(() => api.operate(target, component, { type: "release" }))
-          .catch(() => undefined);
-      void lane.run(() => api.closeWorkspace(target)).catch(() => undefined);
+          .catch((e: unknown) =>
+            reportClosing({
+              project: name,
+              component: labels.get(component) ?? component,
+              error: errorText(e),
+            }),
+          );
+      void lane
+        .run(() => api.closeWorkspace(target))
+        .catch((e: unknown) =>
+          reportClosing({ project: name, error: errorText(e) }),
+        );
     };
-  }, [projectId, applyFrame, nextFrameRequest, lane, held]);
+  }, [projectId, applyFrame, nextFrameRequest, lane, held, log]);
 
   // Frame refresh: one read in flight, coalesced; driven by wake events and actions.
   const refreshFrame = useCallback(() => setWakes((n) => n + 1), []);
@@ -235,14 +279,39 @@ export function useLab(projectId: string) {
     };
   }, [wsId, refreshFrame]);
 
-  /** Report a request that stopped holding the lane without an answer. */
-  const stalled = useCallback(
-    () =>
-      log(
-        "warning",
-        wording.current.say("request.stalled", { seconds: STALL_SECONDS }),
-      ),
+  /** Reports about a request that is slow to answer; `request` names it. */
+  const laneEvents = useCallback(
+    (request: () => string): LaneEvents => ({
+      onStall: (waiting) =>
+        log(
+          "warning",
+          wording.current.say("request.stalled", {
+            request: request(),
+            seconds: STALL_SECONDS,
+            waiting,
+          }),
+        ),
+      onLateAnswer: (ms) =>
+        log(
+          "info",
+          wording.current.say("request.lateAnswer", {
+            request: request(),
+            seconds: Math.round(ms / 1000),
+          }),
+        ),
+    }),
     [log],
+  );
+  /** "Start S1: release", in the interface language. */
+  const describeGesture = useCallback(
+    (component: string, action: OperateActionDto) => {
+      const { say, labels } = wording.current;
+      return say("request.gesture", {
+        component: labels.get(component) ?? component,
+        action: say(ACTION[action.type]),
+      });
+    },
+    [],
   );
 
   /**
@@ -262,13 +331,18 @@ export function useLab(projectId: string) {
       pending.current = true;
       setBusy(label);
       try {
-        return await lane.run(async () => {
-          const request = nextFrameRequest();
-          const result = await work();
-          const f = toFrame ? toFrame(result) : null;
-          if (f) applyFrame(request, f);
-          return result;
-        }, stalled);
+        return await lane.run(
+          async () => {
+            const request = nextFrameRequest();
+            const result = await work();
+            const f = toFrame ? toFrame(result) : null;
+            if (f) applyFrame(request, f);
+            return result;
+          },
+          laneEvents(() =>
+            wording.current.say(COMMAND[label] ?? "request.command.other"),
+          ),
+        );
       } catch (e) {
         log("error", errorText(e));
         return null;
@@ -278,7 +352,7 @@ export function useLab(projectId: string) {
         refreshFrame();
       }
     },
-    [lane, log, stalled, refreshFrame, nextFrameRequest, applyFrame],
+    [lane, log, laneEvents, refreshFrame, nextFrameRequest, applyFrame],
   );
 
   /**
@@ -298,12 +372,15 @@ export function useLab(projectId: string) {
     ): Promise<LiveFrameDto | null> => {
       if (!ws) return Promise.resolve(null);
       return lane
-        .run(async () => {
-          const request = nextFrameRequest();
-          const f = await api.operate(ws, component, action);
-          applyFrame(request, f);
-          return f;
-        }, stalled)
+        .run(
+          async () => {
+            const request = nextFrameRequest();
+            const f = await api.operate(ws, component, action);
+            applyFrame(request, f);
+            return f;
+          },
+          laneEvents(() => describeGesture(component, action)),
+        )
         .catch((e: unknown) => {
           const { say, labels } = wording.current;
           log(
@@ -318,7 +395,16 @@ export function useLab(projectId: string) {
         })
         .finally(refreshFrame);
     },
-    [ws, lane, log, stalled, refreshFrame, nextFrameRequest, applyFrame],
+    [
+      ws,
+      lane,
+      log,
+      laneEvents,
+      describeGesture,
+      refreshFrame,
+      nextFrameRequest,
+      applyFrame,
+    ],
   );
 
   /**

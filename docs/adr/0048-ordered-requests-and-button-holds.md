@@ -25,8 +25,9 @@ left the button pressed.
 ### One ordered lane per workspace
 
 Every request that changes a workspace goes through one lane (`requestLane.ts`). A request
-is sent only after the previous one settled, so the backend applies gestures and commands
-in the order they were made. An idle lane sends at once, in the same task as the click or
+is sent only after the previous one was answered. The host answers a use case only after
+it has applied its change under the workspace lock, so the backend applies gestures and
+commands strictly in the order they were made. An idle lane sends at once, in the same task as the click or
 gesture. Frame reads are not in the lane; they change nothing.
 
 - **Commands** keep the one-at-a-time rule. A command made while another command is
@@ -40,9 +41,20 @@ gesture. Frame reads are not in the lane; they change nothing.
   request's frame wins.
 - **Failures.** A failed request is reported (a gesture names the component and the
   action) and the lane continues with the next request.
-- **A backend that never answers** cannot block the lane forever. After 30 s without an
-  answer, a request stops holding the lane, a warning says so, and later requests are
-  sent. Ordering is only guaranteed for requests that answer within that time.
+- **A slow backend** never reorders requests (amended, CP9 queue hardening). After 30 s
+  without an answer, a warning names the request and how many requests wait behind it;
+  when the answer comes, a message says after how long, and the waiting requests follow in
+  order. A request is never skipped or overtaken. The first version released the lane
+  after 30 s. That could reorder operations: each request runs on its own host worker
+  and then waits for the one workspace lock, which grants no order among waiters, so a
+  late request could be applied after a newer one. Sending early also gains nothing, since
+  the next request needs the same lock. A core that never answers holds every later
+  request of that workspace; the warning says so, and closing the application is the
+  remedy for a hung core.
+- **Scope.** The guarantee covers every request sent through the lane: all commands run
+  through `act` and all operator gestures. Frame reads, diagnostic queries (network ping,
+  measurements, commissioning evidence) and project saves (autosave, watch tables,
+  station) do not use the lane, so the guarantee does not cover their order.
 
 ### Push-button holds
 
@@ -72,14 +84,25 @@ first and the close is sent after every earlier request. Requests carry their wo
 id. A request for a workspace that was replaced fails with `StaleWorkspace` and cannot
 change another workspace.
 
+A release or close that fails while the workspace closes has no screen left to show it.
+It is written to the problem log at once (kind `workspace`, shown on the error screen)
+and kept, also across a reload, until the next workspace opens and lists it in Messages
+(`closingReports.ts`). Nothing stays pressed: process state is not saved with the
+project, so a reopened workspace starts with every button released, and opening any
+workspace saves the previous one if its close did not arrive.
+
 ## Alternatives
 
 - **A queue for gestures only, commands still sent at once.** Rejected: a gesture and a
   command sent together race on the backend workers. A Step could run before the press
   it follows.
-- **Ordering in the backend (a sequence number per request).** It would need a contract
-  change and still could not apply a request it has not received. The order is known
-  where the requests are made.
+- **Ordering in the backend (a sequence number per request, fencing).** The backend
+  would reject a request older than the last applied one. That keeps order after an early
+  send, but it turns a slow request into a lost one: a late release rejected as stale
+  leaves the button pressed. It also needs a contract change on every mutating request.
+  Strict sequencing in the interface gives the same order without losing requests.
+- **Cancelling a slow request.** The host cannot cancel a use case that is running on its
+  worker, so a cancelled request could still be applied later.
 - **Releasing on `pointerleave`.** Rejected: an operator who slides off the button would
   release it unintentionally. Pointer capture keeps the gesture on the button.
 

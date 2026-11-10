@@ -1237,7 +1237,26 @@ export const en = {
   "process.action.presence": "target change",
   "process.action.door": "door change",
   "request.stalled":
-    "The application core has not answered for {seconds} s. Later operator actions and commands are sent without waiting for it.",
+    "{request} has not been answered for {seconds} s. {waiting} later actions wait for it and keep their order.",
+  "request.lateAnswer":
+    "{request} was answered after {seconds} s. The waiting actions continue in order.",
+  "request.gesture": "{component}: {action}",
+  "request.command.build": "Build & Load",
+  "request.command.check": "Check",
+  "request.command.compile": "Compile",
+  "request.command.sim": "Simulation command",
+  "request.command.mode": "PLC mode switch",
+  "request.command.speed": "Speed change",
+  "request.command.force": "Force",
+  "request.command.restart": "PLC restart",
+  "request.command.alarm": "Alarm acknowledgement",
+  "request.command.diagnose": "Diagnosis",
+  "request.command.repair": "Repair",
+  "request.command.other": "A command",
+  "close.releaseFailed":
+    "When {project} was closed, the release of {component} was not confirmed. The reopened project starts with every button released. Reason: {error}",
+  "close.failed":
+    "Closing {project} was not confirmed; opening a project saves it. Reason: {error}",
   "direction.input": "input",
   "direction.output": "output",
   "crash.title": "Part of the interface stopped working",
