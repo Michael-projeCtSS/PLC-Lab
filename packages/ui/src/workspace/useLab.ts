@@ -11,6 +11,7 @@ import {
   type DiagnosticDto,
   type GradeReportDto,
   type LiveFrameDto,
+  type OperateActionDto,
   type PouDto,
   type ProjectDto,
   type SignalDto,
@@ -100,8 +101,11 @@ export function useLab(projectId: string) {
     frameApplied.current = request;
     setFrame(f);
   }, []);
-  // One use case at a time: a second request while one is pending is ignored.
+  // One use case at a time: a second request while one is pending is ignored. Operator
+  // gestures are exempt; they queue instead (see `operate`).
   const pending = useRef(false);
+  // The gestures of this workspace, in the order they were made.
+  const gestures = useRef<Promise<unknown>>(Promise.resolve());
   const ws = useMemo(
     () => (workspace ? { workspaceId: workspace.workspaceId } : null),
     [workspace],
@@ -230,6 +234,41 @@ export function useLab(projectId: string) {
       }
     },
     [log, refreshFrame, nextFrameRequest, applyFrame],
+  );
+
+  /**
+   * Send an operator gesture on a process component (push-button press or release,
+   * selector, presence, door). Unlike `act`, a gesture is never ignored: a release made
+   * while an earlier gesture, a build or a toolbar command is pending must still reach
+   * the process, or the simulated button stays pressed. Gestures are sent one after
+   * another in the order they were made, because the backend runs concurrent requests
+   * on separate workers. Each gesture takes its frame request number when it is sent, so
+   * the frame of the newest request still wins; the frame is re-read afterwards, also
+   * after a failure.
+   */
+  const operate = useCallback(
+    (
+      component: string,
+      action: OperateActionDto,
+    ): Promise<LiveFrameDto | null> => {
+      if (!ws) return Promise.resolve(null);
+      const sent = gestures.current.then(async () => {
+        const request = nextFrameRequest();
+        try {
+          const f = await api.operate(ws, component, action);
+          applyFrame(request, f);
+          return f;
+        } catch (e) {
+          log("error", e instanceof Error ? e.message : String(e));
+          return null;
+        } finally {
+          refreshFrame();
+        }
+      });
+      gestures.current = sent;
+      return sent;
+    },
+    [ws, log, refreshFrame, nextFrameRequest, applyFrame],
   );
 
   // Program draft: live compile diagnostics and autosave, both debounced.
@@ -600,6 +639,7 @@ export function useLab(projectId: string) {
     busy,
     fatal,
     act,
+    operate,
     buildAndLoad,
     check,
     refresh: refreshFrame,

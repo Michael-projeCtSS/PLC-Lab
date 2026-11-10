@@ -2,11 +2,11 @@
  * HMI-style process view. Every value shown comes from the authoritative frame; the view
  * only maps quantities to symbols and turns operator gestures into operate requests.
  */
-import {
-  api,
-  type ComponentDto,
-  type LayoutDto,
-  type SignalValueDto,
+import type {
+  ComponentDto,
+  LayoutDto,
+  OperateActionDto,
+  SignalValueDto,
 } from "@plc-lab/ipc";
 import { formatQuantity } from "../format";
 import { processLabel } from "../locale/messages";
@@ -72,12 +72,9 @@ export function ProcessTab({
     x: l.x + (l.width ?? 0) / 2,
     y: l.y + (l.height ?? 0) / 2,
   });
-  const operate = (id: string, action: Parameters<typeof api.operate>[2]) =>
-    void lab.act(
-      "operate",
-      () => api.operate(ws, id, action),
-      (f) => f,
-    );
+  // Gestures queue in order and are never dropped, also while a command is pending.
+  const operate = (id: string, action: OperateActionDto) =>
+    void lab.operate(id, action);
   return (
     <div
       style={{
@@ -176,7 +173,7 @@ function Symbol({
   c: ComponentDto;
   l: LayoutDto;
   q: Q;
-  operate: (id: string, action: Parameters<typeof api.operate>[2]) => void;
+  operate: (id: string, action: OperateActionDto) => void;
   config: Record<string, string>;
   layout: Map<string, LayoutDto>;
 }) {

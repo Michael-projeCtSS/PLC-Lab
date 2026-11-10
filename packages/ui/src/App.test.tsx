@@ -28,6 +28,7 @@ const fake = vi.hoisted(() => ({
   buildAndLoad: vi.fn(),
   simulation: vi.fn(),
   plcMode: vi.fn(),
+  operate: vi.fn(),
   variables: vi.fn(),
   events: vi.fn(),
   check: vi.fn(),
@@ -561,6 +562,103 @@ it("a slow frame read never overwrites the newer frame of a command", async () =
   await waitFor(() => expect(fake.frame.mock.calls.length).toBeGreaterThan(1));
   expect(screen.getByText("Sim running")).toBeInTheDocument();
   expect(screen.queryByText("Sim paused")).not.toBeInTheDocument();
+});
+
+// ---- operator gestures: queued in order, never dropped -----------------------------------
+
+/** A frame whose Start S1 push button reports `pressed`. */
+const startPressed = (pressed: boolean) =>
+  frame({
+    components: [
+      {
+        id: "start",
+        quantities: [
+          { name: "pressed", value: { type: "BOOL", value: pressed } },
+        ],
+      },
+      ...frame().components.slice(1),
+    ],
+  });
+const gestures = () =>
+  fake.operate.mock.calls.map((c) => [c[1], (c[2] as { type: string }).type]);
+
+async function openStartButton() {
+  // Frame reads stay pending: only the use cases below can change the frame.
+  fake.frame.mockImplementation(() => new Promise(() => undefined));
+  await openMotor();
+  fireEvent.click(screen.getByRole("tab", { name: "Process" }));
+  return screen.findByRole("button", { name: "Start S1 (hold to press)" });
+}
+
+it("a push-button release made while the press is pending is sent after it, not dropped", async () => {
+  const press = deferred<ReturnType<typeof frame>>();
+  fake.operate
+    .mockReturnValueOnce(press.promise)
+    .mockResolvedValueOnce(startPressed(false));
+  const button = await openStartButton();
+  fireEvent.pointerDown(button);
+  fireEvent.pointerUp(button);
+  await waitFor(() => expect(fake.operate).toHaveBeenCalledTimes(1));
+  // The release waits for the press: the backend runs concurrent requests on separate
+  // workers, so sending both at once could reverse them.
+  await act(async () => undefined);
+  expect(gestures()).toEqual([["start", "press"]]);
+  await act(async () => press.resolve(startPressed(true)));
+  await waitFor(() =>
+    expect(gestures()).toEqual([
+      ["start", "press"],
+      ["start", "release"],
+    ]),
+  );
+  await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "false"));
+});
+
+it("a push-button release during a pending toolbar command still reaches the process", async () => {
+  const step = deferred<ReturnType<typeof frame>>();
+  fake.simulation.mockReturnValueOnce(step.promise);
+  fake.operate
+    .mockResolvedValueOnce(startPressed(true))
+    .mockResolvedValueOnce(startPressed(false));
+  const button = await openStartButton();
+  fireEvent.pointerDown(button);
+  await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "true"));
+  const stepButton = screen.getByRole("button", { name: "Step" });
+  // Toolbar commands keep their one-at-a-time rule: the second click is ignored.
+  act(() => {
+    stepButton.click();
+    stepButton.click();
+  });
+  expect(fake.simulation).toHaveBeenCalledTimes(1);
+  fireEvent.pointerUp(button);
+  await waitFor(() =>
+    expect(gestures()).toEqual([
+      ["start", "press"],
+      ["start", "release"],
+    ]),
+  );
+  await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "false"));
+  // Step was sent before the release: its late frame is older and is not applied.
+  await act(async () => step.resolve(startPressed(true)));
+  await waitFor(() => expect(stepButton).toBeEnabled());
+  expect(button).toHaveAttribute("aria-pressed", "false");
+  expect(fake.simulation).toHaveBeenCalledTimes(1);
+});
+
+it("a failed gesture is reported and the gestures after it are still sent", async () => {
+  fake.operate
+    .mockRejectedValueOnce(new Error("Operation refused"))
+    .mockResolvedValueOnce(startPressed(false));
+  const button = await openStartButton();
+  fireEvent.pointerDown(button);
+  fireEvent.pointerUp(button);
+  await waitFor(() =>
+    expect(gestures()).toEqual([
+      ["start", "press"],
+      ["start", "release"],
+    ]),
+  );
+  fireEvent.click(screen.getByRole("tab", { name: /Messages/ }));
+  expect(await screen.findByText(/Operation refused/)).toBeInTheDocument();
 });
 
 it("PLC and simulation controls explain what they do", async () => {

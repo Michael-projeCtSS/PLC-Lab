@@ -69,7 +69,10 @@ cycle, or restores the machine and power-cycles the PLC. Lesson 2 explains the s
 distinction before the first exercise. Only one command runs at a time: the controls
 are disabled while a command is pending, a second click is ignored, and the frame is
 re-read from the backend afterwards; a slower, older response never replaces a newer
-frame.
+frame. Operator gestures in the process view (push-button press and release, selector,
+presence, door) are never ignored: they reach the backend one after another in the order
+they were made, also while a command or an earlier gesture is pending, so a release
+always releases the button.
 
 ## Feedback design
 

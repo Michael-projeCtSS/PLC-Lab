@@ -154,21 +154,38 @@ try {
   const explain = page.getByTestId("sequence-explain");
   const button = (label) =>
     page.getByRole("button", { name: `${label} (hold to press)` });
-  // Each gesture waits until the backend reports the button's new state, as an operator
-  // sees it, before the next one: the workspace runs one request at a time and a
-  // gesture made while another is in flight is not sent.
+  // The button state the backend reports, as an operator sees it.
+  const reported = (label, pressed) =>
+    button(label)
+      .and(page.locator(`[aria-pressed="${pressed}"]`))
+      .waitFor({ timeout: 10_000 });
   const down = async (label) => {
     await button(label).dispatchEvent("pointerdown", { pointerId: 1 });
-    await button(label)
-      .and(page.locator('[aria-pressed="true"]'))
-      .waitFor({ timeout: 10_000 });
+    await reported(label, true);
   };
   const up = async (label) => {
     await button(label).dispatchEvent("pointerup", { pointerId: 1 });
-    await button(label)
-      .and(page.locator('[aria-pressed="false"]'))
-      .waitFor({ timeout: 10_000 });
+    await reported(label, false);
   };
+  // Gestures dispatched in one page task: each later one is made while the earlier ones
+  // are still in flight to the backend. The workspace sends them in order, drops none.
+  const atOnce = (...gestures) =>
+    page.evaluate((list) => {
+      for (const [label, type] of list) {
+        const target = document.querySelector(
+          `[role="button"][aria-label="${label} (hold to press)"]`,
+        );
+        if (!target) throw new Error(`No button ${label}`);
+        target.dispatchEvent(
+          new PointerEvent(type, {
+            pointerId: 1,
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+          }),
+        );
+      }
+    }, gestures);
   const press = async (label, ms = 400) => {
     await down(label);
     await delay(ms);
@@ -220,7 +237,6 @@ try {
       page.getByRole("note"),
       /Not permitted: Hold button released/,
     );
-    await up("Hold S3");
     await waitText(state, /^IDLE$/);
     await page.screenshot({ path: path.join(directory, "refused.png") });
   });
@@ -229,7 +245,13 @@ try {
     "Start runs the batch: transitions follow the real tank",
     async () => {
       const before = percent(await attribute(tank, "aria-label"));
-      await press("Start S1");
+      // Releasing Hold S3 and pressing Start S1 at once: the press is made while the
+      // release is in flight and must not be dropped.
+      await atOnce(["Hold S3", "pointerup"], ["Start S1", "pointerdown"]);
+      await reported("Hold S3", false);
+      await reported("Start S1", true);
+      await delay(400);
+      await up("Start S1");
       await waitText(active, /^S1 Open the inlet valve$/, 5000);
       await waitText(active, /^S2 Fill the tank$/, 10_000);
       await waitText(state, /^RUNNING$/);
