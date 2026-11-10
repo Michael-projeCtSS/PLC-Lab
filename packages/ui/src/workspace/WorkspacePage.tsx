@@ -19,6 +19,7 @@ import { Inspector } from "./Inspector";
 import { Dock } from "./Dock";
 import { ForceBanner } from "./ForceBanner";
 import { TuningTab } from "./TuningTab";
+import { LanguageSwitch } from "./LanguageSwitch";
 
 export type CenterTab =
   | "program"
@@ -145,6 +146,11 @@ export function WorkspacePage({
                 label={t("ws.views")}
                 active={visibleTab}
                 onSelect={setTab}
+                extra={
+                  visibleTab === "program" ? (
+                    <LanguageSwitch lab={lab} />
+                  ) : undefined
+                }
                 tabs={[
                   { id: "program", label: t("ws.program") },
                   ...(!simple

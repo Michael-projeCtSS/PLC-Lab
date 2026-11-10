@@ -1340,10 +1340,14 @@ it("a Free Lab program switches to Ladder Diagram with the scene's signals decla
       comment: "Start button",
     },
   ]);
-  // Exercises keep their language; only Free Lab programs switch.
+  // The switch sits in the view tabs, so the editor keeps its full height.
+  const tabs = screen.getByRole("tablist", { name: "Workspace views" });
   expect(
-    screen.getByRole("group", { name: "Program language" }),
+    within(tabs).getByRole("group", { name: "Program language" }),
   ).toBeInTheDocument();
+  expect(
+    within(tabs).getByRole("button", { name: "Ladder Diagram (LAD)" }),
+  ).toHaveAttribute("aria-pressed", "true");
 });
 
 it("a rung is built graphically; the backend compiles the ladder document and reports what is missing", async () => {
