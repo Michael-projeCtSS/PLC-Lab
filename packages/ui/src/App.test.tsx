@@ -564,7 +564,7 @@ it("a slow frame read never overwrites the newer frame of a command", async () =
   expect(screen.queryByText("Sim paused")).not.toBeInTheDocument();
 });
 
-// ---- operator gestures: queued in order, never dropped -----------------------------------
+// ---- operator gestures: one ordered lane, every press gets its release (ADR-0048) --------
 
 /** A frame whose Start S1 push button reports `pressed`. */
 const startPressed = (pressed: boolean) =>
@@ -579,49 +579,304 @@ const startPressed = (pressed: boolean) =>
       ...frame().components.slice(1),
     ],
   });
-const gestures = () =>
-  fake.operate.mock.calls.map((c) => [c[1], (c[2] as { type: string }).type]);
+
+/**
+ * The backend side of the Start S1 push button: an operate request changes the button
+ * when the backend answers it, and every frame (operate answer or read) reports it.
+ * `gate()` keeps the next operate request unanswered until the returned function opens
+ * it; `refuse()` makes the next one fail without changing anything.
+ */
+function buttonBackend() {
+  const state = { pressed: false };
+  const sent: string[] = [];
+  const gates: Promise<void>[] = [];
+  const refusals: Error[] = [];
+  fake.operate.mockReset();
+  fake.operate.mockImplementation(
+    async (_ws: unknown, component: string, action: { type: string }) => {
+      sent.push(`${component} ${action.type}`);
+      const gate = gates.shift();
+      if (gate) await gate;
+      const refusal = refusals.shift();
+      if (refusal) throw refusal;
+      if (action.type === "press") state.pressed = true;
+      if (action.type === "release") state.pressed = false;
+      return startPressed(state.pressed);
+    },
+  );
+  fake.frame.mockImplementation(async () => startPressed(state.pressed));
+  return {
+    state,
+    sent,
+    gate() {
+      const open = deferred<void>();
+      gates.push(open.promise);
+      return () => act(async () => open.resolve());
+    },
+    refuse(message: string) {
+      refusals.push(new Error(message));
+    },
+  };
+}
 
 async function openStartButton() {
-  // Frame reads stay pending: only the use cases below can change the frame.
-  fake.frame.mockImplementation(() => new Promise(() => undefined));
   await openMotor();
   fireEvent.click(screen.getByRole("tab", { name: "Process" }));
   return screen.findByRole("button", { name: "Start S1 (hold to press)" });
 }
+/** The button state the backend reported in the latest applied frame. */
+const reported = (button: HTMLElement, pressed: boolean) =>
+  waitFor(() =>
+    expect(button).toHaveAttribute("aria-pressed", String(pressed)),
+  );
 
-it("a push-button release made while the press is pending is sent after it, not dropped", async () => {
-  const press = deferred<ReturnType<typeof frame>>();
-  fake.operate
-    .mockReturnValueOnce(press.promise)
-    .mockResolvedValueOnce(startPressed(false));
+it("press then release reaches the backend in order and leaves the button released", async () => {
+  const backend = buttonBackend();
   const button = await openStartButton();
-  fireEvent.pointerDown(button);
-  fireEvent.pointerUp(button);
-  await waitFor(() => expect(fake.operate).toHaveBeenCalledTimes(1));
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  expect(backend.state.pressed).toBe(true);
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  await reported(button, false);
+  expect(backend.sent).toEqual(["start press", "start release"]);
+  expect(backend.state.pressed).toBe(false);
+});
+
+it("a release made while the press is pending is sent after it, not dropped", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  const answerPress = backend.gate();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  fireEvent.pointerUp(button, { pointerId: 1 });
   // The release waits for the press: the backend runs concurrent requests on separate
   // workers, so sending both at once could reverse them.
   await act(async () => undefined);
-  expect(gestures()).toEqual([["start", "press"]]);
-  await act(async () => press.resolve(startPressed(true)));
+  expect(backend.sent).toEqual(["start press"]);
+  await answerPress();
   await waitFor(() =>
-    expect(gestures()).toEqual([
-      ["start", "press"],
-      ["start", "release"],
-    ]),
+    expect(backend.sent).toEqual(["start press", "start release"]),
   );
-  await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "false"));
+  await reported(button, false);
+  expect(backend.state.pressed).toBe(false);
 });
 
-it("a push-button release during a pending toolbar command still reaches the process", async () => {
+it("pointercancel releases a held button", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  fireEvent.pointerDown(button, { pointerId: 3 });
+  await reported(button, true);
+  fireEvent.pointerCancel(button, { pointerId: 3 });
+  await reported(button, false);
+  expect(backend.sent).toEqual(["start press", "start release"]);
+  expect(backend.state.pressed).toBe(false);
+});
+
+it("a capture loss without pointerup releases a held button", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  fireEvent.lostPointerCapture(button, { pointerId: 1 });
+  await reported(button, false);
+  expect(backend.sent).toEqual(["start press", "start release"]);
+  expect(backend.state.pressed).toBe(false);
+});
+
+it("a window that loses focus releases a held button", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  fireEvent.blur(window);
+  await reported(button, false);
+  // The pointerup arriving later sends nothing more.
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  await act(async () => undefined);
+  expect(backend.sent).toEqual(["start press", "start release"]);
+  expect(backend.state.pressed).toBe(false);
+});
+
+it("closing the process view releases a held button; the workspace stays open", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  fireEvent.click(
+    within(screen.getByRole("tablist", { name: "Workspace views" })).getByRole(
+      "tab",
+      { name: "Program" },
+    ),
+  );
+  await waitFor(() =>
+    expect(backend.sent).toEqual(["start press", "start release"]),
+  );
+  await waitFor(() => expect(backend.state.pressed).toBe(false));
+  expect(fake.closeWorkspace).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("tab", { name: "Process" }));
+  await reported(
+    await screen.findByRole("button", { name: "Start S1 (hold to press)" }),
+    false,
+  );
+});
+
+it("leaving the workspace releases a held button before the workspace closes", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  fireEvent.click(screen.getByRole("button", { name: "HOME" }));
+  await waitFor(() => expect(fake.closeWorkspace).toHaveBeenCalledTimes(1));
+  expect(backend.sent).toEqual(["start press", "start release"]);
+  expect(backend.state.pressed).toBe(false);
+  // Same workspace, release first: closing saves the project.
+  const release = fake.operate.mock.calls[1] ?? [];
+  expect(release[0]).toEqual({ workspaceId: "1" });
+  expect(fake.closeWorkspace).toHaveBeenCalledWith({ workspaceId: "1" });
+  expect(fake.operate.mock.invocationCallOrder[1]).toBeLessThan(
+    fake.closeWorkspace.mock.invocationCallOrder[0] ?? 0,
+  );
+});
+
+it("a failed press is reported, its release is still sent and later gestures work", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  backend.refuse("Operation refused");
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  await waitFor(() =>
+    expect(backend.sent).toEqual(["start press", "start release"]),
+  );
+  expect(backend.state.pressed).toBe(false);
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  await reported(button, false);
+  expect(backend.sent).toEqual([
+    "start press",
+    "start release",
+    "start press",
+    "start release",
+  ]);
+  fireEvent.click(screen.getByRole("tab", { name: /Messages/ }));
+  expect(
+    await screen.findByText(
+      "Start S1: the press was not applied. Operation refused",
+    ),
+  ).toBeInTheDocument();
+});
+
+it("two rapid press-release gestures reach the backend in order", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  const answerFirst = backend.gate();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  await answerFirst();
+  await waitFor(() =>
+    expect(backend.sent).toEqual([
+      "start press",
+      "start release",
+      "start press",
+      "start release",
+    ]),
+  );
+  await reported(button, false);
+  expect(backend.state.pressed).toBe(false);
+});
+
+it("overlapping pointers and keys: only the holder that pressed releases", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  // A second finger, a key and their releases neither press again nor release.
+  fireEvent.pointerDown(button, { pointerId: 2 });
+  fireEvent.keyDown(button, { key: " " });
+  fireEvent.pointerUp(button, { pointerId: 2 });
+  fireEvent.keyUp(button, { key: " " });
+  // A right button press is not a press either.
+  fireEvent.pointerDown(button, { pointerId: 1, button: 2 });
+  await act(async () => undefined);
+  expect(backend.sent).toEqual(["start press"]);
+  expect(backend.state.pressed).toBe(true);
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  await reported(button, false);
+  expect(backend.sent).toEqual(["start press", "start release"]);
+});
+
+it("a repeated pointerup and the capture loss after it send one release", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  fireEvent.lostPointerCapture(button, { pointerId: 1 });
+  await reported(button, false);
+  await act(async () => undefined);
+  expect(backend.sent).toEqual(["start press", "start release"]);
+});
+
+it("Space and Enter hold a focused button; repeats are ignored and focus loss releases", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  fireEvent.keyDown(button, { key: " " });
+  await reported(button, true);
+  fireEvent.keyDown(button, { key: " ", repeat: true });
+  fireEvent.keyDown(button, { key: "Enter" });
+  fireEvent.keyUp(button, { key: "Enter" });
+  await act(async () => undefined);
+  expect(backend.sent).toEqual(["start press"]);
+  fireEvent.keyUp(button, { key: " " });
+  await reported(button, false);
+  fireEvent.keyDown(button, { key: "Enter" });
+  await reported(button, true);
+  fireEvent.focusOut(button);
+  await reported(button, false);
+  expect(backend.sent).toEqual([
+    "start press",
+    "start release",
+    "start press",
+    "start release",
+  ]);
+  expect(backend.state.pressed).toBe(false);
+});
+
+it("a Step clicked while a press is pending is sent after the press", async () => {
+  const backend = buttonBackend();
+  const button = await openStartButton();
+  const answerPress = backend.gate();
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  const stepButton = screen.getByRole("button", { name: "Step" });
+  fireEvent.click(stepButton);
+  // Accepted (the toolbar waits), but not sent before the press it follows.
+  expect(stepButton).toBeDisabled();
+  await act(async () => undefined);
+  expect(fake.simulation).not.toHaveBeenCalled();
+  fake.simulation.mockImplementationOnce(async () =>
+    startPressed(backend.state.pressed),
+  );
+  await answerPress();
+  await waitFor(() => expect(fake.simulation).toHaveBeenCalledTimes(1));
+  expect(fake.operate.mock.invocationCallOrder[0]).toBeLessThan(
+    fake.simulation.mock.invocationCallOrder[0] ?? 0,
+  );
+  await waitFor(() => expect(stepButton).toBeEnabled());
+  await reported(button, true);
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  await reported(button, false);
+  expect(backend.state.pressed).toBe(false);
+});
+
+it("a release made during a pending Step is sent after it; the older Step frame does not win", async () => {
+  const backend = buttonBackend();
   const step = deferred<ReturnType<typeof frame>>();
   fake.simulation.mockReturnValueOnce(step.promise);
-  fake.operate
-    .mockResolvedValueOnce(startPressed(true))
-    .mockResolvedValueOnce(startPressed(false));
   const button = await openStartButton();
-  fireEvent.pointerDown(button);
-  await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "true"));
+  fireEvent.pointerDown(button, { pointerId: 1 });
+  await reported(button, true);
   const stepButton = screen.getByRole("button", { name: "Step" });
   // Toolbar commands keep their one-at-a-time rule: the second click is ignored.
   act(() => {
@@ -629,36 +884,19 @@ it("a push-button release during a pending toolbar command still reaches the pro
     stepButton.click();
   });
   expect(fake.simulation).toHaveBeenCalledTimes(1);
-  fireEvent.pointerUp(button);
-  await waitFor(() =>
-    expect(gestures()).toEqual([
-      ["start", "press"],
-      ["start", "release"],
-    ]),
-  );
-  await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "false"));
-  // Step was sent before the release: its late frame is older and is not applied.
+  fireEvent.pointerUp(button, { pointerId: 1 });
+  await act(async () => undefined);
+  expect(backend.sent).toEqual(["start press"]);
+  // The Step answers with the button still pressed; the release follows it.
   await act(async () => step.resolve(startPressed(true)));
+  await waitFor(() =>
+    expect(backend.sent).toEqual(["start press", "start release"]),
+  );
+  await reported(button, false);
   await waitFor(() => expect(stepButton).toBeEnabled());
   expect(button).toHaveAttribute("aria-pressed", "false");
+  expect(backend.state.pressed).toBe(false);
   expect(fake.simulation).toHaveBeenCalledTimes(1);
-});
-
-it("a failed gesture is reported and the gestures after it are still sent", async () => {
-  fake.operate
-    .mockRejectedValueOnce(new Error("Operation refused"))
-    .mockResolvedValueOnce(startPressed(false));
-  const button = await openStartButton();
-  fireEvent.pointerDown(button);
-  fireEvent.pointerUp(button);
-  await waitFor(() =>
-    expect(gestures()).toEqual([
-      ["start", "press"],
-      ["start", "release"],
-    ]),
-  );
-  fireEvent.click(screen.getByRole("tab", { name: /Messages/ }));
-  expect(await screen.findByText(/Operation refused/)).toBeInTheDocument();
 });
 
 it("PLC and simulation controls explain what they do", async () => {

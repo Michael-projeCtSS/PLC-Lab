@@ -27,6 +27,21 @@ import { diagnosticLine } from "../locale/messages";
 import { rememberDraft } from "../error-log";
 import { localizeContent } from "../locale/content";
 import { newTableId, newTableName, setRows, updateTable } from "./watchEdit";
+import { createLane } from "./requestLane";
+import { HeldButtons, type Holder, type HolderMatch } from "./heldButtons";
+
+/** After this long without an answer a request stops holding the lane (ADR-0048). */
+const STALL_SECONDS = 30;
+
+const ACTION: Record<OperateActionDto["type"], TranslationKey> = {
+  press: "process.action.press",
+  release: "process.action.release",
+  selector: "process.action.selector",
+  presence: "process.action.presence",
+  door: "process.action.door",
+};
+
+const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export type Message = {
   id: number;
@@ -101,11 +116,21 @@ export function useLab(projectId: string) {
     frameApplied.current = request;
     setFrame(f);
   }, []);
-  // One use case at a time: a second request while one is pending is ignored. Operator
-  // gestures are exempt; they queue instead (see `operate`).
+  // One use case at a time: a second command while one is pending is ignored. Operator
+  // gestures are never ignored (see `operate`).
   const pending = useRef(false);
-  // The gestures of this workspace, in the order they were made.
-  const gestures = useRef<Promise<unknown>>(Promise.resolve());
+  // Every request that changes this workspace, commands and gestures alike, reaches the
+  // backend in the order it was made (ADR-0048).
+  const [lane] = useState(() => createLane(STALL_SECONDS * 1000));
+  // The push buttons the operator holds pressed; each press gets exactly one release.
+  const [held] = useState(() => new HeldButtons());
+  // Wording for reports that arrive later, kept current by an effect below so the
+  // request callbacks stay stable while a button is held.
+  const wording = useRef({
+    say: (key: TranslationKey, values?: Record<string, string | number>) =>
+      translate("en", key, values),
+    labels: new Map<string, string>(),
+  });
   const ws = useMemo(
     () => (workspace ? { workspaceId: workspace.workspaceId } : null),
     [workspace],
@@ -170,12 +195,18 @@ export function useLab(projectId: string) {
     })().catch((e: unknown) => active && setFatal(e));
     return () => {
       active = false;
-      if (opened)
-        void api
-          .closeWorkspace({ workspaceId: opened.workspaceId })
+      if (!opened) return;
+      const target = { workspaceId: opened.workspaceId };
+      // Closing saves the project, so held buttons are released first and the close
+      // waits for every earlier request of this workspace. Nothing is left on screen to
+      // report a failure to, as before.
+      for (const component of held.releaseAll())
+        void lane
+          .run(() => api.operate(target, component, { type: "release" }))
           .catch(() => undefined);
+      void lane.run(() => api.closeWorkspace(target)).catch(() => undefined);
     };
-  }, [projectId, applyFrame, nextFrameRequest]);
+  }, [projectId, applyFrame, nextFrameRequest, lane, held]);
 
   // Frame refresh: one read in flight, coalesced; driven by wake events and actions.
   const refreshFrame = useCallback(() => setWakes((n) => n + 1), []);
@@ -204,10 +235,22 @@ export function useLab(projectId: string) {
     };
   }, [wsId, refreshFrame]);
 
+  /** Report a request that stopped holding the lane without an answer. */
+  const stalled = useCallback(
+    () =>
+      log(
+        "warning",
+        wording.current.say("request.stalled", { seconds: STALL_SECONDS }),
+      ),
+    [log],
+  );
+
   /**
    * Run a use case that may return a new frame; report errors as messages. Only one use
-   * case runs at a time (further requests are ignored until it settles), and the
-   * authoritative frame is always re-read afterwards, also after a failure.
+   * case runs at a time (further requests are ignored until it settles). It is sent
+   * through the workspace lane, after any operator gesture made before it, and takes its
+   * frame request number when it is sent. The authoritative frame is always re-read
+   * afterwards, also after a failure.
    */
   const act = useCallback(
     async <T>(
@@ -218,14 +261,16 @@ export function useLab(projectId: string) {
       if (pending.current) return null;
       pending.current = true;
       setBusy(label);
-      const request = nextFrameRequest();
       try {
-        const result = await work();
-        const f = toFrame ? toFrame(result) : null;
-        if (f) applyFrame(request, f);
-        return result;
+        return await lane.run(async () => {
+          const request = nextFrameRequest();
+          const result = await work();
+          const f = toFrame ? toFrame(result) : null;
+          if (f) applyFrame(request, f);
+          return result;
+        }, stalled);
       } catch (e) {
-        log("error", e instanceof Error ? e.message : String(e));
+        log("error", errorText(e));
         return null;
       } finally {
         pending.current = false;
@@ -233,18 +278,18 @@ export function useLab(projectId: string) {
         refreshFrame();
       }
     },
-    [log, refreshFrame, nextFrameRequest, applyFrame],
+    [lane, log, stalled, refreshFrame, nextFrameRequest, applyFrame],
   );
 
   /**
    * Send an operator gesture on a process component (push-button press or release,
-   * selector, presence, door). Unlike `act`, a gesture is never ignored: a release made
-   * while an earlier gesture, a build or a toolbar command is pending must still reach
-   * the process, or the simulated button stays pressed. Gestures are sent one after
-   * another in the order they were made, because the backend runs concurrent requests
-   * on separate workers. Each gesture takes its frame request number when it is sent, so
-   * the frame of the newest request still wins; the frame is re-read afterwards, also
-   * after a failure.
+   * selector, presence, door). Unlike a command, a gesture is never ignored: a release
+   * made while an earlier gesture, a build or a toolbar command is pending must still
+   * reach the process, or the simulated button stays pressed. It goes through the
+   * workspace lane in the order it was made and takes its frame request number when it
+   * is sent, so the frame of the newest request still wins; the frame is re-read
+   * afterwards, also after a failure, which is reported with the component and action.
+   * The callback is stable once the workspace is open.
    */
   const operate = useCallback(
     (
@@ -252,24 +297,59 @@ export function useLab(projectId: string) {
       action: OperateActionDto,
     ): Promise<LiveFrameDto | null> => {
       if (!ws) return Promise.resolve(null);
-      const sent = gestures.current.then(async () => {
-        const request = nextFrameRequest();
-        try {
+      return lane
+        .run(async () => {
+          const request = nextFrameRequest();
           const f = await api.operate(ws, component, action);
           applyFrame(request, f);
           return f;
-        } catch (e) {
-          log("error", e instanceof Error ? e.message : String(e));
+        }, stalled)
+        .catch((e: unknown) => {
+          const { say, labels } = wording.current;
+          log(
+            "error",
+            say("process.notApplied", {
+              component: labels.get(component) ?? component,
+              action: say(ACTION[action.type]),
+              error: errorText(e),
+            }),
+          );
           return null;
-        } finally {
-          refreshFrame();
-        }
-      });
-      gestures.current = sent;
-      return sent;
+        })
+        .finally(refreshFrame);
     },
-    [ws, log, refreshFrame, nextFrameRequest, applyFrame],
+    [ws, lane, log, stalled, refreshFrame, nextFrameRequest, applyFrame],
   );
+
+  /**
+   * Push-button holds (ADR-0048). `hold` presses a button unless it is already held;
+   * `letGo` releases it only for the holder that pressed it, so repeated or stale events
+   * send nothing; `letGoAll` releases every held button (window blur, the process view
+   * closing). Holds left when the workspace closes are released before the close.
+   */
+  const hold = useCallback(
+    (component: string, holder: Holder) => {
+      if (held.press(component, holder))
+        void operate(component, { type: "press" });
+    },
+    [held, operate],
+  );
+  const letGo = useCallback(
+    (component: string, match: HolderMatch) => {
+      if (held.release(component, match))
+        void operate(component, { type: "release" });
+    },
+    [held, operate],
+  );
+  const letGoAll = useCallback(() => {
+    for (const component of held.releaseAll())
+      void operate(component, { type: "release" });
+  }, [held, operate]);
+  // A window that loses focus may never see the pointerup or keyup of a held button.
+  useEffect(() => {
+    window.addEventListener("blur", letGoAll);
+    return () => window.removeEventListener("blur", letGoAll);
+  }, [letGoAll]);
 
   // Program draft: live compile diagnostics and autosave, both debounced.
   // The latest text is kept outside React as it arrives, so the error screen can show it
@@ -593,6 +673,14 @@ export function useLab(projectId: string) {
     () => localizeContent(workspace, preferences.language),
     [workspace, preferences.language],
   );
+  useEffect(() => {
+    wording.current = {
+      say,
+      labels: new Map(
+        presentedWorkspace?.scene.components.map((c) => [c.id, c.label]) ?? [],
+      ),
+    };
+  }, [say, presentedWorkspace]);
   const presentedReport = useMemo(
     () =>
       localizeContent(report, preferences.language, workspace?.exercise?.id),
@@ -640,6 +728,9 @@ export function useLab(projectId: string) {
     fatal,
     act,
     operate,
+    hold,
+    letGo,
+    letGoAll,
     buildAndLoad,
     check,
     refresh: refreshFrame,

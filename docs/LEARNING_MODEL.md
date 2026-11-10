@@ -70,9 +70,11 @@ distinction before the first exercise. Only one command runs at a time: the cont
 are disabled while a command is pending, a second click is ignored, and the frame is
 re-read from the backend afterwards; a slower, older response never replaces a newer
 frame. Operator gestures in the process view (push-button press and release, selector,
-presence, door) are never ignored: they reach the backend one after another in the order
-they were made, also while a command or an earlier gesture is pending, so a release
-always releases the button.
+presence, door) are never ignored. Gestures and commands reach the backend one after
+another in the order they were made: a gesture made while a command is pending is sent
+after it, and a command clicked while a gesture is in flight is sent after the gesture. A
+held push button is always released: on pointer up, cancel or capture loss, on key up, and
+when the window, the process view or the workspace is left (ADR-0048).
 
 ## Feedback design
 

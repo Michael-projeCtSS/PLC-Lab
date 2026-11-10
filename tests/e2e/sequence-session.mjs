@@ -191,6 +191,29 @@ try {
     await delay(ms);
     await up(label);
   };
+  // Real keyboard input: Space holds the focused button until the key is let go.
+  const keyPress = async (label, ms = 400) => {
+    await button(label).focus();
+    await page.keyboard.down("Space");
+    await reported(label, true);
+    await delay(ms);
+    await page.keyboard.up("Space");
+    await reported(label, false);
+  };
+  // Real mouse input: the button captures the pointer, so letting go of the mouse away
+  // from the button still releases it.
+  const mousePress = async (label, ms = 400) => {
+    // hover() checks that the button itself receives the pointer at its centre.
+    await button(label).hover();
+    const box = await button(label).boundingBox();
+    assert.ok(box, `${label} is not on screen`);
+    await page.mouse.down();
+    await reported(label, true);
+    await delay(ms);
+    await page.mouse.move(box.x + box.width / 2, Math.max(0, box.y - 150));
+    await page.mouse.up();
+    await reported(label, false);
+  };
   const tank = page.locator('[aria-label^="Tank T-100: "]');
   const valve = page.locator('[aria-label^="Inlet valve XV-101: "]');
 
@@ -265,7 +288,7 @@ try {
   await check(
     "HOLD stops the plant through the program; RESUME continues",
     async () => {
-      await press("Hold S3");
+      await keyPress("Hold S3");
       await waitText(state, /^HELD$/);
       const timer = page.getByTestId("sequence-timer");
       await delay(2500);
@@ -275,7 +298,7 @@ try {
       assert.equal(await timer.innerText(), paused, "the step timer is paused");
       await waitText(active, /^S2 Fill the tank$/);
       await page.screenshot({ path: path.join(directory, "held.png") });
-      await press("Start S1");
+      await mousePress("Start S1");
       await waitText(state, /^RUNNING$/);
       await waitText(active, /^S2 Fill the tank$/);
     },
@@ -296,6 +319,15 @@ try {
       await waitText(history, line);
     await page.screenshot({ path: path.join(directory, "completed.png") });
     await page.getByRole("button", { name: "BASIC", exact: true }).click();
+  });
+
+  await check("a held button is released when its view closes", async () => {
+    await views.getByRole("tab", { name: "Process" }).click();
+    await down("Hold S3");
+    // Its pointerup can no longer arrive: the view releases it as it closes.
+    await views.getByRole("tab", { name: "Program" }).click();
+    await views.getByRole("tab", { name: "Process" }).click();
+    await reported("Hold S3", false);
   });
 
   await check(

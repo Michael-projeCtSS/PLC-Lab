@@ -8,6 +8,7 @@ import type {
   OperateActionDto,
   SignalValueDto,
 } from "@plc-lab/ipc";
+import { useEffect } from "react";
 import { formatQuantity } from "../format";
 import { processLabel } from "../locale/messages";
 import { useInterface } from "../locale";
@@ -16,6 +17,12 @@ import { sequenceAlarmLabel } from "./alarmText";
 import { useSequenceDefinition } from "./sequenceDefinition";
 import type { Selection } from "./ProjectTree";
 import type { Lab } from "./useLab";
+import { anyKey, byKey, byPointer } from "./heldButtons";
+
+/** What a push button needs from the workspace: holds that always end in one release. */
+type Buttons = Pick<Lab, "hold" | "letGo">;
+/** Space and Enter press and hold a focused push button. */
+const isPressKey = (key: string) => key === " " || key === "Enter";
 
 type Q = Record<string, SignalValueDto>;
 const LAMP: Record<string, string> = {
@@ -50,6 +57,9 @@ export function ProcessTab({
 }) {
   const { t } = useInterface();
   const sequence = useSequenceDefinition(lab);
+  // Closing the view (another tab, another workspace) releases every held button: its
+  // pointerup or keyup would never arrive. `letGoAll` is stable once the workspace is open.
+  useEffect(() => lab.letGoAll, [lab.letGoAll]);
   const { workspace, frame, ws } = lab;
   if (!workspace || !frame || !ws) return null;
   const states = new Map(
@@ -75,6 +85,7 @@ export function ProcessTab({
   // Gestures queue in order and are never dropped, also while a command is pending.
   const operate = (id: string, action: OperateActionDto) =>
     void lab.operate(id, action);
+  const buttons: Buttons = { hold: lab.hold, letGo: lab.letGo };
   return (
     <div
       style={{
@@ -144,6 +155,7 @@ export function ProcessTab({
                 l={l}
                 q={q}
                 operate={operate}
+                buttons={buttons}
                 config={Object.fromEntries(
                   c.config.map((k) => [k.key, k.value]),
                 )}
@@ -167,6 +179,7 @@ function Symbol({
   l,
   q,
   operate,
+  buttons,
   config,
   layout,
 }: {
@@ -174,6 +187,7 @@ function Symbol({
   l: LayoutDto;
   q: Q;
   operate: (id: string, action: OperateActionDto) => void;
+  buttons: Buttons;
   config: Record<string, string>;
   layout: Map<string, LayoutDto>;
 }) {
@@ -187,8 +201,11 @@ function Symbol({
     case "pushButton": {
       const pressed = b(q, "pressed");
       const color = LAMP[c.color ?? "white"] ?? "var(--symbol-stroke)";
-      const press = () => operate(c.id, { type: "press" });
-      const release = () => operate(c.id, { type: "release" });
+      // A hold ends with its own pointer's up, cancel or capture loss, or its own key's
+      // keyup; focus loss ends a key hold. pointerleave does not: the pointer is
+      // captured, so the button stays pressed until it is let go.
+      const letGoPointer = (e: React.PointerEvent) =>
+        buttons.letGo(c.id, byPointer(e.pointerId));
       return (
         <g
           role="button"
@@ -196,14 +213,24 @@ function Symbol({
           aria-label={t("process.hold", { label: c.label })}
           aria-pressed={pressed}
           onPointerDown={(e) => {
-            (e.target as Element).setPointerCapture?.(e.pointerId);
-            press();
+            if (e.button !== 0) return;
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+            buttons.hold(c.id, { pointer: e.pointerId });
           }}
-          onPointerUp={release}
-          onKeyDown={(e) =>
-            (e.key === " " || e.key === "Enter") && !e.repeat && press()
-          }
-          onKeyUp={(e) => (e.key === " " || e.key === "Enter") && release()}
+          onPointerUp={letGoPointer}
+          onPointerCancel={letGoPointer}
+          onLostPointerCapture={letGoPointer}
+          onKeyDown={(e) => {
+            if (!isPressKey(e.key)) return;
+            e.preventDefault();
+            if (!e.repeat) buttons.hold(c.id, { key: e.key });
+          }}
+          onKeyUp={(e) => {
+            if (!isPressKey(e.key)) return;
+            e.preventDefault();
+            buttons.letGo(c.id, byKey(e.key));
+          }}
+          onBlur={() => buttons.letGo(c.id, anyKey)}
         >
           <rect
             x={l.x - 30}
