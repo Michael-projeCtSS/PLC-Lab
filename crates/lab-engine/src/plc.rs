@@ -120,13 +120,57 @@ pub fn compile(source: &str) -> Result<CompiledProgram, Vec<Diagnostic>> {
     compile_documents(source, &[])
 }
 
-/// The main program document with the project library documents (ADR-0045).
+/// The main program document with the project library documents (ADR-0045). A main
+/// program that is a ladder document compiles with the LAD frontend into the same
+/// canonical IR (ADR-0050).
 pub fn compile_documents(
     source: &str,
     library: &[String],
 ) -> Result<CompiledProgram, Vec<Diagnostic>> {
+    if lad_frontend::is_lad(source) {
+        return compile_ladder(source, library);
+    }
     let library: Vec<&str> = library.iter().map(String::as_str).collect();
     st_frontend::compile_st_documents(source, &library, CompilerConfig::default())
+}
+
+fn compile_ladder(source: &str, library: &[String]) -> Result<CompiledProgram, Vec<Diagnostic>> {
+    if !library.is_empty() {
+        return Err(vec![
+            Diagnostic::new(
+                plc_types::diagnostics::DiagnosticCode::new(lad_frontend::codes::DOCUMENT)
+                    .expect("fixed LAD code"),
+                plc_types::diagnostics::DiagnosticCategory::CompilerDiagnostic,
+                plc_types::diagnostics::Severity::Error,
+                "A ladder program cannot use project library documents in this version.",
+            )
+            .expect("non-empty message"),
+        ]);
+    }
+    let lad = lad_frontend::compile_lad(source)?;
+    let origin = plc_types::source::SourcePosition::new(1, 1).expect("nonzero position");
+    let span = plc_types::source::TextSpan::new(origin, origin).expect("empty span");
+    let declarations = lad
+        .variables
+        .iter()
+        .map(|v| st_frontend::DeclarationSummary {
+            name: v.name.clone(),
+            type_name: v.data_type.clone(),
+            role: match v.direction {
+                lad_frontend::Direction::Input => "Input",
+                lad_frontend::Direction::Output => "Output",
+                lad_frontend::Direction::Local => "Local",
+            }
+            .into(),
+            retained: false,
+            span,
+        })
+        .collect();
+    Ok(CompiledProgram::from_ir(
+        lad.program,
+        lad.name,
+        declarations,
+    ))
 }
 
 /// Linked tags, function-block outputs and non-blocking binding warnings.

@@ -18,6 +18,7 @@ grading-core.workspace = true
 alarm-core.workspace = true
 sequence-core.workspace = true
 st-frontend.workspace = true
+lad-frontend.workspace = true
 
 
 [lints]

@@ -499,3 +499,28 @@ fn the_pid_lab_grades_offset_disturbance_and_bumpless_transfer() {
         "{overshoot:?}"
     );
 }
+
+#[test]
+fn a_ladder_solution_is_graded_like_its_structured_text_equivalent() {
+    let id = "ex.motor-start-stop";
+    let lad = std::fs::read_to_string(
+        root().join("tests/conformance/solutions/ex.motor-start-stop.lad.json"),
+    )
+    .unwrap();
+    assert!(lad_frontend::is_lad(&lad));
+    // The ladder program passes every criterion of the exercise, like the ST solution.
+    assert!(failed(id, &lad).is_empty(), "{:?}", failed(id, &lad));
+    // Without the self-holding branch both languages fail the same criteria.
+    let st = std::fs::read_to_string(root().join(format!("tests/conformance/solutions/{id}.st")))
+        .unwrap();
+    let st_no_hold = st.replace("(StartPB OR MotorContactor)", "StartPB");
+    assert_ne!(st_no_hold, st);
+    let mut doc: serde_json::Value = serde_json::from_str(&lad).unwrap();
+    doc["rungs"][0]["network"]["items"][0] = serde_json::json!({
+        "type": "contact", "id": 4, "contact": "normallyOpen", "variable": "StartPB"
+    });
+    let lad_no_hold = doc.to_string();
+    let missing = failed(id, &st_no_hold);
+    assert!(!missing.is_empty());
+    assert_eq!(failed(id, &lad_no_hold), missing);
+}

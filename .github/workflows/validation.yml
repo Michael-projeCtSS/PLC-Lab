@@ -64,6 +64,7 @@ jobs:
             artifacts/sequence-session/*.png
             artifacts/pou-session/*.png
             artifacts/pid-session/*.png
+            artifacts/lad-session/*.png
             artifacts/release-smoke/native.log
             artifacts/release-smoke/result.json
             artifacts/release-smoke/*.png

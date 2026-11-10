@@ -8,7 +8,7 @@ and ADRs.
 | Language               | Status                                                   |
 | ---------------------- | -------------------------------------------------------- |
 | Structured Text        | Implemented (subset below), compiled to the canonical IR |
-| Ladder Diagram         | Planned; IR prepared (ADR-0021)                          |
+| Ladder Diagram         | First slice: BOOL contacts and coils (ADR-0050)          |
 | Function Block Diagram | Planned; IR prepared (ADR-0021)                          |
 | Statement List (edu)   | Planned; control-flow design in ADR-0021                 |
 

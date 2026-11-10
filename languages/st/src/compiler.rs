@@ -102,6 +102,17 @@ impl CompiledProgram {
     pub fn validated(&self) -> Result<ValidatedProgram<'_>, Vec<Diagnostic>> {
         plc_ir::validate(&self.program)
     }
+    /// A program another frontend lowered into the canonical IR (ADR-0050). It has no
+    /// user POUs and no standard block inputs bound to plain variables.
+    pub fn from_ir(program: Program, name: String, declarations: Vec<DeclarationSummary>) -> Self {
+        Self {
+            program,
+            name,
+            declarations,
+            pous: Vec::new(),
+            bindings: Vec::new(),
+        }
+    }
 }
 
 pub fn compile_st(

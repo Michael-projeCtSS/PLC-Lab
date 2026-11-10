@@ -673,6 +673,30 @@ export function useLab(projectId: string) {
     ],
     [source, library],
   );
+  /** The language of the main program: "ST" or "LAD" (ADR-0050). */
+  const mainLanguage = project?.programs[0]?.language ?? "ST";
+  /** Replace the main program by `text` in `language` and save the project. */
+  const switchLanguage = useCallback(
+    async (language: "ST" | "LAD", text: string): Promise<boolean> => {
+      if (!project) return false;
+      const [main, ...rest] = currentPrograms(project);
+      if (!main) return false;
+      try {
+        const saved = await api.saveProject({
+          ...project,
+          programs: [{ ...main, language, source: text }, ...rest],
+        });
+        setProject(saved);
+        setSource(text);
+        setActiveDocument(null);
+        return true;
+      } catch (e) {
+        log("error", errorText(e));
+        return false;
+      }
+    },
+    [project, currentPrograms, setSource, log],
+  );
   /** Save a changed list of library documents in the project (ADR-0045). */
   const saveLibrary = useCallback(
     async (documents: LibraryDocument[]): Promise<boolean> => {
@@ -809,6 +833,8 @@ export function useLab(projectId: string) {
     activeDocument,
     setActiveDocument,
     editorText: library.find((d) => d.id === activeDocument)?.source ?? source,
+    mainLanguage,
+    switchLanguage,
     setEditorText,
     documentName,
     addDocument,

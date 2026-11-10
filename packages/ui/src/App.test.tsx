@@ -1282,6 +1282,192 @@ it("a new download reads the control loops again", async () => {
   );
 });
 
+// ---- Ladder Diagram (ADR-0050): a Free Lab program edited graphically, compiled by the backend
+
+function freeLabBackend() {
+  fake.project.mockResolvedValue(project({ kind: "freeLab", exercise: null }));
+  fake.openWorkspace.mockResolvedValue(workspace({ exercise: null }));
+  let saved: ReturnType<typeof project> | null = null;
+  fake.saveProject.mockImplementation(async (p: ReturnType<typeof project>) => {
+    saved = p;
+    return p;
+  });
+  return { saved: () => saved };
+}
+const ladSource = () =>
+  JSON.parse(
+    (fake.buildAndLoad.mock.calls.at(-1)?.[1] as string | undefined) ??
+      (fake.compile.mock.calls.at(-1)?.[0] as string),
+  ) as {
+    format: string;
+    variables: { name: string; direction: string }[];
+    rungs: {
+      network: { type: string; items: { variable: string }[] };
+      coils: { variable: string }[];
+    }[];
+  };
+
+async function openLadder() {
+  const backend = freeLabBackend();
+  await openMotor();
+  const languages = await screen.findByRole("group", {
+    name: "Program language",
+  });
+  fireEvent.click(
+    within(languages).getByRole("button", { name: "Ladder Diagram (LAD)" }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Replace with a new LAD program" }),
+  );
+  await screen.findByTestId("lad-editor");
+  return backend;
+}
+
+it("a Free Lab program switches to Ladder Diagram with the scene's signals declared", async () => {
+  const backend = await openLadder();
+  const main = backend.saved()?.programs[0];
+  expect(main?.language).toBe("LAD");
+  const document = JSON.parse(main?.source ?? "{}") as {
+    format: string;
+    variables: { name: string; direction: string }[];
+  };
+  expect(document.format).toBe("plclab-lad");
+  expect(document.variables).toEqual([
+    {
+      name: "StartPB",
+      type: "BOOL",
+      direction: "input",
+      comment: "Start button",
+    },
+  ]);
+  // Exercises keep their language; only Free Lab programs switch.
+  expect(
+    screen.getByRole("group", { name: "Program language" }),
+  ).toBeInTheDocument();
+});
+
+it("a rung is built graphically; the backend compiles the ladder document and reports what is missing", async () => {
+  await openLadder();
+  fake.compile.mockResolvedValue({
+    success: false,
+    programName: null,
+    diagnostics: [
+      {
+        code: "PLC-LAD-003",
+        severity: "error",
+        message: "Rung 1: an element has no variable.",
+        span: null,
+        category: "compiler",
+        document: null,
+      },
+    ],
+    declarations: [],
+    pous: [],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "+ Rung" }));
+  expect(
+    await screen.findByText(
+      /PLC-LAD-003.*Rung 1: an element has no variable\./,
+    ),
+  ).toBeInTheDocument();
+  expect(ladSource().rungs).toHaveLength(1);
+  // Declare the motor output, then choose the contact's and the coil's variables.
+  fireEvent.change(screen.getByRole("textbox", { name: "New variable name" }), {
+    target: { value: "MotorContactor" },
+  });
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Kind of the new variable" }),
+    { target: { value: "output" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Add variable" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Normally open contact (variable?)" }),
+  );
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Variable of the contact" }),
+    { target: { value: "StartPB" } },
+  );
+  // A parallel branch for the self-holding contact; the new contact is selected.
+  fireEvent.click(screen.getByRole("button", { name: "+ NO in parallel" }));
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Variable of the contact" }),
+    { target: { value: "MotorContactor" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Coil (variable?)" }));
+  const coil = screen.getByRole("combobox", { name: "Variable of the coil" });
+  // A coil cannot write an input: only outputs and internal variables are offered.
+  expect(
+    within(coil)
+      .getAllByRole("option")
+      .map((o) => o.textContent),
+  ).toEqual(["(variable?)", "MotorContactor"]);
+  fireEvent.change(coil, { target: { value: "MotorContactor" } });
+  await waitFor(() =>
+    expect(ladSource().rungs[0]?.coils).toEqual([
+      expect.objectContaining({ variable: "MotorContactor" }),
+    ]),
+  );
+  expect(ladSource().rungs[0]?.network).toMatchObject({
+    type: "series",
+    items: [
+      {
+        type: "parallel",
+        branches: [{ variable: "StartPB" }, { variable: "MotorContactor" }],
+      },
+    ],
+  });
+});
+
+it("a loaded ladder program shows each contact's and coil's value from the PLC", async () => {
+  await openLadder();
+  fireEvent.click(screen.getByRole("button", { name: "+ Rung" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Normally open contact (variable?)" }),
+  );
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Variable of the contact" }),
+    { target: { value: "StartPB" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  fireEvent.click(screen.getByRole("button", { name: "+ Rung" }));
+  expect(
+    screen.getByText(
+      "Offline: load the program into the PLC and switch it to RUN to see values.",
+    ),
+  ).toBeInTheDocument();
+  fake.watch.mockImplementation(async (_ws: unknown, signals: number[]) => ({
+    worldTimeUs: "1200000",
+    cycle: "12",
+    rows: signals.map((signal) => ({
+      signal,
+      value: { type: "BOOL", value: signal === 10 },
+    })),
+  }));
+  // Rung 2's contact reads StartPB.
+  const contacts = screen.getAllByRole("button", {
+    name: "Normally open contact (variable?)",
+  });
+  fireEvent.click(contacts.at(-1)!);
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Variable of the contact" }),
+    { target: { value: "StartPB" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Build & Load to PLC" }));
+  await waitFor(() => expect(fake.buildAndLoad).toHaveBeenCalled());
+  expect(ladSource().format).toBe("plclab-lad");
+  expect(
+    await screen.findByText(
+      "Online: each contact and coil shows its variable's value from the PLC.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByRole("button", {
+      name: "Normally open contact StartPB: TRUE",
+    }),
+  ).toHaveClass("on");
+  expect(fake.watch.mock.calls.at(-1)?.[1]).toEqual([10]);
+});
+
 it("PLC and simulation controls explain what they do", async () => {
   await openMotor();
   const group = screen.getByRole("group", { name: "PLC mode switch" });

@@ -1,0 +1,107 @@
+{
+  "format": "plclab-lad",
+  "version": 1,
+  "name": "Main",
+  "variables": [
+    {
+      "name": "StartPB",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Start button S1, normally open: TRUE while pressed."
+    },
+    {
+      "name": "StopPB",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Stop button S2, normally closed: TRUE while NOT pressed."
+    },
+    {
+      "name": "MotorFeedback",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Contactor auxiliary contact."
+    },
+    {
+      "name": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Overload relay contact: TRUE while not overloaded."
+    },
+    {
+      "name": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Contactor coil K1."
+    },
+    {
+      "name": "RunLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Green run lamp H1."
+    }
+  ],
+  "rungs": [
+    {
+      "id": 1,
+      "comment": "Start with self-holding; stop and overload break the circuit.",
+      "network": {
+        "type": "series",
+        "id": 2,
+        "items": [
+          {
+            "type": "parallel",
+            "id": 3,
+            "branches": [
+              {
+                "type": "contact",
+                "id": 4,
+                "contact": "normallyOpen",
+                "variable": "StartPB"
+              },
+              {
+                "type": "contact",
+                "id": 5,
+                "contact": "normallyOpen",
+                "variable": "MotorContactor"
+              }
+            ]
+          },
+          {
+            "type": "contact",
+            "id": 6,
+            "contact": "normallyOpen",
+            "variable": "StopPB"
+          },
+          {
+            "type": "contact",
+            "id": 7,
+            "contact": "normallyOpen",
+            "variable": "OverloadOK"
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 8,
+          "variable": "MotorContactor"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "comment": "The run lamp shows the contactor feedback.",
+      "network": {
+        "type": "contact",
+        "id": 10,
+        "contact": "normallyOpen",
+        "variable": "MotorFeedback"
+      },
+      "coils": [
+        {
+          "id": 11,
+          "variable": "RunLamp"
+        }
+      ]
+    }
+  ]
+}

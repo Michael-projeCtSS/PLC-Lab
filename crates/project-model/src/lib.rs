@@ -194,13 +194,13 @@ impl Project {
                 "a project needs 1 to 32 program documents".into(),
             ));
         }
-        if self
-            .programs
-            .iter()
-            .any(|p| p.language != "ST" || p.source.len() > 256 * 1024)
-        {
+        // The main program is Structured Text or a ladder document (ADR-0050); library
+        // documents hold Structured Text FUNCTIONs and FUNCTION_BLOCKs (ADR-0045).
+        if self.programs.iter().enumerate().any(|(i, p)| {
+            !(p.language == "ST" || (i == 0 && p.language == "LAD")) || p.source.len() > 256 * 1024
+        }) {
             return Err(ProjectError::Invalid(
-                "program documents must be Structured Text of at most 256 KiB".into(),
+                "the main program must be Structured Text or Ladder Diagram, library documents Structured Text, each of at most 256 KiB".into(),
             ));
         }
         let mut ids = std::collections::BTreeSet::new();
@@ -945,6 +945,25 @@ mod tests {
                 .library_documents()
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn the_main_program_may_be_ladder_diagram_but_library_documents_may_not() {
+        let mut p = parse(&project_json(FORMAT_VERSION)).unwrap();
+        p.programs[0].language = "LAD".into();
+        assert_eq!(p.validate(), Ok(()));
+        assert_eq!(parse(&to_json(&p).unwrap()).unwrap(), p);
+        let mut library = p.clone();
+        library.programs.push(ProgramDocument {
+            id: Identifier::new("lib-1").unwrap(),
+            name: "Blocks".into(),
+            language: "LAD".into(),
+            source: String::new(),
+        });
+        assert!(library.validate().is_err(), "a LAD library document");
+        let mut other = p;
+        other.programs[0].language = "FBD".into();
+        assert!(other.validate().is_err(), "a language without a frontend");
     }
 
     #[test]

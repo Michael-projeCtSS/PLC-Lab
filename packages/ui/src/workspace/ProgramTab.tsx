@@ -4,6 +4,89 @@ import { diagnosticTitle } from "../locale/messages";
 import type { DiagnosticDto } from "@plc-lab/ipc";
 import { StructuredTextEditor } from "../StructuredTextEditor";
 import type { Lab } from "./useLab";
+import { LadEditor } from "./LadEditor";
+import { newLadDocument, parseLad, serializeLad } from "./ladModel";
+
+/** A Structured Text program declaring the ladder program's variables. */
+function stSkeleton(lab: Lab): string {
+  const parsed = parseLad(lab.source);
+  const variables = "document" in parsed ? parsed.document.variables : [];
+  const block = (keyword: string, direction: string) => {
+    const lines = variables
+      .filter((v) => v.direction === direction)
+      .map(
+        (v) =>
+          `    ${v.name} : BOOL;${v.comment ? ` (* ${v.comment.replaceAll("*)", "")} *)` : ""}`,
+      );
+    return lines.length ? [keyword, ...lines, "END_VAR"] : [];
+  };
+  return [
+    "PROGRAM Main",
+    ...block("VAR_INPUT", "input"),
+    ...block("VAR_OUTPUT", "output"),
+    ...block("VAR", "local"),
+    "",
+    "END_PROGRAM",
+    "",
+  ].join("\n");
+}
+
+/** Free Lab programs choose their language: Structured Text or Ladder Diagram (ADR-0050). */
+function LanguageSwitch({ lab }: { lab: Lab }) {
+  const { t } = useInterface();
+  const [target, setTarget] = useState<"ST" | "LAD" | null>(null);
+  if (
+    lab.workspace?.exercise ||
+    lab.activeDocument !== null ||
+    lab.library.length
+  )
+    return null;
+  const current = lab.mainLanguage === "LAD" ? "LAD" : "ST";
+  const replacement = (language: "ST" | "LAD") =>
+    language === "LAD"
+      ? serializeLad(
+          newLadDocument("Main", lab.workspace?.scene.interface ?? []),
+        )
+      : stSkeleton(lab);
+  return (
+    <div className="document-bar" data-testid="language-bar">
+      <span>{t("lang.label")}</span>
+      <div className="segmented" role="group" aria-label={t("lang.label")}>
+        {(["ST", "LAD"] as const).map((language) => (
+          <button
+            key={language}
+            aria-pressed={current === language}
+            disabled={lab.busy !== null}
+            onClick={() => setTarget(language === current ? null : language)}
+          >
+            {t(language === "ST" ? "lang.st" : "lang.lad")}
+          </button>
+        ))}
+      </div>
+      {target && (
+        <>
+          <span className="muted">{t("lang.replaceWarning")}</span>
+          <button
+            className="btn btn-sm btn-danger"
+            onClick={() => {
+              const language = target;
+              setTarget(null);
+              void lab.switchLanguage(language, replacement(language));
+            }}
+          >
+            {t(target === "LAD" ? "lang.toLad" : "lang.toSt")}
+          </button>
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={() => setTarget(null)}
+          >
+            {t("doc.cancel")}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 /**
  * The document in the editor: the main program or a project library document, which can
@@ -141,6 +224,7 @@ export function ProgramTab({ lab }: { lab: Lab }) {
   );
   return (
     <div className="program-panel">
+      <LanguageSwitch lab={lab} />
       <DocumentBar key={active ?? ""} lab={lab} />
       {lab.diagnostics.length > 0 && (
         <div className="compile-problems" role="alert">
@@ -165,15 +249,19 @@ export function ProgramTab({ lab }: { lab: Lab }) {
           })}
         </div>
       )}
-      <StructuredTextEditor
-        source={lab.editorText}
-        onChange={lab.setEditorText}
-        diagnostics={compiler}
-        runtimeDiagnostics={runtime}
-        focusedDiagnostic={
-          focused && (focused.document ?? null) === active ? focused : null
-        }
-      />
+      {active === null && lab.mainLanguage === "LAD" ? (
+        <LadEditor lab={lab} />
+      ) : (
+        <StructuredTextEditor
+          source={lab.editorText}
+          onChange={lab.setEditorText}
+          diagnostics={compiler}
+          runtimeDiagnostics={runtime}
+          focusedDiagnostic={
+            focused && (focused.document ?? null) === active ? focused : null
+          }
+        />
+      )}
     </div>
   );
 }

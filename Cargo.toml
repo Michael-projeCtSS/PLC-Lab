@@ -4,6 +4,7 @@ members = [
   "apps/desktop/src-tauri",
   "crates/*",
   "languages/st",
+  "languages/lad",
   "tests/conformance",
 ]
 
@@ -30,6 +31,7 @@ app-contract = { path = "crates/app-contract" }
 desktop-session = { path = "crates/desktop-session" }
 process-simulation = { path = "crates/process-simulation" }
 st-frontend = { path = "languages/st" }
+lad-frontend = { path = "languages/lad" }
 lab-model = { path = "crates/lab-model" }
 hardware-model = { path = "crates/hardware-model" }
 lab-engine = { path = "crates/lab-engine" }

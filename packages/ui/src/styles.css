@@ -1402,6 +1402,137 @@ textarea.input {
 .legend.mv::before {
   border-top-color: var(--trace-mv);
 }
+/* ladder diagram editor (ADR-0050) */
+.lad {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lad-status {
+  margin: 0;
+  font-size: 12px;
+}
+.lad-rungs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.lad-rung {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--bg-1);
+}
+.lad-comment {
+  max-width: 320px;
+  height: 24px;
+}
+.lad-line {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 6px;
+}
+.lad-rail {
+  align-self: stretch;
+  width: 3px;
+  background: var(--symbol-stroke);
+}
+.lad-wire {
+  height: 2px;
+  min-width: 16px;
+  background: var(--symbol-stroke);
+}
+.lad-network,
+.lad-series,
+.lad-coils {
+  display: flex;
+  align-items: center;
+}
+.lad-series > * + *,
+.lad-coils > * + * {
+  margin-left: 14px;
+}
+.lad-network {
+  padding: 0 8px;
+  border-top: 2px solid var(--symbol-stroke);
+  border-top-color: transparent;
+}
+.lad-parallel {
+  display: flex;
+  align-items: center;
+  border-left: 2px solid var(--symbol-stroke);
+  border-right: 2px solid var(--symbol-stroke);
+  padding: 2px 6px;
+}
+.lad-parallel.selected {
+  outline: 2px solid var(--accent);
+}
+.lad-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lad-branch {
+  display: flex;
+  align-items: center;
+}
+.lad-block {
+  margin-right: 6px;
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--text-2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.lad-contact,
+.lad-coil,
+.lad-empty {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 72px;
+  padding: 2px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.lad-contact.on,
+.lad-coil.on {
+  border-color: var(--st-active);
+  box-shadow: 0 0 0 1px var(--st-active);
+}
+.lad-contact.selected,
+.lad-coil.selected,
+.lad-empty.selected {
+  outline: 2px solid var(--accent);
+}
+.lad-symbol {
+  font-weight: 600;
+}
+.lad-value {
+  font-size: 10px;
+  color: var(--text-2);
+}
+.lad-toolbar {
+  gap: 6px;
+}
+.lad-assign {
+  max-width: 320px;
+}
+.lad-variables h3 {
+  margin: 8px 0 4px;
+  font-size: 13px;
+}
 .tuning {
   position: absolute;
   inset: 0;
