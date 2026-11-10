@@ -174,7 +174,8 @@ try {
 
   await check("a Free Lab program switches to Ladder Diagram", async () => {
     await page.getByRole("button", { name: "FREE LAB", exact: true }).click();
-    await page.getByRole("button", { name: "New project" }).click();
+    // An empty project list offers New project twice (header and empty state).
+    await page.getByRole("button", { name: "New project" }).first().click();
     await page.getByLabel("Project name").fill("Ladder motor");
     await page
       .getByLabel("Machine (scene)")
@@ -190,9 +191,12 @@ try {
       .click();
     await ladder.waitFor({ timeout: 20_000 });
     // The scene's signals are declared.
-    const variables = page.getByRole("region", { name: "Variables" });
+    const variables = page.getByRole("region", {
+      name: "Variables",
+      exact: true,
+    });
     for (const name of ["StartPB", "StopPB", "OverloadOK", "MotorContactor"])
-      await variables.getByRole("rowheader", { name }).waitFor();
+      await variables.getByRole("rowheader", { name, exact: true }).waitFor();
   });
 
   await check(
@@ -291,7 +295,9 @@ try {
     await page.getByRole("combobox", { name: "Language" }).selectOption("pl");
     await page.getByRole("button", { name: "Zamknij", exact: true }).click();
     await page.getByRole("group", { name: "Język programu" }).waitFor();
-    await page.getByRole("region", { name: "Szczebel 1" }).waitFor();
+    await page
+      .getByRole("listitem", { name: "Szczebel 1", exact: true })
+      .waitFor();
     await ladder
       .getByRole("button", { name: /^Styk normalnie otwarty StartPB/ })
       .waitFor();
@@ -309,7 +315,9 @@ try {
         await page.evaluate(() => document.documentElement.dataset.theme),
         value,
       );
-      await page.getByRole("region", { name: "Szczebel 1" }).waitFor();
+      await page
+        .getByRole("listitem", { name: "Szczebel 1", exact: true })
+        .waitFor();
     };
     await theme("light");
     await page.screenshot({ path: path.join(directory, "ladder-light.png") });
