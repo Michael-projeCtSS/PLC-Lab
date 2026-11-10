@@ -343,7 +343,8 @@ export const library = obj<G.LibraryDto>({
           direction: literal("Input", "Output", "InOut"),
           required: bool,
         }),
-        16,
+        // A standard block signature of the runtime (PID has 18, ADR-0046).
+        32,
       ),
     }),
     32,

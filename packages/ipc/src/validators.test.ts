@@ -58,6 +58,37 @@ describe("strict response validation", () => {
     ).toThrow(/RUN \| STOP \| FAULT/);
   });
 
+  it("accepts every standard block signature the runtime declares", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const runtime = readFileSync(
+      join(process.cwd(), "crates/plc-types/src/function_blocks.rs"),
+      "utf8",
+    );
+    const sizes = [...runtime.matchAll(/\[StandardParameter;\s*(\d+)\]/g)].map(
+      (m) => Number(m[1]),
+    );
+    // PID (ADR-0046) is the largest signature so far.
+    expect(Math.max(...sizes)).toBeGreaterThanOrEqual(18);
+    const withBlock = (count: number) => ({
+      ...library,
+      standardBlocks: [
+        {
+          name: "BLOCK",
+          parameters: Array.from({ length: count }, (_, i) => ({
+            name: `P${i}`,
+            dataType: "REAL",
+            direction: "Input" as const,
+            required: false,
+          })),
+        },
+      ],
+    });
+    for (const size of sizes)
+      expect(V.library(withBlock(size), "l")).toEqual(withBlock(size));
+    expect(() => V.library(withBlock(33), "l")).toThrow(/max 32/);
+  });
+
   it("names every command the desktop host registers", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
