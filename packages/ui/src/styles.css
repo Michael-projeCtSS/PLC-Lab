@@ -71,6 +71,8 @@
   --node-stroke: #6f7d8a;
   --plot-grid: #1f2830;
   --trace-num: #5aa0e6;
+  --trace-sp: #ecd29c;
+  --trace-mv: #3dbb8a;
   --plot-cursor: #d8dee4;
   --event-error: #f2b8b4;
   --event-warning: #ecd29c;
@@ -169,6 +171,8 @@
   --node-stroke: #6d7c8a;
   --plot-grid: #e1e7ec;
   --trace-num: #1f64ad;
+  --trace-sp: #7a5200;
+  --trace-mv: #1a7a50;
   --plot-cursor: #3b4a57;
   --event-error: #a3281f;
   --event-warning: #7a5200;
@@ -1371,6 +1375,54 @@ textarea.input {
   stroke: var(--trace-num);
   fill: none;
   stroke-width: 1.5;
+}
+.wave .trace-sp {
+  stroke: var(--trace-sp);
+  fill: none;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+.wave .trace-mv {
+  stroke: var(--trace-mv);
+  fill: none;
+  stroke-width: 1.5;
+}
+.legend::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-top: 2px solid var(--trace-num);
+}
+.legend.sp::before {
+  border-top: 2px dashed var(--trace-sp);
+}
+.legend.mv::before {
+  border-top-color: var(--trace-mv);
+}
+.tuning {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tuning-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px 20px;
+}
+.tuning-grid h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+.tuning-diagnostics {
+  margin: 0;
+  padding-left: 18px;
 }
 .wave .cursor {
   stroke: var(--plot-cursor);

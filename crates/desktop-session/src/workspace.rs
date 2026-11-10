@@ -504,14 +504,14 @@ impl Workspace {
         self.engine(|s| s.force(SignalId(signal), value))
     }
 
-    /// Write a PLC variable or output online, once (ADR-0048).
+    /// Write a PLC variable or output online, once (ADR-0049).
     pub fn modify(&mut self, signal: u32, value: SignalValueDto) -> AppResult<()> {
         let value = convert::value_from_dto(value)
             .ok_or_else(|| AppError::InvalidRequest("A REAL value must be finite.".into()))?;
         self.engine(|s| s.modify(SignalId(signal), value))
     }
 
-    /// The PID controllers of the program in the PLC (ADR-0048).
+    /// The PID controllers of the program in the PLC (ADR-0049).
     pub fn control_loops(&self) -> ControlLoopsDto {
         let pairs = |list: &[(&'static str, SignalId)]| {
             list.iter()

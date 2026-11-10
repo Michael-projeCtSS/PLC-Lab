@@ -35,7 +35,8 @@ and ADRs.
 
 Transactional scans (a faulting scan commits nothing), operation budget per scan,
 runtime faults with source locations (division by zero, overflow), PLC modes RUN / STOP /
-FAULT with warm restart and memory reset, forcing of inputs and outputs, simulation-time
+FAULT with warm restart and memory reset, forcing of inputs and outputs, online writes of
+variables between scans and a control-loop query for PID tuning (ADR-0049), simulation-time
 timers. See [runtime semantics](PLC_RUNTIME_SEMANTICS.md) and
 [simulation fidelity](../SIMULATION_FIDELITY.md).
 

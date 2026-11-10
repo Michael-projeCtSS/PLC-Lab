@@ -1,0 +1,365 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.heater-pid",
+  "revision": 1,
+  "title": "Heated vessel control with a PID loop",
+  "kind": "practice",
+  "difficulty": "advanced",
+  "summary": "Tune a PID controller on a real heated vessel: remove the offset of a P-only loop, ride out a door-open disturbance and switch between manual and automatic without a bump.",
+  "objectives": [
+    "Read SP, PV and MV in a trend and recognise the offset of a P-only loop",
+    "Remove the offset with integral action and keep the overshoot small",
+    "Use output limits, manual mode and bumpless transfer of the PID block"
+  ],
+  "prerequisites": ["ex.tank-analog-scaling"],
+  "estimatedMinutes": 40,
+  "scene": "scene.heater-loop",
+  "starterProgram": "PROGRAM Main\nVAR_INPUT\n    AutoMode : BOOL; (* Selector S1 in position AUTO. *)\n    TempRaw : INT; (* Temperature transmitter TT-1: 0..10000 = 0..150 degC. *)\nEND_VAR\nVAR_OUTPUT\n    HeaterRaw : INT; (* Heater power controller: 0..10000 = 0..100 %. *)\n    HeaterLamp : BOOL; (* Lamp H1: the heater is on. *)\n    AlarmLamp : BOOL; (* Lamp H2: overtemperature. *)\n    Temperature : REAL; (* Vessel temperature in degC. *)\nEND_VAR\nVAR\n    Setpoint : REAL := 60.0; (* degC *)\n    Kp : REAL := 4.0; (* proportional gain, % per degC *)\n    Ti : TIME := T#0s; (* integral time; T#0s = no integral action *)\n    Td : TIME := T#0s; (* derivative time *)\n    PowerMin : REAL := 0.0; (* output limits, % *)\n    PowerMax : REAL := 100.0;\n    ManualPower : REAL := 20.0; (* heater power in MAN, % *)\n    Power : REAL; (* controller output, % *)\n    Loop : PID;\nEND_VAR\n\nTemperature := INT_TO_REAL(TempRaw) * 0.015;\n\n(* The loop runs with P only and has no MAN mode yet. Tune it in the Tuning tab,\n   then complete it: see the instructions. *)\nLoop(SP := Setpoint, PV := Temperature, KP := Kp, TI := Ti, TD := Td,\n     MV_MIN := PowerMin, MV_MAX := PowerMax, MV => Power);\n\nHeaterRaw := REAL_TO_INT(Power * 100.0);\nHeaterLamp := Power > 0.5;\nAlarmLamp := Temperature > 90.0;\nEND_PROGRAM\n",
+  "requiredInterface": [
+    {
+      "tag": "AutoMode",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "TempRaw",
+      "type": "INT",
+      "direction": "input"
+    },
+    {
+      "tag": "HeaterRaw",
+      "type": "INT",
+      "direction": "output"
+    },
+    {
+      "tag": "Temperature",
+      "type": "REAL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Build & Load the starter and open the Tuning tab. The loop runs with P only: the temperature settles below the 60 °C setpoint. Watch SP, PV and MV in the trend.",
+    "Add integral action: change TI in the Tuning tab until the temperature settles at 60 °C and never exceeds 65 °C, then write that value into the program as the initial value of Ti.",
+    "Open the vessel door in the Tuning tab. The heat loss is a disturbance; the controller must bring the temperature back to 60 °C while the door stays open.",
+    "Wire the MAN/AUTO selector S1: MANUAL := NOT AutoMode and MV_MAN := ManualPower. In MAN the heater runs at 20 %; switching to AUTO must not make the output jump.",
+    "Keep the output within 0..100 % with MV_MIN and MV_MAX and scale it to HeaterRaw (0..10000)."
+  ],
+  "hints": [
+    "With P only the heater needs an error to work, so the temperature stays below the setpoint. The integral part grows while there is an error and removes that offset.",
+    "A TI of about 20 s suits this vessel. A much shorter TI makes the temperature overshoot and swing.",
+    "Let the PID block switch between MAN and AUTO: give it MANUAL and MV_MAN instead of choosing Power with an IF. Its integral follows the manual output, so the transfer is bumpless."
+  ],
+  "knowledgeRefs": [
+    "fundamentals.pid",
+    "fundamentals.scaling",
+    "fundamentals.analog-io"
+  ],
+  "evidence": [
+    {
+      "name": "temperature",
+      "source": {
+        "type": "component",
+        "component": "oven",
+        "quantity": "temperatureMilliC"
+      }
+    },
+    {
+      "name": "scaled",
+      "source": {
+        "type": "plcTag",
+        "tag": "Temperature"
+      }
+    },
+    {
+      "name": "heater",
+      "source": {
+        "type": "plcTag",
+        "tag": "HeaterRaw"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "auto",
+      "title": "Heat up in AUTO",
+      "durationMs": 240000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setSelector",
+            "component": "sel",
+            "position": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "door",
+      "title": "Door opened at the setpoint",
+      "durationMs": 420000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setSelector",
+            "component": "sel",
+            "position": 1
+          }
+        },
+        {
+          "atMs": 180000,
+          "action": {
+            "type": "setDoor",
+            "component": "oven",
+            "open": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "MAN, then AUTO",
+      "durationMs": 120000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setSelector",
+            "component": "sel",
+            "position": 0
+          }
+        },
+        {
+          "atMs": 60000,
+          "action": {
+            "type": "setSelector",
+            "component": "sel",
+            "position": 1
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "scaled",
+      "title": "Temperature shows the vessel temperature",
+      "points": 10,
+      "scenario": "auto",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 1000,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "scaled",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 19.0
+            },
+            {
+              "type": "compare",
+              "signal": "scaled",
+              "layer": "outputs",
+              "op": "le",
+              "value": 21.0
+            }
+          ]
+        }
+      },
+      "onFail": "Temperature was not about 20 °C in the cold vessel. Scale TempRaw: 0..10000 is 0..150 °C."
+    },
+    {
+      "id": "reaches",
+      "title": "The vessel reaches the setpoint",
+      "points": 15,
+      "scenario": "auto",
+      "rule": {
+        "type": "eventually",
+        "condition": {
+          "type": "compare",
+          "signal": "temperature",
+          "layer": "process",
+          "op": "ge",
+          "value": 58000
+        },
+        "byMs": 120000
+      },
+      "onFail": "The vessel did not reach 58 °C within 120 s. A P-only loop stays below the setpoint: add integral action (TI)."
+    },
+    {
+      "id": "no-offset",
+      "title": "The temperature settles at 60 °C without offset",
+      "points": 25,
+      "scenario": "auto",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "temperature",
+              "layer": "process",
+              "op": "ge",
+              "value": 58500
+            },
+            {
+              "type": "compare",
+              "signal": "temperature",
+              "layer": "process",
+              "op": "le",
+              "value": 61500
+            }
+          ]
+        },
+        "fromMs": 150000
+      },
+      "onFail": "From 150 s on the temperature left 58.5..61.5 °C. Remove the offset with TI and avoid a swinging loop."
+    },
+    {
+      "id": "no-overshoot",
+      "title": "The temperature never exceeds 65 °C",
+      "points": 10,
+      "scenario": "auto",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "compare",
+          "signal": "temperature",
+          "layer": "process",
+          "op": "le",
+          "value": 65000
+        },
+        "fromMs": 0
+      },
+      "onFail": "The temperature overshot above 65 °C. Use a longer TI or a smaller KP."
+    },
+    {
+      "id": "recovers",
+      "title": "The loop compensates the open door",
+      "points": 15,
+      "scenario": "door",
+      "rule": {
+        "type": "always",
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "temperature",
+              "layer": "process",
+              "op": "ge",
+              "value": 58500
+            },
+            {
+              "type": "compare",
+              "signal": "temperature",
+              "layer": "process",
+              "op": "le",
+              "value": 61500
+            }
+          ]
+        },
+        "fromMs": 330000
+      },
+      "onFail": "With the door open since 180 s the temperature was not back within 58.5..61.5 °C by 330 s. Only integral action can compensate a lasting heat loss."
+    },
+    {
+      "id": "manual",
+      "title": "In MAN the heater runs at 20 %",
+      "points": 10,
+      "scenario": "manual",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 30000,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "heater",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 1950
+            },
+            {
+              "type": "compare",
+              "signal": "heater",
+              "layer": "outputs",
+              "op": "le",
+              "value": 2050
+            }
+          ]
+        }
+      },
+      "onFail": "In MAN HeaterRaw was not about 2000 (20 %). Give the block MANUAL := NOT AutoMode and MV_MAN := ManualPower."
+    },
+    {
+      "id": "bumpless",
+      "title": "Switching from MAN to AUTO does not make the output jump",
+      "points": 10,
+      "scenario": "manual",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 60500,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "heater",
+              "layer": "outputs",
+              "op": "ge",
+              "value": 1500
+            },
+            {
+              "type": "compare",
+              "signal": "heater",
+              "layer": "outputs",
+              "op": "le",
+              "value": 3000
+            }
+          ]
+        }
+      },
+      "onFail": "0.5 s after switching to AUTO HeaterRaw was outside 1500..3000: the output jumped. Let the PID block switch with MANUAL and MV_MAN."
+    },
+    {
+      "id": "no-fault",
+      "title": "The PLC runs without a fault",
+      "points": 5,
+      "scenario": "auto",
+      "rule": {
+        "type": "noPlcFault"
+      },
+      "onFail": "The PLC stopped with a runtime fault, for example inverted output limits."
+    }
+  ],
+  "curriculumOrder": 76
+}

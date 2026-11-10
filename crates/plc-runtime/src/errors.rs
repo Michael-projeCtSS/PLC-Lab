@@ -89,7 +89,7 @@ pub enum ConfigurationError {
 pub enum InputError {
     UnknownSymbol(SymbolId),
     NotExternalInput(SymbolId),
-    /// An online write to an input: the process image writes inputs (ADR-0048).
+    /// An online write to an input: the process image writes inputs (ADR-0049).
     ExternalInput(SymbolId),
     TypeMismatch {
         symbol: SymbolId,

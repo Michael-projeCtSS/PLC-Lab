@@ -153,7 +153,7 @@ impl Runtime {
     pub fn set_input(&mut self, id: SymbolId, value: PlcValue) -> Result<(), InputError> {
         self.memory.set_input(&self.plan.layout, id, value)
     }
-    /// Write a variable or output online between scans (ADR-0048). Unlike a force it is
+    /// Write a variable or output online between scans (ADR-0049). Unlike a force it is
     /// written once: the program may overwrite it in the next scan.
     pub fn modify(&mut self, id: SymbolId, value: PlcValue) -> Result<(), InputError> {
         self.memory.modify(&self.plan.layout, id, value)

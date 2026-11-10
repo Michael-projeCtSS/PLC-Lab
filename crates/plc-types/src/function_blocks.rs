@@ -137,10 +137,12 @@ impl StandardFunctionBlock {
         }
     }
     /// Inputs the runtime reports with the outputs, so a controller's setpoint,
-    /// measurement and tuning can be observed online (ADR-0048).
+    /// measurement, limits and tuning can be observed online (ADR-0049).
     pub fn observed_inputs(self) -> &'static [&'static str] {
         match self {
-            Self::Pid => &["SP", "PV", "KP", "TI", "TD", "MANUAL", "MV_MAN"],
+            Self::Pid => &[
+                "SP", "PV", "KP", "TI", "TD", "MV_MIN", "MV_MAX", "MANUAL", "MV_MAN",
+            ],
             _ => &[],
         }
     }

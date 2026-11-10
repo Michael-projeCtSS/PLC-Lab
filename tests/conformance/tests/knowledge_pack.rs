@@ -461,3 +461,41 @@ fn an_exercise_may_not_require_the_same_pou_twice() {
         "{error}"
     );
 }
+
+#[test]
+fn the_pid_lab_grades_offset_disturbance_and_bumpless_transfer() {
+    let id = "ex.heater-pid";
+    let lib = library();
+    let solution =
+        std::fs::read_to_string(root().join("tests/conformance/solutions/ex.heater-pid.st"))
+            .unwrap();
+    assert!(failed(id, &solution).is_empty());
+    // P only: it scales and never overshoots, but stays below the setpoint, cannot
+    // compensate the open door and has no MAN mode.
+    let starter = &lib.exercise(id).unwrap().starter_program;
+    assert_eq!(
+        failed(id, starter),
+        ["reaches", "no-offset", "recovers", "manual", "bumpless"]
+    );
+    // Switching the output with an IF instead of the block's MANUAL: MAN works, but the
+    // controller wound up while it was not in charge, so AUTO starts with a jump.
+    let switched = solution.replace(
+        "MANUAL := NOT AutoMode, MV_MAN := ManualPower, MV => Power);",
+        "MV => Power);\nIF NOT AutoMode THEN\n    Power := ManualPower;\nEND_IF;",
+    );
+    assert!(switched.contains("Power := ManualPower;"), "{switched}");
+    assert_eq!(failed(id, &switched), ["bumpless"]);
+    // A very short integral time makes the loop swing around the setpoint.
+    let nervous = solution.replace("Ti : TIME := T#20s;", "Ti : TIME := T#2s;");
+    assert!(nervous.contains("T#2s"), "{nervous}");
+    let swinging = failed(id, &nervous);
+    assert!(swinging.contains(&"no-offset".to_string()), "{swinging:?}");
+    // Heating past 65 degC is an overshoot, whatever the cause.
+    let hot = solution.replace("Setpoint : REAL := 60.0;", "Setpoint : REAL := 70.0;");
+    assert!(hot.contains("70.0"), "{hot}");
+    let overshoot = failed(id, &hot);
+    assert!(
+        overshoot.contains(&"no-overshoot".to_string()),
+        "{overshoot:?}"
+    );
+}

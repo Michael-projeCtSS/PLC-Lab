@@ -20930,6 +20930,172 @@
       ]
     },
     {
+      "id": "ex.heater-pid",
+      "file": "exercises/ex-heater-pid.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Heated vessel control with a PID loop",
+          "text": "Regulacja podgrzewanego zbiornika w pętli PID"
+        },
+        {
+          "path": "summary",
+          "source": "Tune a PID controller on a real heated vessel: remove the offset of a P-only loop, ride out a door-open disturbance and switch between manual and automatic without a bump.",
+          "text": "Nastrój regulator PID na rzeczywistym podgrzewanym zbiorniku: usuń uchyb ustalony pętli z samym członem P, opanuj zakłócenie od otwartych drzwi i przełączaj między trybem ręcznym a automatycznym bez skoku."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Read SP, PV and MV in a trend and recognise the offset of a P-only loop",
+          "text": "Odczytaj SP, PV i MV na wykresie trendu i rozpoznaj uchyb ustalony pętli z samym członem P"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Remove the offset with integral action and keep the overshoot small",
+          "text": "Usuń uchyb ustalony działaniem całkującym i utrzymaj małe przeregulowanie"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Use output limits, manual mode and bumpless transfer of the PID block",
+          "text": "Użyj ograniczeń wyjścia, trybu ręcznego i bezuderzeniowego przełączania bloku PID"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Build & Load the starter and open the Tuning tab. The loop runs with P only: the temperature settles below the 60 °C setpoint. Watch SP, PV and MV in the trend.",
+          "text": "Użyj przycisku Kompiluj i wgraj do PLC dla programu startowego i otwórz kartę Strojenie. Pętla działa tylko z członem P: temperatura ustala się poniżej wartości zadanej 60 °C. Obserwuj SP, PV i MV na wykresie trendu."
+        },
+        {
+          "path": "instructions.1",
+          "source": "Add integral action: change TI in the Tuning tab until the temperature settles at 60 °C and never exceeds 65 °C, then write that value into the program as the initial value of Ti.",
+          "text": "Dodaj działanie całkujące: zmieniaj TI na karcie Strojenie, aż temperatura ustali się na 60 °C i nigdy nie przekroczy 65 °C, a następnie wpisz tę wartość do programu jako wartość początkową Ti."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Open the vessel door in the Tuning tab. The heat loss is a disturbance; the controller must bring the temperature back to 60 °C while the door stays open.",
+          "text": "Otwórz drzwi zbiornika na karcie Strojenie. Utrata ciepła jest zakłóceniem; regulator musi przywrócić temperaturę 60 °C, dopóki drzwi pozostają otwarte."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Wire the MAN/AUTO selector S1: MANUAL := NOT AutoMode and MV_MAN := ManualPower. In MAN the heater runs at 20 %; switching to AUTO must not make the output jump.",
+          "text": "Podłącz przełącznik MAN/AUTO S1: MANUAL := NOT AutoMode oraz MV_MAN := ManualPower. W trybie MAN grzałka pracuje z mocą 20 %; przełączenie na AUTO nie może spowodować skoku wyjścia."
+        },
+        {
+          "path": "instructions.4",
+          "source": "Keep the output within 0..100 % with MV_MIN and MV_MAX and scale it to HeaterRaw (0..10000).",
+          "text": "Utrzymaj wyjście w zakresie 0..100 % za pomocą MV_MIN i MV_MAX i przeskaluj je na HeaterRaw (0..10000)."
+        },
+        {
+          "path": "hints.0",
+          "source": "With P only the heater needs an error to work, so the temperature stays below the setpoint. The integral part grows while there is an error and removes that offset.",
+          "text": "Z samym członem P grzałka grzeje tylko wtedy, gdy istnieje uchyb, więc temperatura pozostaje poniżej wartości zadanej. Część całkująca rośnie, dopóki istnieje uchyb, i usuwa ten uchyb ustalony."
+        },
+        {
+          "path": "hints.1",
+          "source": "A TI of about 20 s suits this vessel. A much shorter TI makes the temperature overshoot and swing.",
+          "text": "TI około 20 s pasuje do tego zbiornika. Znacznie krótszy TI powoduje przeregulowanie i kołysanie temperatury."
+        },
+        {
+          "path": "hints.2",
+          "source": "Let the PID block switch between MAN and AUTO: give it MANUAL and MV_MAN instead of choosing Power with an IF. Its integral follows the manual output, so the transfer is bumpless.",
+          "text": "Pozwól blokowi PID przełączać między MAN i AUTO: przekaż mu MANUAL i MV_MAN zamiast wybierać Power instrukcją IF. Jego część całkująca podąża za wyjściem ręcznym, więc przełączenie jest bezuderzeniowe."
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "Heat up in AUTO",
+          "text": "Nagrzewanie w trybie AUTO"
+        },
+        {
+          "path": "scenarios.1.title",
+          "source": "Door opened at the setpoint",
+          "text": "Drzwi otwarte przy wartości zadanej"
+        },
+        {
+          "path": "scenarios.2.title",
+          "source": "MAN, then AUTO",
+          "text": "Najpierw MAN, potem AUTO"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "Temperature shows the vessel temperature",
+          "text": "Temperature pokazuje temperaturę zbiornika"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "Temperature was not about 20 °C in the cold vessel. Scale TempRaw: 0..10000 is 0..150 °C.",
+          "text": "Temperature nie wynosiła około 20 °C w zimnym zbiorniku. Przeskaluj TempRaw: 0..10000 to 0..150 °C."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "The vessel reaches the setpoint",
+          "text": "Zbiornik osiąga wartość zadaną"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "The vessel did not reach 58 °C within 120 s. A P-only loop stays below the setpoint: add integral action (TI).",
+          "text": "Zbiornik nie osiągnął 58 °C w ciągu 120 s. Pętla z samym członem P pozostaje poniżej wartości zadanej: dodaj działanie całkujące (TI)."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "The temperature settles at 60 °C without offset",
+          "text": "Temperatura ustala się na 60 °C bez uchybu ustalonego"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "From 150 s on the temperature left 58.5..61.5 °C. Remove the offset with TI and avoid a swinging loop.",
+          "text": "Od 150 s temperatura wyszła poza zakres 58.5..61.5 °C. Usuń uchyb ustalony za pomocą TI i unikaj kołysania pętli."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "The temperature never exceeds 65 °C",
+          "text": "Temperatura nigdy nie przekracza 65 °C"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "The temperature overshot above 65 °C. Use a longer TI or a smaller KP.",
+          "text": "Temperatura przekroczyła 65 °C. Użyj dłuższego TI lub mniejszego KP."
+        },
+        {
+          "path": "criteria.4.title",
+          "source": "The loop compensates the open door",
+          "text": "Pętla kompensuje otwarte drzwi"
+        },
+        {
+          "path": "criteria.4.onFail",
+          "source": "With the door open since 180 s the temperature was not back within 58.5..61.5 °C by 330 s. Only integral action can compensate a lasting heat loss.",
+          "text": "Przy drzwiach otwartych od 180 s temperatura nie wróciła do zakresu 58.5..61.5 °C do 330 s. Tylko działanie całkujące kompensuje trwałą utratę ciepła."
+        },
+        {
+          "path": "criteria.5.title",
+          "source": "In MAN the heater runs at 20 %",
+          "text": "W trybie MAN grzałka pracuje z mocą 20 %"
+        },
+        {
+          "path": "criteria.5.onFail",
+          "source": "In MAN HeaterRaw was not about 2000 (20 %). Give the block MANUAL := NOT AutoMode and MV_MAN := ManualPower.",
+          "text": "W trybie MAN HeaterRaw nie wynosiło około 2000 (20 %). Przekaż blokowi MANUAL := NOT AutoMode oraz MV_MAN := ManualPower."
+        },
+        {
+          "path": "criteria.6.title",
+          "source": "Switching from MAN to AUTO does not make the output jump",
+          "text": "Przełączenie z MAN na AUTO nie powoduje skoku wyjścia"
+        },
+        {
+          "path": "criteria.6.onFail",
+          "source": "0.5 s after switching to AUTO HeaterRaw was outside 1500..3000: the output jumped. Let the PID block switch with MANUAL and MV_MAN.",
+          "text": "0.5 s po przełączeniu na AUTO HeaterRaw było poza zakresem 1500..3000: wyjście skoczyło. Pozwól blokowi PID przełączać za pomocą MANUAL i MV_MAN."
+        },
+        {
+          "path": "criteria.7.title",
+          "source": "The PLC runs without a fault",
+          "text": "PLC pracuje bez błędu wykonania"
+        },
+        {
+          "path": "criteria.7.onFail",
+          "source": "The PLC stopped with a runtime fault, for example inverted output limits.",
+          "text": "PLC zatrzymał się z błędem wykonania, na przykład przez odwrócone ograniczenia wyjścia."
+        }
+      ]
+    },
+    {
       "id": "fundamentals.pous",
       "file": "fundamentals/pous.json",
       "fields": [

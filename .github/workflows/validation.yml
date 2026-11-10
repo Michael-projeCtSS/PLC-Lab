@@ -63,6 +63,7 @@ jobs:
             artifacts/editor-keyboard/failure.json
             artifacts/sequence-session/*.png
             artifacts/pou-session/*.png
+            artifacts/pid-session/*.png
             artifacts/release-smoke/native.log
             artifacts/release-smoke/result.json
             artifacts/release-smoke/*.png

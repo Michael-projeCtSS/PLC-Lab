@@ -532,8 +532,8 @@ export type LoopSignalDto = { parameter: string, signal: number, };
 
 export type ControlLoopDto = { instance: string, 
 /**
- * Observed outputs and inputs: MV, E, P, I, D, SAT, SP, PV, KP, TI, TD, MANUAL,
- * MV_MAN.
+ * Observed outputs and inputs: MV, E, P, I, D, SAT, SP, PV, KP, TI, TD, MV_MIN,
+ * MV_MAX, MANUAL, MV_MAN.
  */
 signals: Array<LoopSignalDto>, 
 /**

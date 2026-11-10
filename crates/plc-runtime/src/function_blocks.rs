@@ -60,6 +60,8 @@ impl FunctionBlockStateSnapshot {
                 ("KP", PlcValue::Real(o.kp)),
                 ("TI", PlcValue::Time(o.ti)),
                 ("TD", PlcValue::Time(o.td)),
+                ("MV_MIN", PlcValue::Real(o.mv_min)),
+                ("MV_MAX", PlcValue::Real(o.mv_max)),
                 ("MANUAL", PlcValue::Bool(o.manual)),
                 ("MV_MAN", PlcValue::Real(o.mv_man)),
             ],

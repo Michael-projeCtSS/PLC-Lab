@@ -8,6 +8,7 @@ import {
   api,
   onCycleAdvanced,
   type BuildLoadResultDto,
+  type ControlLoopDto,
   type DiagnosticDto,
   type GradeReportDto,
   type LiveFrameDto,
@@ -47,6 +48,7 @@ const COMMAND: Record<string, TranslationKey> = {
   alarm: "request.command.alarm",
   diagnose: "request.command.diagnose",
   repair: "request.command.repair",
+  write: "request.command.write",
 };
 
 const ACTION: Record<OperateActionDto["type"], TranslationKey> = {
@@ -278,6 +280,27 @@ export function useLab(projectId: string) {
       unlisten?.();
     };
   }, [wsId, refreshFrame]);
+
+  // The PID controllers of the program in the PLC (ADR-0049), read again whenever a
+  // download changes the program or its signals.
+  const [controlLoops, setControlLoops] = useState<ControlLoopDto[]>([]);
+  const programRevision = frame?.plc.programRevision ?? null;
+  const signalsRevision = frame?.signalsRevision ?? null;
+  useEffect(() => {
+    if (!ws) return;
+    let active = true;
+    api.controlLoops(ws).then(
+      (r) => {
+        if (active) setControlLoops(r.loops);
+      },
+      (e: unknown) => {
+        if (active) log("error", errorText(e));
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [ws, programRevision, signalsRevision, log]);
 
   /** Reports about a request that is slow to answer; `request` names it. */
   const laneEvents = useCallback(
@@ -814,6 +837,7 @@ export function useLab(projectId: string) {
     fatal,
     act,
     operate,
+    controlLoops,
     hold,
     letGo,
     letGoAll,

@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
+import type { SignalValueDto } from "@plc-lab/ipc";
 import {
   frame,
   library,
@@ -29,6 +30,10 @@ const fake = vi.hoisted(() => ({
   simulation: vi.fn(),
   plcMode: vi.fn(),
   operate: vi.fn(),
+  controlLoops: vi.fn(),
+  watch: vi.fn(),
+  modify: vi.fn(),
+  trend: vi.fn(),
   variables: vi.fn(),
   events: vi.fn(),
   check: vi.fn(),
@@ -245,6 +250,8 @@ beforeEach(() => {
   fake.search.mockResolvedValue([]);
   fake.takeOpenRequest.mockResolvedValue(null);
   fake.noteEvidence.mockResolvedValue(null);
+  fake.controlLoops.mockResolvedValue({ loops: [] });
+  fake.trend.mockResolvedValue({ series: [], oldestUs: null, latestUs: null });
   // Like the real backend, every frame read after a successful load reports the loaded,
   // running simulation; the UI re-reads the frame after each use case.
   fake.buildAndLoad.mockImplementation(() => {
@@ -935,6 +942,344 @@ it("a release made during a pending Step is sent after it; the older Step frame 
   expect(button).toHaveAttribute("aria-pressed", "false");
   expect(backend.state.pressed).toBe(false);
   expect(fake.simulation).toHaveBeenCalledTimes(1);
+});
+
+// ---- PID tuning (ADR-0049): backend values, online writes, operator controls -------------
+
+/** The heated vessel scene's controls, and a PID loop the backend reports. */
+function tuningBackend(
+  values: Record<string, SignalValueDto>,
+  signalsRevision = 2,
+) {
+  const ids: Record<string, number> = {
+    MV: 40,
+    E: 41,
+    P: 42,
+    I: 43,
+    D: 44,
+    SAT: 45,
+    SP: 46,
+    PV: 47,
+    KP: 48,
+    TI: 49,
+    TD: 50,
+    MV_MIN: 51,
+    MV_MAX: 52,
+    MANUAL: 53,
+    MV_MAN: 54,
+  };
+  const bound: Record<string, number> = { SP: 60, KP: 61, TI: 62, MV_MAX: 63 };
+  const base = workspace();
+  fake.openWorkspace.mockResolvedValue(
+    workspace({
+      scene: {
+        ...base.scene,
+        components: [
+          ...base.scene.components,
+          {
+            id: "sel",
+            label: "Selector S1",
+            kind: "selectorSwitch",
+            color: null,
+            positions: ["MAN", "AUTO"],
+            operable: true,
+            config: [],
+          },
+          {
+            id: "oven",
+            label: "Vessel E-1",
+            kind: "heatedVessel",
+            color: null,
+            positions: [],
+            operable: true,
+            config: [],
+          },
+        ],
+      },
+      frame: frame({ signalsRevision }),
+    }),
+  );
+  const shown = frame({
+    signalsRevision,
+    components: [
+      ...frame().components,
+      {
+        id: "sel",
+        quantities: [{ name: "position", value: { type: "COUNT", value: 1 } }],
+      },
+      {
+        id: "oven",
+        quantities: [
+          { name: "doorOpen", value: { type: "BOOL", value: false } },
+        ],
+      },
+    ],
+  });
+  fake.frame.mockResolvedValue(shown);
+  fake.controlLoops.mockResolvedValue({
+    loops: [
+      {
+        instance: "Loop",
+        signals: Object.entries(ids).map(([parameter, signal]) => ({
+          parameter,
+          signal,
+        })),
+        bindings: Object.entries(bound).map(([parameter, signal]) => ({
+          parameter,
+          signal,
+        })),
+      },
+    ],
+  });
+  const byId = new Map(
+    Object.entries(values).map(([name, value]) => [ids[name], value]),
+  );
+  fake.watch.mockImplementation(async (_ws: unknown, signals: number[]) => ({
+    worldTimeUs: "1200000",
+    cycle: "12",
+    rows: signals.map((signal) => ({
+      signal,
+      value: byId.get(signal) ?? null,
+    })),
+  }));
+  const point = (t: string, value: number) => ({
+    t,
+    value: { type: "REAL", value },
+  });
+  fake.trend.mockResolvedValue({
+    series: [
+      {
+        signal: 46,
+        layer: "COMMITTED",
+        decimated: false,
+        points: [point("0", 60)],
+      },
+      {
+        signal: 47,
+        layer: "COMMITTED",
+        decimated: false,
+        points: [point("0", 20), point("600000", 35), point("1100000", 50.5)],
+      },
+      {
+        signal: 40,
+        layer: "COMMITTED",
+        decimated: false,
+        points: [point("0", 100), point("900000", 38)],
+      },
+    ],
+    oldestUs: "0",
+    latestUs: "1200000",
+  });
+  fake.modify.mockResolvedValue(shown);
+  fake.operate.mockReset();
+  fake.operate.mockResolvedValue(shown);
+  return { ids, bound };
+}
+const REAL = (value: number): SignalValueDto => ({ type: "REAL", value });
+const automatic = {
+  SP: REAL(60),
+  PV: REAL(50.5),
+  E: REAL(9.5),
+  MV: REAL(38),
+  P: REAL(38),
+  I: REAL(0),
+  D: REAL(0),
+  SAT: { type: "BOOL", value: false },
+  KP: REAL(4),
+  TI: { type: "TIME", value: "0" },
+  TD: { type: "TIME", value: "0" },
+  MV_MIN: REAL(0),
+  MV_MAX: REAL(100),
+  MANUAL: { type: "BOOL", value: false },
+  MV_MAN: REAL(20),
+} satisfies Record<string, SignalValueDto>;
+
+async function openTuning() {
+  await openMotor();
+  fireEvent.click(await screen.findByRole("tab", { name: "Tuning" }));
+  return screen.findByRole("img", { name: /^Trend of Loop/ });
+}
+const row = (region: string, label: string) =>
+  within(screen.getByRole("region", { name: region }))
+    .getByRole("rowheader", { name: label })
+    .closest("tr") as HTMLElement;
+
+it("a program without a PID block has no Tuning tab", async () => {
+  await openMotor();
+  await waitFor(() => expect(fake.controlLoops).toHaveBeenCalled());
+  expect(screen.queryByRole("tab", { name: "Tuning" })).not.toBeInTheDocument();
+});
+
+it("the Tuning tab shows the controller's trend, state and diagnostics from the backend", async () => {
+  tuningBackend(automatic);
+  const chart = await openTuning();
+  await waitFor(() => expect(chart).toHaveAttribute("data-points", "1,3,2"));
+  expect(fake.trend.mock.calls.at(-1)?.[1]).toEqual([46, 47, 40]);
+  await waitFor(() =>
+    expect(
+      within(row("Controller state", "Output MV")).getByText("38.0"),
+    ).toBeInTheDocument(),
+  );
+  expect(
+    within(row("Controller state", "Error E = SP - PV")).getByText("9.5"),
+  ).toBeInTheDocument();
+  // The mode badge, next to the loop name (the selector has an AUTO button too).
+  expect(document.querySelector(".tuning .badge.auto")).toHaveTextContent(
+    "AUTO",
+  );
+  const diagnostics = within(
+    screen.getByRole("region", { name: "Diagnostics" }),
+  );
+  expect(
+    diagnostics.getByText("AUTO: MV = P + I + D, from the error E = 9.5."),
+  ).toBeInTheDocument();
+  expect(
+    diagnostics.getByText(
+      "TI = 0 s: no integral action. A P-only loop keeps a steady error.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    diagnostics.getByText(
+      "The simulation is not running: the values change only while it runs.",
+    ),
+  ).toBeInTheDocument();
+});
+
+it("manual mode and a saturated output are explained from the backend's values", async () => {
+  tuningBackend({
+    ...automatic,
+    MANUAL: { type: "BOOL", value: true },
+    MV: REAL(100),
+    SAT: { type: "BOOL", value: true },
+    TI: { type: "TIME", value: "20000000" },
+  });
+  await openTuning();
+  const diagnostics = within(
+    screen.getByRole("region", { name: "Diagnostics" }),
+  );
+  expect(
+    await diagnostics.findByText(
+      "MAN: the output follows MV_MAN (20.0). The integral tracks it (I = MV - P), so AUTO continues without a bump.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    diagnostics.getByText(
+      "The output is at its high limit MV_MAX (100.0): the integral does not grow further (anti-windup).",
+    ),
+  ).toBeInTheDocument();
+  expect(diagnostics.queryByText(/TI = 0 s/)).not.toBeInTheDocument();
+  expect(screen.getByText("Output at a limit")).toBeInTheDocument();
+  expect(
+    within(row("Parameters", "Integral time TI")).getByText("20 s"),
+  ).toBeInTheDocument();
+});
+
+it("parameters bound to variables are written online; literals are read-only", async () => {
+  const { bound } = tuningBackend(automatic);
+  await openTuning();
+  const kp = row("Parameters", "Gain KP");
+  fireEvent.change(
+    within(kp).getByRole("textbox", { name: "New value for Gain KP" }),
+    {
+      target: { value: "2,5" },
+    },
+  );
+  fireEvent.click(within(kp).getByRole("button", { name: "Write" }));
+  await waitFor(() =>
+    expect(fake.modify).toHaveBeenCalledWith({ workspaceId: "1" }, bound.KP, {
+      type: "REAL",
+      value: 2.5,
+    }),
+  );
+  const ti = row("Parameters", "Integral time TI");
+  fireEvent.change(within(ti).getByRole("textbox"), {
+    target: { value: "20" },
+  });
+  fireEvent.click(within(ti).getByRole("button", { name: "Write" }));
+  await waitFor(() =>
+    expect(fake.modify).toHaveBeenLastCalledWith(
+      { workspaceId: "1" },
+      bound.TI,
+      { type: "TIME", value: "20000000" },
+    ),
+  );
+  // Not a number: nothing is written.
+  const calls = fake.modify.mock.calls.length;
+  const max = row("Parameters", "Output high limit MV_MAX");
+  const input = within(max).getByRole("textbox");
+  fireEvent.change(input, { target: { value: "lots" } });
+  fireEvent.click(within(max).getByRole("button", { name: "Write" }));
+  expect(input).toHaveAttribute("aria-invalid", "true");
+  expect(fake.modify).toHaveBeenCalledTimes(calls);
+  // MV_MIN is a literal in the program: no input.
+  const min = row("Parameters", "Output low limit MV_MIN");
+  expect(within(min).getByText("set in the program")).toBeInTheDocument();
+  expect(within(min).queryByRole("textbox")).not.toBeInTheDocument();
+  // A setpoint step writes SP relative to its current value.
+  fireEvent.click(screen.getByRole("button", { name: "+5" }));
+  await waitFor(() =>
+    expect(fake.modify).toHaveBeenLastCalledWith(
+      { workspaceId: "1" },
+      bound.SP,
+      { type: "REAL", value: 65 },
+    ),
+  );
+});
+
+it("the Tuning tab operates the MAN/AUTO selector and opens the vessel door as a disturbance", async () => {
+  tuningBackend(automatic);
+  await openTuning();
+  const selector = screen.getByRole("group", { name: "Selector S1" });
+  expect(
+    within(selector).getByRole("button", { name: "AUTO" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(within(selector).getByRole("button", { name: "MAN" }));
+  await waitFor(() =>
+    expect(fake.operate).toHaveBeenCalledWith({ workspaceId: "1" }, "sel", {
+      type: "selector",
+      position: 0,
+    }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open the door of Vessel E-1" }),
+  );
+  await waitFor(() =>
+    expect(fake.operate).toHaveBeenLastCalledWith(
+      { workspaceId: "1" },
+      "oven",
+      {
+        type: "door",
+        open: true,
+      },
+    ),
+  );
+});
+
+it("a new download reads the control loops again", async () => {
+  tuningBackend(automatic);
+  await openTuning();
+  const before = fake.controlLoops.mock.calls.length;
+  fake.controlLoops.mockResolvedValue({ loops: [] });
+  fake.buildAndLoad.mockImplementation(() =>
+    Promise.resolve({
+      outcome: "LOADED",
+      diagnostics: [],
+      bindingIssues: [],
+      message: "Program Main loaded into the PLC.",
+      signals: workspace().signals,
+      frame: frame({ signalsRevision: 3 }),
+    }),
+  );
+  fake.frame.mockResolvedValue(frame({ signalsRevision: 3 }));
+  fireEvent.click(screen.getByRole("button", { name: "Build & Load to PLC" }));
+  await waitFor(() =>
+    expect(fake.controlLoops.mock.calls.length).toBeGreaterThan(before),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("tab", { name: "Tuning" }),
+    ).not.toBeInTheDocument(),
+  );
 });
 
 it("PLC and simulation controls explain what they do", async () => {

@@ -18,12 +18,14 @@ import { useSequenceDefinition } from "./sequenceDefinition";
 import { Inspector } from "./Inspector";
 import { Dock } from "./Dock";
 import { ForceBanner } from "./ForceBanner";
+import { TuningTab } from "./TuningTab";
 
 export type CenterTab =
   | "program"
   | "alarms"
   | "hardware"
   | "process"
+  | "tuning"
   | "network"
   | "diagnostics"
   | "commissioning";
@@ -54,6 +56,7 @@ export function WorkspacePage({
   const visibleTab =
     simple &&
     tab !== "process" &&
+    tab !== "tuning" &&
     !(tab === "diagnostics" && alarms > 0) &&
     !(tab === "alarms" && plantAlarms.length > 0)
       ? "program"
@@ -157,6 +160,9 @@ export function WorkspacePage({
                       ]
                     : []),
                   { id: "process", label: t("ws.process") },
+                  ...(lab.controlLoops.length > 0
+                    ? [{ id: "tuning" as const, label: t("ws.tuning") }]
+                    : []),
                   ...(!simple || plantAlarms.length > 0
                     ? [
                         {
@@ -190,6 +196,7 @@ export function WorkspacePage({
               />
               <div className="ws-center-body">
                 {visibleTab === "program" && <ProgramTab lab={lab} />}
+                {visibleTab === "tuning" && <TuningTab lab={lab} />}
                 {visibleTab === "process" && (
                   <ProcessTab
                     lab={lab}

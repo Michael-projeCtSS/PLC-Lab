@@ -73,7 +73,7 @@ pub(crate) struct LoadedProgram {
     pub source: String,
     /// The project library documents compiled with `source` (ADR-0045).
     pub library: Vec<String>,
-    /// Standard block inputs bound to plain variables (ADR-0048).
+    /// Standard block inputs bound to plain variables (ADR-0049).
     pub bindings: Vec<st_frontend::InputBinding>,
     pub runtime: Runtime,
     pub tags: Vec<TagBinding>,
@@ -442,7 +442,7 @@ impl PlcParticipant {
             .set_input(symbol, value)
             .map_err(|e| EngineError::Internal(format!("input staging failed: {e}")))
     }
-    /// An online write of a variable or output between scans (ADR-0048).
+    /// An online write of a variable or output between scans (ADR-0049).
     pub fn modify(&mut self, symbol: SymbolId, value: PlcValue) -> Result<(), EngineError> {
         let Some(p) = &mut self.program else {
             return Err(EngineError::NoProgram);

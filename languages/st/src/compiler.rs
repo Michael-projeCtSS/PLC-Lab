@@ -61,7 +61,7 @@ pub struct ParameterSummary {
 }
 
 /// A standard block input bound to a plain variable, e.g. `Loop(KP := Kp)`: the tuning
-/// screen writes the variable to change the input (ADR-0048).
+/// screen writes the variable to change the input (ADR-0049).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InputBinding {
     /// The instance path, e.g. `Loop` or `Line.Loop`.

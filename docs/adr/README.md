@@ -54,3 +54,4 @@ as history; their session, process and controller details are superseded as note
 | [0046](0046-deterministic-pid-block.md)                | A deterministic PID standard block                                   | Accepted (CP9-B)                    |
 | [0047](0047-heated-vessel-and-analog-outputs.md)       | A heated vessel process and analog outputs into the process          | Accepted (CP9-B)                    |
 | [0048](0048-ordered-requests-and-button-holds.md)      | Ordered workspace requests and push-button holds                     | Accepted                            |
+| [0049](0049-pid-tuning-screen.md)                      | Online write, control-loop query and the PID tuning screen           | Accepted (CP9-B)                    |

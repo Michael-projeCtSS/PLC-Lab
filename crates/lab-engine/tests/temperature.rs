@@ -1,7 +1,7 @@
 //! Closed-loop temperature control in the real engine (ADR-0046, ADR-0047): the student's
 //! ST program with the PID block, the analog input and output modules and the heated
 //! vessel, cycle by cycle.
-use lab_engine::{LabSession, OperatorAction, SessionConfig};
+use lab_engine::{LabSession, OperatorAction, SessionConfig, SignalId, SignalValue};
 use lab_model::{
     exercise::PlcModeRequest, parse_json, profile::PlatformProfile, scene::SceneDefinition,
 };
@@ -151,4 +151,89 @@ fn the_closed_loop_is_deterministic() {
         t
     };
     assert_eq!(trace(), trace());
+}
+
+#[test]
+fn the_tuning_screen_sees_the_limits_and_writes_bound_inputs_online() {
+    let source = "PROGRAM Main
+VAR_INPUT AutoMode : BOOL; TempRaw : INT; END_VAR
+VAR_OUTPUT HeaterRaw : INT; HeaterLamp : BOOL; AlarmLamp : BOOL; END_VAR
+VAR Loop : PID; Setpoint : REAL := 60.0; Kp : REAL := 4.0; Ti : TIME := T#20s;
+    PowerMax : REAL := 100.0; Temperature : REAL; Heater : REAL; END_VAR
+Temperature := INT_TO_REAL(TempRaw) * 0.015;
+Loop(SP := Setpoint, PV := Temperature, KP := Kp, TI := Ti, MV_MIN := 0.0,
+     MV_MAX := PowerMax, MANUAL := NOT AutoMode, MV_MAN := 25.0, MV => Heater);
+HeaterRaw := REAL_TO_INT(Heater * 100.0);
+HeaterLamp := Heater > 0.5;
+AlarmLamp := Temperature > 90.0;
+END_PROGRAM";
+    let mut s = plant(source);
+    auto(&mut s, true);
+    run(&mut s, 5);
+    let loops = s.control_loops();
+    assert_eq!(loops.len(), 1, "{loops:?}");
+    let control = loops[0].clone();
+    assert_eq!(control.instance, "Loop");
+    let observed = |name: &str| -> SignalId {
+        control
+            .signals
+            .iter()
+            .find(|(p, _)| *p == name)
+            .map(|(_, id)| *id)
+            .unwrap_or_else(|| panic!("{name} is not observed: {:?}", control.signals))
+    };
+    let bound = |name: &str| {
+        control
+            .bindings
+            .iter()
+            .find(|(p, _)| *p == name)
+            .map(|(_, id)| *id)
+    };
+    let value = |s: &LabSession, id: SignalId| s.watch(&[id])[0].1;
+    // Both limits are observed; only the one bound to a variable can be written.
+    assert_eq!(value(&s, observed("MV_MIN")), Some(SignalValue::Real(0.0)));
+    assert_eq!(
+        value(&s, observed("MV_MAX")),
+        Some(SignalValue::Real(100.0))
+    );
+    assert!(bound("MV_MIN").is_none(), "{:?}", control.bindings);
+    for writable in ["SP", "KP", "TI", "MV_MAX"] {
+        assert!(
+            bound(writable).is_some(),
+            "{writable}: {:?}",
+            control.bindings
+        );
+    }
+    // Heating from cold the output is at its upper limit.
+    assert_eq!(value(&s, observed("SAT")), Some(SignalValue::Bool(true)));
+    // Lowering the output limit online caps the heater at once.
+    s.modify(bound("MV_MAX").unwrap(), SignalValue::Real(30.0))
+        .unwrap();
+    let after = run(&mut s, 2);
+    assert_eq!(value(&s, observed("MV_MAX")), Some(SignalValue::Real(30.0)));
+    assert_eq!(value(&s, observed("MV")), Some(SignalValue::Real(30.0)));
+    assert!(after.iter().all(|(_, power)| *power <= 300), "{after:?}");
+    // A new gain reaches the controller in the next scan.
+    s.modify(bound("KP").unwrap(), SignalValue::Real(2.0))
+        .unwrap();
+    run(&mut s, 1);
+    assert_eq!(value(&s, observed("KP")), Some(SignalValue::Real(2.0)));
+    // The trace holds SP, PV and MV for the trend.
+    let now = s.now().as_micros();
+    let series = s.trend(
+        &[observed("SP"), observed("PV"), observed("MV")],
+        0,
+        now,
+        500,
+    );
+    assert_eq!(series.len(), 3);
+    assert!(series.iter().all(|t| !t.points.is_empty()), "{series:?}");
+    assert!(
+        series[0]
+            .points
+            .iter()
+            .all(|(_, v)| *v == SignalValue::Real(60.0)),
+        "{:?}",
+        series[0].points
+    );
 }

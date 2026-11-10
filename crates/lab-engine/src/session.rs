@@ -129,13 +129,13 @@ pub enum OperatorAction {
     },
 }
 
-/// A PID controller of the loaded program (ADR-0048).
+/// A PID controller of the loaded program (ADR-0049).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ControlLoop {
     /// The instance path, e.g. `Loop`.
     pub instance: String,
     /// Its observed outputs and inputs by parameter name (MV, E, P, I, D, SAT, SP, PV,
-    /// KP, TI, TD, MANUAL, MV_MAN).
+    /// KP, TI, TD, MV_MIN, MV_MAX, MANUAL, MV_MAN).
     pub signals: Vec<(&'static str, SignalId)>,
     /// Inputs bound to plain program variables: writing the variable changes the input.
     pub bindings: Vec<(&'static str, SignalId)>,
@@ -186,7 +186,7 @@ pub enum LabEventKind {
     Operator {
         action: OperatorAction,
     },
-    /// A variable written online (ADR-0048).
+    /// A variable written online (ADR-0049).
     Modified {
         signal: SignalId,
         value: SignalValue,
@@ -1429,7 +1429,7 @@ impl LabSession {
         self.drive()
     }
 
-    /// Write a PLC variable or output online, once, between cycles (ADR-0048): the next
+    /// Write a PLC variable or output online, once, between cycles (ADR-0049): the next
     /// scan starts from the written value and the program may overwrite it. Inputs come
     /// from the process image; a force replaces them.
     pub fn modify(&mut self, signal: SignalId, value: SignalValue) -> Result<(), EngineError> {
@@ -1459,7 +1459,7 @@ impl LabSession {
     }
 
     /// The PID controllers of the program in the PLC with their observed signals and
-    /// the variables their inputs are bound to (ADR-0048).
+    /// the variables their inputs are bound to (ADR-0049).
     pub fn control_loops(&self) -> Vec<ControlLoop> {
         let Some(program) = &self.plc.program else {
             return Vec::new();

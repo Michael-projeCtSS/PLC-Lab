@@ -81,6 +81,8 @@ export const PAIRS = [
   ["display-text", "display-bg", 4.5, "drive display"],
   ["symbol-stroke", "canvas", 3, "process symbol outline"],
   ["trace-num", "canvas", 3, "numeric trace"],
+  ["trace-sp", "canvas", 3, "setpoint trace"],
+  ["trace-mv", "canvas", 3, "controller output trace"],
   ["st-active", "canvas", 3, "boolean trace"],
   ["line-strong", "bg-1", 1.3, "control borders (decorative)"],
 ];

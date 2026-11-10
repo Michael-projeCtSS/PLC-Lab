@@ -545,7 +545,7 @@ pub struct ForceRequest {
     pub signal: u32,
     pub value: Option<SignalValueDto>,
 }
-/// Write a PLC variable or output online, once (ADR-0048).
+/// Write a PLC variable or output online, once (ADR-0049).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ModifyRequest {
@@ -561,13 +561,13 @@ pub struct LoopSignalDto {
     pub parameter: String,
     pub signal: u32,
 }
-/// A PID controller of the program in the PLC (ADR-0048).
+/// A PID controller of the program in the PLC (ADR-0049).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ControlLoopDto {
     pub instance: String,
-    /// Observed outputs and inputs: MV, E, P, I, D, SAT, SP, PV, KP, TI, TD, MANUAL,
-    /// MV_MAN.
+    /// Observed outputs and inputs: MV, E, P, I, D, SAT, SP, PV, KP, TI, TD, MV_MIN,
+    /// MV_MAX, MANUAL, MV_MAN.
     pub signals: Vec<LoopSignalDto>,
     /// Inputs bound to plain program variables; writing the variable changes the input.
     pub bindings: Vec<LoopSignalDto>,

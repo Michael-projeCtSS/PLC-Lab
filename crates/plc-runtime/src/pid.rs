@@ -13,7 +13,7 @@ use crate::{
 use plc_types::{PlcReal, PlcTime};
 
 /// The block's outputs (MV, E, P, I, D, SAT) and the inputs it reports for online
-/// observation (SP, PV, KP, TI, TD, MANUAL, MV_MAN, ADR-0048).
+/// observation (SP, PV, KP, TI, TD, MV_MIN, MV_MAX, MANUAL, MV_MAN, ADR-0049).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PidOutputs {
     pub mv: PlcReal,
@@ -27,6 +27,8 @@ pub struct PidOutputs {
     pub kp: PlcReal,
     pub ti: PlcTime,
     pub td: PlcTime,
+    pub mv_min: PlcReal,
+    pub mv_max: PlcReal,
     pub manual: bool,
     pub mv_man: PlcReal,
 }
@@ -91,6 +93,8 @@ impl Default for PidState {
                 kp: zero(),
                 ti: PlcTime::ZERO,
                 td: PlcTime::ZERO,
+                mv_min: zero(),
+                mv_max: zero(),
                 manual: false,
                 mv_man: zero(),
             },
@@ -106,6 +110,8 @@ impl PidState {
             kp: self.kp,
             ti: self.ti,
             td: self.td,
+            mv_min: self.mv_min,
+            mv_max: self.mv_max,
             manual: self.manual,
             mv_man: self.mv_man,
             ..self.outputs

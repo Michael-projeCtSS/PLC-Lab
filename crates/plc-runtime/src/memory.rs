@@ -70,7 +70,7 @@ impl Memory {
         self.staged_inputs.insert(id, value);
         Ok(())
     }
-    /// An online write between scans (ADR-0048): the committed value of a variable or
+    /// An online write between scans (ADR-0049): the committed value of a variable or
     /// output; the next scan starts from it. Inputs belong to the process image.
     pub(crate) fn modify(
         &mut self,
