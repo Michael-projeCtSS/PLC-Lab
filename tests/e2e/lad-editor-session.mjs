@@ -503,7 +503,7 @@ try {
     for (let i = 0; i < 3; i++) {
       const now = (await sel.getAttribute("aria-label")).endsWith("AUTO");
       if (now === auto) return;
-      await sel.click();
+      await sel.dispatchEvent("click");
       await delay(300);
     }
     throw new Error("selector did not switch");
@@ -515,7 +515,7 @@ try {
         "target present",
       );
       if (now === present) return;
-      await sensor.click();
+      await sensor.dispatchEvent("click");
       await delay(300);
     }
     throw new Error("sensor did not switch");
