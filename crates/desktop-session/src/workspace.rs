@@ -535,6 +535,31 @@ impl Workspace {
         }
     }
 
+    /// The ladder observations of the latest recorded cycle (ADR-0051).
+    pub fn ladder_state(&self) -> Option<LadderStateDto> {
+        let s = self.session.ladder_state()?;
+        Some(LadderStateDto {
+            cycle: ExactU64(s.cycle),
+            scanned: s.scanned,
+            power: s
+                .power
+                .iter()
+                .map(|(element, powered)| ElementPowerDto {
+                    element: *element,
+                    powered: *powered,
+                })
+                .collect(),
+            values: s
+                .values
+                .iter()
+                .map(|(signal, v)| WatchValueDto {
+                    signal: signal.0,
+                    value: Some(convert::value(*v)),
+                })
+                .collect(),
+        })
+    }
+
     /// The CPU diagnostic buffer, newest first, filtered and paged.
     pub fn diagnostic_buffer(&self, filter: &DiagnosticBufferRequest) -> DiagnosticBufferDto {
         let s = &self.session;

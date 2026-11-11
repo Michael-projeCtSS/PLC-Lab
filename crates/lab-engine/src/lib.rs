@@ -35,7 +35,9 @@ pub use plc::{
     BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile, compile_documents,
 };
 pub use plc_runtime::StartKind;
-pub use queries::{CauseEffect, Change, Effect, HistoryRow, TrendLayer, TrendSeries, VariableRow};
+pub use queries::{
+    CauseEffect, Change, Effect, HistoryRow, LadderState, TrendLayer, TrendSeries, VariableRow,
+};
 pub use sequence_core;
 pub use session::{
     ActiveForce, ControlLoop, CycleHeader, CycleObservation, CycleOutcome, DownloadReport,

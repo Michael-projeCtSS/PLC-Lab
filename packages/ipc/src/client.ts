@@ -47,6 +47,7 @@ export const COMMANDS = [
   "force",
   "modify",
   "control_loops",
+  "ladder_state",
   "diagnostic_buffer",
   "alarms",
   "acknowledge_alarm",
@@ -201,6 +202,11 @@ export const api = {
     call("modify", { ...w, signal, value }, V.frame),
   /** The PID controllers of the program in the PLC (ADR-0049). */
   controlLoops: (w: Ws) => call("control_loops", w, V.controlLoops),
+  /** What a ladder program did in the latest recorded cycle (ADR-0051). */
+  ladderState: (w: Ws) =>
+    call("ladder_state", w, (v, p) =>
+      v === null ? null : V.ladderState(v, p),
+    ),
   /** The CPU diagnostic buffer, newest first, filtered and paged. */
   diagnosticBuffer: (
     w: Ws,

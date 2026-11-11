@@ -548,6 +548,19 @@ bindings: Array<LoopSignalDto>, };
 
 export type ControlLoopsDto = { loops: Array<ControlLoopDto>, };
 
+export type ElementPowerDto = { element: number, powered: boolean, };
+
+export type LadderStateDto = { cycle: ExactU64, 
+/**
+ * FALSE when the PLC did not scan in that cycle (STOP or FAULT).
+ */
+scanned: boolean, power: Array<ElementPowerDto>, 
+/**
+ * Inputs as that scan read them; outputs, internal variables and block outputs as
+ * it committed them.
+ */
+values: Array<WatchValueDto>, };
+
 export type ForceEntryDto = { signal: number, path: string, label: string, target: "INPUT_IMAGE" | "OUTPUT_IMAGE", value: SignalValueDto, };
 
 export type ForceListDto = { forces: Array<ForceEntryDto>, };

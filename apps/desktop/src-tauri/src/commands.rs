@@ -55,6 +55,7 @@ commands! {
     force(ForceRequest) -> LiveFrameDto => force;
     modify(ModifyRequest) -> LiveFrameDto => modify;
     control_loops(WorkspaceRequest) -> ControlLoopsDto => control_loops;
+    ladder_state(WorkspaceRequest) -> Option<LadderStateDto> => ladder_state;
     frame(FrameRequest) -> LiveFrameDto => frame;
     cycle(CycleRequest) -> Option<CauseEffectDto> => cycle;
     diagnostic_buffer(DiagnosticBufferRequest) -> DiagnosticBufferDto => diagnostic_buffer;

@@ -577,6 +577,27 @@ pub struct ControlLoopDto {
 pub struct ControlLoopsDto {
     pub loops: Vec<ControlLoopDto>,
 }
+/// The power leaving one ladder network element in a recorded cycle (ADR-0051).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ElementPowerDto {
+    pub element: u32,
+    pub powered: bool,
+}
+/// What a Ladder Diagram program did in the latest recorded PLC cycle (ADR-0051): the
+/// power leaving each network element and the values of its variables and blocks, all
+/// from that one cycle. Read-only.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LadderStateDto {
+    pub cycle: ExactU64,
+    /// FALSE when the PLC did not scan in that cycle (STOP or FAULT).
+    pub scanned: bool,
+    pub power: Vec<ElementPowerDto>,
+    /// Inputs as that scan read them; outputs, internal variables and block outputs as
+    /// it committed them.
+    pub values: Vec<WatchValueDto>,
+}
 /// An active force: the signal, what it replaces and the forced value.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -1266,7 +1287,7 @@ pub(crate) fn typescript(config: &ts_rs::Config) -> String {
         SequenceConditionDto, SequenceStepStateDto, SequencePermissiveStateDto, SequenceTransitionStateDto,
         SequenceInterlockStateDto, SequenceObservedDto, SequenceEventDto, SequenceStatusDto, LiveFrameDto, WorkspaceDto, CompileRequest, SourceDocumentDto,
         DeclarationDto, CompileResultDto, PouParameterDto, PouDto, BuildLoadRequest, BindingIssueDto, BuildLoadResultDto, PlcModeRequest,
-        SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ModifyRequest, LoopSignalDto, ControlLoopDto, ControlLoopsDto, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
+        SimulationRequest, SpeedRequest, OperateActionDto, OperateRequest, ForceRequest, ModifyRequest, LoopSignalDto, ControlLoopDto, ControlLoopsDto, ElementPowerDto, LadderStateDto, ForceEntryDto, ForceListDto, FrameRequest, CycleRequest,
         VariablesRequest, VariableRowDto, VariablesDto, WatchRequest, WatchEntryDto, WatchDto, TrendRequest, TrendPointDto, TrendSeriesDto, TrendDto,
         EventsRequest, EventDto, EventsPageDto, ChannelViewDto, ModuleViewDto, DiagnosticDetailDto, DiagnosticEntryDto, DiagnosticBufferRequest, DiagnosticBufferDto,
         PlcRestartRequest, AlarmsRequest, AlarmEventDto, AlarmsDto, AlarmAckRequest, AlarmAckResultDto, ModuleTypeDto,

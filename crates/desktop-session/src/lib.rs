@@ -734,6 +734,17 @@ impl DesktopApp {
         })())
     }
 
+    pub fn ladder_state(
+        &self,
+        request: WorkspaceRequest,
+    ) -> Result<Option<LadderStateDto>, IpcError> {
+        boundary((|| {
+            version(request.contract_version)?;
+            let mut state = self.lock()?;
+            Ok(state.workspace(request.workspace_id)?.ladder_state())
+        })())
+    }
+
     pub fn diagnostic_buffer(
         &self,
         request: DiagnosticBufferRequest,

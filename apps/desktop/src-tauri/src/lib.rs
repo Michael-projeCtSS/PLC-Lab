@@ -172,6 +172,7 @@ fn builder() -> tauri::Builder<tauri::Wry> {
             commands::force,
             commands::modify,
             commands::control_loops,
+            commands::ladder_state,
             commands::diagnostic_buffer,
             commands::alarms,
             commands::acknowledge_alarm,

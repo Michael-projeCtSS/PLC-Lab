@@ -126,6 +126,20 @@ pub fn cause_effect(
     }
 }
 
+/// What a Ladder Diagram program did in one recorded PLC cycle (ADR-0051): the power
+/// leaving each network element, and the values its elements show, all from that cycle.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LadderState {
+    pub cycle: u64,
+    /// FALSE when the PLC did not scan in that cycle (STOP or FAULT).
+    pub scanned: bool,
+    /// Element id and the power leaving it, as the runtime computed it (`LAD#<id>`).
+    pub power: Vec<(u32, bool)>,
+    /// Inputs as that scan read them; outputs, internal variables and block outputs as
+    /// it committed them.
+    pub values: Vec<(SignalId, SignalValue)>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct VariableRow {
     pub signal: SignalId,
@@ -197,6 +211,51 @@ impl LabSession {
         let current = self.observation(cycle)?;
         let previous = cycle.checked_sub(1).and_then(|c| self.observation(c));
         Some(cause_effect(self, &current, previous.as_ref()))
+    }
+
+    /// The ladder observations of the latest recorded cycle, or `None` before the first
+    /// cycle. Every value comes from that one cycle's causal record, so the power of the
+    /// elements and the values of their variables always belong to the same scan.
+    pub fn ladder_state(&self) -> Option<LadderState> {
+        let o = self.last.as_ref()?;
+        let mut power = Vec::new();
+        let mut values = Vec::new();
+        for tag in self.tags() {
+            if let Some(element) = tag
+                .name
+                .strip_prefix("LAD#")
+                .and_then(|n| n.parse::<u32>().ok())
+            {
+                if let Some(SignalValue::Bool(on)) = value_in(&o.committed, tag.signal) {
+                    power.push((element, on));
+                }
+                continue;
+            }
+            if lad_frontend::is_synthetic(&tag.name) {
+                continue;
+            }
+            let layer = if tag.role == TagRole::Input {
+                &o.scan_inputs
+            } else {
+                &o.committed
+            };
+            if let Some(v) = value_in(layer, tag.signal) {
+                values.push((tag.signal, v));
+            }
+        }
+        for block in self.blocks() {
+            for (_, signal) in &block.outputs {
+                if let Some(v) = value_in(&o.committed, *signal) {
+                    values.push((*signal, v));
+                }
+            }
+        }
+        Some(LadderState {
+            cycle: o.header.cycle,
+            scanned: o.header.outcome == crate::session::CycleOutcome::Scanned,
+            power,
+            values,
+        })
     }
 
     /// PLC variables with all images, I/O source and quality. Filtered and paged.

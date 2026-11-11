@@ -58,6 +58,16 @@ export const signalValue: Validator<G.SignalValueDto> =
 const position = obj<G.PositionDto>({ line: u32, column: u32 });
 const span = obj<G.SpanDto>({ start: position, end: position });
 const loopSignal = obj<G.LoopSignalDto>({ parameter: str, signal: u32 });
+export const ladderState = obj<G.LadderStateDto>({
+  cycle: u64,
+  scanned: bool,
+  power: arr(obj<G.ElementPowerDto>({ element: u32, powered: bool }), 8192),
+  values: arr(
+    obj<G.WatchValueDto>({ signal: u32, value: nullable(signalValue) }),
+    8192,
+  ),
+});
+
 export const controlLoops = obj<G.ControlLoopsDto>({
   loops: arr(
     obj<G.ControlLoopDto>({
