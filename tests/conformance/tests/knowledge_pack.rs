@@ -149,8 +149,14 @@ fn every_practice_exercise_is_solvable_and_the_starter_is_not() {
             .starter_station
             .clone()
             .unwrap_or_else(|| scene.reference_station.clone());
+        // A ladder exercise (its starter is a ladder document) has a ladder reference.
+        let extension = if lad_frontend::is_lad(&e.starter_program) {
+            "lad.json"
+        } else {
+            "st"
+        };
         let solution = std::fs::read_to_string(
-            root().join(format!("tests/conformance/solutions/{}.st", e.id)),
+            root().join(format!("tests/conformance/solutions/{}.{extension}", e.id)),
         )
         .unwrap_or_else(|_| panic!("reference solution for {} is missing", e.id));
         let (passed, failures) =
@@ -523,4 +529,152 @@ fn a_ladder_solution_is_graded_like_its_structured_text_equivalent() {
     let missing = failed(id, &st_no_hold);
     assert!(!missing.is_empty());
     assert_eq!(failed(id, &lad_no_hold), missing);
+}
+
+/// The reference ladder of an exercise with one change applied to its document.
+fn changed_ladder(id: &str, change: impl FnOnce(&mut serde_json::Value)) -> String {
+    let text =
+        std::fs::read_to_string(root().join(format!("tests/conformance/solutions/{id}.lad.json")))
+            .unwrap();
+    let original: serde_json::Value = serde_json::from_str(&text).unwrap();
+    let mut doc = original.clone();
+    change(&mut doc);
+    assert_ne!(doc, original, "{id}: the change changed nothing");
+    doc.to_string()
+}
+
+fn items(doc: &mut serde_json::Value, rung: usize) -> &mut Vec<serde_json::Value> {
+    doc["rungs"][rung]["network"]["items"]
+        .as_array_mut()
+        .unwrap()
+}
+
+#[test]
+fn ladder_exercises_start_as_ladder_programs_with_their_references() {
+    let lib = library();
+    let ids = [
+        "ex.lad-motor-start-stop",
+        "ex.lad-start-delay",
+        "ex.lad-run-monitor",
+        "ex.lad-production-count",
+        "ex.lad-tank-interlock",
+    ];
+    for id in ids {
+        let e = lib.exercise(id).unwrap_or_else(|| panic!("{id}"));
+        assert!(lad_frontend::is_lad(&e.starter_program), "{id}");
+        // The starter compiles: the student starts from a valid ladder, not a broken one.
+        let compiled = lad_frontend::compile_lad(&e.starter_program);
+        assert!(compiled.is_ok(), "{id}: {:?}", compiled.err());
+        let reference = std::fs::read_to_string(
+            root().join(format!("tests/conformance/solutions/{id}.lad.json")),
+        )
+        .unwrap();
+        assert!(
+            failed(id, &reference).is_empty(),
+            "{id}: {:?}",
+            failed(id, &reference)
+        );
+    }
+}
+
+#[test]
+fn ladder_exercises_fail_wrong_programs_on_the_right_criteria() {
+    use serde_json::json;
+    let no = |id: u32, variable: &str| json!({ "type": "contact", "id": id, "contact": "normallyOpen", "variable": variable });
+    let nc = |id: u32, variable: &str| json!({ "type": "contact", "id": id, "contact": "normallyClosed", "variable": variable });
+
+    // 1. Self-holding. Without the branch the motor stops when Start is released.
+    let id = "ex.lad-motor-start-stop";
+    let no_hold = changed_ladder(id, |d| items(d, 0)[0] = no(3, "StartPB"));
+    assert_eq!(failed(id, &no_hold), ["latches"]);
+    // Stop drawn normally closed: S2 reads TRUE while released, so the rung passes only
+    // while Stop is pressed.
+    let nc_stop = changed_ladder(id, |d| items(d, 0)[1]["contact"] = json!("normallyClosed"));
+    assert_eq!(failed(id, &nc_stop), ["starts", "latches", "stop-wins", "lamp"]);
+    // SET/RESET coils instead of the branch: the later rung wins, so RESET must come last.
+    let latch = |reset_first: bool| {
+        changed_ladder(id, |d| {
+            let set = json!({ "id": 21, "network": { "type": "series", "id": 22, "items": [no(23, "StartPB")] },
+                "coils": [{ "id": 24, "variable": "MotorContactor", "kind": "set" }] });
+            let reset = json!({ "id": 25, "network": { "type": "series", "id": 26, "items": [
+                    { "type": "parallel", "id": 27, "branches": [nc(28, "StopPB"), nc(29, "OverloadOK")] }] },
+                "coils": [{ "id": 30, "variable": "MotorContactor", "kind": "reset" }] });
+            let lamp = d["rungs"][1].clone();
+            d["rungs"] = if reset_first {
+                json!([reset, set, lamp])
+            } else {
+                json!([set, reset, lamp])
+            };
+        })
+    };
+    assert!(
+        failed(id, &latch(false)).is_empty(),
+        "{:?}",
+        failed(id, &latch(false))
+    );
+    assert_eq!(failed(id, &latch(true)), ["stop-wins"]);
+
+    // 2. TON start delay.
+    let id = "ex.lad-start-delay";
+    let tof = changed_ladder(id, |d| items(d, 2)[1]["block"] = json!("TOF"));
+    assert_eq!(failed(id, &tof), ["not-early", "cancel"]);
+    let short = changed_ladder(id, |d| {
+        items(d, 2)[1]["preset"] = json!({ "constant": "T#1s" })
+    });
+    assert_eq!(failed(id, &short), ["not-early", "cancel"]);
+    // Timing the button instead of the latched request: released before the time is up.
+    let on_button = changed_ladder(id, |d| items(d, 2)[0]["variable"] = json!("StartPB"));
+    assert_eq!(failed(id, &on_button), ["starts"]);
+
+    // 3. Feedback monitoring.
+    let id = "ex.lad-run-monitor";
+    let no_lockout = changed_ladder(id, |d| {
+        items(d, 0).remove(3);
+    });
+    assert_eq!(failed(id, &no_lockout), ["trips", "lockout"]);
+    // Start acknowledging the fault restarts a motor without feedback at once.
+    let start_acks = changed_ladder(id, |d| items(d, 2)[0] = no(18, "StartPB"));
+    assert_eq!(failed(id, &start_acks), ["lockout"]);
+    // Watching the command without the feedback trips every healthy start.
+    let blind = changed_ladder(id, |d| {
+        items(d, 1).remove(1);
+    });
+    assert_eq!(
+        failed(id, &blind),
+        ["runs", "no-false-fault", "acknowledged"]
+    );
+
+    // 4. Production counter.
+    let id = "ex.lad-production-count";
+    let always = changed_ladder(id, |d| {
+        items(d, 0).remove(0);
+    });
+    assert_eq!(failed(id, &always), ["manual"]);
+    let ge = changed_ladder(id, |d| items(d, 2)[0]["op"] = json!("ge"));
+    assert_eq!(failed(id, &ge), ["batch"]);
+    let four = changed_ladder(id, |d| {
+        items(d, 0)[2]["preset"] = json!({ "constant": "4" })
+    });
+    assert_eq!(failed(id, &four), ["last-part"]);
+    let no_reset = changed_ladder(id, |d| {
+        items(d, 0)[2].as_object_mut().unwrap().remove("reset");
+    });
+    assert_eq!(failed(id, &no_reset), ["next-batch"]);
+
+    // 5. Tank interlocks.
+    let id = "ex.lad-tank-interlock";
+    let no_interlocks = changed_ladder(id, |d| {
+        items(d, 0).remove(3);
+        items(d, 1).remove(3);
+    });
+    assert_eq!(failed(id, &no_interlocks), ["interlock", "keeps-draining"]);
+    // Only the pump is interlocked: Start opens the valve and that stops the draining.
+    let one_sided = changed_ladder(id, |d| {
+        items(d, 0).remove(3);
+    });
+    assert_eq!(failed(id, &one_sided), ["keeps-draining"]);
+    let dry = changed_ladder(id, |d| {
+        items(d, 1).remove(2);
+    });
+    assert_eq!(failed(id, &dry), ["stops-dry", "no-dry-run"]);
 }

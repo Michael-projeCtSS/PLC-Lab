@@ -1,0 +1,186 @@
+{
+  "format": "plclab-lad",
+  "version": 2,
+  "name": "Main",
+  "variables": [
+    {
+      "name": "StartPB",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Start button S1, normally open: TRUE while pressed."
+    },
+    {
+      "name": "StopPB",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe)."
+    },
+    {
+      "name": "MotorFeedback",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Contactor auxiliary contact: TRUE when the contactor has pulled in."
+    },
+    {
+      "name": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Overload relay contact, normally closed: TRUE while the motor is not overloaded."
+    },
+    {
+      "name": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Contactor coil K1: TRUE energizes the motor."
+    },
+    {
+      "name": "RunLamp",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Green run lamp H1."
+    },
+    {
+      "name": "FeedbackFault",
+      "type": "BOOL",
+      "direction": "local",
+      "comment": "Latched when the contactor feedback does not confirm within 1 s."
+    }
+  ],
+  "rungs": [
+    {
+      "id": 1,
+      "comment": "Start/stop with self-holding; a feedback fault blocks the motor.",
+      "network": {
+        "type": "series",
+        "id": 2,
+        "items": [
+          {
+            "type": "parallel",
+            "id": 5,
+            "branches": [
+              {
+                "type": "contact",
+                "id": 3,
+                "contact": "normallyOpen",
+                "variable": "StartPB"
+              },
+              {
+                "type": "contact",
+                "id": 4,
+                "contact": "normallyOpen",
+                "variable": "MotorContactor"
+              }
+            ]
+          },
+          {
+            "type": "contact",
+            "id": 6,
+            "contact": "normallyOpen",
+            "variable": "StopPB"
+          },
+          {
+            "type": "contact",
+            "id": 7,
+            "contact": "normallyOpen",
+            "variable": "OverloadOK"
+          },
+          {
+            "type": "contact",
+            "id": 8,
+            "contact": "normallyClosed",
+            "variable": "FeedbackFault"
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 9,
+          "variable": "MotorContactor"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "comment": "Commanded but not confirmed for 1 s: latch the fault.",
+      "network": {
+        "type": "series",
+        "id": 11,
+        "items": [
+          {
+            "type": "contact",
+            "id": 12,
+            "contact": "normallyOpen",
+            "variable": "MotorContactor"
+          },
+          {
+            "type": "contact",
+            "id": 13,
+            "contact": "normallyClosed",
+            "variable": "MotorFeedback"
+          },
+          {
+            "type": "block",
+            "id": 14,
+            "block": "TON",
+            "instance": "FeedbackWatch",
+            "preset": {
+              "constant": "T#1s"
+            }
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 15,
+          "variable": "FeedbackFault",
+          "kind": "set"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "comment": "Pressing Stop acknowledges the fault.",
+      "network": {
+        "type": "series",
+        "id": 17,
+        "items": [
+          {
+            "type": "contact",
+            "id": 18,
+            "contact": "normallyClosed",
+            "variable": "StopPB"
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 19,
+          "variable": "FeedbackFault",
+          "kind": "reset"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "comment": "The auxiliary contact confirms the running motor.",
+      "network": {
+        "type": "series",
+        "id": 21,
+        "items": [
+          {
+            "type": "contact",
+            "id": 22,
+            "contact": "normallyOpen",
+            "variable": "MotorFeedback"
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 23,
+          "variable": "RunLamp"
+        }
+      ]
+    }
+  ]
+}

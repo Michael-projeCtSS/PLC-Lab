@@ -1,0 +1,161 @@
+{
+  "format": "plclab-lad",
+  "version": 2,
+  "name": "Main",
+  "variables": [
+    {
+      "name": "StartPB",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Start button S1 (normally open)."
+    },
+    {
+      "name": "StopPB",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Stop button S2 (normally closed: TRUE while not pressed)."
+    },
+    {
+      "name": "LevelLow",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "TRUE while the level is below the low switch (LSL-104 contact closes when dry)."
+    },
+    {
+      "name": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "TRUE while the level is at or above the high switch (LSH-103 contact closes when wet)."
+    },
+    {
+      "name": "InletOpen",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Inlet valve fully-open limit switch."
+    },
+    {
+      "name": "LevelRaw",
+      "type": "INT",
+      "direction": "input",
+      "comment": "Raw analog value of LT-105 (scaling depends on the selected platform profile)."
+    },
+    {
+      "name": "InletValve",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Inlet valve solenoid XV-101: TRUE opens the valve."
+    },
+    {
+      "name": "DrainPump",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Drain pump P-102 contactor."
+    }
+  ],
+  "rungs": [
+    {
+      "id": 1,
+      "comment": "Fill on Start until full; never while the drain pump runs.",
+      "network": {
+        "type": "series",
+        "id": 2,
+        "items": [
+          {
+            "type": "parallel",
+            "id": 5,
+            "branches": [
+              {
+                "type": "contact",
+                "id": 3,
+                "contact": "normallyOpen",
+                "variable": "StartPB"
+              },
+              {
+                "type": "contact",
+                "id": 4,
+                "contact": "normallyOpen",
+                "variable": "InletValve"
+              }
+            ]
+          },
+          {
+            "type": "contact",
+            "id": 6,
+            "contact": "normallyOpen",
+            "variable": "StopPB"
+          },
+          {
+            "type": "contact",
+            "id": 7,
+            "contact": "normallyClosed",
+            "variable": "LevelHigh"
+          },
+          {
+            "type": "contact",
+            "id": 8,
+            "contact": "normallyClosed",
+            "variable": "DrainPump"
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 9,
+          "variable": "InletValve"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "comment": "Full: drain until the low switch; never with the inlet open or the tank dry.",
+      "network": {
+        "type": "series",
+        "id": 11,
+        "items": [
+          {
+            "type": "parallel",
+            "id": 14,
+            "branches": [
+              {
+                "type": "contact",
+                "id": 12,
+                "contact": "normallyOpen",
+                "variable": "LevelHigh"
+              },
+              {
+                "type": "contact",
+                "id": 13,
+                "contact": "normallyOpen",
+                "variable": "DrainPump"
+              }
+            ]
+          },
+          {
+            "type": "contact",
+            "id": 15,
+            "contact": "normallyOpen",
+            "variable": "StopPB"
+          },
+          {
+            "type": "contact",
+            "id": 16,
+            "contact": "normallyClosed",
+            "variable": "LevelLow"
+          },
+          {
+            "type": "contact",
+            "id": 17,
+            "contact": "normallyClosed",
+            "variable": "InletValve"
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 18,
+          "variable": "DrainPump"
+        }
+      ]
+    }
+  ]
+}

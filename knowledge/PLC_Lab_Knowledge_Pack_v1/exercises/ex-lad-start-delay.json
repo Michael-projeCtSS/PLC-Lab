@@ -1,0 +1,236 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.lad-start-delay",
+  "revision": 1,
+  "title": "Ladder: motor start delay with a TON box",
+  "kind": "practice",
+  "difficulty": "beginner",
+  "summary": "The request and the warning lamp are already drawn. Add a rung with a TON on-delay box so the conveyor motor starts 3 seconds after the request, and watch the box count its elapsed time online.",
+  "objectives": [
+    "Place a TON box in a rung and set its instance name and preset time",
+    "Use the power leaving the box (its Q output) to drive a coil",
+    "Observe the elapsed time ET counting in the running PLC"
+  ],
+  "estimatedMinutes": 15,
+  "scene": "scene.motor-start-stop",
+  "starterProgram": "{\n  \"format\": \"plclab-lad\",\n  \"version\": 2,\n  \"name\": \"Main\",\n  \"variables\": [\n    {\n      \"name\": \"StartPB\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Start button S1, normally open: TRUE while pressed.\"\n    },\n    {\n      \"name\": \"StopPB\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe).\"\n    },\n    {\n      \"name\": \"MotorFeedback\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Contactor auxiliary contact: TRUE when the contactor has pulled in.\"\n    },\n    {\n      \"name\": \"OverloadOK\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Overload relay contact, normally closed: TRUE while the motor is not overloaded.\"\n    },\n    {\n      \"name\": \"MotorContactor\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Contactor coil K1: TRUE energizes the motor.\"\n    },\n    {\n      \"name\": \"RunLamp\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Green run lamp H1.\"\n    },\n    {\n      \"name\": \"Request\",\n      \"type\": \"BOOL\",\n      \"direction\": \"local\",\n      \"comment\": \"Start request: latched by Start, cleared by Stop or an overload.\"\n    }\n  ],\n  \"rungs\": [\n    {\n      \"id\": 1,\n      \"comment\": \"Start latches the request; Stop and the overload relay clear it.\",\n      \"network\": {\n        \"type\": \"series\",\n        \"id\": 2,\n        \"items\": [\n          {\n            \"type\": \"parallel\",\n            \"id\": 5,\n            \"branches\": [\n              {\n                \"type\": \"contact\",\n                \"id\": 3,\n                \"contact\": \"normallyOpen\",\n                \"variable\": \"StartPB\"\n              },\n              {\n                \"type\": \"contact\",\n                \"id\": 4,\n                \"contact\": \"normallyOpen\",\n                \"variable\": \"Request\"\n              }\n            ]\n          },\n          {\n            \"type\": \"contact\",\n            \"id\": 6,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"StopPB\"\n          },\n          {\n            \"type\": \"contact\",\n            \"id\": 7,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"OverloadOK\"\n          }\n        ]\n      },\n      \"coils\": [\n        {\n          \"id\": 8,\n          \"variable\": \"Request\"\n        }\n      ]\n    },\n    {\n      \"id\": 9,\n      \"comment\": \"The run lamp warns while the request is active.\",\n      \"network\": {\n        \"type\": \"series\",\n        \"id\": 10,\n        \"items\": [\n          {\n            \"type\": \"contact\",\n            \"id\": 11,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"Request\"\n          }\n        ]\n      },\n      \"coils\": [\n        {\n          \"id\": 12,\n          \"variable\": \"RunLamp\"\n        }\n      ]\n    }\n  ]\n}",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Rung 1 latches Request with Start; Stop (StopPB FALSE) or an overload clears it. Rung 2 lights RunLamp as a warning.",
+    "Add a rung: a normally open contact on Request, then a TON box with the preset PT T#3s, then the MotorContactor coil.",
+    "Power leaves the TON box only when its time has elapsed (Q), so the motor starts 3 s after the request and stops at once when the request drops.",
+    "Write the elapsed time to a TIME variable through the box's ET output if you want to see it in the variable list; the box itself shows ET online."
+  ],
+  "hints": [
+    "Select the Request contact of the new rung, keep Insert position After and insert TON on-delay timer.",
+    "The preset is a TIME literal such as T#3s; a plain number is rejected by the compiler.",
+    "A TOF or TP box would switch the motor on immediately: only TON delays switching on."
+  ],
+  "knowledgeRefs": [
+    "instruction.ton",
+    "fundamentals.timers"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "contactor",
+      "source": {
+        "type": "plcTag",
+        "tag": "MotorContactor"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "plcTag",
+        "tag": "RunLamp"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "delay",
+      "title": "Start and wait",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cancel",
+      "title": "Stop during the warning",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 2300,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "warns",
+      "title": "The warning lamp lights at once",
+      "points": 20,
+      "scenario": "delay",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "withinMs": 200
+      },
+      "onFail": "RunLamp did not light when Start was pressed."
+    },
+    {
+      "id": "not-early",
+      "title": "The motor does not start before the delay",
+      "points": 30,
+      "scenario": "delay",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3000,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "The motor started before 3 s had elapsed."
+    },
+    {
+      "id": "starts",
+      "title": "The motor starts after 3 s",
+      "points": 30,
+      "scenario": "delay",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 4200,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The motor was not running 3.7 s after Start."
+    },
+    {
+      "id": "cancel",
+      "title": "Stop cancels the start",
+      "points": 20,
+      "scenario": "cancel",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The motor started although Stop was pressed during the warning."
+    }
+  ],
+  "curriculumOrder": 16
+}

@@ -1,0 +1,417 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.lad-tank-interlock",
+  "revision": 1,
+  "title": "Ladder: tank level control with interlocks",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "Fill the tank to the high level switch, then drain it to the low level switch. Interlock contacts keep the inlet valve and the drain pump from ever running together and protect the pump from running dry, even when an operator presses Start at the wrong moment.",
+  "objectives": [
+    "Express interlocks as normally closed contacts in ladder rungs",
+    "Protect a pump against dry running with a level switch",
+    "Use level switches to change between process steps"
+  ],
+  "estimatedMinutes": 25,
+  "scene": "scene.tank-filling",
+  "starterProgram": "{\n  \"format\": \"plclab-lad\",\n  \"version\": 2,\n  \"name\": \"Main\",\n  \"variables\": [\n    {\n      \"name\": \"StartPB\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Start button S1 (normally open).\"\n    },\n    {\n      \"name\": \"StopPB\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Stop button S2 (normally closed: TRUE while not pressed).\"\n    },\n    {\n      \"name\": \"LevelLow\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"TRUE while the level is below the low switch (LSL-104 contact closes when dry).\"\n    },\n    {\n      \"name\": \"LevelHigh\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"TRUE while the level is at or above the high switch (LSH-103 contact closes when wet).\"\n    },\n    {\n      \"name\": \"InletOpen\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Inlet valve fully-open limit switch.\"\n    },\n    {\n      \"name\": \"LevelRaw\",\n      \"type\": \"INT\",\n      \"direction\": \"input\",\n      \"comment\": \"Raw analog value of LT-105 (scaling depends on the selected platform profile).\"\n    },\n    {\n      \"name\": \"InletValve\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Inlet valve solenoid XV-101: TRUE opens the valve.\"\n    },\n    {\n      \"name\": \"DrainPump\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Drain pump P-102 contactor.\"\n    }\n  ],\n  \"rungs\": [\n    {\n      \"id\": 1,\n      \"comment\": \"Start fills the tank until the high level switch.\",\n      \"network\": {\n        \"type\": \"series\",\n        \"id\": 2,\n        \"items\": [\n          {\n            \"type\": \"parallel\",\n            \"id\": 5,\n            \"branches\": [\n              {\n                \"type\": \"contact\",\n                \"id\": 3,\n                \"contact\": \"normallyOpen\",\n                \"variable\": \"StartPB\"\n              },\n              {\n                \"type\": \"contact\",\n                \"id\": 4,\n                \"contact\": \"normallyOpen\",\n                \"variable\": \"InletValve\"\n              }\n            ]\n          },\n          {\n            \"type\": \"contact\",\n            \"id\": 6,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"StopPB\"\n          },\n          {\n            \"type\": \"contact\",\n            \"id\": 7,\n            \"contact\": \"normallyClosed\",\n            \"variable\": \"LevelHigh\"\n          }\n        ]\n      },\n      \"coils\": [\n        {\n          \"id\": 8,\n          \"variable\": \"InletValve\"\n        }\n      ]\n    }\n  ]\n}",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelLow",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "LevelHigh",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "InletValve",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "DrainPump",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Start opens InletValve (self-holding); the valve closes at LevelHigh and on Stop (StopPB FALSE).",
+    "When the tank is full (LevelHigh), DrainPump starts and holds itself until LevelLow: LevelLow is TRUE while the level is below the low switch.",
+    "Interlock: InletValve never opens while DrainPump runs, and DrainPump never runs while InletValve is open.",
+    "Stop switches the drain pump off too."
+  ],
+  "hints": [
+    "An interlock is a normally closed contact on the other output in each rung.",
+    "Dry-run protection: a normally closed contact on LevelLow in the pump rung.",
+    "The valve needs 1.5 s to close; the level keeps rising a little meanwhile."
+  ],
+  "knowledgeRefs": [
+    "fundamentals.interlocks",
+    "fundamentals.start-stop-latch"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "low",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelLow"
+      }
+    },
+    {
+      "name": "high",
+      "source": {
+        "type": "plcTag",
+        "tag": "LevelHigh"
+      }
+    },
+    {
+      "name": "valve",
+      "source": {
+        "type": "plcTag",
+        "tag": "InletValve"
+      }
+    },
+    {
+      "name": "pump",
+      "source": {
+        "type": "plcTag",
+        "tag": "DrainPump"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "cycle",
+      "title": "Fill and drain",
+      "durationMs": 40000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "start-while-draining",
+      "title": "Start pressed while draining",
+      "durationMs": 20000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 16000,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 16300,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stop",
+      "title": "Stop while filling",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 3000,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 3300,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "fills",
+      "title": "Start opens the inlet valve",
+      "points": 10,
+      "scenario": "cycle",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "valve",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "withinMs": 200
+      },
+      "onFail": "InletValve did not open after Start."
+    },
+    {
+      "id": "switches",
+      "title": "Full: the valve closes and the pump starts",
+      "points": 20,
+      "scenario": "cycle",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "high",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "type": "compare",
+              "signal": "pump",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        },
+        "withinMs": 200
+      },
+      "onFail": "At LevelHigh the valve should close and the drain pump start."
+    },
+    {
+      "id": "stops-dry",
+      "title": "The pump stops at the low switch",
+      "points": 15,
+      "scenario": "cycle",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "low",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "pump",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        },
+        "withinMs": 200
+      },
+      "onFail": "DrainPump kept running after LevelLow."
+    },
+    {
+      "id": "no-dry-run",
+      "title": "The pump never runs dry",
+      "points": 10,
+      "scenario": "cycle",
+      "rule": {
+        "type": "eventAbsent",
+        "event": "dryRun"
+      },
+      "onFail": "The drain pump ran dry."
+    },
+    {
+      "id": "no-overflow",
+      "title": "No overflow",
+      "points": 5,
+      "scenario": "cycle",
+      "rule": {
+        "type": "eventAbsent",
+        "event": "overflow"
+      },
+      "onFail": "The tank overflowed."
+    },
+    {
+      "id": "interlock",
+      "title": "Valve and pump never run together",
+      "points": 25,
+      "scenario": "start-while-draining",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "pump",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      "onFail": "InletValve and DrainPump were on together: interlock each output against the other."
+    },
+    {
+      "id": "keeps-draining",
+      "title": "Start does not interrupt draining",
+      "points": 5,
+      "scenario": "start-while-draining",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 17000,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "pump",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      "onFail": "Pressing Start while draining should change nothing."
+    },
+    {
+      "id": "stop",
+      "title": "Stop closes the valve",
+      "points": 10,
+      "scenario": "stop",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3600,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "valve",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "type": "compare",
+              "signal": "pump",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      "onFail": "After Stop both the valve and the pump should be off."
+    }
+  ],
+  "curriculumOrder": 19
+}

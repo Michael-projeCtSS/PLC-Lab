@@ -1,0 +1,350 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.lad-motor-start-stop",
+  "revision": 1,
+  "title": "Ladder: motor start/stop with self-holding",
+  "kind": "practice",
+  "difficulty": "beginner",
+  "summary": "Draw the classic motor circuit as a ladder rung: a momentary Start contact with a self-holding branch through the contactor, a Stop contact and the overload relay contact in series, and a rung for the run lamp.",
+  "objectives": [
+    "Build a self-holding rung with a parallel branch",
+    "Choose the contact type from the wiring: a normally closed Stop button reads TRUE while not pressed",
+    "Watch power flow through the rung online"
+  ],
+  "estimatedMinutes": 15,
+  "scene": "scene.motor-start-stop",
+  "starterProgram": "{\n  \"format\": \"plclab-lad\",\n  \"version\": 2,\n  \"name\": \"Main\",\n  \"variables\": [\n    {\n      \"name\": \"StartPB\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Start button S1, normally open: TRUE while pressed.\"\n    },\n    {\n      \"name\": \"StopPB\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe).\"\n    },\n    {\n      \"name\": \"MotorFeedback\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Contactor auxiliary contact: TRUE when the contactor has pulled in.\"\n    },\n    {\n      \"name\": \"OverloadOK\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Overload relay contact, normally closed: TRUE while the motor is not overloaded.\"\n    },\n    {\n      \"name\": \"MotorContactor\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Contactor coil K1: TRUE energizes the motor.\"\n    },\n    {\n      \"name\": \"RunLamp\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Green run lamp H1.\"\n    }\n  ],\n  \"rungs\": [\n    {\n      \"id\": 1,\n      \"comment\": \"Start energizes the contactor. Add the self-holding branch, Stop and the overload contact.\",\n      \"network\": {\n        \"type\": \"series\",\n        \"id\": 2,\n        \"items\": [\n          {\n            \"type\": \"contact\",\n            \"id\": 3,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"StartPB\"\n          }\n        ]\n      },\n      \"coils\": [\n        {\n          \"id\": 4,\n          \"variable\": \"MotorContactor\"\n        }\n      ]\n    }\n  ]\n}",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "The starter rung switches MotorContactor only while Start is held. Add a parallel branch with a normally open contact on MotorContactor so the coil holds itself.",
+    "Put a contact on StopPB in series. S2 is a normally closed button: StopPB is TRUE while Stop is NOT pressed, so the contact in the rung is normally open.",
+    "Put a normally open contact on OverloadOK in series: an overload trip makes it FALSE and opens the rung.",
+    "Add a second rung: MotorFeedback drives the RunLamp coil.",
+    "Load the program and watch the rung online: highlighted wires carry power in the scan the PLC just executed."
+  ],
+  "hints": [
+    "Select the Start contact, choose Insert position Parallel and insert a normally open contact.",
+    "Select the parallel block, choose After, and insert the series contacts.",
+    "A normally closed contact on StopPB never passes power while S2 is released: the motor would never start."
+  ],
+  "knowledgeRefs": [
+    "fundamentals.start-stop-latch",
+    "fundamentals.no-nc-contacts"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "stop",
+      "source": {
+        "type": "plcTag",
+        "tag": "StopPB"
+      }
+    },
+    {
+      "name": "contactor",
+      "source": {
+        "type": "plcTag",
+        "tag": "MotorContactor"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "plcTag",
+        "tag": "RunLamp"
+      }
+    },
+    {
+      "name": "running",
+      "source": {
+        "type": "component",
+        "component": "motor",
+        "quantity": "running"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "start-stop",
+      "title": "Start, release, then stop",
+      "durationMs": 6000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 4000,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 4300,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stop-priority",
+      "title": "Start and Stop pressed together",
+      "durationMs": 3000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 300,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 1500,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 1800,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        }
+      ]
+    },
+    {
+      "id": "overload",
+      "title": "Overload trip while running",
+      "durationMs": 5000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 2500,
+          "action": {
+            "type": "injectFault",
+            "fault": {
+              "id": "overload",
+              "fault": {
+                "type": "motorOverloadTrip",
+                "component": "motor"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "starts",
+      "title": "Start energizes the contactor",
+      "points": 25,
+      "scenario": "start-stop",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "start",
+          "layer": "inputs",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "withinMs": 300
+      },
+      "onFail": "MotorContactor did not switch on after StartPB became TRUE."
+    },
+    {
+      "id": "latches",
+      "title": "The motor keeps running after Start is released",
+      "points": 25,
+      "scenario": "start-stop",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3000,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The motor stopped when Start was released. Add a seal-in path through MotorContactor."
+    },
+    {
+      "id": "stops",
+      "title": "Stop de-energizes the contactor",
+      "points": 20,
+      "scenario": "start-stop",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 5000,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "The motor kept running after Stop was pressed. Remember: StopPB is FALSE while Stop is pressed."
+    },
+    {
+      "id": "stop-wins",
+      "title": "Stop has priority over Start",
+      "points": 10,
+      "scenario": "stop-priority",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The contactor switched on while Stop was held. Stop must always win."
+    },
+    {
+      "id": "overload-stops",
+      "title": "An overload trip stops the motor",
+      "points": 10,
+      "scenario": "overload",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 4000,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "The contactor stayed energized after the overload relay tripped. Include OverloadOK in the logic."
+    },
+    {
+      "id": "lamp",
+      "title": "The run lamp shows the running motor",
+      "points": 10,
+      "scenario": "start-stop",
+      "rule": {
+        "type": "respondsWithin",
+        "trigger": {
+          "type": "compare",
+          "signal": "running",
+          "layer": "process",
+          "op": "eq",
+          "value": true
+        },
+        "response": {
+          "type": "compare",
+          "signal": "lamp",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        },
+        "withinMs": 300
+      },
+      "onFail": "The motor was running but RunLamp did not switch on."
+    }
+  ],
+  "curriculumOrder": 15
+}

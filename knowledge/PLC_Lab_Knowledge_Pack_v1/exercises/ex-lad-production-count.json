@@ -1,0 +1,481 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.lad-production-count",
+  "revision": 1,
+  "title": "Ladder: counter-based production cycle",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "Parts pass a proximity sensor. In AUTO, a CTU box counts them in batches of five: the batch lamp lights after the fifth part, a comparator announces the last part of the batch, and Button2 starts the next batch.",
+  "objectives": [
+    "Use a CTU box with a preset, a reset input and a CV output",
+    "Compare the count with an EQ comparator",
+    "Stop a production step when the batch is complete"
+  ],
+  "estimatedMinutes": 25,
+  "scene": "scene.io-basics",
+  "starterProgram": "{\n  \"format\": \"plclab-lad\",\n  \"version\": 2,\n  \"name\": \"Main\",\n  \"variables\": [\n    {\n      \"name\": \"Button1\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Pushbutton S1, normally open.\"\n    },\n    {\n      \"name\": \"Button2\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Pushbutton S2, normally open.\"\n    },\n    {\n      \"name\": \"AutoMode\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Selector S3 in position AUTO.\"\n    },\n    {\n      \"name\": \"PartPresent\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Proximity sensor B1 detects a part.\"\n    },\n    {\n      \"name\": \"Lamp1\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Green lamp H1.\"\n    },\n    {\n      \"name\": \"Lamp2\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Amber lamp H2.\"\n    },\n    {\n      \"name\": \"Lamp3\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Red lamp H3.\"\n    },\n    {\n      \"name\": \"Count\",\n      \"type\": \"INT\",\n      \"direction\": \"local\",\n      \"comment\": \"Parts counted in the current batch.\"\n    }\n  ],\n  \"rungs\": [\n    {\n      \"id\": 1,\n      \"comment\": \"The selector is in AUTO.\",\n      \"network\": {\n        \"type\": \"series\",\n        \"id\": 2,\n        \"items\": [\n          {\n            \"type\": \"contact\",\n            \"id\": 3,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"AutoMode\"\n          }\n        ]\n      },\n      \"coils\": [\n        {\n          \"id\": 4,\n          \"variable\": \"Lamp1\"\n        }\n      ]\n    }\n  ]\n}",
+  "requiredInterface": [
+    {
+      "tag": "AutoMode",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "PartPresent",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Button2",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "Lamp1",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "Lamp2",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "Lamp3",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Count parts (PartPresent) only in AUTO: a CTU box with PV 5 behind contacts on AutoMode and PartPresent. Write CV to Count.",
+    "Lamp2 (batch complete) is the power leaving the counter box: on from the fifth part.",
+    "Lamp1 (counting) is on in AUTO while the batch is not complete.",
+    "Lamp3 (last part) is on while Count equals 4: use an EQ comparator.",
+    "Button2 resets the counter (R input of the CTU box) and starts the next batch.",
+    "Click the sensor in the Process view to pass parts."
+  ],
+  "hints": [
+    "The CTU box counts rising edges of its CU input, so a part held in front of the sensor counts once.",
+    "Lamp1: AutoMode and a normally closed contact on Lamp2, in a rung after the counter rung.",
+    "GE would keep Lamp3 on after the fifth part; EQ lights it for the fourth only."
+  ],
+  "knowledgeRefs": [
+    "instruction.ctu",
+    "fundamentals.counters-edges"
+  ],
+  "evidence": [
+    {
+      "name": "lamp1",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp1"
+      }
+    },
+    {
+      "name": "lamp2",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp2"
+      }
+    },
+    {
+      "name": "lamp3",
+      "source": {
+        "type": "plcTag",
+        "tag": "Lamp3"
+      }
+    },
+    {
+      "name": "count",
+      "source": {
+        "type": "plcTag",
+        "tag": "Count"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "batch",
+      "title": "A batch of five parts in AUTO, then Button2",
+      "durationMs": 5000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 200,
+          "action": {
+            "type": "setSelector",
+            "component": "sel",
+            "position": 1
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1100,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 1400,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1700,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 2300,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2600,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 2900,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 3200,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 4000,
+          "action": {
+            "type": "press",
+            "component": "pb2"
+          }
+        },
+        {
+          "atMs": 4300,
+          "action": {
+            "type": "release",
+            "component": "pb2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "title": "Parts in MAN are not counted",
+      "durationMs": 4000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1100,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 1400,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 1700,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2000,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 2300,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 2600,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        },
+        {
+          "atMs": 2900,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": true
+          }
+        },
+        {
+          "atMs": 3200,
+          "action": {
+            "type": "setPresence",
+            "component": "prox",
+            "present": false
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "counting",
+      "title": "Lamp1 shows counting in AUTO",
+      "points": 10,
+      "scenario": "batch",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 400,
+        "condition": {
+          "type": "compare",
+          "signal": "lamp1",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "Lamp1 was off in AUTO before any part."
+    },
+    {
+      "id": "counts",
+      "title": "The counter counts the parts",
+      "points": 15,
+      "scenario": "batch",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2100,
+        "condition": {
+          "type": "compare",
+          "signal": "count",
+          "layer": "outputs",
+          "op": "eq",
+          "value": 3
+        }
+      },
+      "onFail": "Count was not 3 after three parts."
+    },
+    {
+      "id": "last-part",
+      "title": "Lamp3 announces the last part",
+      "points": 15,
+      "scenario": "batch",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2700,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "lamp3",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "lamp2",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      "onFail": "After four parts Lamp3 should be on and Lamp2 still off."
+    },
+    {
+      "id": "batch",
+      "title": "Lamp2 after the fifth part; counting stops",
+      "points": 25,
+      "scenario": "batch",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3500,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "lamp2",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "lamp1",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "type": "compare",
+              "signal": "lamp3",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      "onFail": "After five parts: Lamp2 on, Lamp1 off and Lamp3 off."
+    },
+    {
+      "id": "next-batch",
+      "title": "Button2 starts the next batch",
+      "points": 20,
+      "scenario": "batch",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 4600,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "lamp2",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "type": "compare",
+              "signal": "lamp1",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "count",
+              "layer": "outputs",
+              "op": "eq",
+              "value": 0
+            }
+          ]
+        }
+      },
+      "onFail": "After Button2 the count should be 0, Lamp2 off and Lamp1 on."
+    },
+    {
+      "id": "manual",
+      "title": "No counting in MAN",
+      "points": 15,
+      "scenario": "manual",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "any",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "lamp2",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "lamp3",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      },
+      "onFail": "Parts were counted with the selector in MAN."
+    }
+  ],
+  "curriculumOrder": 18
+}

@@ -21096,6 +21096,731 @@
       ]
     },
     {
+      "id": "ex.lad-motor-start-stop",
+      "file": "exercises/ex-lad-motor-start-stop.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Ladder: motor start/stop with self-holding",
+          "text": "Drabinka: start/stop silnika z podtrzymaniem"
+        },
+        {
+          "path": "summary",
+          "source": "Draw the classic motor circuit as a ladder rung: a momentary Start contact with a self-holding branch through the contactor, a Stop contact and the overload relay contact in series, and a rung for the run lamp.",
+          "text": "Narysuj klasyczny układ silnika jako szczebel drabinki: chwilowy styk Start z gałęzią podtrzymania przez stycznik, szeregowo styk Stop i styk przekaźnika przeciążeniowego, a do tego szczebel lampki pracy."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Build a self-holding rung with a parallel branch",
+          "text": "Zbudować szczebel z podtrzymaniem za pomocą gałęzi równoległej"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Choose the contact type from the wiring: a normally closed Stop button reads TRUE while not pressed",
+          "text": "Dobrać typ styku do okablowania: przycisk Stop NC daje TRUE, gdy nie jest naciśnięty"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Watch power flow through the rung online",
+          "text": "Obserwować online przepływ zasilania przez szczebel"
+        },
+        {
+          "path": "instructions.0",
+          "source": "The starter rung switches MotorContactor only while Start is held. Add a parallel branch with a normally open contact on MotorContactor so the coil holds itself.",
+          "text": "Szczebel startowy załącza MotorContactor tylko podczas trzymania Start. Dodaj gałąź równoległą ze stykiem normalnie otwartym na MotorContactor, aby cewka sama się podtrzymywała."
+        },
+        {
+          "path": "instructions.1",
+          "source": "Put a contact on StopPB in series. S2 is a normally closed button: StopPB is TRUE while Stop is NOT pressed, so the contact in the rung is normally open.",
+          "text": "Dodaj szeregowo styk na StopPB. S2 to przycisk normalnie zamknięty: StopPB ma wartość TRUE, gdy Stop NIE jest naciśnięty, więc styk w szczeblu jest normalnie otwarty."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Put a normally open contact on OverloadOK in series: an overload trip makes it FALSE and opens the rung.",
+          "text": "Dodaj szeregowo styk normalnie otwarty na OverloadOK: zadziałanie przeciążenia daje FALSE i otwiera szczebel."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Add a second rung: MotorFeedback drives the RunLamp coil.",
+          "text": "Dodaj drugi szczebel: MotorFeedback steruje cewką RunLamp."
+        },
+        {
+          "path": "instructions.4",
+          "source": "Load the program and watch the rung online: highlighted wires carry power in the scan the PLC just executed.",
+          "text": "Załaduj program i obserwuj szczebel online: wyróżnione połączenia przewodzą zasilanie w cyklu, który sterownik właśnie wykonał."
+        },
+        {
+          "path": "hints.0",
+          "source": "Select the Start contact, choose Insert position Parallel and insert a normally open contact.",
+          "text": "Zaznacz styk Start, wybierz Miejsce wstawienia: Równolegle i wstaw styk normalnie otwarty."
+        },
+        {
+          "path": "hints.1",
+          "source": "Select the parallel block, choose After, and insert the series contacts.",
+          "text": "Zaznacz blok równoległy, wybierz Za i wstaw styki szeregowe."
+        },
+        {
+          "path": "hints.2",
+          "source": "A normally closed contact on StopPB never passes power while S2 is released: the motor would never start.",
+          "text": "Styk normalnie zamknięty na StopPB nie przewodzi, gdy S2 jest zwolniony: silnik nigdy by nie ruszył."
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "Start, release, then stop",
+          "text": "Start, zwolnienie przycisku i Stop"
+        },
+        {
+          "path": "scenarios.1.title",
+          "source": "Start and Stop pressed together",
+          "text": "Jednoczesne naciśnięcie Start i Stop"
+        },
+        {
+          "path": "scenarios.2.title",
+          "source": "Overload trip while running",
+          "text": "Przeciążenie podczas pracy"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "Start energizes the contactor",
+          "text": "Start załącza stycznik"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "MotorContactor did not switch on after StartPB became TRUE.",
+          "text": "MotorContactor nie załączył się po zmianie StartPB na TRUE."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "The motor keeps running after Start is released",
+          "text": "Silnik pracuje po zwolnieniu Start"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "The motor stopped when Start was released. Add a seal-in path through MotorContactor.",
+          "text": "Silnik zatrzymał się po zwolnieniu Start. Dodaj podtrzymanie przez MotorContactor."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "Stop de-energizes the contactor",
+          "text": "Stop wyłącza stycznik"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "The motor kept running after Stop was pressed. Remember: StopPB is FALSE while Stop is pressed.",
+          "text": "Silnik pracował po naciśnięciu Stop. Pamiętaj: StopPB jest FALSE przy naciśniętym Stop."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "Stop has priority over Start",
+          "text": "Stop ma priorytet nad Start"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "The contactor switched on while Stop was held. Stop must always win.",
+          "text": "Stycznik załączył się przy trzymanym Stop. Stop zawsze musi mieć priorytet."
+        },
+        {
+          "path": "criteria.4.title",
+          "source": "An overload trip stops the motor",
+          "text": "Przeciążenie zatrzymuje silnik"
+        },
+        {
+          "path": "criteria.4.onFail",
+          "source": "The contactor stayed energized after the overload relay tripped. Include OverloadOK in the logic.",
+          "text": "Stycznik pozostał załączony po zadziałaniu zabezpieczenia przeciążeniowego. Uwzględnij OverloadOK w logice."
+        },
+        {
+          "path": "criteria.5.title",
+          "source": "The run lamp shows the running motor",
+          "text": "Lampka sygnalizuje pracę silnika"
+        },
+        {
+          "path": "criteria.5.onFail",
+          "source": "The motor was running but RunLamp did not switch on.",
+          "text": "Silnik pracował, lecz RunLamp nie załączyła się."
+        }
+      ]
+    },
+    {
+      "id": "ex.lad-production-count",
+      "file": "exercises/ex-lad-production-count.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Ladder: counter-based production cycle",
+          "text": "Drabinka: cykl produkcyjny z licznikiem"
+        },
+        {
+          "path": "summary",
+          "source": "Parts pass a proximity sensor. In AUTO, a CTU box counts them in batches of five: the batch lamp lights after the fifth part, a comparator announces the last part of the batch, and Button2 starts the next batch.",
+          "text": "Detale mijają czujnik zbliżeniowy. W trybie AUTO blok CTU liczy je w partiach po pięć: lampka partii zapala się po piątym detalu, komparator zapowiada ostatni detal partii, a Button2 rozpoczyna następną partię."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Use a CTU box with a preset, a reset input and a CV output",
+          "text": "Użyć bloku CTU z wartością zadaną, wejściem kasowania i wyjściem CV"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Compare the count with an EQ comparator",
+          "text": "Porównać stan licznika komparatorem EQ"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Stop a production step when the batch is complete",
+          "text": "Zatrzymać etap produkcji po skompletowaniu partii"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Count parts (PartPresent) only in AUTO: a CTU box with PV 5 behind contacts on AutoMode and PartPresent. Write CV to Count.",
+          "text": "Licz detale (PartPresent) tylko w trybie AUTO: blok CTU z PV 5 za stykami na AutoMode i PartPresent. Zapisz CV do Count."
+        },
+        {
+          "path": "instructions.1",
+          "source": "Lamp2 (batch complete) is the power leaving the counter box: on from the fifth part.",
+          "text": "Lamp2 (partia gotowa) to zasilanie wychodzące z bloku licznika: świeci od piątego detalu."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Lamp1 (counting) is on in AUTO while the batch is not complete.",
+          "text": "Lamp1 (liczenie) świeci w trybie AUTO, dopóki partia nie jest gotowa."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Lamp3 (last part) is on while Count equals 4: use an EQ comparator.",
+          "text": "Lamp3 (ostatni detal) świeci, gdy Count jest równe 4: użyj komparatora EQ."
+        },
+        {
+          "path": "instructions.4",
+          "source": "Button2 resets the counter (R input of the CTU box) and starts the next batch.",
+          "text": "Button2 kasuje licznik (wejście R bloku CTU) i rozpoczyna następną partię."
+        },
+        {
+          "path": "instructions.5",
+          "source": "Click the sensor in the Process view to pass parts.",
+          "text": "Klikaj czujnik w widoku Proces, aby przepuszczać detale."
+        },
+        {
+          "path": "hints.0",
+          "source": "The CTU box counts rising edges of its CU input, so a part held in front of the sensor counts once.",
+          "text": "Blok CTU liczy zbocza narastające wejścia CU, więc detal zatrzymany przed czujnikiem liczy się raz."
+        },
+        {
+          "path": "hints.1",
+          "source": "Lamp1: AutoMode and a normally closed contact on Lamp2, in a rung after the counter rung.",
+          "text": "Lamp1: AutoMode i styk normalnie zamknięty na Lamp2, w szczeblu za szczeblem licznika."
+        },
+        {
+          "path": "hints.2",
+          "source": "GE would keep Lamp3 on after the fifth part; EQ lights it for the fourth only.",
+          "text": "GE pozostawiłby Lamp3 zapaloną po piątym detalu; EQ zapala ją tylko dla czwartego."
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "A batch of five parts in AUTO, then Button2",
+          "text": "Partia pięciu detali w trybie AUTO, potem Button2"
+        },
+        {
+          "path": "scenarios.1.title",
+          "source": "Parts in MAN are not counted",
+          "text": "Detale w trybie MAN nie są liczone"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "Lamp1 shows counting in AUTO",
+          "text": "Lamp1 pokazuje liczenie w trybie AUTO"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "Lamp1 was off in AUTO before any part.",
+          "text": "Lamp1 była zgaszona w trybie AUTO przed pierwszym detalem."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "The counter counts the parts",
+          "text": "Licznik liczy detale"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "Count was not 3 after three parts.",
+          "text": "Count nie wynosiło 3 po trzech detalach."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "Lamp3 announces the last part",
+          "text": "Lamp3 zapowiada ostatni detal"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "After four parts Lamp3 should be on and Lamp2 still off.",
+          "text": "Po czterech detalach Lamp3 powinna świecić, a Lamp2 być jeszcze zgaszona."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "Lamp2 after the fifth part; counting stops",
+          "text": "Lamp2 po piątym detalu; liczenie się kończy"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "After five parts: Lamp2 on, Lamp1 off and Lamp3 off.",
+          "text": "Po pięciu detalach: Lamp2 zapalona, Lamp1 i Lamp3 zgaszone."
+        },
+        {
+          "path": "criteria.4.title",
+          "source": "Button2 starts the next batch",
+          "text": "Button2 rozpoczyna następną partię"
+        },
+        {
+          "path": "criteria.4.onFail",
+          "source": "After Button2 the count should be 0, Lamp2 off and Lamp1 on.",
+          "text": "Po Button2 licznik powinien wynosić 0, Lamp2 być zgaszona, a Lamp1 zapalona."
+        },
+        {
+          "path": "criteria.5.title",
+          "source": "No counting in MAN",
+          "text": "Brak liczenia w trybie MAN"
+        },
+        {
+          "path": "criteria.5.onFail",
+          "source": "Parts were counted with the selector in MAN.",
+          "text": "Detale były liczone przy przełączniku w pozycji MAN."
+        }
+      ]
+    },
+    {
+      "id": "ex.lad-run-monitor",
+      "file": "exercises/ex-lad-run-monitor.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Ladder: motor run feedback monitoring",
+          "text": "Drabinka: nadzór potwierdzenia pracy silnika"
+        },
+        {
+          "path": "summary",
+          "source": "A contactor that is commanded but never confirms it pulled in is a fault. Watch the auxiliary contact with a TON box, latch a fault with a SET coil, switch the motor off, block restarts and let Stop acknowledge the fault with a RESET coil.",
+          "text": "Stycznik, który dostał polecenie, ale nigdy nie potwierdził zadziałania, oznacza usterkę. Nadzoruj styk pomocniczy blokiem TON, zapamiętaj usterkę cewką SET, wyłącz silnik, zablokuj ponowny start i pozwól, by Stop kwitował usterkę cewką RESET."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Detect a missing feedback signal with a TON box",
+          "text": "Wykryć brak sygnału zwrotnego blokiem TON"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Latch a diagnostic with SET and RESET coils",
+          "text": "Zapamiętać diagnostykę cewkami SET i RESET"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Interlock the motor against a latched fault",
+          "text": "Zablokować silnik przy zapamiętanej usterce"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Keep the start/stop circuit with self-holding.",
+          "text": "Zachowaj układ start/stop z podtrzymaniem."
+        },
+        {
+          "path": "instructions.1",
+          "source": "When MotorContactor is on and MotorFeedback has not confirmed for 1 s, set FeedbackFault with a SET coil.",
+          "text": "Gdy MotorContactor jest załączony, a MotorFeedback nie potwierdził przez 1 s, ustaw FeedbackFault cewką SET."
+        },
+        {
+          "path": "instructions.2",
+          "source": "While FeedbackFault is TRUE the motor is off and Start cannot restart it: add a normally closed contact on FeedbackFault to the motor rung.",
+          "text": "Dopóki FeedbackFault ma wartość TRUE, silnik jest wyłączony i Start nie może go uruchomić: dodaj do szczebla silnika styk normalnie zamknięty na FeedbackFault."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Pressing Stop (StopPB FALSE) acknowledges the fault: a RESET coil on FeedbackFault.",
+          "text": "Naciśnięcie Stop (StopPB FALSE) kwituje usterkę: cewka RESET na FeedbackFault."
+        },
+        {
+          "path": "instructions.4",
+          "source": "RunLamp shows the confirmed running motor (MotorFeedback).",
+          "text": "RunLamp pokazuje potwierdzoną pracę silnika (MotorFeedback)."
+        },
+        {
+          "path": "hints.0",
+          "source": "Rung: MotorContactor (normally open), MotorFeedback (normally closed), TON with PT T#1s, then a SET coil on FeedbackFault.",
+          "text": "Szczebel: MotorContactor (normalnie otwarty), MotorFeedback (normalnie zamknięty), TON z PT T#1s, potem cewka SET na FeedbackFault."
+        },
+        {
+          "path": "hints.1",
+          "source": "A SET coil keeps its variable TRUE after power disappears; only a RESET coil clears it.",
+          "text": "Cewka SET utrzymuje zmienną w stanie TRUE po zaniku zasilania; skasować ją może tylko cewka RESET."
+        },
+        {
+          "path": "hints.2",
+          "source": "When SET and RESET of one variable are both powered in a scan, the later rung wins.",
+          "text": "Gdy w jednym cyklu zasilone są SET i RESET tej samej zmiennej, wygrywa późniejszy szczebel."
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "Normal start with feedback",
+          "text": "Normalny start z potwierdzeniem"
+        },
+        {
+          "path": "scenarios.1.title",
+          "source": "The auxiliary contact never closes",
+          "text": "Styk pomocniczy nigdy się nie zamyka"
+        },
+        {
+          "path": "scenarios.2.title",
+          "source": "Repair, acknowledge with Stop, restart",
+          "text": "Naprawa, kwitowanie przyciskiem Stop, ponowny start"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "With feedback the motor keeps running",
+          "text": "Z potwierdzeniem silnik pracuje dalej"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "The motor was not running 3.5 s after Start although the feedback confirmed it.",
+          "text": "Silnik nie pracował 3.5 s po Start, choć potwierdzenie zadziałania nadeszło."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "No fault when the feedback confirms",
+          "text": "Brak usterki przy potwierdzeniu"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "FeedbackFault was set although MotorFeedback confirmed the contactor.",
+          "text": "FeedbackFault został ustawiony, choć MotorFeedback potwierdził zadziałanie stycznika."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "Start still energizes the contactor",
+          "text": "Start nadal załącza stycznik"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "The contactor was off 0.7 s after Start: the watch time is 1 s.",
+          "text": "Stycznik był wyłączony 0.7 s po Start: czas nadzoru wynosi 1 s."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "Missing feedback switches the motor off",
+          "text": "Brak potwierdzenia wyłącza silnik"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "The contactor stayed on although MotorFeedback never confirmed it.",
+          "text": "Stycznik pozostał załączony, choć MotorFeedback nigdy go nie potwierdził."
+        },
+        {
+          "path": "criteria.4.title",
+          "source": "The fault is latched",
+          "text": "Usterka jest zapamiętana"
+        },
+        {
+          "path": "criteria.4.onFail",
+          "source": "FeedbackFault was not TRUE after the feedback timeout.",
+          "text": "FeedbackFault nie miał wartości TRUE po przekroczeniu czasu nadzoru."
+        },
+        {
+          "path": "criteria.5.title",
+          "source": "Start cannot restart while the fault is latched",
+          "text": "Start nie uruchamia silnika przy zapamiętanej usterce"
+        },
+        {
+          "path": "criteria.5.onFail",
+          "source": "Start switched the contactor on again while FeedbackFault was latched.",
+          "text": "Start ponownie załączył stycznik, choć FeedbackFault był zapamiętany."
+        },
+        {
+          "path": "criteria.6.title",
+          "source": "Stop acknowledges; the repaired motor restarts",
+          "text": "Stop kwituje; naprawiony silnik rusza ponownie"
+        },
+        {
+          "path": "criteria.6.onFail",
+          "source": "After the repair, Stop and Start, the motor did not run with FeedbackFault cleared.",
+          "text": "Po naprawie, Stop i Start silnik nie pracował przy skasowanym FeedbackFault."
+        }
+      ]
+    },
+    {
+      "id": "ex.lad-start-delay",
+      "file": "exercises/ex-lad-start-delay.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Ladder: motor start delay with a TON box",
+          "text": "Drabinka: opóźniony start silnika z blokiem TON"
+        },
+        {
+          "path": "summary",
+          "source": "The request and the warning lamp are already drawn. Add a rung with a TON on-delay box so the conveyor motor starts 3 seconds after the request, and watch the box count its elapsed time online.",
+          "text": "Żądanie i lampka ostrzegawcza są już narysowane. Dodaj szczebel z blokiem TON opóźnionego załączenia, aby silnik przenośnika ruszał 3 sekundy po żądaniu, i obserwuj online, jak blok odlicza czas."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Place a TON box in a rung and set its instance name and preset time",
+          "text": "Umieścić blok TON w szczeblu i ustawić nazwę instancji oraz czas zadany"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Use the power leaving the box (its Q output) to drive a coil",
+          "text": "Sterować cewką zasilaniem wychodzącym z bloku (jego wyjściem Q)"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Observe the elapsed time ET counting in the running PLC",
+          "text": "Obserwować w pracującym sterowniku narastający czas ET"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Rung 1 latches Request with Start; Stop (StopPB FALSE) or an overload clears it. Rung 2 lights RunLamp as a warning.",
+          "text": "Szczebel 1 podtrzymuje Request po naciśnięciu Start; Stop (StopPB FALSE) lub przeciążenie kasuje żądanie. Szczebel 2 zapala RunLamp jako ostrzeżenie."
+        },
+        {
+          "path": "instructions.1",
+          "source": "Add a rung: a normally open contact on Request, then a TON box with the preset PT T#3s, then the MotorContactor coil.",
+          "text": "Dodaj szczebel: styk normalnie otwarty na Request, potem blok TON z czasem zadanym PT T#3s, potem cewka MotorContactor."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Power leaves the TON box only when its time has elapsed (Q), so the motor starts 3 s after the request and stops at once when the request drops.",
+          "text": "Zasilanie wychodzi z bloku TON dopiero po upływie czasu (Q), więc silnik rusza 3 s po żądaniu i zatrzymuje się od razu, gdy żądanie zaniknie."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Write the elapsed time to a TIME variable through the box's ET output if you want to see it in the variable list; the box itself shows ET online.",
+          "text": "Jeśli chcesz widzieć upływający czas na liście zmiennych, zapisz go wyjściem ET bloku do zmiennej typu TIME; sam blok pokazuje ET online."
+        },
+        {
+          "path": "hints.0",
+          "source": "Select the Request contact of the new rung, keep Insert position After and insert TON on-delay timer.",
+          "text": "Zaznacz styk Request w nowym szczeblu, zostaw Miejsce wstawienia: Za i wstaw TON timer opóźnionego załączenia."
+        },
+        {
+          "path": "hints.1",
+          "source": "The preset is a TIME literal such as T#3s; a plain number is rejected by the compiler.",
+          "text": "Czas zadany to literał TIME, np. T#3s; samą liczbę kompilator odrzuci."
+        },
+        {
+          "path": "hints.2",
+          "source": "A TOF or TP box would switch the motor on immediately: only TON delays switching on.",
+          "text": "Blok TOF lub TP załączyłby silnik natychmiast: tylko TON opóźnia załączenie."
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "Start and wait",
+          "text": "Naciśnij Start i poczekaj"
+        },
+        {
+          "path": "scenarios.1.title",
+          "source": "Stop during the warning",
+          "text": "Stop podczas ostrzegania"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "The warning lamp lights at once",
+          "text": "Lampka ostrzegawcza zapala się od razu"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "RunLamp did not light when Start was pressed.",
+          "text": "RunLamp nie zapaliła się po naciśnięciu Start."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "The motor does not start before the delay",
+          "text": "Silnik nie rusza przed końcem opóźnienia"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "The motor started before 3 s had elapsed.",
+          "text": "Silnik ruszył, zanim upłynęły 3 s."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "The motor starts after 3 s",
+          "text": "Silnik rusza po 3 s"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "The motor was not running 3.7 s after Start.",
+          "text": "Silnik nie pracował 3.7 s po Start."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "Stop cancels the start",
+          "text": "Stop anuluje rozruch"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "The motor started although Stop was pressed during the warning.",
+          "text": "Silnik ruszył mimo naciśnięcia Stop podczas ostrzegania."
+        }
+      ]
+    },
+    {
+      "id": "ex.lad-tank-interlock",
+      "file": "exercises/ex-lad-tank-interlock.json",
+      "fields": [
+        {
+          "path": "title",
+          "source": "Ladder: tank level control with interlocks",
+          "text": "Drabinka: sterowanie poziomem w zbiorniku z blokadami"
+        },
+        {
+          "path": "summary",
+          "source": "Fill the tank to the high level switch, then drain it to the low level switch. Interlock contacts keep the inlet valve and the drain pump from ever running together and protect the pump from running dry, even when an operator presses Start at the wrong moment.",
+          "text": "Napełnij zbiornik do łącznika poziomu wysokiego, a potem opróżnij go do łącznika poziomu niskiego. Styki blokad nie pozwalają, by zawór wlotowy i pompa spustowa pracowały razem, i chronią pompę przed pracą na sucho, nawet gdy operator naciśnie Start w złym momencie."
+        },
+        {
+          "path": "objectives.0",
+          "source": "Express interlocks as normally closed contacts in ladder rungs",
+          "text": "Zapisać blokady jako styki normalnie zamknięte w szczeblach drabinki"
+        },
+        {
+          "path": "objectives.1",
+          "source": "Protect a pump against dry running with a level switch",
+          "text": "Chronić pompę przed pracą na sucho za pomocą łącznika poziomu"
+        },
+        {
+          "path": "objectives.2",
+          "source": "Use level switches to change between process steps",
+          "text": "Przełączać etapy procesu łącznikami poziomu"
+        },
+        {
+          "path": "instructions.0",
+          "source": "Start opens InletValve (self-holding); the valve closes at LevelHigh and on Stop (StopPB FALSE).",
+          "text": "Start otwiera InletValve (z podtrzymaniem); zawór zamyka się przy LevelHigh i po Stop (StopPB FALSE)."
+        },
+        {
+          "path": "instructions.1",
+          "source": "When the tank is full (LevelHigh), DrainPump starts and holds itself until LevelLow: LevelLow is TRUE while the level is below the low switch.",
+          "text": "Gdy zbiornik jest pełny (LevelHigh), DrainPump rusza i podtrzymuje się aż do LevelLow: LevelLow ma wartość TRUE, gdy poziom jest poniżej łącznika niskiego."
+        },
+        {
+          "path": "instructions.2",
+          "source": "Interlock: InletValve never opens while DrainPump runs, and DrainPump never runs while InletValve is open.",
+          "text": "Blokada: InletValve nigdy się nie otwiera, gdy pracuje DrainPump, a DrainPump nigdy nie pracuje przy otwartym InletValve."
+        },
+        {
+          "path": "instructions.3",
+          "source": "Stop switches the drain pump off too.",
+          "text": "Stop wyłącza również pompę spustową."
+        },
+        {
+          "path": "hints.0",
+          "source": "An interlock is a normally closed contact on the other output in each rung.",
+          "text": "Blokada to styk normalnie zamknięty na drugim wyjściu w każdym szczeblu."
+        },
+        {
+          "path": "hints.1",
+          "source": "Dry-run protection: a normally closed contact on LevelLow in the pump rung.",
+          "text": "Ochrona przed pracą na sucho: styk normalnie zamknięty na LevelLow w szczeblu pompy."
+        },
+        {
+          "path": "hints.2",
+          "source": "The valve needs 1.5 s to close; the level keeps rising a little meanwhile.",
+          "text": "Zawór zamyka się przez 1.5 s; w tym czasie poziom jeszcze trochę rośnie."
+        },
+        {
+          "path": "scenarios.0.title",
+          "source": "Fill and drain",
+          "text": "Napełnianie i opróżnianie"
+        },
+        {
+          "path": "scenarios.1.title",
+          "source": "Start pressed while draining",
+          "text": "Start naciśnięty podczas opróżniania"
+        },
+        {
+          "path": "scenarios.2.title",
+          "source": "Stop while filling",
+          "text": "Stop podczas napełniania"
+        },
+        {
+          "path": "criteria.0.title",
+          "source": "Start opens the inlet valve",
+          "text": "Start otwiera zawór wlotowy"
+        },
+        {
+          "path": "criteria.0.onFail",
+          "source": "InletValve did not open after Start.",
+          "text": "InletValve nie otworzył się po Start."
+        },
+        {
+          "path": "criteria.1.title",
+          "source": "Full: the valve closes and the pump starts",
+          "text": "Pełny zbiornik: zawór się zamyka, pompa rusza"
+        },
+        {
+          "path": "criteria.1.onFail",
+          "source": "At LevelHigh the valve should close and the drain pump start.",
+          "text": "Przy LevelHigh zawór powinien się zamknąć, a pompa spustowa ruszyć."
+        },
+        {
+          "path": "criteria.2.title",
+          "source": "The pump stops at the low switch",
+          "text": "Pompa staje przy łączniku niskim"
+        },
+        {
+          "path": "criteria.2.onFail",
+          "source": "DrainPump kept running after LevelLow.",
+          "text": "DrainPump pracowała dalej po LevelLow."
+        },
+        {
+          "path": "criteria.3.title",
+          "source": "The pump never runs dry",
+          "text": "Pompa nigdy nie pracuje na sucho"
+        },
+        {
+          "path": "criteria.3.onFail",
+          "source": "The drain pump ran dry.",
+          "text": "Pompa spustowa pracowała na sucho."
+        },
+        {
+          "path": "criteria.4.title",
+          "source": "No overflow",
+          "text": "Brak przelania"
+        },
+        {
+          "path": "criteria.4.onFail",
+          "source": "The tank overflowed.",
+          "text": "Zbiornik się przelał."
+        },
+        {
+          "path": "criteria.5.title",
+          "source": "Valve and pump never run together",
+          "text": "Zawór i pompa nigdy nie pracują razem"
+        },
+        {
+          "path": "criteria.5.onFail",
+          "source": "InletValve and DrainPump were on together: interlock each output against the other.",
+          "text": "InletValve i DrainPump były załączone jednocześnie: zablokuj każde wyjście drugim."
+        },
+        {
+          "path": "criteria.6.title",
+          "source": "Start does not interrupt draining",
+          "text": "Start nie przerywa opróżniania"
+        },
+        {
+          "path": "criteria.6.onFail",
+          "source": "Pressing Start while draining should change nothing.",
+          "text": "Naciśnięcie Start podczas opróżniania nie powinno niczego zmienić."
+        },
+        {
+          "path": "criteria.7.title",
+          "source": "Stop closes the valve",
+          "text": "Stop zamyka zawór"
+        },
+        {
+          "path": "criteria.7.onFail",
+          "source": "After Stop both the valve and the pump should be off.",
+          "text": "Po Stop zarówno zawór, jak i pompa powinny być wyłączone."
+        }
+      ]
+    },
+    {
       "id": "fundamentals.pous",
       "file": "fundamentals/pous.json",
       "fields": [

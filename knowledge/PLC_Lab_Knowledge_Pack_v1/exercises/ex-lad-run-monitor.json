@@ -1,0 +1,399 @@
+{
+  "format": "plclab-exercise",
+  "schemaVersion": 1,
+  "id": "ex.lad-run-monitor",
+  "revision": 1,
+  "title": "Ladder: motor run feedback monitoring",
+  "kind": "practice",
+  "difficulty": "intermediate",
+  "summary": "A contactor that is commanded but never confirms it pulled in is a fault. Watch the auxiliary contact with a TON box, latch a fault with a SET coil, switch the motor off, block restarts and let Stop acknowledge the fault with a RESET coil.",
+  "objectives": [
+    "Detect a missing feedback signal with a TON box",
+    "Latch a diagnostic with SET and RESET coils",
+    "Interlock the motor against a latched fault"
+  ],
+  "estimatedMinutes": 25,
+  "scene": "scene.motor-start-stop",
+  "starterProgram": "{\n  \"format\": \"plclab-lad\",\n  \"version\": 2,\n  \"name\": \"Main\",\n  \"variables\": [\n    {\n      \"name\": \"StartPB\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Start button S1, normally open: TRUE while pressed.\"\n    },\n    {\n      \"name\": \"StopPB\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Stop button S2, normally closed: TRUE while NOT pressed (wire-break safe).\"\n    },\n    {\n      \"name\": \"MotorFeedback\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Contactor auxiliary contact: TRUE when the contactor has pulled in.\"\n    },\n    {\n      \"name\": \"OverloadOK\",\n      \"type\": \"BOOL\",\n      \"direction\": \"input\",\n      \"comment\": \"Overload relay contact, normally closed: TRUE while the motor is not overloaded.\"\n    },\n    {\n      \"name\": \"MotorContactor\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Contactor coil K1: TRUE energizes the motor.\"\n    },\n    {\n      \"name\": \"RunLamp\",\n      \"type\": \"BOOL\",\n      \"direction\": \"output\",\n      \"comment\": \"Green run lamp H1.\"\n    },\n    {\n      \"name\": \"FeedbackFault\",\n      \"type\": \"BOOL\",\n      \"direction\": \"local\",\n      \"comment\": \"Latched when the contactor feedback does not confirm within 1 s.\"\n    }\n  ],\n  \"rungs\": [\n    {\n      \"id\": 1,\n      \"comment\": \"Start/stop with self-holding.\",\n      \"network\": {\n        \"type\": \"series\",\n        \"id\": 2,\n        \"items\": [\n          {\n            \"type\": \"parallel\",\n            \"id\": 5,\n            \"branches\": [\n              {\n                \"type\": \"contact\",\n                \"id\": 3,\n                \"contact\": \"normallyOpen\",\n                \"variable\": \"StartPB\"\n              },\n              {\n                \"type\": \"contact\",\n                \"id\": 4,\n                \"contact\": \"normallyOpen\",\n                \"variable\": \"MotorContactor\"\n              }\n            ]\n          },\n          {\n            \"type\": \"contact\",\n            \"id\": 6,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"StopPB\"\n          },\n          {\n            \"type\": \"contact\",\n            \"id\": 7,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"OverloadOK\"\n          }\n        ]\n      },\n      \"coils\": [\n        {\n          \"id\": 8,\n          \"variable\": \"MotorContactor\"\n        }\n      ]\n    },\n    {\n      \"id\": 9,\n      \"comment\": \"The auxiliary contact confirms the running motor.\",\n      \"network\": {\n        \"type\": \"series\",\n        \"id\": 10,\n        \"items\": [\n          {\n            \"type\": \"contact\",\n            \"id\": 11,\n            \"contact\": \"normallyOpen\",\n            \"variable\": \"MotorFeedback\"\n          }\n        ]\n      },\n      \"coils\": [\n        {\n          \"id\": 12,\n          \"variable\": \"RunLamp\"\n        }\n      ]\n    }\n  ]\n}",
+  "requiredInterface": [
+    {
+      "tag": "StartPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "StopPB",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorFeedback",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "OverloadOK",
+      "type": "BOOL",
+      "direction": "input"
+    },
+    {
+      "tag": "MotorContactor",
+      "type": "BOOL",
+      "direction": "output"
+    },
+    {
+      "tag": "RunLamp",
+      "type": "BOOL",
+      "direction": "output"
+    }
+  ],
+  "instructions": [
+    "Keep the start/stop circuit with self-holding.",
+    "When MotorContactor is on and MotorFeedback has not confirmed for 1 s, set FeedbackFault with a SET coil.",
+    "While FeedbackFault is TRUE the motor is off and Start cannot restart it: add a normally closed contact on FeedbackFault to the motor rung.",
+    "Pressing Stop (StopPB FALSE) acknowledges the fault: a RESET coil on FeedbackFault.",
+    "RunLamp shows the confirmed running motor (MotorFeedback)."
+  ],
+  "hints": [
+    "Rung: MotorContactor (normally open), MotorFeedback (normally closed), TON with PT T#1s, then a SET coil on FeedbackFault.",
+    "A SET coil keeps its variable TRUE after power disappears; only a RESET coil clears it.",
+    "When SET and RESET of one variable are both powered in a scan, the later rung wins."
+  ],
+  "knowledgeRefs": [
+    "instruction.ton",
+    "fundamentals.interlocks"
+  ],
+  "evidence": [
+    {
+      "name": "start",
+      "source": {
+        "type": "plcTag",
+        "tag": "StartPB"
+      }
+    },
+    {
+      "name": "contactor",
+      "source": {
+        "type": "plcTag",
+        "tag": "MotorContactor"
+      }
+    },
+    {
+      "name": "lamp",
+      "source": {
+        "type": "plcTag",
+        "tag": "RunLamp"
+      }
+    },
+    {
+      "name": "fault",
+      "source": {
+        "type": "plcTag",
+        "tag": "FeedbackFault"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "normal",
+      "title": "Normal start with feedback",
+      "durationMs": 5000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "missing",
+      "title": "The auxiliary contact never closes",
+      "durationMs": 4500,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 100,
+          "action": {
+            "type": "injectFault",
+            "fault": {
+              "id": "aux-open",
+              "fault": {
+                "type": "feedbackMissing",
+                "component": "motor",
+                "port": "aux"
+              }
+            }
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 3000,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 3300,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "acknowledge",
+      "title": "Repair, acknowledge with Stop, restart",
+      "durationMs": 7000,
+      "actions": [
+        {
+          "atMs": 0,
+          "action": {
+            "type": "setPlcMode",
+            "mode": "run"
+          }
+        },
+        {
+          "atMs": 100,
+          "action": {
+            "type": "injectFault",
+            "fault": {
+              "id": "aux-open",
+              "fault": {
+                "type": "feedbackMissing",
+                "component": "motor",
+                "port": "aux"
+              }
+            }
+          }
+        },
+        {
+          "atMs": 500,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 800,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 2500,
+          "action": {
+            "type": "clearFault",
+            "id": "aux-open"
+          }
+        },
+        {
+          "atMs": 3000,
+          "action": {
+            "type": "press",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 3300,
+          "action": {
+            "type": "release",
+            "component": "stop"
+          }
+        },
+        {
+          "atMs": 4000,
+          "action": {
+            "type": "press",
+            "component": "start"
+          }
+        },
+        {
+          "atMs": 4300,
+          "action": {
+            "type": "release",
+            "component": "start"
+          }
+        }
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "runs",
+      "title": "With feedback the motor keeps running",
+      "points": 15,
+      "scenario": "normal",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 4000,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The motor was not running 3.5 s after Start although the feedback confirmed it."
+    },
+    {
+      "id": "no-false-fault",
+      "title": "No fault when the feedback confirms",
+      "points": 15,
+      "scenario": "normal",
+      "rule": {
+        "type": "never",
+        "condition": {
+          "type": "compare",
+          "signal": "fault",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "FeedbackFault was set although MotorFeedback confirmed the contactor."
+    },
+    {
+      "id": "tries",
+      "title": "Start still energizes the contactor",
+      "points": 10,
+      "scenario": "missing",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 1200,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "The contactor was off 0.7 s after Start: the watch time is 1 s."
+    },
+    {
+      "id": "trips",
+      "title": "Missing feedback switches the motor off",
+      "points": 20,
+      "scenario": "missing",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2000,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "The contactor stayed on although MotorFeedback never confirmed it."
+    },
+    {
+      "id": "flags",
+      "title": "The fault is latched",
+      "points": 15,
+      "scenario": "missing",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 2900,
+        "condition": {
+          "type": "compare",
+          "signal": "fault",
+          "layer": "outputs",
+          "op": "eq",
+          "value": true
+        }
+      },
+      "onFail": "FeedbackFault was not TRUE after the feedback timeout."
+    },
+    {
+      "id": "lockout",
+      "title": "Start cannot restart while the fault is latched",
+      "points": 15,
+      "scenario": "missing",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 3200,
+        "condition": {
+          "type": "compare",
+          "signal": "contactor",
+          "layer": "outputs",
+          "op": "eq",
+          "value": false
+        }
+      },
+      "onFail": "Start switched the contactor on again while FeedbackFault was latched."
+    },
+    {
+      "id": "acknowledged",
+      "title": "Stop acknowledges; the repaired motor restarts",
+      "points": 10,
+      "scenario": "acknowledge",
+      "rule": {
+        "type": "stateAt",
+        "atMs": 6000,
+        "condition": {
+          "type": "all",
+          "of": [
+            {
+              "type": "compare",
+              "signal": "contactor",
+              "layer": "outputs",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "type": "compare",
+              "signal": "fault",
+              "layer": "outputs",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      },
+      "onFail": "After the repair, Stop and Start, the motor did not run with FeedbackFault cleared."
+    }
+  ],
+  "curriculumOrder": 17
+}

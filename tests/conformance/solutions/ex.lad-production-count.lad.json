@@ -1,0 +1,153 @@
+{
+  "format": "plclab-lad",
+  "version": 2,
+  "name": "Main",
+  "variables": [
+    {
+      "name": "Button1",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Pushbutton S1, normally open."
+    },
+    {
+      "name": "Button2",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Pushbutton S2, normally open."
+    },
+    {
+      "name": "AutoMode",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Selector S3 in position AUTO."
+    },
+    {
+      "name": "PartPresent",
+      "type": "BOOL",
+      "direction": "input",
+      "comment": "Proximity sensor B1 detects a part."
+    },
+    {
+      "name": "Lamp1",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Green lamp H1."
+    },
+    {
+      "name": "Lamp2",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Amber lamp H2."
+    },
+    {
+      "name": "Lamp3",
+      "type": "BOOL",
+      "direction": "output",
+      "comment": "Red lamp H3."
+    },
+    {
+      "name": "Count",
+      "type": "INT",
+      "direction": "local",
+      "comment": "Parts counted in the current batch."
+    }
+  ],
+  "rungs": [
+    {
+      "id": 1,
+      "comment": "Count parts in AUTO; five parts complete the batch; Button2 starts the next batch.",
+      "network": {
+        "type": "series",
+        "id": 2,
+        "items": [
+          {
+            "type": "contact",
+            "id": 3,
+            "contact": "normallyOpen",
+            "variable": "AutoMode"
+          },
+          {
+            "type": "contact",
+            "id": 4,
+            "contact": "normallyOpen",
+            "variable": "PartPresent"
+          },
+          {
+            "type": "block",
+            "id": 5,
+            "block": "CTU",
+            "instance": "Parts",
+            "preset": {
+              "constant": "5"
+            },
+            "reset": {
+              "variable": "Button2"
+            },
+            "output": "Count"
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 6,
+          "variable": "Lamp2"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "comment": "Counting is active in AUTO until the batch is complete.",
+      "network": {
+        "type": "series",
+        "id": 8,
+        "items": [
+          {
+            "type": "contact",
+            "id": 9,
+            "contact": "normallyOpen",
+            "variable": "AutoMode"
+          },
+          {
+            "type": "contact",
+            "id": 10,
+            "contact": "normallyClosed",
+            "variable": "Lamp2"
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 11,
+          "variable": "Lamp1"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "comment": "One part to go.",
+      "network": {
+        "type": "series",
+        "id": 13,
+        "items": [
+          {
+            "type": "compare",
+            "id": 14,
+            "op": "eq",
+            "left": {
+              "variable": "Count"
+            },
+            "right": {
+              "constant": "4"
+            }
+          }
+        ]
+      },
+      "coils": [
+        {
+          "id": 15,
+          "variable": "Lamp3"
+        }
+      ]
+    }
+  ]
+}
