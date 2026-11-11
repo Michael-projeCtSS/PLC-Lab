@@ -605,16 +605,16 @@ fn incomplete_or_conflicting_boxes_are_rejected() {
     let e = first(vec![block(3, "TON", "T1", json!({}))]);
     assert_eq!(
         (e.0.as_str(), e.1.as_str(), e.2),
-        (codes::BLOCK, "Rung 1: TON 'T1' needs PT.", Some(3))
+        (codes::BLOCK, "Rung 1: TON T1 needs PT.", Some(3))
     );
     let e = first(vec![block(3, "TON", "T1", json!({ "preset": k("5") }))]);
     assert!(
-        e.1.contains("TON.PT") && e.1.contains("not a TIME literal"),
+        e.1.contains("Rung 1: TON T1.PT:") && e.1.contains("not a TIME literal"),
         "{e:?}"
     );
     let e = first(vec![block(3, "CTU", "C1", json!({ "preset": v("Wait") }))]);
     assert!(
-        e.1.contains("CTU.PV needs INT, but 'Wait' is TIME"),
+        e.1.contains("CTU C1.PV needs INT, but 'Wait' is TIME"),
         "{e:?}"
     );
     let e = first(vec![block(
@@ -623,7 +623,7 @@ fn incomplete_or_conflicting_boxes_are_rejected() {
         "P1",
         json!({ "preset": k("T#1s"), "reset": v("Start") }),
     )]);
-    assert_eq!(e.1, "Rung 1: TP has no reset input.");
+    assert_eq!(e.1, "Rung 1: TP P1 has no reset input.");
     let e = first(vec![block(
         3,
         "TON",
@@ -647,7 +647,7 @@ fn incomplete_or_conflicting_boxes_are_rejected() {
     )]);
     assert_eq!(
         (e.0.as_str(), e.1.as_str()),
-        (codes::TARGET, "Rung 1: CTU.CV cannot write input 'Raw'.")
+        (codes::TARGET, "Rung 1: CTU C1.CV cannot write input 'Raw'.")
     );
     let e = first(vec![block(
         3,
@@ -655,7 +655,10 @@ fn incomplete_or_conflicting_boxes_are_rejected() {
         "T1",
         json!({ "preset": k("T#1s"), "output": "Count" }),
     )]);
-    assert!(e.1.contains("TON.ET is TIME, but 'Count' is INT"), "{e:?}");
+    assert!(
+        e.1.contains("TON T1.ET is TIME, but 'Count' is INT"),
+        "{e:?}"
+    );
     let e = first(vec![block(
         3,
         "TON",

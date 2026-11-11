@@ -324,7 +324,10 @@ try {
       await typeIn("Instance name", "RunDelay");
       await typeIn("Preset time PT: literal", "5");
       // The compiler rejects 5 as a TIME and names the box; the box is marked.
-      await waitText(problems(), /PLC-LAD-007.*Rung 2: RunDelay\.PT/);
+      await waitText(
+        problems(),
+        /PLC-LAD-007.*Rung 2: TON RunDelay\.PT: '5' is not a TIME literal/,
+      );
       await waitAttribute(timer("5"), "aria-invalid", /^true$/);
       // Choosing the problem selects the box.
       await element("Coil (variable?)").click();
@@ -375,7 +378,9 @@ try {
       // An edited program is no longer the loaded one: no stale online values.
       await waitText(status(), /^Offline: load this program into the PLC/);
       await buildAndLoad();
-      await element("Normally open contact StopPB: TRUE, power flows").waitFor({
+      // S2 released reads TRUE: the contact is closed, but no power reaches it yet
+      // (neither Start nor the self-holding branch passes power).
+      await element("Normally open contact StopPB: TRUE, no power").waitFor({
         timeout: 10_000,
       });
       await tab("Process");
@@ -387,6 +392,12 @@ try {
         timeout: 10_000,
       });
       await element("Normally open contact StartPB: FALSE, no power").waitFor();
+      await element(
+        "Normally open contact MotorContactor: TRUE, power flows",
+      ).waitFor();
+      await element(
+        "Normally open contact StopPB: TRUE, power flows",
+      ).waitFor();
       // ET counts up in the runtime until it reaches PT; then Q drives the lamp.
       const seen = new Set();
       const deadline = Date.now() + 15_000;
@@ -458,7 +469,7 @@ try {
       await page.keyboard.press("Control+y");
       await timer("T#3s").waitFor();
       await buildAndLoad();
-      await element("Normally open contact StopPB: TRUE, power flows").waitFor({
+      await element("Normally open contact StopPB: TRUE, no power").waitFor({
         timeout: 10_000,
       });
       await waitAttribute(timer("T#3s"), "aria-label", /no power$/);

@@ -633,6 +633,12 @@ impl Lowering {
         let block = standard(kind);
         let timer = matches!(kind, BlockKind::Ton | BlockKind::Tof | BlockKind::Tp);
         let name = block.name();
+        // Diagnostics name the box as the student sees it: kind and instance.
+        let label = if instance.trim().is_empty() {
+            name.to_string()
+        } else {
+            format!("{name} {instance}")
+        };
         let mut valid = true;
         // The instance: a fresh, valid name that no variable uses.
         let upper = instance.to_ascii_uppercase();
@@ -672,11 +678,11 @@ impl Lowering {
         let preset_name = if timer { "PT" } else { "PV" };
         let preset_type = if timer { PlcType::Time } else { PlcType::Int };
         let preset = match preset {
-            Some(p) => self.operand(p, preset_type, element, &format!("{name}.{preset_name}")),
+            Some(p) => self.operand(p, preset_type, element, &format!("{label}.{preset_name}")),
             None => {
                 self.error(
                     codes::BLOCK,
-                    format!("Rung {rung}: {name} '{instance}' needs {preset_name}."),
+                    format!("Rung {rung}: {label} needs {preset_name}."),
                     Some(element),
                 );
                 None
@@ -687,14 +693,14 @@ impl Lowering {
             (Some(_), true) => {
                 self.error(
                     codes::BLOCK,
-                    format!("Rung {rung}: {name} has no reset input."),
+                    format!("Rung {rung}: {label} has no reset input."),
                     Some(element),
                 );
                 valid = false;
                 None
             }
             (Some(r), false) => {
-                let e = self.operand(r, PlcType::Bool, element, &format!("{name}.{reset_name}"));
+                let e = self.operand(r, PlcType::Bool, element, &format!("{label}.{reset_name}"));
                 valid &= e.is_some();
                 e
             }
@@ -709,7 +715,7 @@ impl Lowering {
                         self.error(
                             codes::TARGET,
                             format!(
-                                "Rung {rung}: {name}.{output_name} cannot write input '{target}'."
+                                "Rung {rung}: {label}.{output_name} cannot write input '{target}'."
                             ),
                             Some(element),
                         );
@@ -720,7 +726,7 @@ impl Lowering {
                         self.error(
                             codes::TYPE,
                             format!(
-                                "Rung {rung}: {name}.{output_name} is {}, but '{target}' is {}.",
+                                "Rung {rung}: {label}.{output_name} is {}, but '{target}' is {}.",
                                 type_name(preset_type),
                                 type_name(v.kind)
                             ),
