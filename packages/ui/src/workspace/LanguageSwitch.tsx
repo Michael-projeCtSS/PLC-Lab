@@ -17,7 +17,7 @@ function stSkeleton(lab: Lab): string {
       .filter((v) => v.direction === direction)
       .map(
         (v) =>
-          `    ${v.name} : BOOL;${v.comment ? ` (* ${v.comment.replaceAll("*)", "")} *)` : ""}`,
+          `    ${v.name} : ${v.type};${v.comment ? ` (* ${v.comment.replaceAll("*)", "")} *)` : ""}`,
       );
     return lines.length ? [keyword, ...lines, "END_VAR"] : [];
   };

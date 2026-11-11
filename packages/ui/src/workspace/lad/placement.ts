@@ -206,13 +206,13 @@ function dropNode(
     const original = findNode(document, source.id);
     if (!original || document.rungs.some((r) => r.network.id === source.id))
       return { error: "unknown" };
-    const inside = subtreeIds(original);
-    const anchor = "id" in target ? target.id : null;
-    if (anchor === source.id) return { error: "noChange" };
-    if (anchor !== null && inside.includes(anchor))
-      return { error: "intoItself" };
+    // A copy is a new element: it may go right next to, or inside, its original.
     if (source.copy) node = freshCopy(document, original);
     else {
+      const anchor = "id" in target ? target.id : null;
+      if (anchor === source.id) return { error: "noChange" };
+      if (anchor !== null && subtreeIds(original).includes(anchor))
+        return { error: "intoItself" };
       node = original;
       // Detach without tidying: the target's container still exists for the insert.
       working = {

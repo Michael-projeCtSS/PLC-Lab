@@ -5,6 +5,7 @@
  * zoom 100 %; nothing here is saved, and the same document always gives the same layout.
  */
 import type { Coil, LadDocument, LadNode, Rung } from "../ladModel";
+import type { Field } from "./complete";
 import type { Target } from "./placement";
 
 export const G = {
@@ -395,4 +396,32 @@ export function targetBox(layout: RungLayout, target: Target): Box | null {
   );
   if (cell) return cell.box;
   return layout.groups.find((g) => g.id === target.id)?.box ?? null;
+}
+
+/** Where a field of an element is drawn, in layout coordinates. */
+export function fieldBox(
+  layout: RungLayout,
+  element: number,
+  field: Field,
+): Box | null {
+  for (const c of layout.cells) {
+    const { x, y, w } = c.box;
+    if (c.kind === "coil" && c.coil.id === element)
+      return { x: x - 6, y: y + 2, w: w + 12, h: 22 };
+    if (c.kind !== "node" || c.node.id !== element) continue;
+    const n = c.node;
+    if (n.type === "contact") return { x: x - 6, y: y + 2, w: w + 12, h: 22 };
+    if (n.type === "compare")
+      return field === "left"
+        ? { x: x + 4, y: y + G.TOP + 2, w: 54, h: 20 }
+        : { x: x + w - 58, y: y + G.TOP + 2, w: 54, h: 20 };
+    if (n.type === "block") {
+      if (field === "instance")
+        return { x: x + 30, y: y + G.TOP + 2, w: w - 60, h: 20 };
+      if (field === "preset") return { x: x + 24, y: y + 50, w: 62, h: 20 };
+      if (field === "reset") return { x: x + 24, y: y + 76, w: 62, h: 20 };
+      if (field === "output") return { x: x + w - 86, y: y + 50, w: 62, h: 20 };
+    }
+  }
+  return null;
 }

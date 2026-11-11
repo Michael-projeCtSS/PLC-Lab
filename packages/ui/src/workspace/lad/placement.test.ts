@@ -218,6 +218,15 @@ describe("placement: moving and copying existing elements", () => {
     unique(r.document);
   });
 
+  it("a copy may go right beside or below its original", () => {
+    const r = applyDrop(ab, move(3, true), { zone: "below", id: 3 });
+    if ("error" in r) throw new Error(r.error);
+    expect(logic(r.document)).toBe("(A OR A) AND B");
+    const s = applyDrop(ab, move(3, true), { zone: "after", id: 3 });
+    if ("error" in s) throw new Error(s.error);
+    expect(logic(s.document)).toBe("A AND A AND B");
+  });
+
   it("refuses to drop a block into itself and does nothing for a drop in place", () => {
     const c = drop(ab, { zone: "below", id: 3 });
     const block = (c.rungs[0]!.network as { items: LadNode[] }).items[0]!;

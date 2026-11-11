@@ -1563,7 +1563,7 @@ it("online, the rungs show the power flow, values and timer state the runtime re
       "Offline: load this program into the PLC and run it to see power flow and values.",
     ),
   ).toBeInTheDocument();
-  // Ids: rung 1, series 2, contact 3, coil 4, the TON box 6.
+  // Ids: rung 1, series 2, contact 3, coil 4, the TON box 5 (the next free id).
   const signals = [
     ...workspace().signals,
     {
@@ -1600,7 +1600,7 @@ it("online, the rungs show the power flow, values and timer state the runtime re
     scanned: true,
     power: [
       { element: 3, powered: true },
-      { element: 6, powered: false },
+      { element: 5, powered: false },
       { element: 2, powered: false },
     ],
     values: [

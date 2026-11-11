@@ -1,148 +1,102 @@
 /**
- * Ladder Diagram editor (ADR-0050, ADR-0051): a rung/grid editor over the ladder
- * document, not a node graph. The document is the program text the workspace saves,
- * compiles and loads; the backend compiles it into the canonical IR and runs it in the
- * one PLC runtime.
+ * Ladder Diagram editor (ADR-0050, ADR-0051, ADR-0052): direct manipulation of the ladder
+ * document. Elements are dragged from the palette or moved on the diagram — beside an
+ * element for AND, below it for OR — operands and box pins are edited in place with
+ * completion, instructions are typed at an insertion point, and every command has a
+ * keyboard path. The document stays the typed ladder tree the backend compiles; layout,
+ * hit testing and placement are pure functions of it (./lad).
  *
  * Online, everything shown on the rungs comes from `ladder_state`: the power leaving each
  * element as the runtime computed it, the values its variables had in that scan, timer
  * elapsed times and counter values. The editor computes no power flow.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import {
-  api,
-  type DiagnosticDto,
-  type LadderStateDto,
-  type SignalValueDto,
-} from "@plc-lab/ipc";
-import { formatValue } from "../format";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { api, type DiagnosticDto } from "@plc-lab/ipc";
 import { useInterface } from "../locale";
-import type { TranslationKey } from "../locale/en";
-import { useFrameQuery } from "./useFrameQuery";
+import { useLoad } from "../useLoad";
 import type { Lab } from "./useLab";
 import {
-  LAD_TYPES,
-  addCoil,
   addRung,
   addVariable,
   duplicateRung,
   findCoil,
   findNode,
-  insertParallel,
-  insertSeries,
-  isTimer,
+  isLeaf,
   moveElement,
   moveRung,
   newLadDocument,
-  newestElement,
   parseLad,
   pasteRung,
   readingOrder,
   removeCoil,
   removeElement,
   removeRung,
-  removeVariable,
   rungOf,
   serializeLad,
   setBlockPin,
   setCoil,
-  setDirection,
+  setContactVariable,
   setRungComment,
-  setVariableType,
+  toggleContact,
   updateElement,
-  type BlockKind,
-  type CoilKind,
-  type CompareOp,
-  type ContactKind,
-  type Direction,
-  type ElementSpec,
+  type Coil,
   type LadDocument,
   type LadNode,
-  type LadType,
   type Operand,
   type Rung,
 } from "./ladModel";
+import {
+  elementName,
+  fieldLabel,
+  fieldText,
+  isTyping,
+  useObserved,
+  type Observed,
+  type Selected,
+  type T,
+} from "./lad/common";
+import {
+  channelsOf,
+  fieldsOf,
+  instructions,
+  type Field,
+  type Instruction,
+} from "./lad/complete";
+import { ContextMenu, type MenuItem } from "./lad/ContextMenu";
+import { InlineEditor, type Accepted } from "./lad/InlineEditor";
+import { InstructionPicker } from "./lad/InstructionPicker";
+import {
+  coilColumn,
+  fieldBox,
+  layoutRung,
+  targetBox,
+  type RungLayout,
+} from "./lad/layout";
+import { Palette, type Where } from "./lad/Palette";
+import {
+  applyDrop,
+  expression,
+  type DropError,
+  type PaletteItem,
+  type Source,
+  type Target,
+} from "./lad/placement";
+import { Properties } from "./lad/Properties";
+import { RungCanvas, type Preview } from "./lad/RungCanvas";
+import { useDrag, type DragState } from "./lad/useDrag";
+import { Variables } from "./lad/Variables";
 
-type Selected = { kind: "node" | "coil" | "rung"; id: number } | null;
-type Where = "before" | "after" | "parallel";
-type T = (
-  key: TranslationKey,
-  values?: Record<string, string | number>,
-) => string;
-
-const CONTACTS: { kind: ContactKind; symbol: string; label: TranslationKey }[] =
-  [
-    { kind: "normallyOpen", symbol: "| |", label: "lad.noContact" },
-    { kind: "normallyClosed", symbol: "|/|", label: "lad.ncContact" },
-    { kind: "positiveEdge", symbol: "|P|", label: "lad.pContact" },
-    { kind: "negativeEdge", symbol: "|N|", label: "lad.nContact" },
-  ];
-const OPS: { op: CompareOp; symbol: string }[] = [
-  { op: "eq", symbol: "=" },
-  { op: "ne", symbol: "<>" },
-  { op: "gt", symbol: ">" },
-  { op: "ge", symbol: ">=" },
-  { op: "lt", symbol: "<" },
-  { op: "le", symbol: "<=" },
-];
-const BLOCKS: BlockKind[] = ["TON", "TOF", "TP", "CTU", "CTD"];
-const COILS: { kind: CoilKind; symbol: string; label: TranslationKey }[] = [
-  { kind: "output", symbol: "( )", label: "lad.addCoil" },
-  { kind: "set", symbol: "(S)", label: "lad.addSetCoil" },
-  { kind: "reset", symbol: "(R)", label: "lad.addResetCoil" },
-];
-const ZOOMS = [0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
 const HISTORY = 100;
 
-const symbolOf = (kind: ContactKind) =>
-  CONTACTS.find((c) => c.kind === kind)?.symbol ?? "| |";
-const coilSymbol = (kind: CoilKind | undefined) =>
-  kind === "set" ? "(S)" : kind === "reset" ? "(R)" : "( )";
-const operandText = (o: Operand | undefined) =>
-  !o ? "" : "variable" in o ? o.variable : o.constant;
-const isEditing = (target: EventTarget | null) =>
-  target instanceof HTMLElement &&
-  ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
-
-/** What the runtime reported for this ladder program in its latest recorded cycle. */
-type Observed = {
-  online: boolean;
-  scanned: boolean;
-  cycle: string | null;
-  power: (element: number) => boolean | null;
-  value: (name: string) => SignalValueDto | null;
-};
-
-function useObserved(lab: Lab, document: LadDocument | null): Observed {
-  const ws = lab.ws;
-  const loaded = !!document && lab.loadedSource === lab.source;
-  const state = useFrameQuery<LadderStateDto | null>(
-    lab,
-    () => (ws && loaded ? api.ladderState(ws) : Promise.resolve(null)),
-    [loaded],
-  );
-  const byPath = useMemo(
-    () => new Map(lab.signals.map((s) => [s.path.toLowerCase(), s.id])),
-    [lab.signals],
-  );
-  const data = loaded ? state.data : null;
-  const power = new Map((data?.power ?? []).map((p) => [p.element, p.powered]));
-  const values = new Map((data?.values ?? []).map((v) => [v.signal, v.value]));
-  return {
-    online: !!data,
-    scanned: data?.scanned ?? false,
-    cycle: data?.cycle ?? null,
-    power: (element) => power.get(element) ?? null,
-    value: (name) => {
-      const id = byPath.get(`plc.${name}`.toLowerCase());
-      return id === undefined ? null : (values.get(id) ?? null);
-    },
-  };
-}
-
-function on(value: SignalValueDto | null): boolean {
-  return value?.type === "BOOL" && value.value;
-}
+type Editing = { element: number; field: Field; initial: string };
+type Picking = { target: Target; rung: number; initial: string };
+type Floating = { left: number; top: number };
+type Menu = { x: number; y: number; id: number; items: MenuItem[] };
+type Clip =
+  | { kind: "rung"; rung: Rung }
+  | { kind: "node"; node: LadNode }
+  | { kind: "coil"; coil: Coil };
 
 export function LadEditor({
   lab,
@@ -157,13 +111,105 @@ export function LadEditor({
   const [selected, setSelected] = useState<Selected>(null);
   const [where, setWhere] = useState<Where>("after");
   const [zoom, setZoom] = useState(1);
-  const [clipboard, setClipboard] = useState<Rung | null>(null);
+  const [clipboard, setClipboard] = useState<Clip | null>(null);
   const [history, setHistory] = useState<{ past: string[]; future: string[] }>({
     past: [],
     future: [],
   });
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const [picking, setPicking] = useState<
+    (Picking & { position: Floating }) | null
+  >(null);
+  const [menu, setMenu] = useState<Menu | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
+  const canvases = useRef(new Map<number, HTMLDivElement>());
   const observed = useObserved(lab, document);
+  const library = useLoad(() => api.library(), []);
+  const standard = library.data?.standardBlocks;
+  const instructionList = useMemo(
+    () => instructions(standard ?? []),
+    [standard],
+  );
+  const station = lab.project?.station;
+  const channels = useMemo(() => channelsOf(station), [station]);
+  const layouts = useMemo(() => {
+    const map = new Map<number, RungLayout>();
+    if (!document) return map;
+    const x = coilColumn(document);
+    for (const r of document.rungs) map.set(r.id, layoutRung(r, x));
+    return map;
+  }, [document]);
+
+  const focusElement = useCallback((id: number) => {
+    requestAnimationFrame(() =>
+      root.current
+        ?.querySelector<HTMLElement>(`[data-element="${id}"]`)
+        ?.focus(),
+    );
+  }, []);
+  const commit = (next: LadDocument) => {
+    const text = serializeLad(next);
+    if (text === lab.source) return;
+    setHistory((h) => ({
+      past: [...h.past, lab.source].slice(-HISTORY),
+      future: [],
+    }));
+    lab.setSource(text);
+  };
+  const kindOf = (d: LadDocument, id: number): Selected => {
+    if (findCoil(d, id)) return { kind: "coil", id };
+    if (d.rungs.some((r) => r.id === id)) return { kind: "rung", id };
+    return { kind: "node", id };
+  };
+  /** Open the inline editor on `field` of `element`, or on its first field. */
+  const openEditor = (
+    d: LadDocument,
+    element: number,
+    field?: Field,
+    initial?: string,
+  ) => {
+    const coil = findCoil(d, element);
+    const node = coil ? null : findNode(d, element);
+    const fields = fieldsOf(node, !!coil);
+    const f = field ?? fields[0];
+    if (!f || (!coil && (!node || !isLeaf(node)))) return;
+    setPicking(null);
+    setMenu(null);
+    setSelected(kindOf(d, element));
+    setEditing({
+      element,
+      field: f,
+      initial: initial ?? fieldText(node, f, coil ? coil.variable : undefined),
+    });
+  };
+  /** After a new element is placed: select it and edit its first field. */
+  const placed = (d: LadDocument, id: number, fresh: boolean) => {
+    setNotice(null);
+    setSelected(kindOf(d, id));
+    if (fresh) openEditor(d, id);
+    else focusElement(id);
+  };
+  const dropError = (e: DropError) => t(`lad.drop.${e}`);
+  const apply = (source: Source, target: Target) => {
+    if (!document) return;
+    const r = applyDrop(document, source, target);
+    if ("error" in r) {
+      if (r.error !== "noChange") setNotice(dropError(r.error));
+      return;
+    }
+    commit(r.document);
+    placed(r.document, r.selected, source.kind !== "move");
+  };
+  const { drag, grab, justDropped } = useDrag({
+    document,
+    zoom,
+    canvases,
+    layouts,
+    scroller: root,
+    drop: apply,
+  });
+
   // A diagnostic chosen in the problem list selects its element.
   const [chosen, setChosen] = useState(focused);
   if (focused !== chosen) {
@@ -171,14 +217,16 @@ export function LadEditor({
     if (focused?.element != null && document)
       setSelected(kindOf(document, focused.element));
   }
-  // The selected element keeps the keyboard focus.
+  // The selected element keeps the keyboard focus, unless a field is being edited.
+  const floating = editing !== null || picking !== null || menu !== null;
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || selected.kind === "point" || floating) return;
     const el = root.current?.querySelector<HTMLElement>(
       `[data-element="${selected.id}"]`,
     );
-    if (el && !el.contains(window.document.activeElement)) el.focus();
-  }, [selected]);
+    if (el && !el.contains(globalThis.document.activeElement)) el.focus();
+  }, [selected, floating]);
+
   if (!document)
     return (
       <div className="lad" role="alert">
@@ -200,15 +248,6 @@ export function LadEditor({
       </div>
     );
 
-  const commit = (next: LadDocument) => {
-    const text = serializeLad(next);
-    if (text === lab.source) return;
-    setHistory((h) => ({
-      past: [...h.past, lab.source].slice(-HISTORY),
-      future: [],
-    }));
-    lab.setSource(text);
-  };
   const undo = () => {
     const previous = history.past.at(-1);
     if (previous === undefined) return;
@@ -238,42 +277,91 @@ export function LadEditor({
       fault.message,
     ]);
 
-  const rung = selected ? rungOf(document, selected.id) : null;
-  const insert = (spec: ElementSpec) => {
-    const target =
-      selected?.kind === "node"
-        ? selected.id
-        : rung
-          ? rung.network.type === "series" && rung.network.items.length
-            ? (rung.network.items.at(-1)?.id ?? rung.network.id)
-            : rung.network.id
-          : null;
-    if (target === null) return;
-    const next =
-      where === "parallel"
-        ? insertParallel(document, target, spec)
-        : insertSeries(document, target, spec, where);
-    commit(next);
-    // Continue with the new element: its variable or parameters are set next.
-    setSelected({ kind: "node", id: newestElement(next) });
+  const selectedId = selected && selected.kind !== "point" ? selected.id : null;
+  const rung =
+    selected?.kind === "point"
+      ? (document.rungs.find((r) => r.id === selected.rung) ?? null)
+      : selectedId !== null
+        ? rungOf(document, selectedId)
+        : null;
+
+  /** Where an insertion goes, from the selection: beside, below, or at a point. */
+  const insertTarget = (how: "before" | "after" | "below"): Picking | null => {
+    if (selected?.kind === "point")
+      return { target: selected.target, rung: selected.rung, initial: "" };
+    if (selected?.kind === "node" && rung)
+      return {
+        target: { zone: how, id: selected.id },
+        rung: rung.id,
+        initial: "",
+      };
+    const r = rung ?? document.rungs.at(-1);
+    if (!r) return null;
+    const items = r.network.type === "series" ? r.network.items : [r.network];
+    const last = items.at(-1);
+    const first = items[0];
+    const target: Target = !last
+      ? { zone: "start", rung: r.id }
+      : how === "below"
+        ? { zone: "below", id: r.network.id }
+        : how === "before" && first
+          ? { zone: "before", id: first.id }
+          : { zone: "after", id: last.id };
+    return { target, rung: r.id, initial: "" };
+  };
+  const insertItem = (item: PaletteItem, at: Picking | null) => {
+    if (!at) return;
+    const r = document.rungs.find((x) => x.id === at.rung);
+    const target: Target =
+      item.type === "coil"
+        ? { zone: "coil", rung: at.rung, index: r?.coils.length ?? 0 }
+        : at.target;
+    apply({ kind: "new", item }, target);
   };
   const remove = () => {
-    if (!selected) return;
+    if (!selected || selected.kind === "point") return;
     if (selected.kind === "node") commit(removeElement(document, selected.id));
     if (selected.kind === "coil") commit(removeCoil(document, selected.id));
     if (selected.kind === "rung") commit(removeRung(document, selected.id));
     setSelected(null);
   };
+  const copySelection = () => {
+    if (selectedId === null) return;
+    const coil = findCoil(document, selectedId);
+    const node = findNode(document, selectedId);
+    if (selected?.kind === "rung" && rung) setClipboard({ kind: "rung", rung });
+    else if (coil) setClipboard({ kind: "coil", coil });
+    else if (node) setClipboard({ kind: "node", node });
+  };
+  const pasteClipboard = () => {
+    if (!clipboard) return;
+    if (clipboard.kind === "rung") {
+      commit(pasteRung(document, clipboard.rung, rung?.id));
+      return;
+    }
+    const at = insertTarget("after");
+    if (!at) return;
+    if (clipboard.kind === "coil") {
+      const r = document.rungs.find((x) => x.id === at.rung);
+      apply(
+        { kind: "pasteCoil", coil: clipboard.coil },
+        { zone: "coil", rung: at.rung, index: r?.coils.length ?? 0 },
+      );
+    } else apply({ kind: "paste", node: clipboard.node }, at.target);
+  };
+
   const order = readingOrder(document);
   const navigate = (key: string) => {
-    const r = order.findIndex((ids) => selected && ids.includes(selected.id));
+    const r = order.findIndex(
+      (ids) => selectedId !== null && ids.includes(selectedId),
+    );
     if (r < 0) {
       const first = order[0]?.[0];
       if (first !== undefined) setSelected(kindOf(document, first));
       return;
     }
     const row = order[r] ?? [];
-    const i = selected ? row.indexOf(selected.id) : 0;
+    const i = selectedId !== null ? row.indexOf(selectedId) : 0;
     let target: number | undefined;
     if (key === "ArrowLeft") target = row[Math.max(0, i - 1)];
     if (key === "ArrowRight") target = row[Math.min(row.length - 1, i + 1)];
@@ -283,19 +371,62 @@ export function LadEditor({
     }
     if (target !== undefined) setSelected(kindOf(document, target));
   };
+  const editable = (id: number | null) => {
+    if (id === null) return false;
+    if (findCoil(document, id)) return true;
+    const n = findNode(document, id);
+    return !!n && isLeaf(n);
+  };
+  const openMenuAt = (id: number) => {
+    const el = root.current?.querySelector<HTMLElement>(
+      `[data-element="${id}"]`,
+    );
+    const r = el?.getBoundingClientRect();
+    openMenu(r ? r.left + 8 : 80, r ? r.bottom + 4 : 80, id);
+  };
+
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (isEditing(e.target)) return;
+    if (isTyping(e.target)) return;
+    // A key on the diagram while an editor is open elsewhere: that editor is abandoned.
+    if (editing || picking || menu) {
+      setEditing(null);
+      setPicking(null);
+      setMenu(null);
+    }
     const ctrl = e.ctrlKey || e.metaKey;
     const key = e.key;
-    if (ctrl && key.toLowerCase() === "z" && !e.shiftKey) undo();
-    else if (
-      ctrl &&
-      (key.toLowerCase() === "y" || (key.toLowerCase() === "z" && e.shiftKey))
-    )
-      redo();
-    else if (ctrl && key.toLowerCase() === "c" && rung) setClipboard(rung);
-    else if (ctrl && key.toLowerCase() === "v" && clipboard)
-      commit(pasteRung(document, clipboard, rung?.id));
+    const lower = key.toLowerCase();
+    if (key === "F9" && !e.shiftKey)
+      insertItem(
+        { type: "contact", contact: "normallyOpen" },
+        insertTarget("after"),
+      );
+    else if (key === "F9" && e.shiftKey)
+      insertItem(
+        { type: "contact", contact: "normallyOpen" },
+        insertTarget("below"),
+      );
+    else if (key === "F10" && !e.shiftKey)
+      insertItem(
+        { type: "contact", contact: "normallyClosed" },
+        insertTarget("after"),
+      );
+    else if (key === "ContextMenu" || (key === "F10" && e.shiftKey)) {
+      if (selectedId !== null) openMenuAt(selectedId);
+    } else if (key === "F8") {
+      const at = insertTarget("after");
+      if (at) openPicker(at);
+    } else if ((ctrl && key === " ") || key === "Enter" || key === "F2") {
+      if (editable(selectedId) && selectedId !== null)
+        openEditor(document, selectedId);
+      else {
+        const at = insertTarget("after");
+        if (at) openPicker(at);
+      }
+    } else if (ctrl && lower === "z" && !e.shiftKey) undo();
+    else if (ctrl && (lower === "y" || (lower === "z" && e.shiftKey))) redo();
+    else if (ctrl && lower === "c") copySelection();
+    else if (ctrl && lower === "v") pasteClipboard();
     else if (key === "Delete") remove();
     else if (
       e.altKey &&
@@ -306,14 +437,304 @@ export function LadEditor({
     else if (e.altKey && rung && (key === "ArrowUp" || key === "ArrowDown"))
       commit(moveRung(document, rung.id, key === "ArrowUp" ? -1 : 1));
     else if (key.startsWith("Arrow")) navigate(key);
-    else if (key === "Escape") setSelected(null);
-    else return;
+    else if (key === "Escape") {
+      setSelected(null);
+      setNotice(null);
+    } else if (key.length === 1 && !ctrl && !e.altKey && key !== " ") {
+      // Typing edits the selected element, or searches instructions at a point.
+      if (editable(selectedId) && selectedId !== null)
+        openEditor(document, selectedId, undefined, key);
+      else {
+        const at = insertTarget("after");
+        if (at) openPicker({ ...at, initial: key });
+      }
+    } else return;
     e.preventDefault();
+  };
+
+  /** Apply what the inline editor accepted, as one undo step. */
+  const acceptEdit = (choice: Accepted, advance: -1 | 0 | 1) => {
+    if (!editing) return;
+    const { element, field } = editing;
+    let next = document;
+    if (choice.kind === "create") {
+      const declared = addVariable(
+        next,
+        choice.name,
+        choice.direction,
+        choice.type,
+      );
+      if (!declared) {
+        setNotice(t("lad.suggest.instanceTaken", { name: choice.name }));
+        return;
+      }
+      next = declared;
+    }
+    const value =
+      choice.kind === "clear"
+        ? ""
+        : choice.kind === "literal"
+          ? choice.text
+          : choice.name;
+    const operand: Operand =
+      choice.kind === "literal" ? { constant: value } : { variable: value };
+    const coil = findCoil(next, element);
+    const node = findNode(next, element);
+    if (coil) next = setCoil(next, element, { variable: value });
+    else if (node?.type === "contact")
+      next = setContactVariable(next, element, value);
+    else if (node?.type === "compare")
+      next = updateElement(next, element, (n) =>
+        n.type === "compare"
+          ? { ...n, [field === "left" ? "left" : "right"]: operand }
+          : n,
+      );
+    else if (node?.type === "block") {
+      if (field === "instance") {
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(value)) {
+          setNotice(t("lad.suggest.instanceTaken", { name: value }));
+          return;
+        }
+        next = updateElement(next, element, (n) =>
+          n.type === "block" ? { ...n, instance: value } : n,
+        );
+      } else if (field === "preset")
+        next = updateElement(next, element, (n) => {
+          if (n.type !== "block") return n;
+          const { preset: _p, ...rest } = n;
+          void _p;
+          return value ? { ...rest, preset: operand } : rest;
+        });
+      else if (field === "reset")
+        next = setBlockPin(next, element, "reset", value ? operand : null);
+      else next = setBlockPin(next, element, "output", value);
+    }
+    commit(next);
+    setEditing(null);
+    setNotice(null);
+    if (advance === 0) {
+      focusElement(element);
+      return;
+    }
+    // Tab: the next field of this element, then the next element of the rung.
+    const fields = fieldsOf(node, !!coil);
+    const i = fields.indexOf(field) + advance;
+    const nextField = fields[i];
+    if (nextField) return openEditor(next, element, nextField);
+    const row = order.find((ids) => ids.includes(element)) ?? [];
+    const candidates =
+      advance > 0
+        ? row.slice(row.indexOf(element) + 1)
+        : row.slice(0, row.indexOf(element)).reverse();
+    const target = candidates.find((id) => editable(id));
+    if (target === undefined) return focusElement(element);
+    const tc = findCoil(next, target);
+    const tf = fieldsOf(tc ? null : findNode(next, target), !!tc);
+    openEditor(next, target, advance > 0 ? tf[0] : tf.at(-1));
+  };
+  const cancelEdit = () => {
+    const id = editing?.element;
+    setEditing(null);
+    if (id !== undefined) focusElement(id);
+  };
+
+  const menuItems = (id: number): MenuItem[] => {
+    const coil = findCoil(document, id);
+    const node = findNode(document, id);
+    const r = rungOf(document, id);
+    const no: PaletteItem = { type: "contact", contact: "normallyOpen" };
+    const del = { label: t("lad.menu.delete"), run: () => remove() };
+    const props = {
+      label: t("lad.menu.properties"),
+      run: () =>
+        root.current
+          ?.querySelector<HTMLElement>(
+            ".lad-properties select, .lad-properties input",
+          )
+          ?.focus(),
+    };
+    if (coil && r) {
+      const index = r.coils.findIndex((c) => c.id === id);
+      return [
+        { label: t("lad.menu.edit"), run: () => openEditor(document, id) },
+        {
+          label: t("lad.menu.duplicate"),
+          run: () =>
+            apply(
+              { kind: "move", id, copy: true },
+              { zone: "coil", rung: r.id, index: index + 1 },
+            ),
+        },
+        del,
+        props,
+      ];
+    }
+    if (!node || !r) return [];
+    const items: MenuItem[] = [
+      {
+        label: t("lad.menu.insertBefore"),
+        run: () => apply({ kind: "new", item: no }, { zone: "before", id }),
+      },
+      {
+        label: t("lad.menu.insertAfter"),
+        run: () => apply({ kind: "new", item: no }, { zone: "after", id }),
+      },
+      {
+        label: t("lad.menu.addBranch"),
+        run: () =>
+          apply(
+            { kind: "new", item: no },
+            node.type === "parallel"
+              ? { zone: "branch", id }
+              : { zone: "below", id },
+          ),
+      },
+      {
+        label: t("lad.menu.instruction"),
+        run: () =>
+          openPicker({
+            target: { zone: "after", id },
+            rung: r.id,
+            initial: "",
+          }),
+      },
+    ];
+    if (node.type === "contact")
+      items.push({
+        label: t(
+          node.contact === "normallyOpen" ? "lad.menu.toNc" : "lad.menu.toNo",
+        ),
+        run: () => commit(toggleContact(document, id)),
+      });
+    if (isLeaf(node))
+      items.push({
+        label: t("lad.menu.edit"),
+        run: () => openEditor(document, id),
+      });
+    items.push(
+      {
+        label: t("lad.menu.duplicate"),
+        run: () =>
+          apply({ kind: "move", id, copy: true }, { zone: "after", id }),
+      },
+      del,
+    );
+    if (isLeaf(node)) items.push(props);
+    return items;
+  };
+
+  const preview = (r: Rung): Preview | null => {
+    const over = drag?.over;
+    if (!over || over.rung !== r.id) return null;
+    if ("target" in over)
+      return over.error
+        ? { kind: "invalid", x: over.x, y: over.y }
+        : {
+            kind: "target",
+            target: over.target,
+            copy: drag.source.kind === "move" && drag.source.copy,
+          };
+    if ("wrong" in over) return { kind: "invalid", x: over.x, y: over.y };
+    return null;
+  };
+  const placeName = (target: Target): string => {
+    if (target.zone === "start" || target.zone === "coil") {
+      const number = document.rungs.findIndex((x) => x.id === target.rung) + 1;
+      return target.zone === "start"
+        ? t("lad.drop.start", { number })
+        : t("lad.drop.coil", { position: target.index + 1, number });
+    }
+    const node = findNode(document, target.id);
+    const isRoot = document.rungs.some((x) => x.network.id === target.id);
+    if (target.zone === "below" && isRoot) return t("lad.drop.belowAll");
+    const name =
+      node?.type === "parallel"
+        ? t("lad.parallelBlock", { count: node.branches.length })
+        : elementName(t, node);
+    if (target.zone === "branch") return t("lad.drop.branch");
+    return t(`lad.drop.${target.zone}`, { name });
+  };
+  const dragText = (d: DragState): string => {
+    const over = d.over;
+    if (!over) return t("lad.drop.none");
+    if ("wrong" in over)
+      return t(
+        over.wrong === "coil"
+          ? "lad.drop.elementInCoils"
+          : "lad.drop.coilInNetwork",
+      );
+    if ("nothing" in over) return t("lad.drop.none");
+    if (over.error) return dropError(over.error);
+    // The resulting logic of the rung, so the topology is never a surprise.
+    const result = applyDrop(document, d.source, over.target);
+    const changed =
+      "document" in result
+        ? result.document.rungs.find((x) => x.id === over.rung)
+        : null;
+    const coilTarget = over.target.zone === "coil";
+    return `${placeName(over.target)}${changed && !coilTarget ? ` → ${expression(changed.network)}` : ""}`;
+  };
+
+  const editorFor = (r: Rung) => {
+    if (!editing) return null;
+    const layout = layouts.get(r.id);
+    if (!layout) return null;
+    const box = fieldBox(layout, editing.element, editing.field);
+    if (!box) return null;
+    const coil = findCoil(document, editing.element);
+    const node = coil ? null : findNode(document, editing.element);
+    return (
+      <div
+        className="lad-inline-host"
+        style={{
+          left: box.x,
+          top: box.y,
+          width: Math.max(box.w, 150),
+          height: box.h,
+        }}
+      >
+        <InlineEditor
+          key={`${editing.element}:${editing.field}`}
+          t={t}
+          document={document}
+          element={editing.element}
+          field={editing.field}
+          label={t("lad.inlineEdit", {
+            field: fieldLabel(t, node, editing.field, !!coil),
+            element: elementName(t, node, coil ? coil.variable : undefined),
+          })}
+          initial={editing.initial}
+          channels={channels}
+          accept={acceptEdit}
+          cancel={cancelEdit}
+        />
+      </div>
+    );
+  };
+
+  /** Open the instruction picker under its insertion target (measured now, in the handler). */
+  const openPicker = (p: Picking) => {
+    setMenu(null);
+    setPicking({ ...p, position: pickerPosition(p) });
+  };
+  const openMenu = (x: number, y: number, id: number) =>
+    setMenu({ x, y, id, items: menuItems(id) });
+  const pickerPosition = (p: Picking): Floating => {
+    const canvas = canvases.current.get(p.rung);
+    const layout = layouts.get(p.rung);
+    const r = canvas?.getBoundingClientRect();
+    const b = layout ? targetBox(layout, p.target) : null;
+    if (!r || !b) return { left: 80, top: 120 };
+    const x = p.target.zone === "after" ? b.x + b.w : b.x;
+    return {
+      left: Math.max(4, Math.min(r.left + x * zoom, window.innerWidth - 420)),
+      top: Math.min(r.top + (b.y + b.h) * zoom + 4, window.innerHeight - 330),
+    };
   };
 
   return (
     <div
-      className="lad"
+      className={`lad${drag ? " dragging" : ""}`}
       data-testid="lad-editor"
       ref={root}
       onKeyDown={onKeyDown}
@@ -323,15 +744,12 @@ export function LadEditor({
         where={where}
         setWhere={setWhere}
         canInsert={!!selected || !!rung}
-        insert={insert}
-        addCoil={(kind) => {
-          const target = rung ?? document.rungs.at(-1);
-          if (!target) return;
-          const next = addCoil(document, target.id, kind);
-          commit(next);
-          setSelected({ kind: "coil", id: newestElement(next) });
-        }}
-        remove={selected ? remove : null}
+        insert={(item) =>
+          insertItem(item, insertTarget(where === "parallel" ? "below" : where))
+        }
+        grab={grab}
+        justDropped={justDropped}
+        remove={selected && selected.kind !== "point" ? remove : null}
         move={
           selected?.kind === "node"
             ? (delta) => commit(moveElement(document, selected.id, delta))
@@ -339,38 +757,70 @@ export function LadEditor({
         }
         undo={history.past.length ? undo : null}
         redo={history.future.length ? redo : null}
-        copy={rung ? () => setClipboard(rung) : null}
+        copy={rung ? () => setClipboard({ kind: "rung", rung }) : null}
         paste={
-          clipboard
-            ? () => commit(pasteRung(document, clipboard, rung?.id))
+          clipboard?.kind === "rung"
+            ? () => commit(pasteRung(document, clipboard.rung, rung?.id))
             : null
         }
         zoom={zoom}
         setZoom={setZoom}
       />
       <Status t={t} lab={lab} observed={observed} fault={fault} />
-      <div
-        className="lad-rungs"
-        role="list"
-        aria-label={t("lad.rungs")}
-        style={{ zoom }}
-      >
-        {document.rungs.map((r, index) => (
-          <RungView
-            key={r.id}
-            t={t}
-            rung={r}
-            number={index + 1}
-            count={document.rungs.length}
-            selected={selected}
-            select={setSelected}
-            observed={observed}
-            errors={errors}
-            change={(next) => commit(next(document))}
-          />
-        ))}
+      <p className="lad-notice" role="status" aria-live="polite">
+        {drag ? dragText(drag) : (notice ?? "")}
+      </p>
+      <div className="lad-rungs" role="list" aria-label={t("lad.rungs")}>
+        {document.rungs.map((r, index) => {
+          const layout = layouts.get(r.id);
+          return (
+            <RungFrame
+              key={r.id}
+              t={t}
+              rung={r}
+              number={index + 1}
+              count={document.rungs.length}
+              selected={selected}
+              select={setSelected}
+              errors={errors}
+              change={(edit) => commit(edit(document))}
+            >
+              {layout && (
+                <RungCanvas
+                  t={t}
+                  rung={r}
+                  layout={layout}
+                  zoom={zoom}
+                  selected={selected}
+                  select={(s) => {
+                    setSelected(s);
+                    setMenu(null);
+                  }}
+                  observed={observed}
+                  errors={errors}
+                  preview={preview(r)}
+                  editor={
+                    editing && rungOf(document, editing.element)?.id === r.id
+                      ? editorFor(r)
+                      : null
+                  }
+                  register={(id, el) => {
+                    if (el) canvases.current.set(id, el);
+                    else canvases.current.delete(id);
+                  }}
+                  grab={grab}
+                  edit={(element, field) =>
+                    openEditor(document, element, field)
+                  }
+                  menu={(e, id) => openMenu(e.clientX, e.clientY, id)}
+                />
+              )}
+            </RungFrame>
+          );
+        })}
         <button
-          className="btn"
+          type="button"
+          className="btn lad-add-rung"
           onClick={() => {
             const next = addRung(document, rung?.id);
             commit(next);
@@ -392,14 +842,59 @@ export function LadEditor({
         commit={commit}
       />
       <Variables t={t} document={document} commit={commit} />
+      {picking &&
+        createPortal(
+          <div className="lad-floating" style={picking.position}>
+            <InstructionPicker
+              t={t}
+              list={instructionList}
+              initial={picking.initial}
+              where={placeName(picking.target)}
+              choose={(i: Instruction) => {
+                setPicking(null);
+                insertItem(i.item, picking);
+              }}
+              cancel={() => {
+                setPicking(null);
+                root.current?.focus();
+              }}
+            />
+          </div>,
+          globalThis.document.body,
+        )}
+      {menu &&
+        createPortal(
+          <ContextMenu
+            t={t}
+            x={menu.x}
+            y={menu.y}
+            items={menu.items}
+            close={() => {
+              setMenu(null);
+              focusElement(menu.id);
+            }}
+          />,
+          globalThis.document.body,
+        )}
+      {drag &&
+        createPortal(
+          <div
+            className={`lad-ghost${drag.over && "target" in drag.over && !drag.over.error ? " valid" : drag.over && ("wrong" in drag.over || ("target" in drag.over && drag.over.error && drag.over.error !== "noChange")) ? " invalid" : ""}`}
+            style={{ left: drag.x + 14, top: drag.y + 14 }}
+            aria-hidden="true"
+          >
+            <strong className="mono">
+              {drag.label}
+              {drag.source.kind === "move" && drag.source.copy
+                ? ` + ${t("lad.drop.copy")}`
+                : ""}
+            </strong>
+            <span>{dragText(drag)}</span>
+          </div>,
+          globalThis.document.body,
+        )}
     </div>
   );
-}
-
-function kindOf(document: LadDocument, id: number): Selected {
-  if (findCoil(document, id)) return { kind: "coil", id };
-  if (document.rungs.some((r) => r.id === id)) return { kind: "rung", id };
-  return { kind: "node", id };
 }
 
 function Status({
@@ -432,192 +927,17 @@ function Status({
   );
 }
 
-function Palette({
-  t,
-  where,
-  setWhere,
-  canInsert,
-  insert,
-  addCoil,
-  remove,
-  move,
-  undo,
-  redo,
-  copy,
-  paste,
-  zoom,
-  setZoom,
-}: {
-  t: T;
-  where: Where;
-  setWhere: (w: Where) => void;
-  canInsert: boolean;
-  insert: (spec: ElementSpec) => void;
-  addCoil: (kind: CoilKind) => void;
-  remove: (() => void) | null;
-  move: ((delta: -1 | 1) => void) | null;
-  undo: (() => void) | null;
-  redo: (() => void) | null;
-  copy: (() => void) | null;
-  paste: (() => void) | null;
-  zoom: number;
-  setZoom: (z: number) => void;
-}) {
-  const zi = ZOOMS.indexOf(zoom);
-  return (
-    <div className="lad-toolbar" role="toolbar" aria-label={t("lad.tools")}>
-      <div className="segmented" role="group" aria-label={t("lad.where")}>
-        {(["before", "after", "parallel"] as const).map((w) => (
-          <button
-            key={w}
-            aria-pressed={where === w}
-            onClick={() => setWhere(w)}
-          >
-            {t(`lad.where.${w}`)}
-          </button>
-        ))}
-      </div>
-      <div
-        className="row lad-palette"
-        role="group"
-        aria-label={t("lad.palette")}
-      >
-        {CONTACTS.map((c) => (
-          <button
-            key={c.kind}
-            className="btn btn-sm mono"
-            disabled={!canInsert}
-            aria-label={t("lad.insert", {
-              element: t(c.label, { variable: "" }).trim(),
-            })}
-            title={t(c.label, { variable: "" }).trim()}
-            onClick={() => insert({ type: "contact", contact: c.kind })}
-          >
-            {c.symbol}
-          </button>
-        ))}
-        <button
-          className="btn btn-sm mono"
-          disabled={!canInsert}
-          aria-label={t("lad.insert", { element: t("lad.compare") })}
-          title={t("lad.compare")}
-          onClick={() => insert({ type: "compare", op: "ge" })}
-        >
-          CMP
-        </button>
-        {BLOCKS.map((b) => (
-          <button
-            key={b}
-            className="btn btn-sm mono"
-            disabled={!canInsert}
-            aria-label={t("lad.insert", { element: t(`lad.block.${b}`) })}
-            title={t(`lad.block.${b}`)}
-            onClick={() => insert({ type: "block", block: b })}
-          >
-            {b}
-          </button>
-        ))}
-        {COILS.map((c) => (
-          <button
-            key={c.kind}
-            className="btn btn-sm mono"
-            disabled={!canInsert}
-            aria-label={t(c.label)}
-            title={t(c.label)}
-            onClick={() => addCoil(c.kind)}
-          >
-            {c.symbol}
-          </button>
-        ))}
-      </div>
-      <div className="row" style={{ gap: 4 }}>
-        <button
-          className="btn btn-sm"
-          disabled={!move}
-          aria-label={t("lad.moveLeft")}
-          onClick={() => move?.(-1)}
-        >
-          ◀
-        </button>
-        <button
-          className="btn btn-sm"
-          disabled={!move}
-          aria-label={t("lad.moveRight")}
-          onClick={() => move?.(1)}
-        >
-          ▶
-        </button>
-        <button
-          className="btn btn-sm btn-ghost"
-          disabled={!remove}
-          onClick={() => remove?.()}
-        >
-          {t("lad.delete")}
-        </button>
-        <button
-          className="btn btn-sm"
-          disabled={!undo}
-          onClick={() => undo?.()}
-        >
-          {t("lad.undo")}
-        </button>
-        <button
-          className="btn btn-sm"
-          disabled={!redo}
-          onClick={() => redo?.()}
-        >
-          {t("lad.redo")}
-        </button>
-        <button
-          className="btn btn-sm"
-          disabled={!copy}
-          onClick={() => copy?.()}
-        >
-          {t("lad.copyRung")}
-        </button>
-        <button
-          className="btn btn-sm"
-          disabled={!paste}
-          onClick={() => paste?.()}
-        >
-          {t("lad.pasteRung")}
-        </button>
-        <span className="lad-zoom row" role="group" aria-label={t("lad.zoom")}>
-          <button
-            className="btn btn-sm"
-            disabled={zi <= 0}
-            aria-label={t("lad.zoomOut")}
-            onClick={() => setZoom(ZOOMS[zi - 1] ?? zoom)}
-          >
-            −
-          </button>
-          <span className="mono" style={{ fontSize: 11 }}>
-            {Math.round(zoom * 100)} %
-          </span>
-          <button
-            className="btn btn-sm"
-            disabled={zi >= ZOOMS.length - 1}
-            aria-label={t("lad.zoomIn")}
-            onClick={() => setZoom(ZOOMS[zi + 1] ?? zoom)}
-          >
-            +
-          </button>
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function RungView({
+/** A rung: its header (handle, comment, order, duplicate, delete) and its canvas. */
+function RungFrame({
   t,
   rung,
   number,
   count,
   selected,
   select,
-  observed,
   errors,
   change,
+  children,
 }: {
   t: T;
   rung: Rung;
@@ -625,11 +945,10 @@ function RungView({
   count: number;
   selected: Selected;
   select: (s: Selected) => void;
-  observed: Observed;
   errors: Map<number, string[]>;
   change: (edit: (d: LadDocument) => LadDocument) => void;
+  children: React.ReactNode;
 }) {
-  const power = observed.power(rung.network.id);
   const rungSelected = selected?.kind === "rung" && selected.id === rung.id;
   const rungErrors = errors.get(rung.id);
   return (
@@ -640,6 +959,7 @@ function RungView({
     >
       <header className="row" style={{ gap: 6 }}>
         <button
+          type="button"
           className="btn btn-sm btn-ghost lad-rung-handle"
           data-element={rung.id}
           aria-pressed={rungSelected}
@@ -659,6 +979,7 @@ function RungView({
         />
         <span className="spacer" />
         <button
+          type="button"
           className="btn btn-sm"
           disabled={number === 1}
           aria-label={t("lad.rungUp", { number })}
@@ -667,6 +988,7 @@ function RungView({
           ↑
         </button>
         <button
+          type="button"
           className="btn btn-sm"
           disabled={number === count}
           aria-label={t("lad.rungDown", { number })}
@@ -675,12 +997,14 @@ function RungView({
           ↓
         </button>
         <button
+          type="button"
           className="btn btn-sm"
           onClick={() => change((d) => duplicateRung(d, rung.id))}
         >
           {t("lad.duplicateRung")}
         </button>
         <button
+          type="button"
           className="btn btn-sm btn-ghost"
           onClick={() => change((d) => removeRung(d, rung.id))}
         >
@@ -692,739 +1016,7 @@ function RungView({
           {rungErrors.join(" ")}
         </p>
       )}
-      <div className="lad-line">
-        <span
-          className={`lad-rail${observed.online ? " powered" : ""}`}
-          aria-hidden="true"
-        />
-        <span
-          className={`lad-seg${observed.online ? " powered" : ""}`}
-          aria-hidden="true"
-        />
-        <div className="lad-network">
-          <NetworkView
-            t={t}
-            node={rung.network}
-            selected={selected}
-            select={select}
-            observed={observed}
-            errors={errors}
-          />
-        </div>
-        <span
-          className={`lad-wire grow${power ? " powered" : ""}`}
-          aria-hidden="true"
-        />
-        <div className="lad-coils">
-          {rung.coils.map((coil) => {
-            const v = observed.value(coil.variable);
-            const isSelected =
-              selected?.kind === "coil" && selected.id === coil.id;
-            const problems = errors.get(coil.id);
-            const name = coil.variable || t("lad.noVariable");
-            const label = t(
-              coil.kind === "set"
-                ? "lad.setCoilNamed"
-                : coil.kind === "reset"
-                  ? "lad.resetCoilNamed"
-                  : "lad.coilNamed",
-              { variable: name },
-            );
-            return (
-              <button
-                key={coil.id}
-                data-element={coil.id}
-                className={`lad-coil${power ? " powered" : ""}${on(v) ? " on" : ""}${isSelected ? " selected" : ""}${problems ? " error" : ""}`}
-                aria-pressed={isSelected}
-                aria-invalid={problems ? true : undefined}
-                aria-label={describe(t, label, v, power)}
-                title={problems?.join("\n")}
-                onClick={() => select({ kind: "coil", id: coil.id })}
-              >
-                <span className="lad-symbol">{coilSymbol(coil.kind)}</span>
-                <span className="lad-name">{name}</span>
-                {v && <span className="lad-value">{formatValue(v)}</span>}
-              </button>
-            );
-          })}
-        </div>
-        <span className="lad-rail" aria-hidden="true" />
-      </div>
-    </section>
-  );
-}
-
-/** "Normally open contact X: TRUE, power flows" — values and power from the runtime. */
-function describe(
-  t: T,
-  label: string,
-  value: SignalValueDto | null,
-  power: boolean | null,
-): string {
-  const parts = [value ? `${label}: ${formatValue(value)}` : label];
-  if (power !== null) parts.push(t(power ? "lad.powered" : "lad.unpowered"));
-  return parts.join(", ");
-}
-
-function NetworkView({
-  t,
-  node,
-  selected,
-  select,
-  observed,
-  errors,
-}: {
-  t: T;
-  node: LadNode;
-  selected: Selected;
-  select: (s: Selected) => void;
-  observed: Observed;
-  errors: Map<number, string[]>;
-}): ReactNode {
-  const isSelected = selected?.kind === "node" && selected.id === node.id;
-  const power = observed.power(node.id);
-  const problems = errors.get(node.id);
-  const common = {
-    "data-element": node.id,
-    "aria-pressed": isSelected,
-    "aria-invalid": problems ? true : undefined,
-    title: problems?.join("\n"),
-    onClick: () => select({ kind: "node", id: node.id }),
-  };
-  const cls = (base: string, active = false) =>
-    `${base}${power ? " powered" : ""}${active ? " on" : ""}${isSelected ? " selected" : ""}${problems ? " error" : ""}`;
-  switch (node.type) {
-    case "contact": {
-      const v = observed.value(node.variable);
-      const kind = CONTACTS.find((c) => c.kind === node.contact);
-      const name = node.variable || t("lad.noVariable");
-      return (
-        <button
-          {...common}
-          className={cls("lad-contact", on(v))}
-          aria-label={describe(
-            t,
-            t(kind?.label ?? "lad.noContact", { variable: name }),
-            v,
-            power,
-          )}
-        >
-          <span className="lad-symbol">{symbolOf(node.contact)}</span>
-          <span className="lad-name">{name}</span>
-          {v && <span className="lad-value">{formatValue(v)}</span>}
-        </button>
-      );
-    }
-    case "compare": {
-      const symbol = OPS.find((o) => o.op === node.op)?.symbol ?? node.op;
-      const side = (o: Operand) => {
-        if ("constant" in o) return o.constant;
-        const v = observed.value(o.variable);
-        return v ? `${o.variable} (${formatValue(v)})` : o.variable || "?";
-      };
-      const text = `${side(node.left)} ${symbol} ${side(node.right)}`;
-      return (
-        <button
-          {...common}
-          className={cls("lad-compare")}
-          aria-label={describe(
-            t,
-            t("lad.compareNamed", { comparison: text }),
-            null,
-            power,
-          )}
-        >
-          <span className="lad-symbol">CMP {symbol}</span>
-          <span className="lad-name">{text}</span>
-        </button>
-      );
-    }
-    case "block": {
-      const timer = isTimer(node.block);
-      const out = observed.value(`${node.instance}.${timer ? "ET" : "CV"}`);
-      const q = observed.value(`${node.instance}.Q`);
-      const preset = operandText(node.preset) || "?";
-      return (
-        <button
-          {...common}
-          className={cls("lad-block", on(q))}
-          aria-label={describe(
-            t,
-            t("lad.blockNamed", {
-              block: node.block,
-              instance: node.instance,
-              preset,
-              value: out ? formatValue(out) : "—",
-            }),
-            null,
-            power,
-          )}
-        >
-          <span className="lad-symbol">{node.block}</span>
-          <span className="lad-name">{node.instance}</span>
-          <span className="lad-pin">
-            {timer ? "PT" : "PV"} {preset}
-          </span>
-          {node.block === "CTU" && node.reset && (
-            <span className="lad-pin">R {operandText(node.reset)}</span>
-          )}
-          {node.block === "CTD" && node.reset && (
-            <span className="lad-pin">LD {operandText(node.reset)}</span>
-          )}
-          <span className="lad-value">
-            {timer ? "ET" : "CV"} {out ? formatValue(out) : "—"}
-          </span>
-        </button>
-      );
-    }
-    case "series":
-      if (!node.items.length)
-        return (
-          <button
-            {...common}
-            className={cls("lad-empty")}
-            aria-label={t("lad.empty")}
-          >
-            {t("lad.empty")}
-          </button>
-        );
-      return (
-        <div className="lad-series">
-          {node.items.map((item, i) => (
-            <span key={item.id} className="lad-cell">
-              {i > 0 && (
-                <span
-                  className={`lad-seg${observed.power(node.items[i - 1]?.id ?? 0) ? " powered" : ""}`}
-                  aria-hidden="true"
-                />
-              )}
-              <NetworkView
-                t={t}
-                node={item}
-                selected={selected}
-                select={select}
-                observed={observed}
-                errors={errors}
-              />
-            </span>
-          ))}
-        </div>
-      );
-    case "parallel":
-      return (
-        <div className={cls("lad-parallel")}>
-          <button
-            {...common}
-            className="lad-block-handle"
-            aria-label={t("lad.parallelBlock", { count: node.branches.length })}
-          >
-            ∥
-          </button>
-          <div className="lad-branches">
-            {node.branches.map((branch) => (
-              <div key={branch.id} className="lad-branch">
-                <NetworkView
-                  t={t}
-                  node={branch}
-                  selected={selected}
-                  select={select}
-                  observed={observed}
-                  errors={errors}
-                />
-                <span
-                  className={`lad-seg grow${observed.power(branch.id) ? " powered" : ""}`}
-                  aria-hidden="true"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-  }
-}
-
-/** The settings of the selected element: variables, kinds, operands, block pins. */
-function Properties({
-  t,
-  document,
-  selected,
-  commit,
-}: {
-  t: T;
-  document: LadDocument;
-  selected: Selected;
-  commit: (d: LadDocument) => void;
-}) {
-  if (!selected) return null;
-  const vars = (type: LadType, writable = false) =>
-    document.variables
-      .filter((v) => v.type === type && (!writable || v.direction !== "input"))
-      .map((v) => v.name);
-  if (selected.kind === "coil") {
-    const coil = findCoil(document, selected.id);
-    if (!coil) return null;
-    return (
-      <section
-        className="lad-properties row wrap"
-        aria-label={t("lad.properties")}
-      >
-        <VariableSelect
-          t={t}
-          label={t("lad.coilVariable")}
-          value={coil.variable}
-          options={vars("BOOL", true)}
-          onChange={(variable) =>
-            commit(setCoil(document, coil.id, { variable }))
-          }
-        />
-        <label className="field">
-          {t("lad.coilKind")}
-          <select
-            className="input"
-            value={coil.kind ?? "output"}
-            onChange={(e) =>
-              commit(
-                setCoil(document, coil.id, {
-                  kind: e.target.value as CoilKind,
-                }),
-              )
-            }
-          >
-            {COILS.map((c) => (
-              <option key={c.kind} value={c.kind}>
-                {c.symbol} {t(`lad.coil.${c.kind}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
-    );
-  }
-  if (selected.kind === "rung") return null;
-  const node = findNode(document, selected.id);
-  if (!node) return null;
-  const edit = (change: (n: LadNode) => LadNode) =>
-    commit(updateElement(document, node.id, change));
-  if (node.type === "contact")
-    return (
-      <section
-        className="lad-properties row wrap"
-        aria-label={t("lad.properties")}
-      >
-        <VariableSelect
-          t={t}
-          label={t("lad.contactVariable")}
-          value={node.variable}
-          options={vars("BOOL")}
-          onChange={(variable) =>
-            edit((n) => (n.type === "contact" ? { ...n, variable } : n))
-          }
-        />
-        <label className="field">
-          {t("lad.contactKind")}
-          <select
-            className="input"
-            value={node.contact}
-            onChange={(e) =>
-              edit((n) =>
-                n.type === "contact"
-                  ? { ...n, contact: e.target.value as ContactKind }
-                  : n,
-              )
-            }
-          >
-            {CONTACTS.map((c) => (
-              <option key={c.kind} value={c.kind}>
-                {c.symbol} {t(c.label, { variable: "" }).trim()}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
-    );
-  if (node.type === "compare") {
-    const all = document.variables.map((v) => v.name);
-    return (
-      <section
-        className="lad-properties row wrap"
-        aria-label={t("lad.properties")}
-      >
-        <OperandEditor
-          key={`l${node.id}${JSON.stringify(node.left)}`}
-          t={t}
-          label={t("lad.left")}
-          value={node.left}
-          options={all}
-          onChange={(left) =>
-            edit((n) => (n.type === "compare" ? { ...n, left } : n))
-          }
-        />
-        <label className="field">
-          {t("lad.comparison")}
-          <select
-            className="input"
-            value={node.op}
-            onChange={(e) =>
-              edit((n) =>
-                n.type === "compare"
-                  ? { ...n, op: e.target.value as CompareOp }
-                  : n,
-              )
-            }
-          >
-            {OPS.map((o) => (
-              <option key={o.op} value={o.op}>
-                {o.op.toUpperCase()} {o.symbol}
-              </option>
-            ))}
-          </select>
-        </label>
-        <OperandEditor
-          key={`r${node.id}${JSON.stringify(node.right)}`}
-          t={t}
-          label={t("lad.right")}
-          value={node.right}
-          options={all}
-          onChange={(right) =>
-            edit((n) => (n.type === "compare" ? { ...n, right } : n))
-          }
-        />
-      </section>
-    );
-  }
-  if (node.type === "block") {
-    const timer = isTimer(node.block);
-    return (
-      <section
-        className="lad-properties row wrap"
-        aria-label={t("lad.properties")}
-      >
-        <InstanceName
-          key={`i${node.id}${node.instance}`}
-          t={t}
-          value={node.instance}
-          onChange={(instance) =>
-            edit((n) => (n.type === "block" ? { ...n, instance } : n))
-          }
-        />
-        <OperandEditor
-          key={`p${node.id}${JSON.stringify(node.preset)}`}
-          t={t}
-          label={t(timer ? "lad.presetPT" : "lad.presetPV")}
-          value={node.preset ?? { constant: "" }}
-          options={vars(timer ? "TIME" : "INT")}
-          onChange={(preset) =>
-            edit((n) => (n.type === "block" ? { ...n, preset } : n))
-          }
-        />
-        {!timer && (
-          <OperandEditor
-            key={`z${node.id}${JSON.stringify(node.reset)}`}
-            t={t}
-            label={t(node.block === "CTD" ? "lad.loadLD" : "lad.resetR")}
-            value={node.reset ?? { constant: "FALSE" }}
-            options={vars("BOOL")}
-            onChange={(reset) =>
-              commit(
-                setBlockPin(
-                  document,
-                  node.id,
-                  "reset",
-                  "constant" in reset &&
-                    reset.constant.toUpperCase() === "FALSE"
-                    ? null
-                    : reset,
-                ),
-              )
-            }
-          />
-        )}
-        <VariableSelect
-          t={t}
-          label={t(timer ? "lad.outputET" : "lad.outputCV")}
-          value={node.output ?? ""}
-          options={vars(timer ? "TIME" : "INT", true)}
-          none={t("lad.noOutput")}
-          onChange={(output) =>
-            commit(setBlockPin(document, node.id, "output", output))
-          }
-        />
-      </section>
-    );
-  }
-  return null;
-}
-
-function VariableSelect({
-  t,
-  label,
-  value,
-  options,
-  none,
-  onChange,
-}: {
-  t: T;
-  label: string;
-  value: string;
-  options: string[];
-  none?: string;
-  onChange: (v: string) => void;
-}) {
-  const list =
-    value && !options.includes(value) ? [value, ...options] : options;
-  return (
-    <label className="field lad-assign">
-      {label}
-      <select
-        className="input"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">{none ?? t("lad.noVariable")}</option>
-        {list.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-/** A variable or a literal; literals are checked by the compiler in Rust. */
-function OperandEditor({
-  t,
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  t: T;
-  label: string;
-  value: Operand;
-  options: string[];
-  onChange: (o: Operand) => void;
-}) {
-  const isVariable = "variable" in value;
-  const [text, setText] = useState(isVariable ? "" : value.constant);
-  return (
-    <fieldset className="lad-operand">
-      <legend>{label}</legend>
-      <select
-        className="input"
-        aria-label={t("lad.operandKind", { operand: label })}
-        value={isVariable ? "variable" : "constant"}
-        onChange={(e) =>
-          onChange(
-            e.target.value === "variable"
-              ? { variable: options[0] ?? "" }
-              : { constant: text || "0" },
-          )
-        }
-      >
-        <option value="variable">{t("lad.operand.variable")}</option>
-        <option value="constant">{t("lad.operand.constant")}</option>
-      </select>
-      {isVariable ? (
-        <select
-          className="input"
-          aria-label={t("lad.operandVariable", { operand: label })}
-          value={value.variable}
-          onChange={(e) => onChange({ variable: e.target.value })}
-        >
-          <option value="">{t("lad.noVariable")}</option>
-          {options.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input
-          className="input"
-          aria-label={t("lad.operandConstant", { operand: label })}
-          value={text}
-          size={9}
-          onChange={(e) => setText(e.target.value)}
-          onBlur={() => text !== value.constant && onChange({ constant: text })}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onChange({ constant: text });
-          }}
-        />
-      )}
-    </fieldset>
-  );
-}
-
-function InstanceName({
-  t,
-  value,
-  onChange,
-}: {
-  t: T;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [text, setText] = useState(value);
-  return (
-    <label className="field">
-      {t("lad.instance")}
-      <input
-        className="input mono"
-        value={text}
-        size={10}
-        maxLength={40}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => text.trim() && text !== value && onChange(text.trim())}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && text.trim()) onChange(text.trim());
-        }}
-      />
-    </label>
-  );
-}
-
-const DIRECTIONS: Direction[] = ["input", "output", "local"];
-
-function Variables({
-  t,
-  document,
-  commit,
-}: {
-  t: T;
-  document: LadDocument;
-  commit: (d: LadDocument) => void;
-}) {
-  const [name, setName] = useState("");
-  const [direction, setNewDirection] = useState<Direction>("local");
-  const [type, setType] = useState<LadType>("BOOL");
-  const [invalid, setInvalid] = useState(false);
-  return (
-    <section className="lad-variables" aria-label={t("lad.variables")}>
-      <h3>{t("lad.variables")}</h3>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>{t("lad.variableName")}</th>
-            <th>{t("lad.variableType")}</th>
-            <th>{t("lad.direction")}</th>
-            <th>{t("lad.variableComment")}</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {document.variables.map((v) => (
-            <tr key={v.name}>
-              <th scope="row" className="mono">
-                {v.name}
-              </th>
-              <td>
-                <select
-                  className="input"
-                  aria-label={t("lad.typeOf", { name: v.name })}
-                  value={v.type}
-                  onChange={(e) =>
-                    commit(
-                      setVariableType(
-                        document,
-                        v.name,
-                        e.target.value as LadType,
-                      ),
-                    )
-                  }
-                >
-                  {LAD_TYPES.map((x) => (
-                    <option key={x} value={x}>
-                      {x}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td>
-                <select
-                  className="input"
-                  aria-label={t("lad.directionOf", { name: v.name })}
-                  value={v.direction}
-                  onChange={(e) =>
-                    commit(
-                      setDirection(
-                        document,
-                        v.name,
-                        e.target.value as Direction,
-                      ),
-                    )
-                  }
-                >
-                  {DIRECTIONS.map((d) => (
-                    <option key={d} value={d}>
-                      {t(`lad.dir.${d}`)}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td className="muted">{v.comment ?? ""}</td>
-              <td>
-                <button
-                  className="btn btn-sm btn-ghost"
-                  aria-label={t("lad.removeVariable", { name: v.name })}
-                  onClick={() => commit(removeVariable(document, v.name))}
-                >
-                  ×
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <form
-        className="row"
-        style={{ gap: 6 }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const next = addVariable(document, name, direction, type);
-          setInvalid(next === null);
-          if (next) {
-            commit(next);
-            setName("");
-          }
-        }}
-      >
-        <input
-          className="input"
-          aria-label={t("lad.newVariable")}
-          aria-invalid={invalid}
-          value={name}
-          maxLength={40}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <select
-          className="input"
-          aria-label={t("lad.newType")}
-          value={type}
-          onChange={(e) => setType(e.target.value as LadType)}
-        >
-          {LAD_TYPES.map((x) => (
-            <option key={x} value={x}>
-              {x}
-            </option>
-          ))}
-        </select>
-        <select
-          className="input"
-          aria-label={t("lad.newDirection")}
-          value={direction}
-          onChange={(e) => setNewDirection(e.target.value as Direction)}
-        >
-          {DIRECTIONS.map((d) => (
-            <option key={d} value={d}>
-              {t(`lad.dir.${d}`)}
-            </option>
-          ))}
-        </select>
-        <button className="btn btn-sm" type="submit">
-          {t("lad.addVariable")}
-        </button>
-      </form>
+      {children}
     </section>
   );
 }

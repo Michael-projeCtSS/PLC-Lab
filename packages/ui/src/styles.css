@@ -1402,7 +1402,7 @@ textarea.input {
 .legend.mv::before {
   border-top-color: var(--trace-mv);
 }
-/* ladder diagram editor (ADR-0050, ADR-0051) */
+/* ladder diagram editor (ADR-0050, ADR-0051, ADR-0052) */
 .lad {
   flex: 1;
   overflow: auto;
@@ -1410,10 +1410,21 @@ textarea.input {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative;
 }
-.lad-status {
+.lad.dragging,
+.lad.dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+.lad-status,
+.lad-notice {
   margin: 0;
   font-size: 12px;
+}
+.lad-notice {
+  min-height: 16px;
+  color: var(--text-1);
 }
 .lad-fault,
 .lad-error-text {
@@ -1424,166 +1435,477 @@ textarea.input {
 .lad-toolbar {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
-  gap: 6px 10px;
+  position: sticky;
+  top: -8px;
+  z-index: 5;
+  padding: 6px 0;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
 }
 .lad-palette {
-  gap: 3px;
+  gap: 4px;
   flex-wrap: wrap;
+}
+.lad-tool {
+  min-width: 34px;
+  cursor: grab;
+  touch-action: none;
 }
 .lad-zoom {
   gap: 4px;
-  margin-left: 6px;
+  align-items: center;
+}
+.lad-shortcuts {
+  font-size: 12px;
+}
+.lad-shortcuts summary {
+  cursor: pointer;
+  color: var(--text-1);
+}
+.lad-shortcuts dl {
+  position: absolute;
+  z-index: 6;
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  max-width: 520px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.3);
+}
+.lad-shortcuts dl > div {
+  gap: 10px;
+  align-items: baseline;
+}
+.lad-shortcuts dt {
+  min-width: 150px;
+  color: var(--text-0);
+}
+.lad-shortcuts dd {
+  margin: 0;
+  color: var(--text-1);
 }
 .lad-rungs {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-items: flex-start;
 }
 .lad-rung {
-  width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 6px 8px;
+  padding: 6px 8px 4px;
   background: var(--bg-1);
+  overflow-x: auto;
 }
 .lad-rung.selected {
-  outline: 2px solid var(--accent);
+  border-color: var(--accent);
 }
 .lad-rung.error {
   border-color: var(--danger-line);
 }
 .lad-comment {
-  max-width: 320px;
-  height: 24px;
+  flex: 1;
+  min-width: 120px;
+  max-width: 520px;
 }
-.lad-line {
-  display: flex;
-  align-items: center;
-  min-height: 52px;
-  margin-top: 6px;
+.lad-add-rung {
+  align-self: flex-start;
 }
-.lad-rail {
-  align-self: stretch;
-  width: 3px;
-  background: var(--symbol-stroke);
+/* the canvas: a plane of layout coordinates, scaled by the zoom */
+.lad-canvas {
+  position: relative;
+  margin-top: 4px;
 }
-.lad-rail.powered,
-.lad-seg.powered,
-.lad-wire.powered {
-  background: var(--st-active);
+.lad-plane {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
 }
-.lad-seg,
-.lad-wire {
-  height: 2px;
-  min-width: 14px;
-  background: var(--symbol-stroke);
+.lad-wires {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
 }
-.lad-network,
-.lad-series,
-.lad-coils,
-.lad-cell {
-  display: flex;
-  align-items: center;
+.lad-wire-line,
+.lad-rail-line {
+  stroke: var(--text-3);
+  stroke-width: 2;
 }
-.lad-coils > * + * {
-  margin-left: 14px;
+.lad-rail-line {
+  stroke-width: 4;
 }
-.lad-parallel {
-  display: flex;
-  align-items: center;
-  border-left: 2px solid var(--symbol-stroke);
-  border-right: 2px solid var(--symbol-stroke);
-  padding: 2px 0 2px 4px;
+.lad-wire-line.on,
+.lad-rail-line.on {
+  stroke: var(--st-active);
 }
-.lad-parallel.powered {
-  border-right-color: var(--st-active);
-}
-.lad-parallel.selected {
-  outline: 2px solid var(--accent);
-}
-.lad-branches {
+.lad-el {
+  position: absolute;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-.lad-branch {
-  display: flex;
   align-items: center;
-}
-.lad-block-handle {
-  margin-right: 4px;
-  border: 1px dashed var(--line-strong);
+  padding: 0;
+  font: inherit;
+  color: var(--text-0);
   background: transparent;
-  color: var(--text-2);
-  border-radius: 4px;
-  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: grab;
+  touch-action: none;
 }
-.lad-contact,
-.lad-coil,
-.lad-empty,
-.lad-compare,
-.lad-block {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 72px;
-  padding: 2px 6px;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: var(--bg-2);
-  color: var(--text-1);
-  font-family: var(--mono);
-  font-size: 12px;
-  cursor: pointer;
+.lad-el:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
-.lad-block {
-  min-width: 96px;
-  border-width: 2px;
+.lad-el.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
 }
-.lad-pin {
-  font-size: 10px;
-  color: var(--text-2);
-}
-.lad-contact.on,
-.lad-coil.on,
-.lad-block.on {
-  background: var(--ok-tint);
-}
-.lad-contact.powered,
-.lad-coil.powered,
-.lad-compare.powered,
-.lad-block.powered {
-  border-color: var(--st-active);
-  box-shadow: 0 0 0 1px var(--st-active);
-}
-.lad-contact.error,
-.lad-coil.error,
-.lad-compare.error,
-.lad-block.error,
-.lad-parallel.error {
+.lad-el.error {
   border-color: var(--danger-line);
-  box-shadow: 0 0 0 1px var(--danger-line);
+  background: var(--danger-tint);
 }
-.lad-contact.selected,
-.lad-coil.selected,
-.lad-compare.selected,
-.lad-block.selected,
-.lad-empty.selected {
-  outline: 2px solid var(--accent);
-}
-.lad button:focus-visible {
+.lad button:focus-visible,
+.lad-el:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.lad-name {
+  height: 18px;
+  max-width: 100%;
+  padding: 2px 4px 0;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .lad-symbol {
-  font-weight: 600;
+  padding: 0 3px;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 12px;
+  color: var(--text-1);
+  background: var(--bg-1);
+}
+.lad-contact.powered .lad-symbol,
+.lad-coil.powered .lad-symbol {
+  color: var(--st-active);
+}
+.lad-contact.on .lad-symbol,
+.lad-coil.on .lad-symbol {
+  background: color-mix(in srgb, var(--st-active) 28%, var(--bg-1));
 }
 .lad-value {
+  font-family: var(--mono);
   font-size: 10px;
   color: var(--text-2);
 }
+.lad-compare,
+.lad-block {
+  background: var(--bg-2);
+  border-color: var(--line-strong);
+}
+.lad-compare.powered,
+.lad-block.powered {
+  border-color: var(--st-active);
+}
+.lad-block.on {
+  box-shadow: inset 0 -3px 0 var(--st-active);
+}
+.lad-compare .lad-op {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+}
+.lad-compare .lad-kind,
+.lad-block .lad-kind {
+  position: absolute;
+  font-size: 10px;
+  color: var(--text-2);
+}
+.lad-compare .lad-kind {
+  bottom: 2px;
+}
+.lad-block .lad-kind {
+  top: 4px;
+  left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-0);
+}
+.lad-pin-label {
+  position: absolute;
+  top: 18px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+}
+.lad-pin-label.in {
+  left: 4px;
+}
+.lad-pin-label.out {
+  right: 4px;
+}
+.lad-pin-label.second {
+  top: 48px;
+}
+.lad-pin-label.third {
+  top: 74px;
+}
+.lad-block .lad-value {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  left: 0;
+  text-align: center;
+}
+/* box pins and comparison operands, edited in place */
+.lad-field {
+  position: absolute;
+  z-index: 2;
+  height: 20px;
+  padding: 0 4px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-0);
+  background: var(--bg-1);
+  border: 1px dashed transparent;
+  border-radius: 3px;
+  cursor: text;
+}
+.lad-field:hover,
+.lad-field:focus-visible {
+  border-color: var(--accent);
+}
+.lad-field.empty {
+  color: var(--text-3);
+  border-color: var(--line-strong);
+}
+.lad-empty {
+  justify-content: center;
+  font-size: 11px;
+  color: var(--text-2);
+  background: var(--bg-1);
+  border: 1px dashed var(--line-strong);
+  cursor: pointer;
+}
+.lad-empty.selected {
+  border-style: solid;
+}
+.lad-group-handle {
+  position: absolute;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-2);
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  cursor: grab;
+}
+.lad-group-handle.selected {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.lad-group-handle.error {
+  border-color: var(--danger-line);
+}
+.lad-point {
+  position: absolute;
+  border-radius: 3px;
+  cursor: text;
+}
+.lad-point:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.lad-point.selected {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* drop preview: topology only, never power */
+.lad-drop {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.lad-drop polyline {
+  stroke-dasharray: 6 4;
+}
+.lad-drop.copy {
+  stroke: var(--st-auto);
+}
+.lad-drop text {
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--accent);
+  stroke: none;
+}
+.lad-drop .lad-drop-tag {
+  fill: var(--bg-1);
+  stroke-width: 1;
+}
+.lad-drop .lad-drop-ghost {
+  fill: color-mix(in srgb, var(--accent) 15%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.lad-drop-invalid {
+  fill: color-mix(in srgb, var(--st-fault) 25%, transparent);
+  stroke: var(--st-fault);
+  stroke-width: 2;
+}
+.lad-ghost {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 380px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-0);
+  background: var(--bg-3);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+.lad-ghost.valid {
+  border-color: var(--accent);
+}
+.lad-ghost.invalid {
+  border-color: var(--st-fault);
+}
+/* inline editing, suggestions, instruction picker, context menu */
+.lad-inline-host {
+  position: absolute;
+  z-index: 4;
+}
+.lad-inline-input {
+  width: 100%;
+  height: 22px;
+  padding: 0 4px;
+  font-size: 12px;
+}
+.lad-popup,
+.lad-floating {
+  position: fixed;
+  z-index: 1000;
+  width: 340px;
+}
+.lad-floating {
+  width: 410px;
+}
+.lad-suggest,
+.lad-picker,
+.lad-menu {
+  padding: 4px;
+  font-size: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+.lad-suggest ul,
+.lad-picker ul {
+  max-height: 240px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.lad-suggest-head {
+  margin: 2px 4px 4px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+.lad-picker input {
+  width: 100%;
+  margin-bottom: 4px;
+}
+.lad-option {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.lad-option[aria-selected="true"] {
+  background: var(--accent-dim);
+}
+.lad-option.empty {
+  color: var(--text-2);
+  cursor: default;
+}
+.lad-option-name {
+  font-weight: 600;
+}
+.lad-option-comment {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--text-2);
+}
+.lad-pins {
+  flex-basis: 100%;
+  font-size: 10.5px;
+}
+.lad-create {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+}
+.lad-suggest-message {
+  margin: 4px;
+  font-size: 11px;
+  color: var(--danger-text);
+}
+.lad-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 230px;
+}
+.lad-menu-item {
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--text-0);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.lad-menu-item:hover,
+.lad-menu-item:focus-visible {
+  background: var(--accent-dim);
+  outline: none;
+}
+.lad-menu-item:disabled {
+  color: var(--text-3);
+}
+/* fallback panels */
 .lad-properties {
   gap: 8px 14px;
   align-items: flex-end;
