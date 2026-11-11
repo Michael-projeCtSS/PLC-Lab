@@ -77,6 +77,8 @@ const passed = [];
 const evidence = {};
 let browser;
 let page;
+/** One DevTools session for the viewport emulation of the whole run. */
+let cdp;
 const pageErrors = [];
 async function check(name, run) {
   await run();
@@ -201,6 +203,14 @@ try {
     );
     await page.reload();
     await page.getByRole("navigation").first().waitFor();
+    // Room for several rungs next to the docks, as on a desktop monitor.
+    cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setDeviceMetricsOverride", {
+      width: 1920,
+      height: 1080,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
   });
 
   const views = () => page.getByRole("tablist", { name: "Workspace views" });
@@ -232,6 +242,19 @@ try {
     if (!hold) await page.mouse.up();
   };
   const center = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+  /** A drop point on `locator`, after scrolling it to the middle of the rung area. */
+  const spot = async (locator, where = "center") => {
+    await locator.evaluate((el) =>
+      el.scrollIntoView({ block: "center", inline: "nearest" }),
+    );
+    await delay(150);
+    const b = await box(locator);
+    return where === "right"
+      ? rightOf(b)
+      : where === "below"
+        ? below(b)
+        : center(b);
+  };
   const rightOf = (b) => ({ x: b.x + b.width * 0.8, y: b.y + b.height / 2 });
   const below = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height + 7 });
   /** Type into the open operand editor and accept the first suggestion. */
@@ -280,16 +303,21 @@ try {
         name: "Empty network (always on)",
       });
       await empty.waitFor();
+      const onEmpty = await spot(empty);
       await mouseDrag(
         center(await box(palette("Insert Normally open contact"))),
-        center(await box(empty)),
+        onEmpty,
       );
       // C: the dropped contact's operand is typed with completion.
       await choose("Butt", ["Button1", "Button2"]);
       await waitLogic(0, "Button1");
+      const right = await spot(
+        element(1, "Normally open contact Button1"),
+        "right",
+      );
       await mouseDrag(
         center(await box(palette("Insert Normally open contact"))),
-        rightOf(await box(element(1, "Normally open contact Button1"))),
+        right,
       );
       await choose("Auto", ["AutoMode"]);
       await waitLogic(0, "Button1 AND AutoMode");
@@ -312,8 +340,9 @@ try {
       await choose("AutoMode");
       await waitLogic(1, "Button1 AND AutoMode");
       // The OR preview while hovering below A, then the drop.
-      const target = below(
-        await box(element(2, "Normally open contact Button1")),
+      const target = await spot(
+        element(2, "Normally open contact Button1"),
+        "below",
       );
       await mouseDrag(
         center(await box(palette("Insert Normally open contact"))),
@@ -515,11 +544,12 @@ try {
     "F: an invalid drop explains itself and changes nothing; Esc cancels a drag",
     async () => {
       const before = JSON.stringify(await savedLadder());
-      await mouseDrag(
-        center(await box(palette("Add coil"))),
-        center(await box(element(1, /^Normally open contact Button1/))),
-        { hold: true },
+      const onContact = await spot(
+        element(1, /^Normally open contact Button1/),
       );
+      await mouseDrag(center(await box(palette("Add coil"))), onContact, {
+        hold: true,
+      });
       assert.equal(
         await notice().innerText(),
         "Coils go in the coil column at the right end of a rung.",
@@ -530,9 +560,13 @@ try {
       });
       await page.mouse.up();
       // A valid target, then Esc before releasing.
+      const afterAuto = await spot(
+        element(1, /^Normally open contact AutoMode/),
+        "right",
+      );
       await mouseDrag(
         center(await box(palette("Insert Normally open contact"))),
-        rightOf(await box(element(1, /^Normally open contact AutoMode/))),
+        afterAuto,
         { hold: true },
       );
       await page.keyboard.press("Escape");
@@ -559,9 +593,13 @@ try {
   await check(
     "E: an existing contact dragged onto a new branch; undo, redo, save and reopen",
     async () => {
+      const branch = await spot(
+        element(1, /^Normally open contact Button1/),
+        "below",
+      );
       await mouseDrag(
         center(await box(element(1, /^Normally open contact AutoMode/))),
-        below(await box(element(1, /^Normally open contact Button1/))),
+        branch,
       );
       await waitLogic(0, "(Button1 OR AutoMode)");
       await page.keyboard.press("Control+z");
@@ -661,7 +699,6 @@ try {
   );
 
   // ---- screenshots and layout checks: 3 sizes × English/Polish × dark/light ----
-  const cdp = await page.context().newCDPSession(page);
   const layoutProblems = () =>
     page.evaluate(() => {
       const problems = [];

@@ -74,10 +74,32 @@ export function useDrag({
     latest.current = { document, zoom, layouts, drop };
   });
 
+  /**
+   * Where rungs can be seen: the scroll area below its sticky toolbar. A rung scrolled
+   * out of it (behind the toolbar or another panel) is no drop target. Null when the
+   * area is not laid out.
+   */
+  const view = useCallback(() => {
+    const el = scroller.current;
+    const r = el?.getBoundingClientRect();
+    if (!el || !r || r.width <= 3 * EDGE || r.height <= 3 * EDGE) return null;
+    const bar = el.querySelector(".lad-toolbar")?.getBoundingClientRect();
+    return {
+      el,
+      left: r.left,
+      right: r.right,
+      top: Math.max(r.top, bar?.bottom ?? r.top),
+      bottom: r.bottom,
+    };
+  }, [scroller]);
+
   const locate = useCallback(
     (x: number, y: number, source: Source): Over | null => {
       const { document: d, zoom: z, layouts: ls } = latest.current;
       if (!d) return null;
+      const v = view();
+      if (v && (x < v.left || x >= v.right || y < v.top || y >= v.bottom))
+        return null;
       for (const [rung, el] of canvases.current ?? []) {
         const r = el.getBoundingClientRect();
         if (x < r.left || x >= r.right || y < r.top || y >= r.bottom) continue;
@@ -104,7 +126,7 @@ export function useDrag({
       }
       return null;
     },
-    [canvases],
+    [canvases, view],
   );
 
   const update = useCallback(
@@ -142,17 +164,28 @@ export function useDrag({
       )
         return;
       e.preventDefault();
-      // Near an edge of the scroll area the view follows the pointer (driven by pointer
-      // movement only: the interface runs no timers).
-      const el = scroller.current;
-      const r = el?.getBoundingClientRect();
-      // Only a laid-out scroll area larger than both edge bands scrolls.
-      if (el && r && r.height > 3 * EDGE && r.width > 3 * EDGE) {
-        const dy =
-          e.clientY < r.top + EDGE ? -24 : e.clientY > r.bottom - EDGE ? 24 : 0;
-        const dx =
-          e.clientX < r.left + EDGE ? -24 : e.clientX > r.right - EDGE ? 24 : 0;
-        if (dx || dy) el.scrollBy(dx, dy);
+      // Near an edge of the visible rung area the view follows the pointer (driven by
+      // pointer movement only: the interface runs no timers). Over the toolbar, where a
+      // drag from the palette starts, nothing scrolls.
+      const v = view();
+      if (v) {
+        const { clientX: x, clientY: y } = e;
+        const inside = y >= v.top && y < v.bottom && x >= v.left && x < v.right;
+        const dy = !inside
+          ? 0
+          : y < v.top + EDGE
+            ? -24
+            : y > v.bottom - EDGE
+              ? 24
+              : 0;
+        const dx = !inside
+          ? 0
+          : x < v.left + EDGE
+            ? -24
+            : x > v.right - EDGE
+              ? 24
+              : 0;
+        if (dx || dy) v.el.scrollBy(dx, dy);
       }
       update(e.clientX, e.clientY, e.ctrlKey);
     };
@@ -198,7 +231,7 @@ export function useDrag({
       window.removeEventListener("keydown", ctrl);
       window.removeEventListener("keyup", ctrl);
     };
-  }, [update, cancel, scroller]);
+  }, [update, cancel, view]);
 
   return {
     drag,
