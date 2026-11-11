@@ -55,6 +55,13 @@ Further exercises: `ex.part-counter`, `ex.tank-analog-scaling`, `ex.tank-batch-s
 `ex.modbus-level`. Every practice exercise passes with its reference solution in
 `tests/conformance/solutions/` and fails with its starter program.
 
+Ladder exercises (ADR-0051) have a ladder document as starter program, so their projects
+open in the LAD editor, and a reference ladder `<id>.lad.json`: `ex.lad-motor-start-stop`
+(self-holding), `ex.lad-start-delay` (TON box), `ex.lad-run-monitor` (feedback watch with
+SET/RESET coils), `ex.lad-production-count` (CTU box and EQ comparator) and
+`ex.lad-tank-interlock` (interlocks and dry-run protection). The conformance suite also
+checks that typical wrong ladders fail exactly the criteria describing their mistake.
+
 ## Basic and Advanced modes
 
 Basic mode offers one **Build & Load to PLC** button (compile, link, download, PLC RUN,

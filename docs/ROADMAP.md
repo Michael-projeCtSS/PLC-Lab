@@ -11,8 +11,9 @@ own scoped task and, where fundamental, an ADR:
    with end-position sensors, second pump for alternating-pump exercises.
 3. **Structured Text growth**: DINT/UDINT/WORD types, arrays, user functions and FBs, loops,
    CTUD, retentive memory.
-4. **Ladder Diagram editor** on the dedicated rung/grid model compiling to the same IR, with
-   ST/LAD semantic-equivalence tests; then FBD; then the educational STL profile.
+4. **Ladder Diagram editor**: delivered (ADR-0050, ADR-0051) with contacts, edges,
+   SET/RESET coils, timer/counter boxes, comparators, runtime power flow and graded LAD
+   exercises. Next: FBD, then the educational STL profile.
 5. **More exercises and labs** per new component; analog output exercises.
 6. **Replay and timeline scrubbing** over the compact trace.
 7. **Additional protocol adapters** on the virtual network kernel (Modbus RTU first), still

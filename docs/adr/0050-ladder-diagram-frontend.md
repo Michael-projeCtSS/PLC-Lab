@@ -1,6 +1,7 @@
 # ADR-0050: Ladder Diagram frontend and editor (first vertical slice)
 
-- Status: Accepted for 0.2.0-dev (CP9-C)
+- Status: Accepted for 0.2.0-dev (CP9-C); extended by [ADR-0051](0051-industrial-ladder-elements-and-power-observations.md)
+  (document version 2, SET/RESET, edges, boxes, comparators, runtime power flow)
 - Date: 2026-11-10
 
 ## Context

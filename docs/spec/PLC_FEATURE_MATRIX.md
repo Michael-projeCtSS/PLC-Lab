@@ -8,7 +8,7 @@ and ADRs.
 | Language               | Status                                                   |
 | ---------------------- | -------------------------------------------------------- |
 | Structured Text        | Implemented (subset below), compiled to the canonical IR |
-| Ladder Diagram         | First slice: BOOL contacts and coils (ADR-0050)          |
+| Ladder Diagram         | Implemented (elements below), ADR-0050 and ADR-0051      |
 | Function Block Diagram | Planned; IR prepared (ADR-0021)                          |
 | Statement List (edu)   | Planned; control-flow design in ADR-0021                 |
 
@@ -30,6 +30,27 @@ and ADRs.
 | User functions and function blocks, library documents (ADR-0044, ADR-0045)    | Implemented |
 | FOR/WHILE/REPEAT                                                              | Planned     |
 | CTUD, retentive memory, multiple tasks                                        | Planned     |
+
+## Ladder Diagram
+
+Compiled by the LAD frontend into the canonical IR and run by the one runtime; online
+power flow and values come from the runtime (`ladder_state`, ADR-0051).
+
+| Feature                                                                      | Status        |
+| ---------------------------------------------------------------------------- | ------------- |
+| Rungs with series and parallel networks, multiple coils per rung             | Implemented   |
+| Variables BOOL, INT, REAL, TIME (input, output, internal)                    | Implemented   |
+| Normally open / normally closed contacts                                     | Implemented   |
+| Positive / negative edge contacts (R_TRIG/F_TRIG semantics)                  | Implemented   |
+| Output, SET and RESET coils (later instruction wins)                         | Implemented   |
+| Comparators EQ, NE, GT, GE, LT, LE (type-checked in Rust)                    | Implemented   |
+| TON, TOF, TP boxes (PT, ET output); CTU (PV, R, CV), CTD (PV, LD, CV)        | Implemented   |
+| Power flow per element and values online from the executed scan              | Implemented   |
+| Diagnostics on elements; palette, properties, undo/redo, keyboard, copy rung | Implemented   |
+| Graded LAD exercises (5)                                                     | Implemented   |
+| PID, R_TRIG/F_TRIG, CTUD and arithmetic boxes                                | Not available |
+| User functions/FBs in rungs, library documents with a LAD program            | Not available |
+| Retentive LAD variables, ST↔LAD conversion                                   | Not available |
 
 ## Runtime
 
