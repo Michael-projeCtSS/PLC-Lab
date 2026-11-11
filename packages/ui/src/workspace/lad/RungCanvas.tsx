@@ -122,7 +122,8 @@ export function RungCanvas({
         edit(n.id, field);
       }}
     >
-      {value || "?"}
+      {/* A required pin shows "?", an optional one (R/LD, ET/CV) "—" while unset. */}
+      {value || (field === "reset" || field === "output" ? "—" : "?")}
     </button>
   );
 

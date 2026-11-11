@@ -89,7 +89,12 @@ import { Variables } from "./lad/Variables";
 
 const HISTORY = 100;
 
-type Editing = { element: number; field: Field; initial: string };
+type Editing = {
+  element: number;
+  field: Field;
+  initial: string;
+  typed: boolean;
+};
 type Picking = { target: Target; rung: number; initial: string };
 type Floating = { left: number; top: number };
 type Menu = { x: number; y: number; id: number; items: MenuItem[] };
@@ -181,6 +186,7 @@ export function LadEditor({
       element,
       field: f,
       initial: initial ?? fieldText(node, f, coil ? coil.variable : undefined),
+      typed: initial !== undefined,
     });
   };
   /** After a new element is placed: select it and edit its first field. */
@@ -704,6 +710,7 @@ export function LadEditor({
             element: elementName(t, node, coil ? coil.variable : undefined),
           })}
           initial={editing.initial}
+          typed={editing.typed}
           channels={channels}
           accept={acceptEdit}
           cancel={cancelEdit}

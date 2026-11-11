@@ -41,6 +41,7 @@ export function InlineEditor({
   field,
   label,
   initial,
+  typed,
   channels,
   accept,
   cancel,
@@ -52,12 +53,16 @@ export function InlineEditor({
   /** Accessible name: "Preset time PT of TON RunDelay". */
   label: string;
   initial: string;
+  /** Opened by typing a character (keep the caret after it) or on the current value. */
+  typed: boolean;
   channels: Map<string, string>;
   /** Apply the choice; `advance` is 1 or -1 after Tab / Shift+Tab, 0 after Enter. */
   accept: (choice: Accepted, advance: -1 | 0 | 1) => void;
   cancel: () => void;
 }) {
   const [text, setText] = useState(initial);
+  // On the current value the list starts complete; typing filters it.
+  const [query, setQuery] = useState(typed ? initial : "");
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(true);
   const [creating, setCreating] = useState<{
@@ -71,7 +76,7 @@ export function InlineEditor({
   const list = useId();
   const expect = expectationFor(document, element, field);
   const suggestions = open
-    ? suggest(document, element, field, text, channels)
+    ? suggest(document, element, field, query, channels)
     : [];
   const current = suggestions[Math.min(active, suggestions.length - 1)];
 
@@ -79,10 +84,10 @@ export function InlineEditor({
     const el = input.current;
     if (!el) return;
     el.focus();
-    // A typed first character continues; an existing value is selected for replacing.
-    if (initial && el.value === initial)
-      el.setSelectionRange(initial.length, initial.length);
-  }, [initial]);
+    // A typed first character continues; the current value is selected for replacing.
+    if (typed) el.setSelectionRange(el.value.length, el.value.length);
+    else el.select();
+  }, [typed]);
 
   const choose = (s: Suggestion | undefined, advance: -1 | 0 | 1) => {
     const typed = text.trim();
@@ -176,6 +181,7 @@ export function InlineEditor({
         autoComplete="off"
         onChange={(e) => {
           setText(e.target.value);
+          setQuery(e.target.value);
           setActive(0);
           setOpen(true);
           setMessage(null);

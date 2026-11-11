@@ -215,7 +215,8 @@ function instanceProposals(
   const q = query.trim();
   if (q && free(q)) out.push({ kind: "instance", name: q });
   const generated = nextInstance(document, node.block);
-  if (free(generated) && generated !== q)
+  // A box that keeps its own free name gets no second proposal.
+  if (free(generated) && generated !== q && q !== node.instance)
     out.push({ kind: "instance", name: generated });
   if (node.instance && node.instance !== q && free(node.instance))
     out.push({ kind: "instance", name: node.instance });

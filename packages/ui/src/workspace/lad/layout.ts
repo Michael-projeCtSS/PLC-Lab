@@ -19,11 +19,11 @@ export const G = {
   JX: 18,
   RAIL: 18,
   BOTTOM: 30,
-  CONTACT_W: 96,
+  CONTACT_W: 120,
   COMPARE_W: 136,
   BLOCK_W: 168,
   EMPTY_W: 150,
-  COIL_W: 108,
+  COIL_W: 124,
   COIL_GAP: 44,
   MIN_COIL_X: 330,
 } as const;
