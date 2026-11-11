@@ -433,7 +433,10 @@ try {
       await choose("Part", ["PartPresent"]);
       await waitLogic(1, "(Button1 OR PartPresent) AND AutoMode");
       await rung(2)
-        .getByRole("button", { name: "Parallel block of 2 branches" })
+        .getByRole("button", {
+          name: "Parallel block of 2 branches",
+          exact: true,
+        })
         .waitFor();
       await element(2, "Coil (variable?)").dblclick();
       await choose("Lamp2");
@@ -691,7 +694,10 @@ try {
         .click();
       await ladder().waitFor({ timeout: 60_000 });
       await rung(1)
-        .getByRole("button", { name: "Parallel block of 2 branches" })
+        .getByRole("button", {
+          name: "Parallel block of 2 branches",
+          exact: true,
+        })
         .waitFor();
       assert.equal(await rungLogic(0), "(Button1 OR AutoMode)");
       assert.equal(await rungLogic(1), "(Button1 OR PartPresent) AND AutoMode");
