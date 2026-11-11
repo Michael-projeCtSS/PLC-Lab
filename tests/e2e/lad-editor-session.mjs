@@ -234,11 +234,59 @@ try {
   };
   /** A real mouse drag: press, move in steps, release. */
   const mouseDrag = async (from, to, { hold = false } = {}) => {
+    // Record what the page receives, to explain a drag that does not start.
+    await page.evaluate(() => {
+      window.__drag = [];
+      if (window.__dragRecorder) return;
+      window.__dragRecorder = true;
+      for (const type of [
+        "pointerdown",
+        "pointermove",
+        "pointerup",
+        "pointercancel",
+        "mousedown",
+        "mouseup",
+        "dragstart",
+        "blur",
+        "focus",
+      ])
+        window.addEventListener(
+          type,
+          (e) => {
+            const t = e.target;
+            const name =
+              t === window
+                ? "window"
+                : (t?.getAttribute?.("aria-label") ??
+                  t?.className ??
+                  String(t));
+            window.__drag.push(
+              `${type}@${Math.round(e.clientX ?? -1)},${Math.round(e.clientY ?? -1)}:${String(name).slice(0, 40)}`,
+            );
+          },
+          true,
+        );
+    });
     await page.mouse.move(from.x, from.y);
     await page.mouse.down();
     await page.mouse.move(from.x + 12, from.y + 12, { steps: 3 });
     await page.mouse.move(to.x, to.y, { steps: 12 });
     await delay(150);
+    const during = await page.evaluate(
+      ({ x, y }) => ({
+        ghost: document.querySelectorAll(".lad-ghost").length,
+        notice: document.querySelector(".lad-notice")?.textContent ?? null,
+        under: document.elementFromPoint(x, y)?.className ?? null,
+        events: [...new Set(window.__drag)].slice(0, 40),
+        count: window.__drag.length,
+      }),
+      to,
+    );
+    evidence.lastDrag = { from, to, ...during };
+    if (!during.ghost)
+      throw new Error(
+        `no drag in progress: ${JSON.stringify(evidence.lastDrag)}`,
+      );
     if (!hold) await page.mouse.up();
   };
   const center = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
