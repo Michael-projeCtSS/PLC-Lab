@@ -40,6 +40,17 @@ release (`PLC Lab.exe`). Record date, build (About page) and any failed item.
 - [ ] Watch a tag and a process value; Waveforms plots them; Events lists operator actions.
 - [ ] Save as, export and import a project; reopen it and find the program unchanged.
 
+## Free Lab: Ladder Diagram editor
+
+- [ ] Switch a Free Lab program to Ladder Diagram (the warning names the replaced program).
+- [ ] Drag a normally open contact from the palette onto a rung: the operand editor opens on it; typing filters the variables; Enter binds one.
+- [ ] Drop a contact to the right of another: they are wired in series (AND). Drop one below another: a branch is drawn around exactly that contact (OR); the status line named the resulting logic while dragging.
+- [ ] Drag an existing contact onto a new branch; Ctrl+Z and Ctrl+Y undo and redo it in one step each.
+- [ ] Drag a coil onto the contacts: the editor says why it cannot go there and nothing changes; Esc during a drag cancels it.
+- [ ] Click a wire between two contacts and type `TON`: the instruction list shows TON with its pins; Enter inserts it; type the instance name, Tab, type `T#3s`.
+- [ ] With only the keyboard: F9 inserts a contact, typing binds it, Shift+F9 adds a branch, arrows reach the coil, an unknown name asks for type and kind before it is created.
+- [ ] Build & Load: powered wires and elements light up from the PLC; the timer's ET counts on the box.
+
 ## Knowledge
 
 - [ ] Search "4-20" finds the 4-20 mA article first; vendor and troubleshooting filters work.

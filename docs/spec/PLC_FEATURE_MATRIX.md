@@ -34,7 +34,8 @@ and ADRs.
 ## Ladder Diagram
 
 Compiled by the LAD frontend into the canonical IR and run by the one runtime; online
-power flow and values come from the runtime (`ladder_state`, ADR-0051).
+power flow and values come from the runtime (`ladder_state`, ADR-0051). Programs are
+edited on the diagram by drag and drop, in-place typing and keyboard commands (ADR-0052).
 
 | Feature                                                                      | Status        |
 | ---------------------------------------------------------------------------- | ------------- |
