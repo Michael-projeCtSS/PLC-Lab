@@ -117,6 +117,11 @@ export function useLab(projectId: string) {
     [library],
   );
   const [messages, setMessages] = useState<Message[]>([]);
+  /** Undo/redo of the ladder editor (ADR-0052), kept while the workspace is open. */
+  const [ladHistory, setLadHistory] = useState<{
+    past: string[];
+    future: string[];
+  }>({ past: [], future: [] });
   const [report, setReport] = useState<GradeReportDto | null>(null);
   const [watchTables, setWatchTables] = useState<WatchTableDto[]>([]);
   const [activeTable, setActiveTable] = useState<string | null>(null);
@@ -847,6 +852,8 @@ export function useLab(projectId: string) {
     pous,
     pousCurrent,
     loadedSource,
+    ladHistory,
+    setLadHistory,
     messages,
     clearMessages: () => setMessages([]),
     log,

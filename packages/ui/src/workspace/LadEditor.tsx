@@ -117,10 +117,10 @@ export function LadEditor({
   const [where, setWhere] = useState<Where>("after");
   const [zoom, setZoom] = useState(1);
   const [clipboard, setClipboard] = useState<Clip | null>(null);
-  const [history, setHistory] = useState<{ past: string[]; future: string[] }>({
-    past: [],
-    future: [],
-  });
+  // The undo history belongs to the workspace, not to this view: switching to the
+  // Process tab and back keeps it.
+  const history = lab.ladHistory;
+  const setHistory = lab.setLadHistory;
   const [editing, setEditing] = useState<Editing | null>(null);
   const [picking, setPicking] = useState<
     (Picking & { position: Floating }) | null

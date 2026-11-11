@@ -1636,6 +1636,29 @@ it("online, the rungs show the power flow, values and timer state the runtime re
   expect(fake.watch).not.toHaveBeenCalled();
 });
 
+it("the ladder's undo history survives a visit to the Process view", async () => {
+  await openLadder();
+  fireEvent.click(screen.getByRole("button", { name: "+ Rung" }));
+  fireEvent.click(
+    lad().getByRole("button", { name: "Normally open contact (variable?)" }),
+  );
+  choose("Variable of the contact", "StartPB");
+  await waitFor(() =>
+    expect(ladSource().rungs[0]?.network.items[0]).toMatchObject({
+      variable: "StartPB",
+    }),
+  );
+  fireEvent.click(screen.getByRole("tab", { name: "Process" }));
+  fireEvent.click(screen.getByRole("tab", { name: "Program" }));
+  await screen.findByTestId("lad-editor");
+  fireEvent.click(palette().getByRole("button", { name: "Undo" }));
+  await waitFor(() =>
+    expect(ladSource().rungs[0]?.network.items[0]).toMatchObject({
+      variable: "",
+    }),
+  );
+});
+
 it("a PLC that does not scan shows no power flow, only values", async () => {
   await openLadder();
   fireEvent.click(screen.getByRole("button", { name: "+ Rung" }));

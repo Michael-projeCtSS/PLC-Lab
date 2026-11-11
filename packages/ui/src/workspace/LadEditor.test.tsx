@@ -63,12 +63,18 @@ const logic = () => expression(latest().rungs[0]!.network);
 
 function Harness({ initial }: { initial: LadDocument }) {
   const [source, setSource] = useState(JSON.stringify(initial, null, 2));
+  const [ladHistory, setLadHistory] = useState<{
+    past: string[];
+    future: string[];
+  }>({ past: [], future: [] });
   const lab = {
     source,
     setSource: (text: string) => {
       saved.push(text);
       setSource(text);
     },
+    ladHistory,
+    setLadHistory,
     diagnostics: [],
     frame: null,
     signals: [],
