@@ -417,10 +417,7 @@ function Status({
     ? t("lad.offline")
     : observed.scanned
       ? t("lad.online", { cycle: observed.cycle ?? "" })
-      : t("lad.notScanning", {
-          mode: lab.frame?.plc.mode ?? "",
-          cycle: observed.cycle ?? "",
-        });
+      : t("lad.notScanning", { mode: lab.frame?.plc.mode ?? "" });
   return (
     <>
       <p className="muted lad-status" role="status">

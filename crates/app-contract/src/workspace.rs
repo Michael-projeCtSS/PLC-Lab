@@ -593,9 +593,10 @@ pub struct LadderStateDto {
     pub cycle: ExactU64,
     /// FALSE when the PLC did not scan in that cycle (STOP or FAULT).
     pub scanned: bool,
+    /// Empty when the cycle did not scan: no rung was executed.
     pub power: Vec<ElementPowerDto>,
-    /// Inputs as that scan read them; outputs, internal variables and block outputs as
-    /// it committed them.
+    /// Inputs as that scan read them (without a scan: as the field shows them now);
+    /// outputs, internal variables and block outputs as the last scan committed them.
     pub values: Vec<WatchValueDto>,
 }
 /// An active force: the signal, what it replaces and the forced value.

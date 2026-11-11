@@ -218,6 +218,10 @@ impl LabSession {
     /// elements and the values of their variables always belong to the same scan.
     pub fn ladder_state(&self) -> Option<LadderState> {
         let o = self.last.as_ref()?;
+        // A cycle without a scan (STOP, FAULT) executed no rung: it has no power flow.
+        // Its values are the inputs as the field shows them and the outputs as the last
+        // scan wrote them.
+        let scanned = o.header.outcome == crate::session::CycleOutcome::Scanned;
         let mut power = Vec::new();
         let mut values = Vec::new();
         for tag in self.tags() {
@@ -226,7 +230,9 @@ impl LabSession {
                 .strip_prefix("LAD#")
                 .and_then(|n| n.parse::<u32>().ok())
             {
-                if let Some(SignalValue::Bool(on)) = value_in(&o.committed, tag.signal) {
+                if let (true, Some(SignalValue::Bool(on))) =
+                    (scanned, value_in(&o.committed, tag.signal))
+                {
                     power.push((element, on));
                 }
                 continue;
@@ -252,7 +258,7 @@ impl LabSession {
         }
         Some(LadderState {
             cycle: o.header.cycle,
-            scanned: o.header.outcome == crate::session::CycleOutcome::Scanned,
+            scanned,
             power,
             values,
         })

@@ -240,4 +240,17 @@ fn a_ladder_program_drives_the_real_motor_and_is_observed_one_cycle_at_a_time() 
     // The ladder's hidden symbols are not student variables.
     let (_, rows) = s.variables(None, 0, 500);
     assert!(rows.iter().all(|r| !r.name.contains('#')), "{rows:?}");
+
+    // In STOP no rung executes: no power is reported, inputs show the field now and
+    // outputs keep what the last scan wrote.
+    s.set_plc_switch(PlcModeRequest::Stop).unwrap();
+    press(&mut s, "stop", false);
+    press(&mut s, "start", true);
+    s.step_cycle().unwrap();
+    s.step_cycle().unwrap();
+    let state = s.ladder_state().unwrap();
+    assert!(!state.scanned);
+    assert!(state.power.is_empty(), "{:?}", state.power);
+    assert_eq!(shown(&s, "StartPB"), SignalValue::Bool(true));
+    assert_eq!(shown(&s, "MotorContactor"), SignalValue::Bool(false));
 }

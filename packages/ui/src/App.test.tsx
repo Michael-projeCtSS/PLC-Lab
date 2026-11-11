@@ -1636,14 +1636,18 @@ it("online, the rungs show the power flow, values and timer state the runtime re
   expect(fake.watch).not.toHaveBeenCalled();
 });
 
-it("a PLC that does not scan says so and shows the last scan", async () => {
+it("a PLC that does not scan shows no power flow, only values", async () => {
   await openLadder();
   fireEvent.click(screen.getByRole("button", { name: "+ Rung" }));
+  fireEvent.click(
+    lad().getByRole("button", { name: "Normally open contact (variable?)" }),
+  );
+  choose("Variable of the contact", "StartPB");
   fake.ladderState.mockResolvedValue({
     cycle: "30",
     scanned: false,
     power: [],
-    values: [],
+    values: [{ signal: 10, value: { type: "BOOL", value: true } }],
   });
   fake.buildAndLoad.mockImplementation(() =>
     Promise.resolve({
@@ -1661,9 +1665,14 @@ it("a PLC that does not scan says so and shows the last scan", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Build & Load to PLC" }));
   expect(
     await screen.findByText(
-      "The PLC is in STOP and does not scan: shown is scan 30, the last one.",
+      "The PLC is in STOP and does not scan: no power flows. Inputs show the field now, outputs what the last scan wrote.",
     ),
   ).toBeInTheDocument();
+  // The contact shows its input, with no power claim either way.
+  const start = await lad().findByRole("button", {
+    name: "Normally open contact StartPB: TRUE",
+  });
+  expect(start).not.toHaveClass("powered");
 });
 
 it("PLC and simulation controls explain what they do", async () => {

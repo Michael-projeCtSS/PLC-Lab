@@ -1357,7 +1357,7 @@ export const en = {
   "lad.addSetCoil": "Add SET coil",
   "lad.fault": "PLC fault: {message}",
   "lad.notScanning":
-    "The PLC is in {mode} and does not scan: shown is scan {cycle}, the last one.",
+    "The PLC is in {mode} and does not scan: no power flows. Inputs show the field now, outputs what the last scan wrote.",
   "code.PLC-LAD-001": "Invalid ladder document",
   "code.PLC-LAD-002": "Invalid declaration",
   "code.PLC-LAD-003": "Unknown variable",

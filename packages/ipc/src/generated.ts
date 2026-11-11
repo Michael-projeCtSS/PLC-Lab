@@ -554,10 +554,14 @@ export type LadderStateDto = { cycle: ExactU64,
 /**
  * FALSE when the PLC did not scan in that cycle (STOP or FAULT).
  */
-scanned: boolean, power: Array<ElementPowerDto>, 
+scanned: boolean, 
 /**
- * Inputs as that scan read them; outputs, internal variables and block outputs as
- * it committed them.
+ * Empty when the cycle did not scan: no rung was executed.
+ */
+power: Array<ElementPowerDto>, 
+/**
+ * Inputs as that scan read them (without a scan: as the field shows them now);
+ * outputs, internal variables and block outputs as the last scan committed them.
  */
 values: Array<WatchValueDto>, };
 

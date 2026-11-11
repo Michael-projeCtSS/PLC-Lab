@@ -1370,7 +1370,7 @@ export const pl = {
   "lad.addSetCoil": "Dodaj cewkę SET",
   "lad.fault": "Błąd PLC: {message}",
   "lad.notScanning":
-    "PLC jest w stanie {mode} i nie wykonuje cykli: pokazano cykl {cycle}, ostatni.",
+    "PLC jest w stanie {mode} i nie wykonuje cykli: zasilanie nie płynie. Wejścia pokazują stan obiektu teraz, wyjścia to, co zapisał ostatni cykl.",
   "code.PLC-LAD-001": "Nieprawidłowy dokument drabinkowy",
   "code.PLC-LAD-002": "Nieprawidłowa deklaracja",
   "code.PLC-LAD-003": "Nieznana zmienna",
