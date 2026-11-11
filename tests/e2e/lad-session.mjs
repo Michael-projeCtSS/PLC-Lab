@@ -186,7 +186,11 @@ try {
 
   const views = () => page.getByRole("tablist", { name: "Workspace views" });
   const ladder = () => page.getByTestId("lad-editor");
-  const element = (name) => ladder().getByRole("button", { name }).first();
+  // Exact names: since ADR-0052 insertion points are named after their neighbours.
+  const element = (name) =>
+    ladder()
+      .getByRole("button", { name, exact: typeof name === "string" })
+      .first();
   const status = () => page.locator(".lad-status");
   const problems = () => page.locator(".compile-problems");
   const tools = () => page.getByRole("toolbar", { name: "Ladder tools" });
@@ -201,11 +205,11 @@ try {
       .click();
   const contactVariable = (variable) =>
     page
-      .getByRole("combobox", { name: "Variable of the contact" })
+      .getByRole("combobox", { name: "Variable of the contact", exact: true })
       .selectOption(variable);
   const coilVariable = (variable) =>
     page
-      .getByRole("combobox", { name: "Variable of the coil" })
+      .getByRole("combobox", { name: "Variable of the coil", exact: true })
       .selectOption(variable);
   const typeIn = async (name, text) => {
     const input = page.getByRole("textbox", { name, exact: true });
@@ -337,7 +341,7 @@ try {
       await waitAttribute(timer("5"), "aria-pressed", /^true$/);
       await typeIn("Preset time PT: literal", "T#2s");
       await page
-        .getByRole("combobox", { name: "Elapsed time ET to" })
+        .getByRole("combobox", { name: "Elapsed time ET to", exact: true })
         .selectOption("RunTime");
       await element("Coil (variable?)").click();
       await coilVariable("RunLamp");
@@ -373,7 +377,7 @@ try {
     async () => {
       await element(/^Normally closed contact StopPB/).click();
       await page
-        .getByRole("combobox", { name: "Contact type" })
+        .getByRole("combobox", { name: "Contact type", exact: true })
         .selectOption("normallyOpen");
       // An edited program is no longer the loaded one: no stale online values.
       await waitText(status(), /^Offline: load this program into the PLC/);

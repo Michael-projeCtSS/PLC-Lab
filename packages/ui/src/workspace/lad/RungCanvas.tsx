@@ -414,6 +414,7 @@ export function RungCanvas({
             </button>
           );
         })}
+        {cells}
         {layout.points.map((p, i) => {
           const isSelected =
             selected?.kind === "point" &&
@@ -460,7 +461,6 @@ export function RungCanvas({
             />
           );
         })}
-        {cells}
         {editor}
       </div>
     </div>

@@ -147,7 +147,8 @@ export function LadEditor({
   }, [document]);
 
   const focusElement = useCallback((id: number) => {
-    requestAnimationFrame(() =>
+    // After React has rendered the change (no frame timing in the interface).
+    setTimeout(() =>
       root.current
         ?.querySelector<HTMLElement>(`[data-element="${id}"]`)
         ?.focus(),
@@ -393,15 +394,24 @@ export function LadEditor({
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (isTyping(e.target)) return;
+    const ctrl = e.ctrlKey || e.metaKey;
+    const key = e.key;
+    const lower = key.toLowerCase();
+    // Diagram commands apply on the diagram; toolbar, rung header and panel buttons
+    // keep their own keys (Enter and Space press them, arrows and letters do nothing).
+    const onDiagram =
+      e.target instanceof HTMLElement &&
+      (!!e.target.closest(".lad-canvas") ||
+        e.target.classList.contains("lad-rung-handle"));
+    const global =
+      (ctrl && ["z", "y"].includes(lower)) || key === "F8" || key === "F9";
+    if (!onDiagram && !global) return;
     // A key on the diagram while an editor is open elsewhere: that editor is abandoned.
     if (editing || picking || menu) {
       setEditing(null);
       setPicking(null);
       setMenu(null);
     }
-    const ctrl = e.ctrlKey || e.metaKey;
-    const key = e.key;
-    const lower = key.toLowerCase();
     if (key === "F9" && !e.shiftKey)
       insertItem(
         { type: "contact", contact: "normallyOpen" },

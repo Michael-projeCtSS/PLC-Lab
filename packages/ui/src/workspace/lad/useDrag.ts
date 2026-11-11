@@ -4,7 +4,7 @@
  * few pixels; the pointer is hit-tested against the rung layouts (logical coordinates,
  * any zoom); the target is validated with the placement engine on every move; release
  * applies it once; Esc or a release over nothing changes nothing. Ctrl copies an existing
- * element instead of moving it. Near the edges of the scroll area the view scrolls.
+ * element instead of moving it. Moving near the edges of the scroll area scrolls it.
  */
 import {
   useCallback,
@@ -142,6 +142,18 @@ export function useDrag({
       )
         return;
       e.preventDefault();
+      // Near an edge of the scroll area the view follows the pointer (driven by pointer
+      // movement only: the interface runs no timers).
+      const el = scroller.current;
+      const r = el?.getBoundingClientRect();
+      // Only a laid-out scroll area larger than both edge bands scrolls.
+      if (el && r && r.height > 3 * EDGE && r.width > 3 * EDGE) {
+        const dy =
+          e.clientY < r.top + EDGE ? -24 : e.clientY > r.bottom - EDGE ? 24 : 0;
+        const dx =
+          e.clientX < r.left + EDGE ? -24 : e.clientX > r.right - EDGE ? 24 : 0;
+        if (dx || dy) el.scrollBy(dx, dy);
+      }
       update(e.clientX, e.clientY, e.ctrlKey);
     };
     const up = () => {
@@ -186,31 +198,7 @@ export function useDrag({
       window.removeEventListener("keydown", ctrl);
       window.removeEventListener("keyup", ctrl);
     };
-  }, [update, cancel]);
-
-  // Autoscroll while the pointer rests near an edge of the scroll area.
-  const dragging = drag !== null;
-  useEffect(() => {
-    if (!dragging) return;
-    const timer = setInterval(() => {
-      const state = live.current;
-      const el = scroller.current;
-      if (!state || !el) return;
-      const r = el.getBoundingClientRect();
-      const dy =
-        state.y < r.top + EDGE ? -16 : state.y > r.bottom - EDGE ? 16 : 0;
-      const dx =
-        state.x < r.left + EDGE ? -16 : state.x > r.right - EDGE ? 16 : 0;
-      if (!dx && !dy) return;
-      el.scrollBy(dx, dy);
-      update(
-        state.x,
-        state.y,
-        state.source.kind === "move" && state.source.copy,
-      );
-    }, 40);
-    return () => clearInterval(timer);
-  }, [dragging, scroller, update]);
+  }, [update, cancel, scroller]);
 
   return {
     drag,

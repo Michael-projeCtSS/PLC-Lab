@@ -8,7 +8,7 @@ and ADRs.
 | Language               | Status                                                   |
 | ---------------------- | -------------------------------------------------------- |
 | Structured Text        | Implemented (subset below), compiled to the canonical IR |
-| Ladder Diagram         | Implemented (elements below), ADR-0050 and ADR-0051      |
+| Ladder Diagram         | Implemented (elements below), ADR-0050 to ADR-0052       |
 | Function Block Diagram | Planned; IR prepared (ADR-0021)                          |
 | Statement List (edu)   | Planned; control-flow design in ADR-0021                 |
 
@@ -47,6 +47,10 @@ power flow and values come from the runtime (`ladder_state`, ADR-0051).
 | TON, TOF, TP boxes (PT, ET output); CTU (PV, R, CV), CTD (PV, LD, CV)        | Implemented   |
 | Power flow per element and values online from the executed scan              | Implemented   |
 | Diagnostics on elements; palette, properties, undo/redo, keyboard, copy rung | Implemented   |
+| Drag and drop from the palette and on the diagram; beside = AND, below = OR  | Implemented   |
+| Wiring, junctions and coil column derived from the ladder tree (ADR-0052)    | Implemented   |
+| Operands and box pins typed in place with type-filtered completion           | Implemented   |
+| Instruction completion at an insertion point (F8), F9/F10/Shift+F9, menu     | Implemented   |
 | Graded LAD exercises (5)                                                     | Implemented   |
 | PID, R_TRIG/F_TRIG, CTUD and arithmetic boxes                                | Not available |
 | User functions/FBs in rungs, library documents with a LAD program            | Not available |

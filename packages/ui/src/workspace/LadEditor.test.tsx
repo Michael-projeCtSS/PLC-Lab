@@ -418,3 +418,17 @@ it("a coil gets only writable variables; Esc keeps the document", () => {
     }),
   ).toBeNull();
 });
+
+it("buttons outside the diagram keep their own keys", () => {
+  render(<Harness initial={doc([NO(3, "StartPB")])} />);
+  const add = screen.getByRole("button", { name: "+ Rung" });
+  add.focus();
+  // Not prevented: the browser turns Enter and Space on a button into a click.
+  expect(fireEvent.keyDown(add, { key: "Enter" })).toBe(true);
+  expect(fireEvent.keyDown(add, { key: "a" })).toBe(true);
+  expect(fireEvent.keyDown(tool("Undo"), { key: "Delete" })).toBe(true);
+  expect(
+    screen.queryByRole("combobox", { name: "Instruction name" }),
+  ).toBeNull();
+  expect(saved).toHaveLength(0);
+});
