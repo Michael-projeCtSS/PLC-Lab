@@ -464,10 +464,11 @@ try {
   await check(
     "editing resumes: keyboard undo and redo, then a reload",
     async () => {
-      await timer("T#2s").click();
+      // Pins are fields on the box (ADR-0052): the box is selected by its header.
+      await timer("T#2s").click({ position: { x: 12, y: 10 } });
       await typeIn("Preset time PT: literal", "T#3s");
       await timer("T#3s").waitFor();
-      await timer("T#3s").click();
+      await timer("T#3s").click({ position: { x: 12, y: 10 } });
       await page.keyboard.press("Control+z");
       await timer("T#2s").waitFor();
       await page.keyboard.press("Control+y");
