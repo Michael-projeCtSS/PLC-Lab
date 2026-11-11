@@ -2090,3 +2090,83 @@ fn launch_open_requests_open_store_projects_in_place_and_import_others() {
         "only the valid copy was imported"
     );
 }
+
+#[test]
+fn a_ladder_exercise_opens_runs_and_is_graded_as_ladder() {
+    const SOLUTION: &str =
+        include_str!("../../../tests/conformance/solutions/ex.lad-start-delay.lad.json");
+    let f = fixture("ladder");
+    let (project, w) = exercise(&f.app, "ex.lad-start-delay");
+    let id = w.workspace_id;
+    // The starter is a ladder document, so the project's program is LAD.
+    assert_eq!(project.programs[0].language, "LAD");
+    assert!(project.programs[0].source.contains("\"plclab-lad\""));
+    let hidden = |signals: &[SignalDto]| signals.iter().any(|s| s.label.contains('#'));
+    assert!(!hidden(&w.signals));
+
+    let (result, _) = f
+        .app
+        .build_and_load(BuildLoadRequest {
+            contract_version: V,
+            workspace_id: id,
+            source: SOLUTION.into(),
+            library: Vec::new(),
+            revision: ExactU64(1),
+            station: None,
+            run_after_load: false,
+        })
+        .unwrap();
+    assert_eq!(result.outcome, "LOADED", "{:?}", result.message);
+    f.app
+        .plc_mode(PlcModeRequest {
+            contract_version: V,
+            workspace_id: id,
+            mode: "RUN".into(),
+        })
+        .unwrap();
+    // The compiler's power symbols stay behind ladder_state; the interface never lists them.
+    assert!(!hidden(&result.signals), "{:?}", result.signals);
+    let state = |app: &DesktopApp| {
+        app.ladder_state(WorkspaceRequest {
+            contract_version: V,
+            workspace_id: id,
+        })
+        .unwrap()
+        .expect("a recorded cycle")
+    };
+    press(&f.app, id, "start");
+    step(&f.app, id, 5);
+    let s = state(&f.app);
+    assert!(s.scanned);
+    let powered = |s: &LadderStateDto, element: u32| {
+        s.power
+            .iter()
+            .find(|p| p.element == element)
+            .unwrap_or_else(|| panic!("element {element}"))
+            .powered
+    };
+    // Rung 3: the Request contact (15) passes power; the TON box (16) not yet.
+    assert!(powered(&s, 15));
+    assert!(!powered(&s, 16));
+    let et = result
+        .signals
+        .iter()
+        .find(|x| x.label == "StartDelay.ET")
+        .expect("the timer's ET is a signal")
+        .id;
+    assert!(
+        s.values
+            .iter()
+            .any(|v| v.signal == et && matches!(v.value, Some(SignalValueDto::Time { .. }))),
+        "{:?}",
+        s.values
+    );
+
+    // Graded on behavior like an ST program.
+    let report = check(&f.app, id, SOLUTION, None);
+    assert_eq!(report.outcome, "GRADED");
+    assert!(report.passed, "{:?}", report.criteria);
+    let starter = &project.programs[0].source;
+    let report = check(&f.app, id, starter, None);
+    assert!(!report.passed);
+}

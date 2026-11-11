@@ -590,7 +590,10 @@ fn ladder_exercises_fail_wrong_programs_on_the_right_criteria() {
     // Stop drawn normally closed: S2 reads TRUE while released, so the rung passes only
     // while Stop is pressed.
     let nc_stop = changed_ladder(id, |d| items(d, 0)[1]["contact"] = json!("normallyClosed"));
-    assert_eq!(failed(id, &nc_stop), ["starts", "latches", "stop-wins", "lamp"]);
+    assert_eq!(
+        failed(id, &nc_stop),
+        ["starts", "latches", "stop-wins", "lamp"]
+    );
     // SET/RESET coils instead of the branch: the later rung wins, so RESET must come last.
     let latch = |reset_first: bool| {
         changed_ladder(id, |d| {

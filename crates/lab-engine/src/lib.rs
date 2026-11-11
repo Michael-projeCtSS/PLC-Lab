@@ -31,6 +31,7 @@ pub use commissioning::{
 pub use error::{BindingIssue, EngineError};
 /// Whether a program document is a ladder document rather than Structured Text (ADR-0050).
 pub use lad_frontend::is_lad as is_ladder_document;
+pub use lad_frontend::is_synthetic as is_ladder_symbol;
 pub use plc::{
     BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile, compile_documents,
 };

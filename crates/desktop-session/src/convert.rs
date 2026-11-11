@@ -267,10 +267,14 @@ pub fn signal_kind(kind: SignalKind) -> &'static str {
     }
 }
 
+/// The signals the interface may show. A ladder program's compiler-owned symbols (power
+/// leaving each element, edge memory; ADR-0051) are not signals a student picks: the
+/// editor receives their values through `ladder_state` by element id.
 pub fn signals(session: &LabSession) -> Vec<SignalDto> {
     session
         .signals()
         .iter()
+        .filter(|d| !(d.kind == SignalKind::PlcLocal && lab_engine::is_ladder_symbol(&d.label)))
         .map(|d| SignalDto {
             id: d.id.0,
             path: d.path.clone(),
