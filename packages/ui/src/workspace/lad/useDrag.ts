@@ -164,25 +164,29 @@ export function useDrag({
       )
         return;
       e.preventDefault();
-      // Near an edge of the visible rung area the view follows the pointer (driven by
-      // pointer movement only: the interface runs no timers). Over the toolbar, where a
-      // drag from the palette starts, nothing scrolls.
+      // Near an edge of the visible rung area the view follows the pointer while it
+      // moves towards that edge (driven by pointer movement only: the interface runs no
+      // timers). Crossing a band on the way in — from the palette above, say — leaves
+      // the view where it is, so the rung the student aims at does not slide away.
       const v = view();
+      const last = live.current ?? { x: p.x0, y: p.y0 };
       if (v) {
         const { clientX: x, clientY: y } = e;
         const inside = y >= v.top && y < v.bottom && x >= v.left && x < v.right;
+        const up = y < last.y;
+        const down = y > last.y;
         const dy = !inside
           ? 0
-          : y < v.top + EDGE
+          : y < v.top + EDGE && up
             ? -24
-            : y > v.bottom - EDGE
+            : y > v.bottom - EDGE && down
               ? 24
               : 0;
         const dx = !inside
           ? 0
-          : x < v.left + EDGE
+          : x < v.left + EDGE && x < last.x
             ? -24
-            : x > v.right - EDGE
+            : x > v.right - EDGE && x > last.x
               ? 24
               : 0;
         if (dx || dy) v.el.scrollBy(dx, dy);

@@ -1422,9 +1422,13 @@ textarea.input {
   margin: 0;
   font-size: 12px;
 }
+/* One line of fixed height: text appearing during a drag never shifts the rungs. */
 .lad-notice {
-  min-height: 16px;
+  height: 18px;
+  overflow: hidden;
   color: var(--text-1);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .lad-fault,
 .lad-error-text {
