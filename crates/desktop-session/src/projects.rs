@@ -328,7 +328,13 @@ pub fn create(
             programs: vec![ProgramDocument {
                 id: identifier("main", "program")?,
                 name: "Main".into(),
-                language: "ST".into(),
+                // A ladder exercise starts with a ladder document (ADR-0051).
+                language: if lab_engine::is_ladder_document(&e.starter_program) {
+                    "LAD"
+                } else {
+                    "ST"
+                }
+                .into(),
                 source: e.starter_program.clone(),
             }],
             watch_tables: Vec::new(),

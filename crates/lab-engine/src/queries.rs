@@ -106,11 +106,16 @@ pub fn cause_effect(
             previous.map(|p| &p.scan_inputs),
             |_| true,
         ),
+        // The ladder power observations are the compiler's, not program decisions
+        // (ADR-0051); the editor shows them on the rungs.
         decided: effects(&current.committed, previous.map(|p| &p.committed), |s| {
             matches!(
                 kind(s),
                 Some(SignalKind::PlcOutput | SignalKind::PlcLocal | SignalKind::BlockOutput)
-            )
+            ) && !session
+                .signals()
+                .get(s)
+                .is_some_and(|d| lad_frontend::is_synthetic(&d.label))
         }),
         applied: effects(&current.applied, previous.map(|p| &p.applied), |s| {
             kind(s) == Some(SignalKind::Physical)
@@ -210,7 +215,8 @@ impl LabSession {
         };
         let mut rows = Vec::new();
         for tag in self.tags() {
-            if !matches(&tag.name) {
+            // Compiler-owned ladder symbols are not student variables (ADR-0051).
+            if !matches(&tag.name) || lad_frontend::is_synthetic(&tag.name) {
                 continue;
             }
             let get = |map: Option<&std::collections::BTreeMap<_, plc_types::PlcValue>>| {

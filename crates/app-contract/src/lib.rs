@@ -138,6 +138,9 @@ pub struct DiagnosticDto {
     /// The project library document the span is in; `None` for the main program
     /// (ADR-0045).
     pub document: Option<String>,
+    /// The ladder element (rung, network element or coil) the diagnostic points at, in a
+    /// Ladder Diagram program (ADR-0051).
+    pub element: Option<u32>,
 }
 
 macro_rules! declarations {

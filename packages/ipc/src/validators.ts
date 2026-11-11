@@ -76,6 +76,7 @@ export const diagnostic = obj<G.DiagnosticDto>({
   span: nullable(span),
   category: literal("compiler", "runtime", "internal"),
   document: nullable(str),
+  element: nullable(u32),
 });
 
 export const coreInfo = obj<G.CoreInfo>({

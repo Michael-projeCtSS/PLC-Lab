@@ -182,6 +182,10 @@ pub fn diagnostic_in(d: &Diagnostic, library: &[String]) -> DiagnosticDto {
             _ => "internal",
         }
         .into(),
+        element: d
+            .source()
+            .filter(|s| s.language() == plc_types::source::SourceLanguage::Lad)
+            .map(|s| s.reference().element_id().get()),
     }
 }
 

@@ -1,6 +1,7 @@
 //! The LAD frontend (ADR-0050): document validation, lowering into the canonical IR and
-//! behavioural equivalence with Structured Text in the one PLC runtime.
-use lad_frontend::{codes, compile_lad, is_lad};
+//! behavioural equivalence with Structured Text in the one PLC runtime. These documents
+//! are version 1; version 1 stays readable (ADR-0051).
+use lad_frontend::{codes, compile_lad, is_lad, is_synthetic};
 use plc_ir::Program;
 use plc_types::{
     PlcTime, PlcValue,
@@ -204,14 +205,19 @@ fn variables_and_elements_become_symbols_and_ladder_sources() {
     let category = |name: &str| program.symbols().resolve(scope, name).unwrap().category();
     assert_eq!(category("a"), VariableCategory::Input, "case-insensitive");
     assert_eq!(category("Q1"), VariableCategory::Output);
-    // One assignment per coil, each at its coil's element.
-    assert_eq!(program.body().len(), 3);
+    // Each rung ends with one assignment per coil, at the coil's element; before it,
+    // every network element assigned the power leaving it, left to right.
     let elements: Vec<u32> = program
         .body()
         .iter()
         .map(|s| s.source().element_id().get())
         .collect();
-    assert_eq!(elements, [13, 18, 25]);
+    assert_eq!(
+        elements,
+        [
+            5, 6, 4, 8, 10, 11, 9, 7, 3, 12, 2, 13, 16, 17, 15, 18, 22, 23, 21, 24, 20, 25
+        ]
+    );
     assert!(
         program
             .sources()
@@ -219,6 +225,15 @@ fn variables_and_elements_become_symbols_and_ladder_sources() {
             .all(|e| e.language() == SourceLanguage::Lad)
     );
     assert_eq!(program.sources().elements().count(), 25);
+    // The power symbols are the compiler's: hidden, and not a name a student can write.
+    let hidden: Vec<String> = program
+        .symbols()
+        .symbols()
+        .filter(|s| is_synthetic(s.name()))
+        .map(|s| s.name().to_owned())
+        .collect();
+    assert_eq!(hidden.len(), 19, "{hidden:?}");
+    assert!(hidden.contains(&"LAD#2".to_owned()));
 }
 
 #[test]
@@ -256,11 +271,11 @@ fn malformed_documents_are_rejected_with_a_clear_reason() {
         "{e:?}"
     );
     let e = errors(
-        &json!({ "format": "plclab-lad", "version": 2, "name": "Main", "variables": [], "rungs": [] })
+        &json!({ "format": "plclab-lad", "version": 3, "name": "Main", "variables": [], "rungs": [] })
             .to_string(),
     );
     assert_eq!(e[0].0, codes::DOCUMENT);
-    assert!(e[0].1.contains("version 2"), "{e:?}");
+    assert!(e[0].1.contains("version 3"), "{e:?}");
     let e = errors(
         &json!({ "format": "plclab-lad", "version": 1, "name": "Main", "variables": [], "rungs": [], "extra": 1 })
             .to_string(),
@@ -271,13 +286,16 @@ fn malformed_documents_are_rejected_with_a_clear_reason() {
 }
 
 #[test]
-fn declarations_must_be_valid_bool_variables_with_distinct_names() {
+fn declarations_must_be_valid_variables_with_distinct_names() {
     let e = errors(&document(
-        vec![json!({ "name": "Level", "type": "INT", "direction": "input" })],
+        vec![json!({ "name": "Level", "type": "WORD", "direction": "input" })],
         vec![],
     ));
     assert_eq!(e[0].0, codes::DECLARATION);
-    assert!(e[0].1.contains("BOOL"), "{e:?}");
+    assert!(e[0].1.contains("BOOL, INT, REAL or TIME"), "{e:?}");
+    // Compiler-owned names cannot be declared.
+    let e = errors(&document(vec![variable("LAD#1", "local")], vec![]));
+    assert_eq!(e[0].0, codes::DECLARATION, "{e:?}");
     let e = errors(&document(
         vec![variable("Pump", "output"), variable("PUMP", "local")],
         vec![],

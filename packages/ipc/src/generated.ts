@@ -51,7 +51,12 @@ category: "compiler" | "runtime" | "internal",
  * The project library document the span is in; `None` for the main program
  * (ADR-0045).
  */
-document: string | null, };
+document: string | null, 
+/**
+ * The ladder element (rung, network element or coil) the diagnostic points at, in a
+ * Ladder Diagram program (ADR-0051).
+ */
+element: number | null, };
 
 export type StandardParameterDto = { name: string, dataType: string, direction: "Input" | "Output" | "InOut", required: boolean, };
 

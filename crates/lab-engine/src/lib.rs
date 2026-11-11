@@ -29,6 +29,8 @@ pub use commissioning::{
     CheckCategory, CheckItem, CheckState, Checklist, FEEDBACK_WAIT_US, SignalMapRow,
 };
 pub use error::{BindingIssue, EngineError};
+/// Whether a program document is a ladder document rather than Structured Text (ADR-0050).
+pub use lad_frontend::is_lad as is_ladder_document;
 pub use plc::{
     BlockBinding, InputSource, PlcMode, TagBinding, TagRole, compile, compile_documents,
 };
