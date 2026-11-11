@@ -292,11 +292,36 @@ try {
   const center = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
   /** A drop point on `locator`, after scrolling it to the middle of the rung area. */
   const spot = async (locator, where = "center") => {
-    await locator.evaluate((el) =>
-      el.scrollIntoView({ block: "center", inline: "nearest" }),
-    );
-    await delay(150);
-    const b = await box(locator);
+    // The live compile (350 ms after an edit) can add or remove the problems banner
+    // above the editor and move everything: measure only once the layout is still.
+    let b = null;
+    for (let round = 0; round < 3; round++) {
+      await locator.evaluate((el) =>
+        el.scrollIntoView({ block: "center", inline: "nearest" }),
+      );
+      let previous = null;
+      let still = 0;
+      for (let i = 0; i < 30 && still < 3; i++) {
+        await delay(250);
+        b = await box(locator);
+        still =
+          previous &&
+          Math.abs(b.x - previous.x) < 0.5 &&
+          Math.abs(b.y - previous.y) < 0.5
+            ? still + 1
+            : 0;
+        previous = b;
+      }
+      const visible = await locator.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          r.left + r.width / 2,
+          r.top + r.height / 2,
+        );
+        return !!hit && (el === hit || el.contains(hit) || hit.contains(el));
+      });
+      if (visible) break;
+    }
     return where === "right"
       ? rightOf(b)
       : where === "below"
