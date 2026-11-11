@@ -897,7 +897,17 @@ export function LadEditor({
         createPortal(
           <div
             className={`lad-ghost${drag.over && "target" in drag.over && !drag.over.error ? " valid" : drag.over && ("wrong" in drag.over || ("target" in drag.over && drag.over.error && drag.over.error !== "noChange")) ? " invalid" : ""}`}
-            style={{ left: drag.x + 14, top: drag.y + 14 }}
+            // Above the pointer, so it never covers the preview of where the element goes
+            // (below the pointer for an OR branch); near the top of the window, below it.
+            style={
+              drag.y > 140
+                ? {
+                    left: drag.x + 18,
+                    top: drag.y - 18,
+                    transform: "translateY(-100%)",
+                  }
+                : { left: drag.x + 18, top: drag.y + 28 }
+            }
             aria-hidden="true"
           >
             <strong className="mono">
