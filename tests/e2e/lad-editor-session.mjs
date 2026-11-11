@@ -504,7 +504,7 @@ try {
           await setSelector(b);
           await setPresence(c);
           if (a) {
-            await button().dispatchEvent("pointerdown", { pointerId: 7 });
+            await button().dispatchEvent("pointerdown", { pointerId: 1 });
             await button()
               .and(page.locator('[aria-pressed="true"]'))
               .waitFor({ timeout: 10_000 });
@@ -518,7 +518,7 @@ try {
           ).catch(async () => [await lamp("Lamp H1"), await lamp("Lamp H2")]);
           rows.push({ a, b, c, lamp1: got[0], lamp2: got[1] });
           if (a) {
-            await button().dispatchEvent("pointerup", { pointerId: 7 });
+            await button().dispatchEvent("pointerup", { pointerId: 1 });
             await button()
               .and(page.locator('[aria-pressed="false"]'))
               .waitFor({ timeout: 10_000 });
