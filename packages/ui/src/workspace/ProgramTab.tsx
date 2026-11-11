@@ -167,7 +167,7 @@ export function ProgramTab({ lab }: { lab: Lab }) {
         </div>
       )}
       {active === null && lab.mainLanguage === "LAD" ? (
-        <LadEditor lab={lab} />
+        <LadEditor lab={lab} focused={focused} />
       ) : (
         <StructuredTextEditor
           source={lab.editorText}

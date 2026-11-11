@@ -16,6 +16,17 @@ import {
   setCoilVariable,
   setContactVariable,
   toggleContact,
+  duplicateRung,
+  findNode,
+  insertParallel as parallelTo,
+  isSynthetic,
+  moveElement,
+  moveRung,
+  nextInstance,
+  pasteRung,
+  readingOrder,
+  setBlockPin,
+  setCoil,
   type LadDocument,
   type LadNode,
 } from "./ladModel";
@@ -39,9 +50,18 @@ const motorScene = [
 
 /** The network without ids: what the ladder means. */
 function shape(node: LadNode): unknown {
-  if (node.type === "contact") return [node.contact, node.variable];
-  if (node.type === "series") return ["series", ...node.items.map(shape)];
-  return ["parallel", ...node.branches.map(shape)];
+  switch (node.type) {
+    case "contact":
+      return [node.contact, node.variable];
+    case "compare":
+      return ["compare", node.op];
+    case "block":
+      return [node.block, node.instance];
+    case "series":
+      return ["series", ...node.items.map(shape)];
+    case "parallel":
+      return ["parallel", ...node.branches.map(shape)];
+  }
 }
 const firstContact = (d: LadDocument, rung = 0): number => {
   const n = d.rungs[rung]?.network;
@@ -52,11 +72,12 @@ const firstContact = (d: LadDocument, rung = 0): number => {
 const lastId = (d: LadDocument) => Math.max(...elementIds(d));
 
 describe("ladder document model", () => {
-  it("a new program declares the scene's BOOL signals and has no rungs", () => {
+  it("a new program declares the scene's signals and has no rungs", () => {
     const d = newLadDocument("Main", motorScene);
     expect(d.variables.map((v) => [v.name, v.direction])).toEqual([
       ["StartPB", "input"],
       ["StopPB", "input"],
+      ["Level", "input"],
       ["MotorContactor", "output"],
     ]);
     expect(d.rungs).toEqual([]);
@@ -175,5 +196,134 @@ describe("ladder document model", () => {
         }),
       ),
     ).toHaveProperty("error");
+  });
+
+  it("reads version 1 documents and writes version 2", () => {
+    const v1 = JSON.stringify({
+      format: "plclab-lad",
+      version: 1,
+      name: "Main",
+      variables: [],
+      rungs: [],
+    });
+    const parsed = parseLad(v1);
+    expect(parsed).toHaveProperty("document");
+    if (!("document" in parsed)) return;
+    expect(JSON.parse(serializeLad(parsed.document)).version).toBe(2);
+  });
+
+  it("inserts boxes and comparators with fresh instance names and presets", () => {
+    let d = addRung(newLadDocument("Main", motorScene));
+    const start = firstContact(d);
+    d = insertSeries(d, start, { type: "block", block: "TON" });
+    const ton = findNode(d, lastId(d));
+    expect(ton).toMatchObject({
+      type: "block",
+      block: "TON",
+      instance: "T1",
+      preset: { constant: "T#1s" },
+    });
+    d = insertSeries(d, lastId(d), { type: "block", block: "TOF" });
+    expect(findNode(d, lastId(d))).toMatchObject({ instance: "T2" });
+    d = insertSeries(d, lastId(d), { type: "block", block: "CTU" });
+    expect(findNode(d, lastId(d))).toMatchObject({
+      instance: "C1",
+      preset: { constant: "3" },
+    });
+    d = insertSeries(d, start, { type: "compare", op: "ge" }, "before");
+    expect(shape(d.rungs[0]!.network)).toEqual([
+      "series",
+      ["compare", "ge"],
+      ["normallyOpen", ""],
+      ["TON", "T1"],
+      ["TOF", "T2"],
+      ["CTU", "C1"],
+    ]);
+    // A variable takes no instance name, and no instance a variable name.
+    expect(addVariable(d, "T1", "local")).toBeNull();
+    expect(nextInstance(addVariable(d, "T3", "local")!, "TP")).toBe("T4");
+  });
+
+  it("sets and clears optional box pins and coil kinds", () => {
+    let d = addRung(newLadDocument("Main", motorScene));
+    d = insertSeries(d, firstContact(d), { type: "block", block: "CTU" });
+    const box = lastId(d);
+    d = setBlockPin(d, box, "reset", { variable: "StopPB" });
+    d = setBlockPin(d, box, "output", "Level");
+    expect(findNode(d, box)).toMatchObject({
+      reset: { variable: "StopPB" },
+      output: "Level",
+    });
+    d = setBlockPin(d, box, "reset", null);
+    d = setBlockPin(d, box, "output", "");
+    expect(findNode(d, box)).not.toHaveProperty("reset");
+    expect(findNode(d, box)).not.toHaveProperty("output");
+    const coil = d.rungs[0]!.coils[0]!.id;
+    d = setCoil(d, coil, { kind: "set", variable: "MotorContactor" });
+    expect(d.rungs[0]!.coils[0]).toEqual({
+      id: coil,
+      variable: "MotorContactor",
+      kind: "set",
+    });
+    d = setCoil(d, coil, { kind: "output" });
+    expect(d.rungs[0]!.coils[0]).toEqual({
+      id: coil,
+      variable: "MotorContactor",
+    });
+    d = addCoil(d, d.rungs[0]!.id, "reset");
+    expect(d.rungs[0]!.coils[1]).toMatchObject({ kind: "reset" });
+  });
+
+  it("moves elements in their series and rungs in the program", () => {
+    let d = addRung(newLadDocument("Main", motorScene));
+    const a = firstContact(d);
+    d = setContactVariable(d, a, "StartPB");
+    d = insertSeries(d, a, "normallyClosed");
+    d = setContactVariable(d, lastId(d), "StopPB");
+    d = moveElement(d, a, 1);
+    expect(shape(d.rungs[0]!.network)).toEqual([
+      "series",
+      ["normallyClosed", "StopPB"],
+      ["normallyOpen", "StartPB"],
+    ]);
+    expect(moveElement(d, a, 1)).toEqual(d);
+    d = addRung(d);
+    const [first, second] = d.rungs.map((r) => r.id);
+    d = moveRung(d, second!, -1);
+    expect(d.rungs.map((r) => r.id)).toEqual([second, first]);
+    expect(moveRung(d, second!, -1)).toEqual(d);
+  });
+
+  it("a copied rung gets fresh ids and instances and shares nothing", () => {
+    let d = addRung(newLadDocument("Main", motorScene));
+    d = parallelTo(d, firstContact(d), { type: "block", block: "TON" });
+    d = duplicateRung(d, d.rungs[0]!.id);
+    expect(d.rungs).toHaveLength(2);
+    const ids = elementIds(d);
+    expect(new Set(ids).size).toBe(ids.length);
+    const instances = d.rungs.map(
+      (r) => JSON.stringify(r.network).match(/"instance":"(\w+)"/)?.[1],
+    );
+    expect(instances).toEqual(["T1", "T2"]);
+    d = pasteRung(d, d.rungs[0]!);
+    expect(d.rungs.at(-1)?.network).toMatchObject({ type: "series" });
+    expect(JSON.stringify(d.rungs.at(-1))).toContain('"instance":"T3"');
+  });
+
+  it("reads elements rung by rung, left to right, coils last", () => {
+    let d = addRung(newLadDocument("Main", motorScene));
+    const a = firstContact(d);
+    d = parallelTo(d, a, "normallyOpen");
+    const b = lastId(d);
+    const network = d.rungs[0]!.network;
+    const block = network.type === "series" ? network.items[0]!.id : 0;
+    expect(readingOrder(d)).toEqual([[block, a, b, d.rungs[0]!.coils[0]!.id]]);
+  });
+
+  it("knows the compiler-owned symbols", () => {
+    expect(isSynthetic("LAD#12")).toBe(true);
+    expect(isSynthetic("edge#3")).toBe(true);
+    expect(isSynthetic("LAD")).toBe(false);
+    expect(isSynthetic("Motor")).toBe(false);
   });
 });

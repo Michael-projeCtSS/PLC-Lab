@@ -1402,7 +1402,7 @@ textarea.input {
 .legend.mv::before {
   border-top-color: var(--trace-mv);
 }
-/* ladder diagram editor (ADR-0050) */
+/* ladder diagram editor (ADR-0050, ADR-0051) */
 .lad {
   flex: 1;
   overflow: auto;
@@ -1414,6 +1414,26 @@ textarea.input {
 .lad-status {
   margin: 0;
   font-size: 12px;
+}
+.lad-fault,
+.lad-error-text {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 12px;
+}
+.lad-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.lad-palette {
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.lad-zoom {
+  gap: 4px;
+  margin-left: 6px;
 }
 .lad-rungs {
   display: flex;
@@ -1428,6 +1448,12 @@ textarea.input {
   padding: 6px 8px;
   background: var(--bg-1);
 }
+.lad-rung.selected {
+  outline: 2px solid var(--accent);
+}
+.lad-rung.error {
+  border-color: var(--danger-line);
+}
 .lad-comment {
   max-width: 320px;
   height: 24px;
@@ -1435,7 +1461,7 @@ textarea.input {
 .lad-line {
   display: flex;
   align-items: center;
-  min-height: 44px;
+  min-height: 52px;
   margin-top: 6px;
 }
 .lad-rail {
@@ -1443,32 +1469,36 @@ textarea.input {
   width: 3px;
   background: var(--symbol-stroke);
 }
+.lad-rail.powered,
+.lad-seg.powered,
+.lad-wire.powered {
+  background: var(--st-active);
+}
+.lad-seg,
 .lad-wire {
   height: 2px;
-  min-width: 16px;
+  min-width: 14px;
   background: var(--symbol-stroke);
 }
 .lad-network,
 .lad-series,
-.lad-coils {
+.lad-coils,
+.lad-cell {
   display: flex;
   align-items: center;
 }
-.lad-series > * + *,
 .lad-coils > * + * {
   margin-left: 14px;
-}
-.lad-network {
-  padding: 0 8px;
-  border-top: 2px solid var(--symbol-stroke);
-  border-top-color: transparent;
 }
 .lad-parallel {
   display: flex;
   align-items: center;
   border-left: 2px solid var(--symbol-stroke);
   border-right: 2px solid var(--symbol-stroke);
-  padding: 2px 6px;
+  padding: 2px 0 2px 4px;
+}
+.lad-parallel.powered {
+  border-right-color: var(--st-active);
 }
 .lad-parallel.selected {
   outline: 2px solid var(--accent);
@@ -1482,8 +1512,8 @@ textarea.input {
   display: flex;
   align-items: center;
 }
-.lad-block {
-  margin-right: 6px;
+.lad-block-handle {
+  margin-right: 4px;
   border: 1px dashed var(--line-strong);
   background: transparent;
   color: var(--text-2);
@@ -1492,7 +1522,9 @@ textarea.input {
 }
 .lad-contact,
 .lad-coil,
-.lad-empty {
+.lad-empty,
+.lad-compare,
+.lad-block {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
@@ -1506,15 +1538,44 @@ textarea.input {
   font-size: 12px;
   cursor: pointer;
 }
+.lad-block {
+  min-width: 96px;
+  border-width: 2px;
+}
+.lad-pin {
+  font-size: 10px;
+  color: var(--text-2);
+}
 .lad-contact.on,
-.lad-coil.on {
+.lad-coil.on,
+.lad-block.on {
+  background: var(--ok-tint);
+}
+.lad-contact.powered,
+.lad-coil.powered,
+.lad-compare.powered,
+.lad-block.powered {
   border-color: var(--st-active);
   box-shadow: 0 0 0 1px var(--st-active);
 }
+.lad-contact.error,
+.lad-coil.error,
+.lad-compare.error,
+.lad-block.error,
+.lad-parallel.error {
+  border-color: var(--danger-line);
+  box-shadow: 0 0 0 1px var(--danger-line);
+}
 .lad-contact.selected,
 .lad-coil.selected,
+.lad-compare.selected,
+.lad-block.selected,
 .lad-empty.selected {
   outline: 2px solid var(--accent);
+}
+.lad button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .lad-symbol {
   font-weight: 600;
@@ -1523,8 +1584,22 @@ textarea.input {
   font-size: 10px;
   color: var(--text-2);
 }
-.lad-toolbar {
-  gap: 6px;
+.lad-properties {
+  gap: 8px 14px;
+  align-items: flex-end;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+.lad-operand {
+  display: flex;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 6px 6px;
+}
+.lad-operand legend {
+  font-size: 11px;
+  color: var(--text-2);
 }
 .lad-assign {
   max-width: 320px;
